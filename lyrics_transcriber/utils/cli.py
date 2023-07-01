@@ -5,6 +5,11 @@ import pkg_resources
 from lyrics_transcriber import LyricsTranscriber
 
 
+def log(message):
+    timestamp = datetime.datetime.now().isoformat()
+    print(f"{timestamp} - {message}")
+
+
 def main():
     parser = argparse.ArgumentParser(
         description="Create synchronised lyrics files in ASS and MidiCo LRC formats with word-level timestamps, from any input song file"
@@ -30,19 +35,27 @@ def main():
         parser.print_help()
         exit(1)
 
-    log(f"LyricsTranscriber instantiating with input file: {args.audio_filepath}")
-
     transcriber = LyricsTranscriber(args.audio_filepath, output_dir=args.output_dir, cache_dir=args.cache_dir)
 
     log("LyricsTranscriber beginning transcription")
-    whisper_json_filepath, genius_lyrics_filepath, midico_lrc_filepath = transcriber.generate()
 
-    print(f"Transcription complete! Output files: {whisper_json_filepath} {genius_lyrics_filepath} {midico_lrc_filepath}")
+    result_metadata = transcriber.generate()
 
+    log(f"*** Success! ***")
 
-def log(message):
-    timestamp = datetime.datetime.now().isoformat()
-    print(f"{timestamp} - {message}")
+    formatted_duration = f'{int(result_metadata["song_duration"] // 60):02d}:{int(result_metadata["song_duration"] % 60):02d}'
+    log(f"Total Song Duration: {formatted_duration}")
+
+    formatted_singing_duration = (
+        f'{int(result_metadata["total_singing_duration"] // 60):02d}:{int(result_metadata["total_singing_duration"] % 60):02d}'
+    )
+    log(f"Total Singing Duration: {formatted_singing_duration}")
+    log(f"Singing Percentage: {result_metadata['singing_percentage']}")
+
+    log(f"*** Outputs: ***")
+    log(f"Whisper transcription output JSON file: {result_metadata['whisper_json_filepath']}")
+    log(f"MidiCo LRC output file: {result_metadata['midico_lrc_filepath']}")
+    log(f"Genius lyrics output file: {result_metadata['genius_lyrics_filepath']}")
 
 
 if __name__ == "__main__":
