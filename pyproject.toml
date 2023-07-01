@@ -8,7 +8,16 @@ readme = "README.md"
 packages = [{include = "lyrics_transcriber"}]
 
 [tool.poetry.dependencies]
-python = ">=3.9,<3.11"
+python = ">=3.9, <3.11"
+Cython = "^0"
+dtw-python = "^1"
+llvmlite = "^0"
+numba = "^0.57"
+numpy = "^1"
+onnx = "^1"
+onnxruntime = "^1"
+torch = "^1"
+tqdm = "^4"
 
 [tool.poetry.group.dev.dependencies]
 black = "^23.3.0"
