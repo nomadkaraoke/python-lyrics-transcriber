@@ -1,2 +1,0 @@
-openai-whisper==20230314
-whisper-timestamped @ git+https://github.com/linto-ai/whisper-timestamped
