@@ -63,6 +63,10 @@ class LyricsTranscriber:
         else:
             log(f"not fetching lyrics from Genius as song_artist and song_title were not set")
 
+        # TODO: attempt to match up segments from genius lyrics with whisper segments
+
+        # TODO: output synced lyrics from self.whisper_result_dict in ASS format too, using code from the_tuul
+
         if self.output_dir is None:
             self.output_dir = os.getcwd()
 
