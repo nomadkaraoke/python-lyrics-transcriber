@@ -10,7 +10,7 @@ def main():
         description="Create synchronised lyrics files in ASS and MidiCo LRC formats with word-level timestamps, from any input song file"
     )
 
-    parser.add_argument("audio_file", nargs="?", help="The audio file path to transcribe lyrics for.", default=argparse.SUPPRESS)
+    parser.add_argument("audio_filepath", nargs="?", help="The audio file path to transcribe lyrics for.", default=argparse.SUPPRESS)
     parser.add_argument("--cache_dir", default="/tmp/lyrics-transcriber-cache/", help="Optional cache directory.")
     parser.add_argument(
         "--output_dir",
@@ -26,16 +26,16 @@ def main():
         print(f"lyrics-transcriber version: {version}")
         exit(0)
 
-    if not hasattr(args, "audio_file"):
+    if not hasattr(args, "audio_filepath"):
         parser.print_help()
         exit(1)
 
-    log(f"LyricsTranscriber instantiating with input file: {args.audio_file}")
+    log(f"LyricsTranscriber instantiating with input file: {args.audio_filepath}")
 
-    transcriber = LyricsTranscriber(args.audio_file, output_dir=args.output_dir, cache_dir=args.cache_dir)
+    transcriber = LyricsTranscriber(args.audio_filepath, output_dir=args.output_dir, cache_dir=args.cache_dir)
 
     log("LyricsTranscriber beginning transcription")
-    whisper_json_filepath, genius_lyrics_filepath, midico_lrc_filepath = transcriber.transcribe()
+    whisper_json_filepath, genius_lyrics_filepath, midico_lrc_filepath = transcriber.generate()
 
     print(f"Transcription complete! Output files: {whisper_json_filepath} {genius_lyrics_filepath} {midico_lrc_filepath}")
 
