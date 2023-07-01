@@ -1,15 +1,20 @@
 import os
+import re
 import json
 import hashlib
 import datetime
 import subprocess
 import whisper_timestamped as whisper
+import lyricsgenius
 
 
 class LyricsTranscriber:
     def __init__(
         self,
-        audio_filepath=None,
+        audio_filepath,
+        song_artist=None,
+        song_title=None,
+        genius_api_token=None,
         output_dir=None,
         cache_dir="/tmp/lyrics-transcriber-cache/",
     ):
@@ -18,8 +23,21 @@ class LyricsTranscriber:
         self.cache_dir = cache_dir
         self.output_dir = output_dir
         self.audio_filepath = audio_filepath
+        self.song_artist = song_artist
+        self.song_title = song_title
+        self.genius_api_token = genius_api_token
 
         self.whisper_result_dict = None
+
+        self.result_metadata = {
+            "whisper_json_filepath": None,
+            "genius_lyrics": None,
+            "genius_lyrics_filepath": None,
+            "midico_lrc_filepath": None,
+            "singing_percentage": None,
+            "total_singing_duration": None,
+            "song_duration": None,
+        }
 
         if self.audio_filepath is None:
             raise Exception("audio_filepath must be specified as the input source to transcribe")
@@ -29,26 +47,56 @@ class LyricsTranscriber:
     def generate(self):
         log(f"audio_filepath is set: {self.audio_filepath}, beginning initial whisper transcription")
 
-        whisper_json_filepath = self.get_cache_filepath(".json")
-        self.whisper_result_dict = self.transcribe(whisper_json_filepath)
+        self.result_metadata["whisper_json_filepath"] = self.get_cache_filepath(".json")
+        self.whisper_result_dict = self.transcribe()
 
-        midico_lrc_filepath = self.get_cache_filepath(".lrc")
-        self.write_midico_lrc_file(midico_lrc_filepath)
+        self.result_metadata["midico_lrc_filepath"] = self.get_cache_filepath(".lrc")
+        self.write_midico_lrc_file()
 
-        singing_percentage, total_singing_duration, song_duration = self.calculate_singing_percentage()
+        self.calculate_singing_percentage()
 
-        genius_lyrics_filepath = ""
+        if self.genius_api_token and self.song_artist and self.song_title:
+            log(f"fetching lyrics from Genius as genius_api_token, song_artist and song_title were set")
+            self.result_metadata["genius_lyrics_filepath"] = self.get_cache_filepath("-genius.txt")
+            self.write_genius_lyrics_file()
+        else:
+            log(f"not fetching lyrics from Genius as song_artist and song_title were not set")
 
-        result_metadata = {
-            "whisper_json_filepath": whisper_json_filepath,
-            "genius_lyrics_filepath": genius_lyrics_filepath,
-            "midico_lrc_filepath": midico_lrc_filepath,
-            "singing_percentage": singing_percentage,
-            "total_singing_duration": total_singing_duration,
-            "song_duration": song_duration,
-        }
+        return self.result_metadata
 
-        return result_metadata
+    def write_genius_lyrics_file(self):
+        genius_lyrics_filepath = self.result_metadata["genius_lyrics_filepath"]
+        if os.path.isfile(genius_lyrics_filepath):
+            log(f"found existing file at genius_lyrics_filepath, reading: {genius_lyrics_filepath}")
+            with open(genius_lyrics_filepath, "r") as cache_file:
+                return cache_file
+
+        genius = lyricsgenius.Genius(self.genius_api_token)
+
+        song = genius.search_song(self.song_title, self.song_artist)
+        if song is None:
+            print(f'Could not find lyrics on Genius for "{self.song_title}" by {self.song_artist}')
+            return
+        lyrics = self.clean_genius_lyrics(song.lyrics)
+
+        log(f"writing clean lyrics to genius_lyrics_filepath: {genius_lyrics_filepath}")
+        with open(genius_lyrics_filepath, "w") as f:
+            f.write(lyrics)
+
+        self.result_metadata["genius_lyrics"] = lyrics
+        return lyrics
+
+    def clean_genius_lyrics(self, lyrics):
+        lyrics = lyrics.replace("\\n", "\n")
+        lyrics = re.sub(r"You might also like", "", lyrics)
+        # Remove the song name and word "Lyrics" if this has a non-newline char at the start
+        lyrics = re.sub(r".*?Lyrics([A-Z])", r"\1", lyrics)
+        lyrics = re.sub(r"[0-9]+Embed$", "", lyrics)  # Remove the word "Embed" at end of line with preceding numbers if found
+        lyrics = re.sub(r"(\S)Embed$", r"\1", lyrics)  # Remove the word "Embed" if it has been tacked onto a word at the end of a line
+        lyrics = re.sub(r"^Embed$", r"", lyrics)  # Remove the word "Embed" if it has been tacked onto a word at the end of a line
+        lyrics = re.sub(r".*?\[.*?\].*?", "", lyrics)  # Remove lines containing square brackets
+        # add any additional cleaning rules here
+        return lyrics
 
     def calculate_singing_percentage(self):
         # Calculate total seconds of singing using timings from whisper transcription results
@@ -72,14 +120,19 @@ class LyricsTranscriber:
         song_duration = float(duration_output)
 
         # Calculate singing percentage
-        singing_percentage = (total_singing_duration / song_duration) * 100
+        singing_percentage = int((total_singing_duration / song_duration) * 100)
+
+        self.result_metadata["singing_percentage"] = singing_percentage
+        self.result_metadata["total_singing_duration"] = total_singing_duration
+        self.result_metadata["song_duration"] = song_duration
 
         return singing_percentage, total_singing_duration, song_duration
 
     # Loops through lyrics segments (typically sentences) from whisper_timestamps JSON output,
     # then loops over each word and writes all words with MidiCo segment start/end formatting
     # and word-level timestamps to a MidiCo-compatible LRC file
-    def write_midico_lrc_file(self, lrc_filename):
+    def write_midico_lrc_file(self):
+        lrc_filename = self.result_metadata["midico_lrc_filepath"]
         log(f"writing midico formatted word timestamps to LRC file: {lrc_filename}")
         with open(lrc_filename, "w") as f:
             f.write("[re:MidiCo]\n")
@@ -98,7 +151,8 @@ class LyricsTranscriber:
         formatted_time = f"{minutes:02d}:{seconds:02d}.{milliseconds:03d}"
         return formatted_time
 
-    def transcribe(self, whisper_cache_filepath):
+    def transcribe(self):
+        whisper_cache_filepath = self.result_metadata["whisper_json_filepath"]
         if os.path.isfile(whisper_cache_filepath):
             log(f"transcribe found existing file at whisper_cache_filepath, reading: {whisper_cache_filepath}")
             with open(whisper_cache_filepath, "r") as cache_file:

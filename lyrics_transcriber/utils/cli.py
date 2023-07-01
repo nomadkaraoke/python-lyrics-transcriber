@@ -16,6 +16,23 @@ def main():
     )
 
     parser.add_argument("audio_filepath", nargs="?", help="The audio file path to transcribe lyrics for.", default=argparse.SUPPRESS)
+
+    parser.add_argument(
+        "--song_artist",
+        default=None,
+        help="Optional: specify song artist for Genius lyrics lookup and auto-correction",
+    )
+    parser.add_argument(
+        "--song_title",
+        default=None,
+        help="Optional: specify song title for Genius lyrics lookup and auto-correction",
+    )
+    parser.add_argument(
+        "--genius_api_token",
+        default=None,
+        help="Optional: specify Genius API token for lyrics lookup and auto-correction",
+    )
+
     parser.add_argument("--cache_dir", default="/tmp/lyrics-transcriber-cache/", help="Optional cache directory.")
     parser.add_argument(
         "--output_dir",
@@ -35,7 +52,19 @@ def main():
         parser.print_help()
         exit(1)
 
-    transcriber = LyricsTranscriber(args.audio_filepath, output_dir=args.output_dir, cache_dir=args.cache_dir)
+    if 1 <= [args.genius_api_token, args.song_title, args.song_artist].count(True) < 3:
+        print(f"To use genius lyrics auto-correction, all 3 args genius_api_token, song_artist, song_title must be provided")
+        print(args)
+        exit(1)
+
+    transcriber = LyricsTranscriber(
+        args.audio_filepath,
+        genius_api_token=args.genius_api_token,
+        song_artist=args.song_artist,
+        song_title=args.song_title,
+        output_dir=args.output_dir,
+        cache_dir=args.cache_dir,
+    )
 
     log("LyricsTranscriber beginning transcription")
 
@@ -50,7 +79,7 @@ def main():
         f'{int(result_metadata["total_singing_duration"] // 60):02d}:{int(result_metadata["total_singing_duration"] % 60):02d}'
     )
     log(f"Total Singing Duration: {formatted_singing_duration}")
-    log(f"Singing Percentage: {result_metadata['singing_percentage']}")
+    log(f"Singing Percentage: {result_metadata['singing_percentage']}%")
 
     log(f"*** Outputs: ***")
     log(f"Whisper transcription output JSON file: {result_metadata['whisper_json_filepath']}")
