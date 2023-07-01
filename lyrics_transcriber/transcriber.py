@@ -1,6 +1,7 @@
 import os
 import re
 import json
+import shutil
 import hashlib
 import datetime
 import subprocess
@@ -61,6 +62,13 @@ class LyricsTranscriber:
             self.write_genius_lyrics_file()
         else:
             log(f"not fetching lyrics from Genius as song_artist and song_title were not set")
+
+        if self.output_dir is None:
+            self.output_dir = os.getcwd()
+
+        self.result_metadata["whisper_json_filepath"] = shutil.copy(self.result_metadata["whisper_json_filepath"], self.output_dir)
+        self.result_metadata["midico_lrc_filepath"] = shutil.copy(self.result_metadata["midico_lrc_filepath"], self.output_dir)
+        self.result_metadata["genius_lyrics_filepath"] = shutil.copy(self.result_metadata["genius_lyrics_filepath"], self.output_dir)
 
         return self.result_metadata
 

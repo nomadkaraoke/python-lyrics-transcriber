@@ -34,6 +34,7 @@ def main():
     )
 
     parser.add_argument("--cache_dir", default="/tmp/lyrics-transcriber-cache/", help="Optional cache directory.")
+
     parser.add_argument(
         "--output_dir",
         default=None,
