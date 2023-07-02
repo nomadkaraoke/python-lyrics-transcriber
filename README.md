@@ -21,12 +21,13 @@ Automatically create synchronised lyrics files in ASS and MidiCo LRC formats wit
 pip install git+https://github.com/karaokenerds/python-lyrics-transcriber.git
 ```
 
+Note: this project was designed to be published as a package on PyPI but unfortunately cannot be right now as one of the dependencies of openai-whisper ([triton](https://github.com/openai/triton)) is only supported on Linux, but I want lyrics-transcriber to be usable on any platform...
+
 ## Usage 🚀
 
 ### As a standalone CLI
 
 1. To transcribe lyrics from an audio file:
-
 
 ```
 lyrics-transcriber /path/to/your/audiofile.mp3

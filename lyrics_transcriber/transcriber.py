@@ -57,7 +57,7 @@ class LyricsTranscriber:
         self.calculate_singing_percentage()
 
         if self.genius_api_token and self.song_artist and self.song_title:
-            log(f"fetching lyrics from Genius as genius_api_token, song_artist and song_title were set")
+            log(f"fetching lyrics from Genius as genius_api_token: {self.genius_api_token}, song_artist: {self.song_artist} and song_title: {self.song_title} were set")
             self.result_metadata["genius_lyrics_filepath"] = self.get_cache_filepath("-genius.txt")
             self.write_genius_lyrics_file()
         else:

@@ -18,7 +18,7 @@ onnx = "^1"
 onnxruntime = "^1"
 torch = "^1"
 tqdm = "^4"
-lyricsgenius = "^3.0.1"
+lyricsgenius = "^3"
 openai-whisper = { git = "https://github.com/openai/whisper.git" }
 whisper-timestamped = { git = "https://github.com/linto-ai/whisper-timestamped" }
 
