@@ -5,6 +5,7 @@ import shutil
 import hashlib
 import datetime
 import subprocess
+import slugify
 import whisper_timestamped as whisper
 import lyricsgenius
 
@@ -57,11 +58,15 @@ class LyricsTranscriber:
         self.calculate_singing_percentage()
 
         if self.genius_api_token and self.song_artist and self.song_title:
-            log(f"fetching lyrics from Genius as genius_api_token: {self.genius_api_token}, song_artist: {self.song_artist} and song_title: {self.song_title} were set")
+            log(
+                f"fetching lyrics from Genius as genius_api_token: {self.genius_api_token}, song_artist: {self.song_artist} and song_title: {self.song_title} were set"
+            )
             self.result_metadata["genius_lyrics_filepath"] = self.get_cache_filepath("-genius.txt")
             self.write_genius_lyrics_file()
         else:
-            log(f"not fetching lyrics from Genius as song_artist and song_title were not set")
+            log(
+                f"not fetching lyrics from Genius as not all genius params were set: genius_api_token: {self.genius_api_token}, song_artist: {self.song_artist} and song_title: {self.song_title}"
+            )
 
         # TODO: attempt to match up segments from genius lyrics with whisper segments
 
@@ -72,17 +77,24 @@ class LyricsTranscriber:
 
         self.result_metadata["whisper_json_filepath"] = shutil.copy(self.result_metadata["whisper_json_filepath"], self.output_dir)
         self.result_metadata["midico_lrc_filepath"] = shutil.copy(self.result_metadata["midico_lrc_filepath"], self.output_dir)
-        self.result_metadata["genius_lyrics_filepath"] = shutil.copy(self.result_metadata["genius_lyrics_filepath"], self.output_dir)
+
+        if self.result_metadata["genius_lyrics_filepath"] is not None:
+            self.result_metadata["genius_lyrics_filepath"] = shutil.copy(self.result_metadata["genius_lyrics_filepath"], self.output_dir)
 
         return self.result_metadata
 
     def write_genius_lyrics_file(self):
-        genius_lyrics_filepath = self.result_metadata["genius_lyrics_filepath"]
-        if os.path.isfile(genius_lyrics_filepath):
-            log(f"found existing file at genius_lyrics_filepath, reading: {genius_lyrics_filepath}")
-            with open(genius_lyrics_filepath, "r") as cache_file:
-                return cache_file
+        genius_lyrics_cache_filepath = os.path.join(self.cache_dir, self.get_song_slug() + "-genius.txt")
 
+        if os.path.isfile(genius_lyrics_cache_filepath):
+            log(f"found existing file at genius_lyrics_cache_filepath, reading: {genius_lyrics_cache_filepath}")
+
+            with open(genius_lyrics_cache_filepath, "r") as cached_lyrics:
+                self.result_metadata["genius_lyrics_filepath"] = genius_lyrics_cache_filepath
+                self.result_metadata["genius_lyrics"] = cached_lyrics
+                return cached_lyrics
+
+        log(f"no cached lyrics found at genius_lyrics_cache_filepath: {genius_lyrics_cache_filepath}, fetching from Genius")
         genius = lyricsgenius.Genius(self.genius_api_token)
 
         song = genius.search_song(self.song_title, self.song_artist)
@@ -91,10 +103,11 @@ class LyricsTranscriber:
             return
         lyrics = self.clean_genius_lyrics(song.lyrics)
 
-        log(f"writing clean lyrics to genius_lyrics_filepath: {genius_lyrics_filepath}")
-        with open(genius_lyrics_filepath, "w") as f:
+        log(f"writing clean lyrics to genius_lyrics_cache_filepath: {genius_lyrics_cache_filepath}")
+        with open(genius_lyrics_cache_filepath, "w") as f:
             f.write(lyrics)
 
+        self.result_metadata["genius_lyrics_filepath"] = genius_lyrics_cache_filepath
         self.result_metadata["genius_lyrics"] = lyrics
         return lyrics
 
@@ -183,10 +196,16 @@ class LyricsTranscriber:
 
     def get_cache_filepath(self, extension):
         filename = os.path.split(self.audio_filepath)[1]
+        filename_slug = slugify.slugify(filename)
         hash_value = self.get_file_hash(self.audio_filepath)
-        cache_filepath = os.path.join(self.cache_dir, filename + "_" + hash_value + extension)
+        cache_filepath = os.path.join(self.cache_dir, filename_slug + "_" + hash_value + extension)
         log(f"get_cache_filepath returning cache_filepath: {cache_filepath}")
         return cache_filepath
+
+    def get_song_slug(self):
+        song_artist_slug = slugify.slugify(self.song_artist)
+        song_title_slug = slugify.slugify(self.song_title)
+        return song_artist_slug + "_" + song_title_slug
 
     def get_file_hash(self, filepath):
         return hashlib.md5(open(filepath, "rb").read()).hexdigest()

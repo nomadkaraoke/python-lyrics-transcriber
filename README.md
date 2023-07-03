@@ -18,10 +18,11 @@ Automatically create synchronised lyrics files in ASS and MidiCo LRC formats wit
 - [Optional] A Genius API token if you want to fetch lyrics from Genius
 
 ```
-pip install git+https://github.com/karaokenerds/python-lyrics-transcriber.git
+pip install lyrics-transcriber
 ```
 
-Note: this project was designed to be published as a package on PyPI but unfortunately cannot be right now as one of the dependencies of openai-whisper ([triton](https://github.com/openai/triton)) is only supported on Linux, but I want lyrics-transcriber to be usable on any platform...
+> **Warning**
+> The package published to PyPI was created by manually editing `poetry.lock` to remove [triton](https://github.com/openai/triton), as it is technically a sub-dependency from openai-whisper but is currently only supported on Linux (whisper still works fine without it, and I want this package to be usable on any platform)
 
 ## Usage 🚀
 

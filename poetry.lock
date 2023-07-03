@@ -177,6 +177,35 @@ files = [
 colorama = {version = "*", markers = "platform_system == \"Windows\""}
 
 [[package]]
+name = "cmake"
+version = "3.26.4"
+description = "CMake is an open-source, cross-platform family of tools designed to build, test and package software"
+optional = false
+python-versions = "*"
+files = [
+    {file = "cmake-3.26.4-py2.py3-none-macosx_10_10_universal2.macosx_10_10_x86_64.macosx_11_0_arm64.macosx_11_0_universal2.whl", hash = "sha256:230227bf99f36614de84cdc92ffce3a50eb2803020e946f8da945a08fcf766bf"},
+    {file = "cmake-3.26.4-py2.py3-none-manylinux2010_i686.manylinux_2_12_i686.whl", hash = "sha256:248a90816abfc10ff6e1109b54b8235c3e62f0ac92da16541753deb3b5ae063d"},
+    {file = "cmake-3.26.4-py2.py3-none-manylinux2010_x86_64.manylinux_2_12_x86_64.whl", hash = "sha256:1b92f9f59f48c803106dbdd6750b0f571a0500e25d3a62c42ba84bb7a9240d10"},
+    {file = "cmake-3.26.4-py2.py3-none-manylinux2014_aarch64.manylinux_2_17_aarch64.whl", hash = "sha256:3175442985558d5415b97f264a6a1bb0af5ecfe10e3f7510257b1ea66bd33848"},
+    {file = "cmake-3.26.4-py2.py3-none-manylinux2014_i686.manylinux_2_17_i686.whl", hash = "sha256:1d887be5f1a3f17559a78707a6bc0560f4f8cb93cebb9d823d90a63e68bae09b"},
+    {file = "cmake-3.26.4-py2.py3-none-manylinux2014_ppc64le.manylinux_2_17_ppc64le.whl", hash = "sha256:235d8eac93a28dcce5a1cd7130412885a2aa53d5735cb2230e0f26f589347b65"},
+    {file = "cmake-3.26.4-py2.py3-none-manylinux2014_s390x.manylinux_2_17_s390x.whl", hash = "sha256:05cfd76c637eb22058c95e2dc383cadd4e0615e2643e637bb498a6cc24825790"},
+    {file = "cmake-3.26.4-py2.py3-none-manylinux2014_x86_64.manylinux_2_17_x86_64.whl", hash = "sha256:93015da6f1c0e1e5f2debf752f1803ea52d742d915ad674043d36e471f937507"},
+    {file = "cmake-3.26.4-py2.py3-none-musllinux_1_1_aarch64.whl", hash = "sha256:d726671ae7ae4aa6989e73d26b9f8f8e6af45163a26ea243949d72246566fdd8"},
+    {file = "cmake-3.26.4-py2.py3-none-musllinux_1_1_i686.whl", hash = "sha256:432837364aa6cab2826a72e8a4cdd3586f5ac9ce495217ccd59aa70f2bba8120"},
+    {file = "cmake-3.26.4-py2.py3-none-musllinux_1_1_ppc64le.whl", hash = "sha256:24110035aff586a04a6a6fcf4609270642e4f503c0620c962dff75b653f81414"},
+    {file = "cmake-3.26.4-py2.py3-none-musllinux_1_1_s390x.whl", hash = "sha256:3e280e81713408987b7053f5b922c9f94e45668ca6efff1f02846309ca0b5b0f"},
+    {file = "cmake-3.26.4-py2.py3-none-musllinux_1_1_x86_64.whl", hash = "sha256:c3b0e72750c0f6c0373242c1299bc4ffdbebdd5004966ae6df0b2e9845aa6990"},
+    {file = "cmake-3.26.4-py2.py3-none-win32.whl", hash = "sha256:e058e59154a1e490fb9425b420f87e28144292397607638d73e323509f7efae6"},
+    {file = "cmake-3.26.4-py2.py3-none-win_amd64.whl", hash = "sha256:b7a6946c345497c14064e0c9585b30f5aaebbefdfc0b245b6bb5a978eb4fc85f"},
+    {file = "cmake-3.26.4-py2.py3-none-win_arm64.whl", hash = "sha256:93a03bad17b9741acaff4a8651f8596496506602fa123e70fe67142f1b21ee2e"},
+    {file = "cmake-3.26.4.tar.gz", hash = "sha256:d45b30b9ce7280829888c78650177ab525df2b6785e1a5b3d82b4c147d828c0e"},
+]
+
+[package.extras]
+test = ["coverage (>=4.2)", "flake8 (>=3.0.4)", "path.py (>=11.5.0)", "pytest (>=3.0.3)", "pytest-cov (>=2.4.0)", "pytest-runner (>=2.9)", "pytest-virtualenv (>=1.7.0)", "scikit-build (>=0.10.0)", "setuptools (>=28.0.0)", "virtualenv (>=15.0.3)", "wheel"]
+
+[[package]]
 name = "colorama"
 version = "0.4.6"
 description = "Cross-platform colored terminal text."
@@ -287,6 +316,38 @@ numpy = ">=1.19"
 scipy = ">=1.1"
 
 [[package]]
+name = "ffmpeg-python"
+version = "0.2.0"
+description = "Python bindings for FFmpeg - with complex filtering support"
+optional = false
+python-versions = "*"
+files = [
+    {file = "ffmpeg-python-0.2.0.tar.gz", hash = "sha256:65225db34627c578ef0e11c8b1eb528bb35e024752f6f10b78c011f6f64c4127"},
+    {file = "ffmpeg_python-0.2.0-py3-none-any.whl", hash = "sha256:ac441a0404e053f8b6a1113a77c0f452f1cfc62f6344a769475ffdc0f56c23c5"},
+]
+
+[package.dependencies]
+future = "*"
+
+[package.extras]
+dev = ["Sphinx (==2.1.0)", "future (==0.17.1)", "numpy (==1.16.4)", "pytest (==4.6.1)", "pytest-mock (==1.10.4)", "tox (==3.12.1)"]
+
+[[package]]
+name = "filelock"
+version = "3.12.2"
+description = "A platform independent file lock."
+optional = false
+python-versions = ">=3.7"
+files = [
+    {file = "filelock-3.12.2-py3-none-any.whl", hash = "sha256:cbb791cdea2a72f23da6ac5b5269ab0a0d161e9ef0100e653b69049a7706d1ec"},
+    {file = "filelock-3.12.2.tar.gz", hash = "sha256:002740518d8aa59a26b0c76e10fb8c6e15eae825d34b6fdf670333fd7b938d81"},
+]
+
+[package.extras]
+docs = ["furo (>=2023.5.20)", "sphinx (>=7.0.1)", "sphinx-autodoc-typehints (>=1.23,!=1.23.4)"]
+testing = ["covdefaults (>=2.3)", "coverage (>=7.2.7)", "diff-cover (>=7.5)", "pytest (>=7.3.1)", "pytest-cov (>=4.1)", "pytest-mock (>=3.10)", "pytest-timeout (>=2.1)"]
+
+[[package]]
 name = "flatbuffers"
 version = "23.5.26"
 description = "The FlatBuffers serialization format for Python"
@@ -295,6 +356,16 @@ python-versions = "*"
 files = [
     {file = "flatbuffers-23.5.26-py2.py3-none-any.whl", hash = "sha256:c0ff356da363087b915fde4b8b45bdda73432fc17cddb3c8157472eab1422ad1"},
     {file = "flatbuffers-23.5.26.tar.gz", hash = "sha256:9ea1144cac05ce5d86e2859f431c6cd5e66cd9c78c558317c7955fb8d4c78d89"},
+]
+
+[[package]]
+name = "future"
+version = "0.18.3"
+description = "Clean single-source support for Python 3 and 2"
+optional = false
+python-versions = ">=2.6, !=3.0.*, !=3.1.*, !=3.2.*"
+files = [
+    {file = "future-0.18.3.tar.gz", hash = "sha256:34a17436ed1e96697a86f9de3d15a3b0be01d8bc8de9c1dffd59fb8234ed5307"},
 ]
 
 [[package]]
@@ -320,6 +391,16 @@ python-versions = ">=3.5"
 files = [
     {file = "idna-3.4-py3-none-any.whl", hash = "sha256:90b77e79eaa3eba6de819a0c442c0b4ceefc341a7a2ab77d7562bf49f425c5c2"},
     {file = "idna-3.4.tar.gz", hash = "sha256:814f528e8dead7d329833b91c5faa87d60bf71824cd12a7530b5526063d02cb4"},
+]
+
+[[package]]
+name = "lit"
+version = "16.0.6"
+description = "A Software Testing Tool"
+optional = false
+python-versions = "*"
+files = [
+    {file = "lit-16.0.6.tar.gz", hash = "sha256:84623c9c23b6b14763d637f4e63e6b721b3446ada40bf7001d8fee70b8e77a9a"},
 ]
 
 [[package]]
@@ -644,25 +725,21 @@ version = "20230314"
 description = "Robust Speech Recognition via Large-Scale Weak Supervision"
 optional = false
 python-versions = ">=3.8"
-files = []
-develop = false
+files = [
+    {file = "openai-whisper-20230314.tar.gz", hash = "sha256:7a8e62334f97a8d143b439ae8ed6638d78f41ad921a0205382354004b7271725"},
+]
 
 [package.dependencies]
+ffmpeg-python = "0.2.0"
 more-itertools = "*"
 numba = "*"
 numpy = "*"
-tiktoken = "0.3.3"
+tiktoken = "0.3.1"
 torch = "*"
 tqdm = "*"
 
 [package.extras]
 dev = ["black", "flake8", "isort", "pytest", "scipy"]
-
-[package.source]
-type = "git"
-url = "https://github.com/openai/whisper.git"
-reference = "HEAD"
-resolved_reference = "f572f2161ba831bae131364c3bffdead7af6d210"
 
 [[package]]
 name = "packaging"
@@ -733,6 +810,23 @@ files = [
     {file = "pyreadline3-3.4.1-py3-none-any.whl", hash = "sha256:b0efb6516fd4fb07b45949053826a62fa4cb353db5be2bbb4a7aa1fdd1e345fb"},
     {file = "pyreadline3-3.4.1.tar.gz", hash = "sha256:6f3d1f7b8a31ba32b73917cefc1f28cc660562f39aea8646d30bd6eff21f7bae"},
 ]
+
+[[package]]
+name = "python-slugify"
+version = "8.0.1"
+description = "A Python slugify application that also handles Unicode"
+optional = false
+python-versions = ">=3.7"
+files = [
+    {file = "python-slugify-8.0.1.tar.gz", hash = "sha256:ce0d46ddb668b3be82f4ed5e503dbc33dd815d83e2eb6824211310d3fb172a27"},
+    {file = "python_slugify-8.0.1-py2.py3-none-any.whl", hash = "sha256:70ca6ea68fe63ecc8fa4fcf00ae651fc8a5d02d93dcd12ae6d4fc7ca46c4d395"},
+]
+
+[package.dependencies]
+text-unidecode = ">=1.3"
+
+[package.extras]
+unidecode = ["Unidecode (>=1.1.1)"]
 
 [[package]]
 name = "regex"
@@ -930,41 +1024,52 @@ files = [
 mpmath = ">=0.19"
 
 [[package]]
+name = "text-unidecode"
+version = "1.3"
+description = "The most basic Text::Unidecode port"
+optional = false
+python-versions = "*"
+files = [
+    {file = "text-unidecode-1.3.tar.gz", hash = "sha256:bad6603bb14d279193107714b288be206cac565dfa49aa5b105294dd5c4aab93"},
+    {file = "text_unidecode-1.3-py2.py3-none-any.whl", hash = "sha256:1311f10e8b895935241623731c2ba64f4c455287888b18189350b67134a822e8"},
+]
+
+[[package]]
 name = "tiktoken"
-version = "0.3.3"
+version = "0.3.1"
 description = "tiktoken is a fast BPE tokeniser for use with OpenAI's models"
 optional = false
 python-versions = ">=3.8"
 files = [
-    {file = "tiktoken-0.3.3-cp310-cp310-macosx_10_9_x86_64.whl", hash = "sha256:d1f37fa75ba70c1bc7806641e8ccea1fba667d23e6341a1591ea333914c226a9"},
-    {file = "tiktoken-0.3.3-cp310-cp310-macosx_11_0_arm64.whl", hash = "sha256:3d7296c38392a943c2ccc0b61323086b8550cef08dcf6855de9949890dbc1fd3"},
-    {file = "tiktoken-0.3.3-cp310-cp310-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:3c84491965e139a905280ac28b74baaa13445b3678e07f96767089ad1ef5ee7b"},
-    {file = "tiktoken-0.3.3-cp310-cp310-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:65970d77ea85ce6c7fce45131da9258cd58a802ffb29ead8f5552e331c025b2b"},
-    {file = "tiktoken-0.3.3-cp310-cp310-musllinux_1_1_aarch64.whl", hash = "sha256:bd3f72d0ba7312c25c1652292121a24c8f1711207b63c6d8dab21afe4be0bf04"},
-    {file = "tiktoken-0.3.3-cp310-cp310-musllinux_1_1_x86_64.whl", hash = "sha256:719c9e13432602dc496b24f13e3c3ad3ec0d2fbdb9aace84abfb95e9c3a425a4"},
-    {file = "tiktoken-0.3.3-cp310-cp310-win_amd64.whl", hash = "sha256:dc00772284c94e65045b984ed7e9f95d000034f6b2411df252011b069bd36217"},
-    {file = "tiktoken-0.3.3-cp311-cp311-macosx_10_9_x86_64.whl", hash = "sha256:4db2c40f79f8f7a21a9fdbf1c6dee32dea77b0d7402355dc584a3083251d2e15"},
-    {file = "tiktoken-0.3.3-cp311-cp311-macosx_11_0_arm64.whl", hash = "sha256:e3c0f2231aa3829a1a431a882201dc27858634fd9989898e0f7d991dbc6bcc9d"},
-    {file = "tiktoken-0.3.3-cp311-cp311-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:48c13186a479de16cfa2c72bb0631fa9c518350a5b7569e4d77590f7fee96be9"},
-    {file = "tiktoken-0.3.3-cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:6674e4e37ab225020135cd66a392589623d5164c6456ba28cc27505abed10d9e"},
-    {file = "tiktoken-0.3.3-cp311-cp311-musllinux_1_1_aarch64.whl", hash = "sha256:4a0c1357f6191211c544f935d5aa3cb9d7abd118c8f3c7124196d5ecd029b4af"},
-    {file = "tiktoken-0.3.3-cp311-cp311-musllinux_1_1_x86_64.whl", hash = "sha256:2e948d167fc3b04483cbc33426766fd742e7cefe5346cd62b0cbd7279ef59539"},
-    {file = "tiktoken-0.3.3-cp311-cp311-win_amd64.whl", hash = "sha256:5dca434c8680b987eacde2dbc449e9ea4526574dbf9f3d8938665f638095be82"},
-    {file = "tiktoken-0.3.3-cp38-cp38-macosx_10_9_x86_64.whl", hash = "sha256:984758ebc07cd8c557345697c234f1f221bd730b388f4340dd08dffa50213a01"},
-    {file = "tiktoken-0.3.3-cp38-cp38-macosx_11_0_arm64.whl", hash = "sha256:891012f29e159a989541ae47259234fb29ff88c22e1097567316e27ad33a3734"},
-    {file = "tiktoken-0.3.3-cp38-cp38-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:210f8602228e4c5d706deeb389da5a152b214966a5aa558eec87b57a1969ced5"},
-    {file = "tiktoken-0.3.3-cp38-cp38-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:dd783564f80d4dc44ff0a64b13756ded8390ed2548549aefadbe156af9188307"},
-    {file = "tiktoken-0.3.3-cp38-cp38-musllinux_1_1_aarch64.whl", hash = "sha256:03f64bde9b4eb8338bf49c8532bfb4c3578f6a9a6979fc176d939f9e6f68b408"},
-    {file = "tiktoken-0.3.3-cp38-cp38-musllinux_1_1_x86_64.whl", hash = "sha256:1ac369367b6f5e5bd80e8f9a7766ac2a9c65eda2aa856d5f3c556d924ff82986"},
-    {file = "tiktoken-0.3.3-cp38-cp38-win_amd64.whl", hash = "sha256:94600798891f78db780e5aa9321456cf355e54a4719fbd554147a628de1f163f"},
-    {file = "tiktoken-0.3.3-cp39-cp39-macosx_10_9_x86_64.whl", hash = "sha256:e59db6fca8d5ccea302fe2888917364446d6f4201a25272a1a1c44975c65406a"},
-    {file = "tiktoken-0.3.3-cp39-cp39-macosx_11_0_arm64.whl", hash = "sha256:19340d8ba4d6fd729b2e3a096a547ded85f71012843008f97475f9db484869ee"},
-    {file = "tiktoken-0.3.3-cp39-cp39-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:542686cbc9225540e3a10f472f82fa2e1bebafce2233a211dee8459e95821cfd"},
-    {file = "tiktoken-0.3.3-cp39-cp39-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:3a43612b2a09f4787c050163a216bf51123851859e9ab128ad03d2729826cde9"},
-    {file = "tiktoken-0.3.3-cp39-cp39-musllinux_1_1_aarch64.whl", hash = "sha256:a11674f0275fa75fb59941b703650998bd4acb295adbd16fc8af17051aaed19d"},
-    {file = "tiktoken-0.3.3-cp39-cp39-musllinux_1_1_x86_64.whl", hash = "sha256:65fc0a449630bab28c30b4adec257442a4706d79cffc2337c1d9df3e91825cdd"},
-    {file = "tiktoken-0.3.3-cp39-cp39-win_amd64.whl", hash = "sha256:0b9a7a9a8b781a50ee9289e85e28771d7e113cc0c656eadfb6fc6d3a106ff9bb"},
-    {file = "tiktoken-0.3.3.tar.gz", hash = "sha256:97b58b7bfda945791ec855e53d166e8ec20c6378942b93851a6c919ddf9d0496"},
+    {file = "tiktoken-0.3.1-cp310-cp310-macosx_10_9_x86_64.whl", hash = "sha256:064048f506e747b636e2d70b66658743de32645d53287290734eb2b6ec43e6b5"},
+    {file = "tiktoken-0.3.1-cp310-cp310-macosx_11_0_arm64.whl", hash = "sha256:e4448b7e09781a85ca767c995078011c96554b50c6260a2325c07d500577f748"},
+    {file = "tiktoken-0.3.1-cp310-cp310-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:7b3409670824ff7e7cf8b54a2320634fdd8f3d9d9f3ea46ae58c68de82f9c093"},
+    {file = "tiktoken-0.3.1-cp310-cp310-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:0c0eb4fe2e583def3f9090a645fe21e52068f0fbccb05070abf2f376f399ce6d"},
+    {file = "tiktoken-0.3.1-cp310-cp310-musllinux_1_1_aarch64.whl", hash = "sha256:c6d3140a92bfb8fc0e003cad1e608363bcddc0a781d3d580535570276e0f911a"},
+    {file = "tiktoken-0.3.1-cp310-cp310-musllinux_1_1_x86_64.whl", hash = "sha256:44bd6878bc3605a907c6be8e46e2b999806cd97edd2dbb96643a6d338df0bac0"},
+    {file = "tiktoken-0.3.1-cp310-cp310-win_amd64.whl", hash = "sha256:f15441c393b362ccfa6bece920ec9ca826d216ba3c4166ce065518b4dedff452"},
+    {file = "tiktoken-0.3.1-cp311-cp311-macosx_10_9_x86_64.whl", hash = "sha256:3ce64d0f826a424278429383dbba9484a82492a3aa1a805b3b9ff30a018de119"},
+    {file = "tiktoken-0.3.1-cp311-cp311-macosx_11_0_arm64.whl", hash = "sha256:6b7f58463026fe9196ab54fe8a34beb7f839f0bdccdb0b7e707959b5d65cbe50"},
+    {file = "tiktoken-0.3.1-cp311-cp311-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:34055fa17e63eccced1b1859bad34bcb6b892e8d3e2c2a8b9a24b7ff4023018e"},
+    {file = "tiktoken-0.3.1-cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:5c1ed9584b30fe64157b72f0537688f3562506fb20d6aa1d6f90264b6f1f5981"},
+    {file = "tiktoken-0.3.1-cp311-cp311-musllinux_1_1_aarch64.whl", hash = "sha256:9743aed9aae72a8d4e3d899186e87e469ddc2a1670549664e8317b095fd3e024"},
+    {file = "tiktoken-0.3.1-cp311-cp311-musllinux_1_1_x86_64.whl", hash = "sha256:fe665728520092af0c260ef0f03d0e1472f29927bd8393da57c2299d9580e268"},
+    {file = "tiktoken-0.3.1-cp311-cp311-win_amd64.whl", hash = "sha256:3257c88c9c85f7059a6186d0850b3339265b4a9ff6e2d8fa4515757252037382"},
+    {file = "tiktoken-0.3.1-cp38-cp38-macosx_10_9_x86_64.whl", hash = "sha256:f35121008e535a1cc212336a8865c7696641dbef7a995b45c3b8cd6ad52d12cf"},
+    {file = "tiktoken-0.3.1-cp38-cp38-macosx_11_0_arm64.whl", hash = "sha256:a730a2177929ba32b56e63cfd613a983447cb9399936e596a3397adb06f186b8"},
+    {file = "tiktoken-0.3.1-cp38-cp38-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:7dcfec6d3ac4eea3f85e54194ceccb8ee16c909fecefe94e2185cf3efaecae30"},
+    {file = "tiktoken-0.3.1-cp38-cp38-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:14fff699c21def38ba6e5a96f60991813fbe370b7074b503f4746c20b04e3906"},
+    {file = "tiktoken-0.3.1-cp38-cp38-musllinux_1_1_aarch64.whl", hash = "sha256:8f128eff76bcf2ff7d2eeb7bf326d1ff8476fce3f123f14faa275fa730bc707a"},
+    {file = "tiktoken-0.3.1-cp38-cp38-musllinux_1_1_x86_64.whl", hash = "sha256:22a78094ea77a7054c0fb2c6e54dd714e4860a2ef69d724bdde186f6fe6a0d6b"},
+    {file = "tiktoken-0.3.1-cp38-cp38-win_amd64.whl", hash = "sha256:f1442d512fd4e33ca14547fbd4764f540f978bbb075e13294e1c82a69ac73012"},
+    {file = "tiktoken-0.3.1-cp39-cp39-macosx_10_9_x86_64.whl", hash = "sha256:a77180b4dbee3ffac8e7e6ba4dd97414bc4e5233c5d063098c5a91b699f03f2e"},
+    {file = "tiktoken-0.3.1-cp39-cp39-macosx_11_0_arm64.whl", hash = "sha256:c643192f46d3f47e44758b0ea096918f95c0bc8676e1f62fa20b2a2ccd4d5a93"},
+    {file = "tiktoken-0.3.1-cp39-cp39-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:bb28347e3a3544d5cdf1fb29f8b1b075eb06ca8aeab32f5684cf63ab6ace7ab8"},
+    {file = "tiktoken-0.3.1-cp39-cp39-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:3bb375d4d6fa058320889ff894aac9bcd0bfbd9a2c61bf4a5a7407116ba1f862"},
+    {file = "tiktoken-0.3.1-cp39-cp39-musllinux_1_1_aarch64.whl", hash = "sha256:7e213c1a95766c751de74322c19776fcf4161cde76013c899b3c918be966a13c"},
+    {file = "tiktoken-0.3.1-cp39-cp39-musllinux_1_1_x86_64.whl", hash = "sha256:d8e034e8905eb188326df645523ca582bdaa616442d37562051a52f3a3a79382"},
+    {file = "tiktoken-0.3.1-cp39-cp39-win_amd64.whl", hash = "sha256:aa43c67f8caf9626473f7dbe1656b52859b17a541ea2e0749a1a355f14af5216"},
+    {file = "tiktoken-0.3.1.tar.gz", hash = "sha256:8295912429374f5f3c6c6bf053a091ce1de8c1792a62e3b30d4ad36f47fa8b52"},
 ]
 
 [package.dependencies]
@@ -1093,8 +1198,10 @@ version = "1.12.20"
 description = "Add to OpenAI Whisper the capability to give word timestamps"
 optional = false
 python-versions = ">=3.7"
-files = []
-develop = false
+files = [
+    {file = "whisper-timestamped-1.12.20.tar.gz", hash = "sha256:3d5173f5ec08b1463532f00f1698c2b277d6607111cf4f632008a79e726ec3b3"},
+    {file = "whisper_timestamped-1.12.20-py3-none-any.whl", hash = "sha256:47ac7eda1904662ca950198ecd1c6a7526461913d67cfd7de7e34476f6da3702"},
+]
 
 [package.dependencies]
 Cython = "*"
@@ -1105,13 +1212,7 @@ openai-whisper = "*"
 dev = ["jsonschema", "matplotlib", "transformers"]
 vad = ["onnxruntime", "torchaudio"]
 
-[package.source]
-type = "git"
-url = "https://github.com/linto-ai/whisper-timestamped"
-reference = "HEAD"
-resolved_reference = "732865ce9c0c1027c67f964e7200c7db6542b142"
-
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.9, <3.11"
-content-hash = "de580271728a1692cda0b8036ab1f614d577983705dd3e68672a1bbd6df5c7f8"
+content-hash = "f4b1f03dfd36151a17fed06e03e250d03fe3f477da0ba01335c024eba55ac697"
