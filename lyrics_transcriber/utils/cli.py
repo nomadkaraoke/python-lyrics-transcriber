@@ -1,16 +1,21 @@
 #!/usr/bin/env python
 import argparse
-import datetime
+import logging
 import pkg_resources
 from lyrics_transcriber import LyricsTranscriber
 
 
-def log(message):
-    timestamp = datetime.datetime.now().isoformat()
-    print(f"{timestamp} - {message}")
-
-
 def main():
+    logger = logging.getLogger(__name__)
+    logger.setLevel(logging.DEBUG)
+
+    log_handler = logging.StreamHandler()
+    log_formatter = logging.Formatter("%(asctime)s - %(module)s - %(levelname)s - %(message)s")
+    log_handler.setFormatter(log_formatter)
+    logger.addHandler(log_handler)
+
+    logger.debug("Parsing CLI args")
+
     parser = argparse.ArgumentParser(
         description="Create synchronised lyrics files in ASS and MidiCo LRC formats with word-level timestamps, from any input song file"
     )
@@ -58,6 +63,8 @@ def main():
         print(args)
         exit(1)
 
+    logger.debug("Loading LyricsTranscriber class")
+
     transcriber = LyricsTranscriber(
         args.audio_filepath,
         genius_api_token=args.genius_api_token,
@@ -67,25 +74,23 @@ def main():
         cache_dir=args.cache_dir,
     )
 
-    log("LyricsTranscriber beginning transcription")
-
     result_metadata = transcriber.generate()
 
-    log(f"*** Success! ***")
+    logger.info(f"*** Success! ***")
 
     formatted_duration = f'{int(result_metadata["song_duration"] // 60):02d}:{int(result_metadata["song_duration"] % 60):02d}'
-    log(f"Total Song Duration: {formatted_duration}")
+    logger.info(f"Total Song Duration: {formatted_duration}")
 
     formatted_singing_duration = (
         f'{int(result_metadata["total_singing_duration"] // 60):02d}:{int(result_metadata["total_singing_duration"] % 60):02d}'
     )
-    log(f"Total Singing Duration: {formatted_singing_duration}")
-    log(f"Singing Percentage: {result_metadata['singing_percentage']}%")
+    logger.info(f"Total Singing Duration: {formatted_singing_duration}")
+    logger.info(f"Singing Percentage: {result_metadata['singing_percentage']}%")
 
-    log(f"*** Outputs: ***")
-    log(f"Whisper transcription output JSON file: {result_metadata['whisper_json_filepath']}")
-    log(f"MidiCo LRC output file: {result_metadata['midico_lrc_filepath']}")
-    log(f"Genius lyrics output file: {result_metadata['genius_lyrics_filepath']}")
+    logger.info(f"*** Outputs: ***")
+    logger.info(f"Whisper transcription output JSON file: {result_metadata['whisper_json_filepath']}")
+    logger.info(f"MidiCo LRC output file: {result_metadata['midico_lrc_filepath']}")
+    logger.info(f"Genius lyrics output file: {result_metadata['genius_lyrics_filepath']}")
 
 
 if __name__ == "__main__":

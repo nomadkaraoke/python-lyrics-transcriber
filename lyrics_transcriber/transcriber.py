@@ -1,9 +1,9 @@
 import os
 import re
 import json
+import logging
 import shutil
 import hashlib
-import datetime
 import subprocess
 import slugify
 import whisper_timestamped as whisper
@@ -19,8 +19,18 @@ class LyricsTranscriber:
         genius_api_token=None,
         output_dir=None,
         cache_dir="/tmp/lyrics-transcriber-cache/",
+        log_level=logging.DEBUG,
+        log_format="%(asctime)s - %(module)s - %(levelname)s - %(message)s",
     ):
-        log(f"LyricsTranscriber instantiating with input file: {audio_filepath}")
+        self.logger = logging.getLogger(__name__)
+        self.logger.setLevel(log_level)
+
+        log_handler = logging.StreamHandler()
+        log_formatter = logging.Formatter(log_format)
+        log_handler.setFormatter(log_formatter)
+        self.logger.addHandler(log_handler)
+
+        self.logger.debug(f"LyricsTranscriber instantiating with input file: {audio_filepath}")
 
         self.cache_dir = cache_dir
         self.output_dir = output_dir
@@ -47,7 +57,7 @@ class LyricsTranscriber:
         self.create_folders()
 
     def generate(self):
-        log(f"audio_filepath is set: {self.audio_filepath}, beginning initial whisper transcription")
+        self.logger.debug(f"audio_filepath is set: {self.audio_filepath}, beginning initial whisper transcription")
 
         self.result_metadata["whisper_json_filepath"] = self.get_cache_filepath(".json")
         self.whisper_result_dict = self.transcribe()
@@ -58,13 +68,13 @@ class LyricsTranscriber:
         self.calculate_singing_percentage()
 
         if self.genius_api_token and self.song_artist and self.song_title:
-            log(
+            self.logger.debug(
                 f"fetching lyrics from Genius as genius_api_token: {self.genius_api_token}, song_artist: {self.song_artist} and song_title: {self.song_title} were set"
             )
             self.result_metadata["genius_lyrics_filepath"] = self.get_cache_filepath("-genius.txt")
             self.write_genius_lyrics_file()
         else:
-            log(
+            self.logger.debug(
                 f"not fetching lyrics from Genius as not all genius params were set: genius_api_token: {self.genius_api_token}, song_artist: {self.song_artist} and song_title: {self.song_title}"
             )
 
@@ -87,23 +97,23 @@ class LyricsTranscriber:
         genius_lyrics_cache_filepath = os.path.join(self.cache_dir, self.get_song_slug() + "-genius.txt")
 
         if os.path.isfile(genius_lyrics_cache_filepath):
-            log(f"found existing file at genius_lyrics_cache_filepath, reading: {genius_lyrics_cache_filepath}")
+            self.logger.debug(f"found existing file at genius_lyrics_cache_filepath, reading: {genius_lyrics_cache_filepath}")
 
             with open(genius_lyrics_cache_filepath, "r") as cached_lyrics:
                 self.result_metadata["genius_lyrics_filepath"] = genius_lyrics_cache_filepath
                 self.result_metadata["genius_lyrics"] = cached_lyrics
                 return cached_lyrics
 
-        log(f"no cached lyrics found at genius_lyrics_cache_filepath: {genius_lyrics_cache_filepath}, fetching from Genius")
+        self.logger.debug(f"no cached lyrics found at genius_lyrics_cache_filepath: {genius_lyrics_cache_filepath}, fetching from Genius")
         genius = lyricsgenius.Genius(self.genius_api_token)
 
         song = genius.search_song(self.song_title, self.song_artist)
         if song is None:
-            print(f'Could not find lyrics on Genius for "{self.song_title}" by {self.song_artist}')
+            self.logger.warning(f'Could not find lyrics on Genius for "{self.song_title}" by {self.song_artist}')
             return
         lyrics = self.clean_genius_lyrics(song.lyrics)
 
-        log(f"writing clean lyrics to genius_lyrics_cache_filepath: {genius_lyrics_cache_filepath}")
+        self.logger.debug(f"writing clean lyrics to genius_lyrics_cache_filepath: {genius_lyrics_cache_filepath}")
         with open(genius_lyrics_cache_filepath, "w") as f:
             f.write(lyrics)
 
@@ -127,7 +137,7 @@ class LyricsTranscriber:
         # Calculate total seconds of singing using timings from whisper transcription results
         total_singing_duration = sum(segment["end"] - segment["start"] for segment in self.whisper_result_dict["segments"])
 
-        log(f"calculated total_singing_duration: {int(total_singing_duration)} seconds, now running ffprobe")
+        self.logger.debug(f"calculated total_singing_duration: {int(total_singing_duration)} seconds, now running ffprobe")
 
         # Calculate total song duration using ffprobe
         duration_command = [
@@ -158,7 +168,7 @@ class LyricsTranscriber:
     # and word-level timestamps to a MidiCo-compatible LRC file
     def write_midico_lrc_file(self):
         lrc_filename = self.result_metadata["midico_lrc_filepath"]
-        log(f"writing midico formatted word timestamps to LRC file: {lrc_filename}")
+        self.logger.debug(f"writing midico formatted word timestamps to LRC file: {lrc_filename}")
         with open(lrc_filename, "w") as f:
             f.write("[re:MidiCo]\n")
             for segment in self.whisper_result_dict["segments"]:
@@ -179,16 +189,16 @@ class LyricsTranscriber:
     def transcribe(self):
         whisper_cache_filepath = self.result_metadata["whisper_json_filepath"]
         if os.path.isfile(whisper_cache_filepath):
-            log(f"transcribe found existing file at whisper_cache_filepath, reading: {whisper_cache_filepath}")
+            self.logger.debug(f"transcribe found existing file at whisper_cache_filepath, reading: {whisper_cache_filepath}")
             with open(whisper_cache_filepath, "r") as cache_file:
                 return json.load(cache_file)
 
-        log(f"no cached transcription file found, running whisper transcribe")
+        self.logger.debug(f"no cached transcription file found, running whisper transcribe")
         audio = whisper.load_audio(self.audio_filepath)
         model = whisper.load_model("medium.en", device="cpu")
         result = whisper.transcribe(model, audio, language="en")
 
-        log(f"whisper transcription complete, writing JSON to cache file: {whisper_cache_filepath}")
+        self.logger.debug(f"whisper transcription complete, writing JSON to cache file: {whisper_cache_filepath}")
         with open(whisper_cache_filepath, "w") as cache_file:
             json.dump(result, cache_file, indent=2)
 
@@ -199,7 +209,7 @@ class LyricsTranscriber:
         filename_slug = slugify.slugify(filename)
         hash_value = self.get_file_hash(self.audio_filepath)
         cache_filepath = os.path.join(self.cache_dir, filename_slug + "_" + hash_value + extension)
-        log(f"get_cache_filepath returning cache_filepath: {cache_filepath}")
+        self.logger.debug(f"get_cache_filepath returning cache_filepath: {cache_filepath}")
         return cache_filepath
 
     def get_song_slug(self):
@@ -216,8 +226,3 @@ class LyricsTranscriber:
 
         if self.output_dir is not None:
             os.makedirs(self.output_dir, exist_ok=True)
-
-
-def log(message):
-    timestamp = datetime.datetime.now().isoformat()
-    print(f"{timestamp} - {message}")
