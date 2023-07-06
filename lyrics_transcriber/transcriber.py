@@ -8,6 +8,7 @@ import subprocess
 import slugify
 import whisper_timestamped as whisper
 import lyricsgenius
+import syrics.api
 
 
 class LyricsTranscriber:
@@ -17,10 +18,11 @@ class LyricsTranscriber:
         song_artist=None,
         song_title=None,
         genius_api_token=None,
+        spotify_cookie=None,
         output_dir=None,
         cache_dir="/tmp/lyrics-transcriber-cache/",
         log_level=logging.DEBUG,
-        log_format="%(asctime)s - %(module)s - %(levelname)s - %(message)s",
+        log_format="%(asctime)s - %(levelname)s - %(module)s - %(message)s",
     ):
         self.logger = logging.getLogger(__name__)
         self.logger.setLevel(log_level)
@@ -35,9 +37,13 @@ class LyricsTranscriber:
         self.cache_dir = cache_dir
         self.output_dir = output_dir
         self.audio_filepath = audio_filepath
+
         self.song_artist = song_artist
         self.song_title = song_title
-        self.genius_api_token = genius_api_token
+        self.song_known = self.song_artist is not None and self.song_title is not None
+
+        self.genius_api_token = os.getenv("GENIUS_API_TOKEN", default=genius_api_token)
+        self.spotify_cookie = os.getenv("SPOTIFY_COOKIE_SP_DC", default=spotify_cookie)
 
         self.whisper_result_dict = None
 
@@ -62,26 +68,23 @@ class LyricsTranscriber:
         self.result_metadata["whisper_json_filepath"] = self.get_cache_filepath(".json")
         self.whisper_result_dict = self.transcribe()
 
-        self.result_metadata["midico_lrc_filepath"] = self.get_cache_filepath(".lrc")
-        self.write_midico_lrc_file()
-
         self.calculate_singing_percentage()
 
-        if self.genius_api_token and self.song_artist and self.song_title:
-            self.logger.debug(
-                f"fetching lyrics from Genius as genius_api_token: {self.genius_api_token}, song_artist: {self.song_artist} and song_title: {self.song_title} were set"
-            )
-            self.result_metadata["genius_lyrics_filepath"] = self.get_cache_filepath("-genius.txt")
-            self.write_genius_lyrics_file()
-        else:
-            self.logger.debug(
-                f"not fetching lyrics from Genius as not all genius params were set: genius_api_token: {self.genius_api_token}, song_artist: {self.song_artist} and song_title: {self.song_title}"
-            )
+        self.write_genius_lyrics_file()
+        self.write_spotify_lyrics_file()
 
         # TODO: attempt to match up segments from genius lyrics with whisper segments
 
         # TODO: output synced lyrics from self.whisper_result_dict in ASS format too, using code from the_tuul
 
+        self.result_metadata["midico_lrc_filepath"] = self.get_cache_filepath(".lrc")
+        self.write_midico_lrc_file()
+
+        self.copy_files_to_output_dir()
+
+        return self.result_metadata
+
+    def copy_files_to_output_dir(self):
         if self.output_dir is None:
             self.output_dir = os.getcwd()
 
@@ -91,9 +94,62 @@ class LyricsTranscriber:
         if self.result_metadata["genius_lyrics_filepath"] is not None:
             self.result_metadata["genius_lyrics_filepath"] = shutil.copy(self.result_metadata["genius_lyrics_filepath"], self.output_dir)
 
-        return self.result_metadata
+        if self.result_metadata["spotify_lyrics_filepath"] is not None:
+            self.result_metadata["spotify_lyrics_filepath"] = shutil.copy(self.result_metadata["spotify_lyrics_filepath"], self.output_dir)
+
+    def write_spotify_lyrics_file(self):
+        if self.spotify_cookie and self.song_known:
+            self.logger.debug(f"attempting spotify fetch as spotify_cookie and song name was set")
+        else:
+            self.logger.warning(f"skipping spotify fetch as not all spotify params were set")
+            return
+
+        spotify_lyrics_cache_filepath = os.path.join(self.cache_dir, self.get_song_slug() + "-spotify.json")
+
+        if os.path.isfile(spotify_lyrics_cache_filepath):
+            self.logger.debug(f"found existing file at spotify_lyrics_cache_filepath, reading: {spotify_lyrics_cache_filepath}")
+
+            with open(spotify_lyrics_cache_filepath, "r") as cached_lyrics:
+                self.result_metadata["spotify_lyrics_filepath"] = spotify_lyrics_cache_filepath
+                self.result_metadata["spotify_lyrics"] = cached_lyrics
+                return cached_lyrics
+
+        self.logger.debug(
+            f"no cached lyrics found at spotify_lyrics_cache_filepath: {spotify_lyrics_cache_filepath}, attempting to fetch from spotify"
+        )
+
+        spotify_lyrics_json = None
+
+        try:
+            spotify_client = syrics.api.Spotify(self.spotify_cookie)
+            spotify_search_query = f"{self.song_title} - {self.song_artist}"
+            spotify_search_results = spotify_client.search(spotify_search_query, type="track", limit=5)
+
+            spotify_top_result = spotify_search_results["tracks"]["items"][0]
+            self.logger.debug(
+                f"spotify_top_result: {spotify_top_result['artists'][0]['name']} - {spotify_top_result['name']} ({spotify_top_result['external_urls']['spotify']})"
+            )
+
+            spotify_lyrics_dict = spotify_client.get_lyrics(spotify_top_result["id"])
+            spotify_lyrics_json = json.dumps(spotify_lyrics_dict, indent=4)
+
+            self.logger.debug(f"writing lyrics to spotify_lyrics_cache_filepath: {spotify_lyrics_cache_filepath}")
+            with open(spotify_lyrics_cache_filepath, "w") as f:
+                f.write(spotify_lyrics_json)
+        except Exception as e:
+            self.logger.warn(f"caught exception while attempting to fetch from spotify: ", e)
+
+        self.result_metadata["spotify_lyrics_filepath"] = spotify_lyrics_cache_filepath
+        self.result_metadata["spotify_lyrics"] = spotify_lyrics_json
+        return spotify_lyrics_json
 
     def write_genius_lyrics_file(self):
+        if self.genius_api_token and self.song_known:
+            self.logger.debug(f"attempting genius fetch as genius_api_token and song name was set")
+        else:
+            self.logger.warning(f"skipping genius fetch as not all genius params were set")
+            return
+
         genius_lyrics_cache_filepath = os.path.join(self.cache_dir, self.get_song_slug() + "-genius.txt")
 
         if os.path.isfile(genius_lyrics_cache_filepath):
@@ -200,7 +256,7 @@ class LyricsTranscriber:
 
         self.logger.debug(f"whisper transcription complete, writing JSON to cache file: {whisper_cache_filepath}")
         with open(whisper_cache_filepath, "w") as cache_file:
-            json.dump(result, cache_file, indent=2)
+            json.dump(result, cache_file, indent=4)
 
         return result
 

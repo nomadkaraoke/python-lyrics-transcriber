@@ -10,7 +10,7 @@ def main():
     logger.setLevel(logging.DEBUG)
 
     log_handler = logging.StreamHandler()
-    log_formatter = logging.Formatter("%(asctime)s - %(module)s - %(levelname)s - %(message)s")
+    log_formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(module)s - %(message)s")
     log_handler.setFormatter(log_formatter)
     logger.addHandler(log_handler)
 
@@ -36,6 +36,11 @@ def main():
         "--genius_api_token",
         default=None,
         help="Optional: specify Genius API token for lyrics lookup and auto-correction",
+    )
+    parser.add_argument(
+        "--spotify_cookie",
+        default=None,
+        help="Optional: specify Spotify sp_dc cookie value for lyrics lookup and auto-correction",
     )
 
     parser.add_argument("--cache_dir", default="/tmp/lyrics-transcriber-cache/", help="Optional cache directory.")
@@ -68,6 +73,7 @@ def main():
     transcriber = LyricsTranscriber(
         args.audio_filepath,
         genius_api_token=args.genius_api_token,
+        spotify_cookie=args.spotify_cookie,
         song_artist=args.song_artist,
         song_title=args.song_title,
         output_dir=args.output_dir,
@@ -91,6 +97,7 @@ def main():
     logger.info(f"Whisper transcription output JSON file: {result_metadata['whisper_json_filepath']}")
     logger.info(f"MidiCo LRC output file: {result_metadata['midico_lrc_filepath']}")
     logger.info(f"Genius lyrics output file: {result_metadata['genius_lyrics_filepath']}")
+    logger.info(f"Spotify lyrics output file: {result_metadata['spotify_lyrics_filepath']}")
 
 
 if __name__ == "__main__":
