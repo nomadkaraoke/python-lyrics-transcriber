@@ -51,6 +51,8 @@ class LyricsTranscriber:
             "whisper_json_filepath": None,
             "genius_lyrics": None,
             "genius_lyrics_filepath": None,
+            "spotify_lyrics": None,
+            "spotify_lyrics_filepath": None,
             "midico_lrc_filepath": None,
             "singing_percentage": None,
             "total_singing_duration": None,
