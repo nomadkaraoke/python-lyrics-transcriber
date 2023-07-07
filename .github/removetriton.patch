@@ -1,6 +1,6 @@
-1041d1040
+712d711
 < triton = "2.0.0"
-1713,1739d1711
+1206,1232d1204
 < 
 < [[package]]
 < name = "triton"
@@ -28,7 +28,7 @@
 <     {file = "triton-2.0.0-pp38-pypy38_pp73-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:42a0d2c3fc2eab4ba71384f2e785fbfd47aa41ae05fa58bf12cb31dcbd0aeceb"},
 <     {file = "triton-2.0.0-pp39-pypy39_pp73-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:52c47b72c72693198163ece9d90a721299e4fb3b8e24fd13141e384ad952724f"},
 < ]
-1741,1750d1712
+1234,1243d1205
 < [package.dependencies]
 < cmake = "*"
 < filelock = "*"
