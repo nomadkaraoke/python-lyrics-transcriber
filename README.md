@@ -1,5 +1,7 @@
 # Lyrics Transcriber 🎶
 
+[![PyPI version](https://badge.fury.io/py/lyrics-transcriber.svg)](https://badge.fury.io/py/lyrics-transcriber)
+
 Automatically create synchronised lyrics files in ASS and MidiCo LRC formats with word-level timestamps, using OpenAI Whisper and lyrics from Genius and Spotify, for convenience in use cases such as karaoke video production.
 
 ## Features 🌟
