@@ -37,7 +37,7 @@ lyrics-transcriber /path/to/your/audiofile.mp3
 2. To specify Genius API token, song artist, and song title for auto-correction:
 
 ```
-lyrics-transcriber /path/to/your/audiofile.mp3 --genius_api_token YOUR_API_TOKEN --song_artist "Artist Name" --song_title "Song Title"
+lyrics-transcriber /path/to/your/audiofile.mp3 --genius_api_token YOUR_API_TOKEN --artist "Artist Name" --title "Song Title"
 ```
 
 ### As a Python package in your project

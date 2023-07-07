@@ -15,22 +15,27 @@ class LyricsTranscriber:
     def __init__(
         self,
         audio_filepath,
-        song_artist=None,
-        song_title=None,
+        artist=None,
+        title=None,
         genius_api_token=None,
         spotify_cookie=None,
         output_dir=None,
         cache_dir="/tmp/lyrics-transcriber-cache/",
         log_level=logging.DEBUG,
-        log_format="%(asctime)s - %(levelname)s - %(module)s - %(message)s",
+        log_formatter=None,
     ):
         self.logger = logging.getLogger(__name__)
         self.logger.setLevel(log_level)
+        self.log_level = log_level
+        self.log_formatter = log_formatter
 
-        log_handler = logging.StreamHandler()
-        log_formatter = logging.Formatter(log_format)
-        log_handler.setFormatter(log_formatter)
-        self.logger.addHandler(log_handler)
+        self.log_handler = logging.StreamHandler()
+
+        if self.log_formatter is None:
+            self.log_formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(module)s - %(message)s")
+
+        self.log_handler.setFormatter(self.log_formatter)
+        self.logger.addHandler(self.log_handler)
 
         self.logger.debug(f"LyricsTranscriber instantiating with input file: {audio_filepath}")
 
@@ -38,9 +43,9 @@ class LyricsTranscriber:
         self.output_dir = output_dir
         self.audio_filepath = audio_filepath
 
-        self.song_artist = song_artist
-        self.song_title = song_title
-        self.song_known = self.song_artist is not None and self.song_title is not None
+        self.artist = artist
+        self.title = title
+        self.song_known = self.artist is not None and self.title is not None
 
         self.genius_api_token = os.getenv("GENIUS_API_TOKEN", default=genius_api_token)
         self.spotify_cookie = os.getenv("SPOTIFY_COOKIE_SP_DC", default=spotify_cookie)
@@ -124,7 +129,7 @@ class LyricsTranscriber:
 
         try:
             spotify_client = syrics.api.Spotify(self.spotify_cookie)
-            spotify_search_query = f"{self.song_title} - {self.song_artist}"
+            spotify_search_query = f"{self.title} - {self.artist}"
             spotify_search_results = spotify_client.search(spotify_search_query, type="track", limit=5)
 
             spotify_top_result = spotify_search_results["tracks"]["items"][0]
@@ -163,11 +168,11 @@ class LyricsTranscriber:
                 return cached_lyrics
 
         self.logger.debug(f"no cached lyrics found at genius_lyrics_cache_filepath: {genius_lyrics_cache_filepath}, fetching from Genius")
-        genius = lyricsgenius.Genius(self.genius_api_token)
+        genius = lyricsgenius.Genius(self.genius_api_token, verbose=(self.log_level == logging.DEBUG))
 
-        song = genius.search_song(self.song_title, self.song_artist)
+        song = genius.search_song(self.title, self.artist)
         if song is None:
-            self.logger.warning(f'Could not find lyrics on Genius for "{self.song_title}" by {self.song_artist}')
+            self.logger.warning(f'Could not find lyrics on Genius for "{self.title}" by {self.artist}')
             return
         lyrics = self.clean_genius_lyrics(song.lyrics)
 
@@ -271,9 +276,9 @@ class LyricsTranscriber:
         return cache_filepath
 
     def get_song_slug(self):
-        song_artist_slug = slugify.slugify(self.song_artist)
-        song_title_slug = slugify.slugify(self.song_title)
-        return song_artist_slug + "_" + song_title_slug
+        artist_slug = slugify.slugify(self.artist)
+        title_slug = slugify.slugify(self.title)
+        return artist_slug + "_" + title_slug
 
     def get_file_hash(self, filepath):
         return hashlib.md5(open(filepath, "rb").read()).hexdigest()

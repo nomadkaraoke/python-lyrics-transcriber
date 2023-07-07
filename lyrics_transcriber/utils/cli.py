@@ -7,64 +7,68 @@ from lyrics_transcriber import LyricsTranscriber
 
 def main():
     logger = logging.getLogger(__name__)
-    logger.setLevel(logging.DEBUG)
-
     log_handler = logging.StreamHandler()
-    log_formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(module)s - %(message)s")
+    log_formatter = logging.Formatter(fmt="%(asctime)s.%(msecs)03d - %(levelname)s - %(module)s - %(message)s", datefmt="%Y-%m-%d %H:%M:%S")
     log_handler.setFormatter(log_formatter)
     logger.addHandler(log_handler)
 
     logger.debug("Parsing CLI args")
 
     parser = argparse.ArgumentParser(
-        description="Create synchronised lyrics files in ASS and MidiCo LRC formats with word-level timestamps, from any input song file"
+        description="Create synchronised lyrics files in ASS and MidiCo LRC formats with word-level timestamps, from any input song file",
+        formatter_class=lambda prog: argparse.HelpFormatter(prog, max_help_position=40),
     )
 
     parser.add_argument("audio_filepath", nargs="?", help="The audio file path to transcribe lyrics for.", default=argparse.SUPPRESS)
 
+    package_version = pkg_resources.get_distribution("lyrics-transcriber").version
+    parser.add_argument("-v", "--version", action="version", version=f"%(prog)s {package_version}")
+    parser.add_argument("--log_level", default="INFO", help="Optional: Logging level, e.g. info, debug, warning. Default: INFO")
+
     parser.add_argument(
-        "--song_artist",
+        "--artist",
         default=None,
-        help="Optional: specify song artist for Genius lyrics lookup and auto-correction",
+        help="Optional: song artist for lyrics lookup and auto-correction",
     )
     parser.add_argument(
-        "--song_title",
+        "--title",
         default=None,
-        help="Optional: specify song title for Genius lyrics lookup and auto-correction",
+        help="Optional: song title for lyrics lookup and auto-correction",
     )
     parser.add_argument(
         "--genius_api_token",
         default=None,
-        help="Optional: specify Genius API token for lyrics lookup and auto-correction",
+        help="Optional: Genius API token for lyrics fetching. Can also be set with GENIUS_API_TOKEN env var.",
     )
     parser.add_argument(
         "--spotify_cookie",
         default=None,
-        help="Optional: specify Spotify sp_dc cookie value for lyrics lookup and auto-correction",
+        help="Optional: Spotify sp_dc cookie value for lyrics fetching. Can also be set with SPOTIFY_COOKIE_SP_DC env var.",
     )
 
-    parser.add_argument("--cache_dir", default="/tmp/lyrics-transcriber-cache/", help="Optional cache directory.")
+    parser.add_argument(
+        "--cache_dir",
+        default="/tmp/lyrics-transcriber-cache/",
+        help="Optional: directory to cache files downloaded or generated during execution",
+    )
 
     parser.add_argument(
         "--output_dir",
         default=None,
-        help="Optional directory where the resulting lyrics files will be saved. If not specified, outputs to current dir.",
+        help="Optional: directory where the output lyrics files will be saved. Default: current directory",
     )
-    parser.add_argument("--version", action="store_true", help="Show the version number and exit")
 
     args = parser.parse_args()
 
-    if args.version:
-        version = pkg_resources.get_distribution("lyrics-transcriber").version
-        print(f"lyrics-transcriber version: {version}")
-        exit(0)
+    log_level = getattr(logging, args.log_level.upper())
+    logger.setLevel(log_level)
 
     if not hasattr(args, "audio_filepath"):
         parser.print_help()
         exit(1)
 
-    if 1 <= [args.genius_api_token, args.song_title, args.song_artist].count(True) < 3:
-        print(f"To use genius lyrics auto-correction, all 3 args genius_api_token, song_artist, song_title must be provided")
+    if 1 <= [args.genius_api_token, args.title, args.artist].count(True) < 3:
+        print(f"To use genius lyrics auto-correction, all 3 args genius_api_token, artist, title must be provided")
         print(args)
         exit(1)
 
@@ -74,10 +78,12 @@ def main():
         args.audio_filepath,
         genius_api_token=args.genius_api_token,
         spotify_cookie=args.spotify_cookie,
-        song_artist=args.song_artist,
-        song_title=args.song_title,
+        artist=args.artist,
+        title=args.title,
         output_dir=args.output_dir,
         cache_dir=args.cache_dir,
+        log_formatter=log_formatter,
+        log_level=log_level,
     )
 
     result_metadata = transcriber.generate()
