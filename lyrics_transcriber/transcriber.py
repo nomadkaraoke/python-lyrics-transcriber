@@ -111,7 +111,7 @@ class LyricsTranscriber:
             self.logger.warning(f"skipping spotify fetch as not all spotify params were set")
             return
 
-        spotify_lyrics_cache_filepath = os.path.join(self.cache_dir, self.get_song_slug() + "-spotify.json")
+        spotify_lyrics_cache_filepath = os.path.join(self.cache_dir, "lyrics-" + self.get_song_slug() + "-spotify.json")
 
         if os.path.isfile(spotify_lyrics_cache_filepath):
             self.logger.debug(f"found existing file at spotify_lyrics_cache_filepath, reading: {spotify_lyrics_cache_filepath}")
@@ -157,7 +157,7 @@ class LyricsTranscriber:
             self.logger.warning(f"skipping genius fetch as not all genius params were set")
             return
 
-        genius_lyrics_cache_filepath = os.path.join(self.cache_dir, self.get_song_slug() + "-genius.txt")
+        genius_lyrics_cache_filepath = os.path.join(self.cache_dir, "lyrics-" + self.get_song_slug() + "-genius.txt")
 
         if os.path.isfile(genius_lyrics_cache_filepath):
             self.logger.debug(f"found existing file at genius_lyrics_cache_filepath, reading: {genius_lyrics_cache_filepath}")
@@ -269,16 +269,16 @@ class LyricsTranscriber:
 
     def get_cache_filepath(self, extension):
         filename = os.path.split(self.audio_filepath)[1]
-        filename_slug = slugify.slugify(filename)
+        filename_slug = slugify.slugify(filename, lowercase=False)
         hash_value = self.get_file_hash(self.audio_filepath)
         cache_filepath = os.path.join(self.cache_dir, filename_slug + "_" + hash_value + extension)
         self.logger.debug(f"get_cache_filepath returning cache_filepath: {cache_filepath}")
         return cache_filepath
 
     def get_song_slug(self):
-        artist_slug = slugify.slugify(self.artist)
-        title_slug = slugify.slugify(self.title)
-        return artist_slug + "_" + title_slug
+        artist_slug = slugify.slugify(self.artist, lowercase=False)
+        title_slug = slugify.slugify(self.title, lowercase=False)
+        return artist_slug + "-" + title_slug
 
     def get_file_hash(self, filepath):
         return hashlib.md5(open(filepath, "rb").read()).hexdigest()
