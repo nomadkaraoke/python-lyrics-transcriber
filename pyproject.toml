@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "lyrics-transcriber"
-version = "0.6.4"
+version = "0.6.5"
 description = "Automatically create synchronised lyrics files in ASS and MidiCo LRC formats with word-level timestamps, using Whisper and lyrics from Genius and Spotify"
 authors = ["Andrew Beveridge <andrew@beveridge.uk>"]
 license = "MIT"
@@ -20,7 +20,7 @@ numba = "^0.57"
 numpy = "^1"
 onnx = "^1"
 onnxruntime = "^1"
-torch = "^1"
+torch = ">1"
 tqdm = "^4"
 lyricsgenius = "^3"
 python-slugify = "^8"
