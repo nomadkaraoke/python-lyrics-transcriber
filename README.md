@@ -72,7 +72,7 @@ result_metadata = {
 
 ## Requirements 📋
 
- - Python >= 3.9, < 3.11
+ - Python >= 3.9
  - Python Poetry
  - Dependencies are listed in pyproject.toml
 
