@@ -103,7 +103,8 @@ def main():
     logger.info(f"Whisper transcription output JSON file: {result_metadata['whisper_json_filepath']}")
     logger.info(f"MidiCo LRC output file: {result_metadata['midico_lrc_filepath']}")
     logger.info(f"Genius lyrics output file: {result_metadata['genius_lyrics_filepath']}")
-    logger.info(f"Spotify lyrics output file: {result_metadata['spotify_lyrics_filepath']}")
+    logger.info(f"Spotify lyrics data file: {result_metadata['spotify_lyrics_data_filepath']}")
+    logger.info(f"Spotify lyrics text file: {result_metadata['spotify_lyrics_text_filepath']}")
 
 
 if __name__ == "__main__":

@@ -56,8 +56,9 @@ class LyricsTranscriber:
             "whisper_json_filepath": None,
             "genius_lyrics": None,
             "genius_lyrics_filepath": None,
-            "spotify_lyrics": None,
-            "spotify_lyrics_filepath": None,
+            "spotify_lyrics_data_dict": None,
+            "spotify_lyrics_data_filepath": None,
+            "spotify_lyrics_text_filepath": None,
             "midico_lrc_filepath": None,
             "singing_percentage": None,
             "total_singing_duration": None,
@@ -78,7 +79,8 @@ class LyricsTranscriber:
         self.calculate_singing_percentage()
 
         self.write_genius_lyrics_file()
-        self.write_spotify_lyrics_file()
+        self.write_spotify_lyrics_data_file()
+        self.write_spotify_lyrics_plain_text()
 
         # TODO: attempt to match up segments from genius lyrics with whisper segments
 
@@ -101,28 +103,39 @@ class LyricsTranscriber:
         if self.result_metadata["genius_lyrics_filepath"] is not None:
             self.result_metadata["genius_lyrics_filepath"] = shutil.copy(self.result_metadata["genius_lyrics_filepath"], self.output_dir)
 
-        if self.result_metadata["spotify_lyrics_filepath"] is not None:
-            self.result_metadata["spotify_lyrics_filepath"] = shutil.copy(self.result_metadata["spotify_lyrics_filepath"], self.output_dir)
+        if self.result_metadata["spotify_lyrics_data_filepath"] is not None:
+            self.result_metadata["spotify_lyrics_data_filepath"] = shutil.copy(
+                self.result_metadata["spotify_lyrics_data_filepath"], self.output_dir
+            )
 
-    def write_spotify_lyrics_file(self):
+        if self.result_metadata["spotify_lyrics_text_filepath"] is not None:
+            self.result_metadata["spotify_lyrics_text_filepath"] = shutil.copy(
+                self.result_metadata["spotify_lyrics_text_filepath"], self.output_dir
+            )
+
+    def write_spotify_lyrics_data_file(self):
         if self.spotify_cookie and self.song_known:
             self.logger.debug(f"attempting spotify fetch as spotify_cookie and song name was set")
         else:
             self.logger.warning(f"skipping spotify fetch as not all spotify params were set")
             return
 
-        spotify_lyrics_cache_filepath = os.path.join(self.cache_dir, "lyrics-" + self.get_song_slug() + "-spotify.json")
+        spotify_lyrics_data_json_cache_filepath = os.path.join(self.cache_dir, "lyrics-" + self.get_song_slug() + "-spotify.json")
 
-        if os.path.isfile(spotify_lyrics_cache_filepath):
-            self.logger.debug(f"found existing file at spotify_lyrics_cache_filepath, reading: {spotify_lyrics_cache_filepath}")
+        if os.path.isfile(spotify_lyrics_data_json_cache_filepath):
+            self.logger.debug(
+                f"found existing file at spotify_lyrics_data_json_cache_filepath, reading: {spotify_lyrics_data_json_cache_filepath}"
+            )
 
-            with open(spotify_lyrics_cache_filepath, "r") as cached_lyrics:
-                self.result_metadata["spotify_lyrics_filepath"] = spotify_lyrics_cache_filepath
-                self.result_metadata["spotify_lyrics"] = cached_lyrics
-                return cached_lyrics
+            with open(spotify_lyrics_data_json_cache_filepath, "r") as spotify_lyrics_data_json:
+                self.result_metadata["spotify_lyrics_data_filepath"] = spotify_lyrics_data_json_cache_filepath
+
+                spotify_lyrics_data_dict = json.load(spotify_lyrics_data_json)
+                self.result_metadata["spotify_lyrics_data_dict"] = spotify_lyrics_data_dict
+                return spotify_lyrics_data_dict
 
         self.logger.debug(
-            f"no cached lyrics found at spotify_lyrics_cache_filepath: {spotify_lyrics_cache_filepath}, attempting to fetch from spotify"
+            f"no cached lyrics found at spotify_lyrics_data_json_cache_filepath: {spotify_lyrics_data_json_cache_filepath}, attempting to fetch from spotify"
         )
 
         spotify_lyrics_json = None
@@ -140,15 +153,31 @@ class LyricsTranscriber:
             spotify_lyrics_dict = spotify_client.get_lyrics(spotify_top_result["id"])
             spotify_lyrics_json = json.dumps(spotify_lyrics_dict, indent=4)
 
-            self.logger.debug(f"writing lyrics to spotify_lyrics_cache_filepath: {spotify_lyrics_cache_filepath}")
-            with open(spotify_lyrics_cache_filepath, "w") as f:
+            self.logger.debug(
+                f"writing lyrics data JSON to spotify_lyrics_data_json_cache_filepath: {spotify_lyrics_data_json_cache_filepath}"
+            )
+            with open(spotify_lyrics_data_json_cache_filepath, "w") as f:
                 f.write(spotify_lyrics_json)
         except Exception as e:
             self.logger.warn(f"caught exception while attempting to fetch from spotify: ", e)
 
-        self.result_metadata["spotify_lyrics_filepath"] = spotify_lyrics_cache_filepath
-        self.result_metadata["spotify_lyrics"] = spotify_lyrics_json
-        return spotify_lyrics_json
+        self.result_metadata["spotify_lyrics_data_filepath"] = spotify_lyrics_data_json_cache_filepath
+        self.result_metadata["spotify_lyrics_data_dict"] = spotify_lyrics_dict
+        return spotify_lyrics_dict
+
+    def write_spotify_lyrics_plain_text(self):
+        if self.result_metadata["spotify_lyrics_data_dict"]:
+            self.logger.debug(f"spotify_lyrics data found, checking/writing plain text lyrics file")
+
+            spotify_lyrics_text_filepath = os.path.join(self.cache_dir, "lyrics-" + self.get_song_slug() + "-spotify.txt")
+            self.result_metadata["spotify_lyrics_text_filepath"] = spotify_lyrics_text_filepath
+
+            lines = self.result_metadata["spotify_lyrics_data_dict"]["lyrics"]["lines"]
+
+            self.logger.debug(f"writing lyrics plain text to spotify_lyrics_text_filepath: {spotify_lyrics_text_filepath}")
+            with open(spotify_lyrics_text_filepath, "w") as f:
+                for line in lines:
+                    f.write(line["words"] + "\n")
 
     def write_genius_lyrics_file(self):
         if self.genius_api_token and self.song_known:
