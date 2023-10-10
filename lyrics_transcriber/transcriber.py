@@ -294,14 +294,18 @@ class LyricsTranscriber:
         words = []
         events_tuples = []
 
+        segment_counter = 0
         for segment in self.whisper_result_dict["segments"]:
-            self.logger.debug(f"processing segment: {segment['text']}")
+            segment_counter += 1
+            self.logger.debug(f"processing segment {segment_counter}: {segment['text']}")
 
             num_words = len(segment["words"])
             for i, word in enumerate(segment["words"]):
                 word_text = word["text"]
                 if i == num_words - 1:
                     word_text += "\n"
+                    if segment_counter % 2 == 0:
+                        word_text += "\n"
 
                 words.append(word_text)
                 startTimeDelta = timedelta(seconds=int(word["start"]))
@@ -313,10 +317,14 @@ class LyricsTranscriber:
         lyric_subtitles_ass = subtitles.create_subtitles(
             screens,
             {
-                "FontName": "Arial Narrow",
-                "FontSize": 20,
-                "PrimaryColor": (255, 0, 255, 255),
-                "SecondaryColor": (0, 255, 255, 255),
+                # "FontName": "Arial Narrow",
+                # "FontSize": 20,
+                # "PrimaryColor": (255, 0, 255, 255),
+                # "SecondaryColor": (0, 255, 255, 255),
+                "FontName": "Avenir Next",
+                "FontSize": 30,
+                "PrimaryColor": (4, 51, 255, 255),
+                "SecondaryColor": (255, 255, 255, 255),
             },
         )
 
@@ -342,7 +350,9 @@ class LyricsTranscriber:
             "-f",
             "lavfi",
             "-i",
-            "color=c=black:s=1280x720:r=20",
+            # "color=c=black:s=1280x720:r=20",
+            "color=c=black:s=1920x1080:r=20",
+            # "color=c=black:s=3840x2160:r=30",
             # Use accompaniment track as audio
             "-i",
             self.audio_filepath,
