@@ -291,16 +291,23 @@ class LyricsTranscriber:
         ass_filepath = self.result_metadata["ass_subtitles_filepath"]
         self.logger.debug(f"writing ASS formatted subtitle file: {ass_filepath}")
 
-        spotify_lines = self.result_metadata["spotify_lyrics_data_dict"]["lyrics"]["lines"]
-        simple_text_lines = []
+        words = []
         events_tuples = []
 
-        for line in spotify_lines:
-            simple_text_lines.append(line["words"])
-            startTimeDelta = timedelta(milliseconds=int(line["startTimeMs"]))
-            events_tuples.append((startTimeDelta, timing_data.LyricMarker.SEGMENT_START))
+        for segment in self.whisper_result_dict["segments"]:
+            self.logger.debug(f"processing segment: {segment['text']}")
 
-        intial_screens = subtitles.create_screens(self.logger, simple_text_lines, events_tuples)
+            num_words = len(segment["words"])
+            for i, word in enumerate(segment["words"]):
+                word_text = word["text"]
+                if i == num_words - 1:
+                    word_text += "\n"
+
+                words.append(word_text)
+                startTimeDelta = timedelta(seconds=int(word["start"]))
+                events_tuples.append((startTimeDelta, timing_data.LyricMarker.SEGMENT_START))
+
+        intial_screens = subtitles.create_screens(self.logger, words, events_tuples)
         screens = subtitles.set_segment_end_times(intial_screens, int(self.result_metadata["song_duration"]))
         screens = subtitles.set_screen_start_times(screens)
         lyric_subtitles_ass = subtitles.create_subtitles(
@@ -341,11 +348,11 @@ class LyricsTranscriber:
             self.audio_filepath,
             # Set audio delay if needed
             # https://ffmpeg.org/ffmpeg-filters.html#adelay
-            "-af",
-            f"adelay=delays={audio_delay_ms}:all=1",
+            # "-af",
+            # f"adelay=delays={audio_delay_ms}:all=1",
             # Re-encode audio as mp3
             "-c:a",
-            "libmp3lame",
+            "aac",
             # Add subtitles
             "-vf",
             "ass=" + self.result_metadata["ass_subtitles_filepath"],
