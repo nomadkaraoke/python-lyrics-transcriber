@@ -105,6 +105,8 @@ def main():
     logger.info(f"Genius lyrics output file: {result_metadata['genius_lyrics_filepath']}")
     logger.info(f"Spotify lyrics data file: {result_metadata['spotify_lyrics_data_filepath']}")
     logger.info(f"Spotify lyrics text file: {result_metadata['spotify_lyrics_text_filepath']}")
+    logger.info(f"ASS Subtitles file: {result_metadata['ass_subtitles_filepath']}")
+    logger.info(f"Karaoke Video file: {result_metadata['karaoke_video_filepath']}")
 
 
 if __name__ == "__main__":

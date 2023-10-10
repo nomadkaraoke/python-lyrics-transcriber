@@ -9,6 +9,8 @@ import slugify
 import whisper_timestamped as whisper
 import lyricsgenius
 import syrics.api
+from datetime import timedelta
+from .tuul_utils import timing_data, subtitles
 
 
 class LyricsTranscriber:
@@ -60,6 +62,8 @@ class LyricsTranscriber:
             "spotify_lyrics_data_filepath": None,
             "spotify_lyrics_text_filepath": None,
             "midico_lrc_filepath": None,
+            "ass_subtitles_filepath": None,
+            "karaoke_video_filepath": None,
             "singing_percentage": None,
             "total_singing_duration": None,
             "song_duration": None,
@@ -84,10 +88,14 @@ class LyricsTranscriber:
 
         # TODO: attempt to match up segments from genius lyrics with whisper segments
 
-        # TODO: output synced lyrics from self.whisper_result_dict in ASS format too, using code from the_tuul
-
         self.result_metadata["midico_lrc_filepath"] = self.get_cache_filepath(".lrc")
         self.write_midico_lrc_file()
+
+        self.result_metadata["ass_subtitles_filepath"] = self.get_cache_filepath(".ass")
+        self.write_ass_file()
+
+        self.result_metadata["karaoke_video_filepath"] = self.get_cache_filepath(".mp4")
+        self.create_video()
 
         self.copy_files_to_output_dir()
 
@@ -96,6 +104,8 @@ class LyricsTranscriber:
     def copy_files_to_output_dir(self):
         if self.output_dir is None:
             self.output_dir = os.getcwd()
+
+        self.logger.debug(f"copying temporary files to output dir: {self.output_dir}")
 
         self.result_metadata["whisper_json_filepath"] = shutil.copy(self.result_metadata["whisper_json_filepath"], self.output_dir)
         self.result_metadata["midico_lrc_filepath"] = shutil.copy(self.result_metadata["midico_lrc_filepath"], self.output_dir)
@@ -112,6 +122,12 @@ class LyricsTranscriber:
             self.result_metadata["spotify_lyrics_text_filepath"] = shutil.copy(
                 self.result_metadata["spotify_lyrics_text_filepath"], self.output_dir
             )
+
+        if self.result_metadata["ass_subtitles_filepath"] is not None:
+            self.result_metadata["ass_subtitles_filepath"] = shutil.copy(self.result_metadata["ass_subtitles_filepath"], self.output_dir)
+
+        if self.result_metadata["karaoke_video_filepath"] is not None:
+            self.result_metadata["karaoke_video_filepath"] = shutil.copy(self.result_metadata["karaoke_video_filepath"], self.output_dir)
 
     def write_spotify_lyrics_data_file(self):
         if self.spotify_cookie and self.song_known:
@@ -270,6 +286,81 @@ class LyricsTranscriber:
                         word["text"] += " "
                     line = "[{}]1:{}{}\n".format(start_time, "/" if i == 0 else "", word["text"])
                     f.write(line)
+
+    def write_ass_file(self):
+        ass_filepath = self.result_metadata["ass_subtitles_filepath"]
+        self.logger.debug(f"writing ASS formatted subtitle file: {ass_filepath}")
+
+        spotify_lines = self.result_metadata["spotify_lyrics_data_dict"]["lyrics"]["lines"]
+        simple_text_lines = []
+        events_tuples = []
+
+        for line in spotify_lines:
+            simple_text_lines.append(line["words"])
+            startTimeDelta = timedelta(milliseconds=int(line["startTimeMs"]))
+            events_tuples.append((startTimeDelta, timing_data.LyricMarker.SEGMENT_START))
+
+        intial_screens = subtitles.create_screens(self.logger, simple_text_lines, events_tuples)
+        screens = subtitles.set_segment_end_times(intial_screens, int(self.result_metadata["song_duration"]))
+        screens = subtitles.set_screen_start_times(screens)
+        lyric_subtitles_ass = subtitles.create_subtitles(
+            screens,
+            {
+                "FontName": "Arial Narrow",
+                "FontSize": 20,
+                "PrimaryColor": (255, 0, 255, 255),
+                "SecondaryColor": (0, 255, 255, 255),
+            },
+        )
+
+        lyric_subtitles_ass.write(ass_filepath)
+
+    def create_video(self):
+        self.logger.debug(f"create_video attempting to generate video file: {self.result_metadata['karaoke_video_filepath']}")
+
+        audio_delay = 0
+        audio_delay_ms = int(audio_delay * 1000)  # milliseconds
+
+        video_metadata = []
+        if self.artist:
+            video_metadata.append("-metadata")
+            video_metadata.append(f"artist={self.artist}")
+        if self.title:
+            video_metadata.append("-metadata")
+            video_metadata.append(f"title={self.title}")
+
+        ffmpeg_cmd = [
+            "ffmpeg",
+            # Describe a video stream that is a black background
+            "-f",
+            "lavfi",
+            "-i",
+            "color=c=black:s=1280x720:r=20",
+            # Use accompaniment track as audio
+            "-i",
+            self.audio_filepath,
+            # Set audio delay if needed
+            # https://ffmpeg.org/ffmpeg-filters.html#adelay
+            "-af",
+            f"adelay=delays={audio_delay_ms}:all=1",
+            # Re-encode audio as mp3
+            "-c:a",
+            "libmp3lame",
+            # Add subtitles
+            "-vf",
+            "ass=" + self.result_metadata["ass_subtitles_filepath"],
+            # End encoding after the shortest stream
+            "-shortest",
+            # Overwrite files without asking
+            "-y",
+            *video_metadata,
+            # Output path of video
+            self.result_metadata["karaoke_video_filepath"],
+        ]
+
+        self.logger.debug(f"running ffmpeg command to generate video: {ffmpeg_cmd}")
+        ffmpeg_output = subprocess.check_output(ffmpeg_cmd, universal_newlines=True)
+        return ffmpeg_output
 
     def format_time_lrc(self, duration):
         minutes = int(duration // 60)
