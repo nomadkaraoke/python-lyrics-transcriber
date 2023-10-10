@@ -11,6 +11,7 @@ import lyricsgenius
 import syrics.api
 from datetime import timedelta
 from .tuul_utils import timing_data, subtitles
+from typing import Dict, List, Optional
 
 
 class LyricsTranscriber:
@@ -287,31 +288,57 @@ class LyricsTranscriber:
                     line = "[{}]1:{}{}\n".format(start_time, "/" if i == 0 else "", word["text"])
                     f.write(line)
 
+    def create_screens(self):
+        self.logger.debug(f"create_screens beginning generation of screens from whisper results")
+        screens: List[subtitles.LyricsScreen] = []
+        line: Optional[subtitles.LyricsLine] = None
+        screen: Optional[subtitles.LyricsScreen] = None
+
+        lines_in_current_screen = 0
+        for whisper_line in self.whisper_result_dict["segments"]:
+            self.logger.debug(f"lines_in_current_screen: {lines_in_current_screen} whisper_line: {whisper_line['text']}")
+            if screen is None:
+                self.logger.debug(f"screen is none, creating new LyricsScreen")
+                screen = subtitles.LyricsScreen()
+            if line is None:
+                self.logger.debug(f"line is none, creating new LyricsLine")
+                line = subtitles.LyricsLine()
+
+            num_words_in_whisper_line = len(whisper_line["words"])
+            for word_index, word in enumerate(whisper_line["words"]):
+                segment = subtitles.LyricSegment(
+                    text=word["text"], ts=timedelta(seconds=word["start"]), end_ts=timedelta(seconds=word["end"])
+                )
+                line.segments.append(segment)
+
+                # If word is last in the line, add line to screen and start new line
+                # Before looping to the next word
+                if word_index == num_words_in_whisper_line - 1:
+                    self.logger.debug(f"word_index is last in whisper_line, adding line to screen and starting new line")
+                    screen.lines.append(line)
+                    lines_in_current_screen += 1
+                    line = None
+
+            # If current screen has 3 lines already, add screen to list and start new screen
+            # Before looping to the next line
+            if lines_in_current_screen == 2:
+                self.logger.debug(f"lines_in_current_screen is 2, adding screen to list and starting new screen")
+                screens.append(screen)
+                screen = None
+                lines_in_current_screen = 0
+
+        if line is not None:
+            screen.lines.append(line)  # type: ignore[union-attr]
+        if screen is not None and len(screen.lines) > 0:
+            screens.append(screen)  # type: ignore[arg-type]
+
+        return screens
+
     def write_ass_file(self):
         ass_filepath = self.result_metadata["ass_subtitles_filepath"]
         self.logger.debug(f"writing ASS formatted subtitle file: {ass_filepath}")
 
-        words = []
-        events_tuples = []
-
-        segment_counter = 0
-        for segment in self.whisper_result_dict["segments"]:
-            segment_counter += 1
-            self.logger.debug(f"processing segment {segment_counter}: {segment['text']}")
-
-            num_words = len(segment["words"])
-            for i, word in enumerate(segment["words"]):
-                word_text = word["text"]
-                if i == num_words - 1:
-                    word_text += "\n"
-                    if segment_counter % 2 == 0:
-                        word_text += "\n"
-
-                words.append(word_text)
-                startTimeDelta = timedelta(seconds=int(word["start"]))
-                events_tuples.append((startTimeDelta, timing_data.LyricMarker.SEGMENT_START))
-
-        intial_screens = subtitles.create_screens(self.logger, words, events_tuples)
+        intial_screens = self.create_screens()
         screens = subtitles.set_segment_end_times(intial_screens, int(self.result_metadata["song_duration"]))
         screens = subtitles.set_screen_start_times(screens)
         lyric_subtitles_ass = subtitles.create_subtitles(
