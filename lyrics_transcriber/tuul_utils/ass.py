@@ -145,14 +145,7 @@ class ASS:
             return float(match.group(1))
 
     class Style:
-        aliases = {
-            "PrimaryColour": "PrimaryColor",
-            "SecondaryColour": "SecondaryColor",
-            "TertiaryColor": "OutlineColor",
-            "TertiaryColour": "OutlineColor",
-            "OutlineColour": "OutlineColor",
-            "BackColour": "BackColor",
-        }
+        aliases = {}
         formatters = None
         order = [
             "Name",
@@ -188,10 +181,10 @@ class ASS:
             self.Name = ""
             self.Fontname = ""
             self.Fontsize = 1.0
-            self.PrimaryColor = (255, 255, 255, 255)
-            self.SecondaryColor = (255, 255, 255, 255)
-            self.OutlineColor = (255, 255, 255, 255)
-            self.BackColor = (255, 255, 255, 255)
+            self.PrimaryColour = (255, 255, 255, 255)
+            self.SecondaryColour = (255, 255, 255, 255)
+            self.OutlineColour = (255, 255, 255, 255)
+            self.BackColour = (255, 255, 255, 255)
             self.Bold = False
             self.Italic = False
             self.Underline = False
@@ -249,10 +242,10 @@ class ASS:
             obj1.Name = obj2.Name
             obj1.Fontname = obj2.Fontname
             obj1.Fontsize = obj2.Fontsize
-            obj1.PrimaryColor = obj2.PrimaryColor
-            obj1.SecondaryColor = obj2.SecondaryColor
-            obj1.OutlineColor = obj2.OutlineColor
-            obj1.BackColor = obj2.BackColor
+            obj1.PrimaryColour = obj2.PrimaryColour
+            obj1.SecondaryColour = obj2.SecondaryColour
+            obj1.OutlineColour = obj2.OutlineColour
+            obj1.BackColour = obj2.BackColour
             obj1.Bold = obj2.Bold
             obj1.Italic = obj2.Italic
             obj1.Underline = obj2.Underline
@@ -281,10 +274,10 @@ class ASS:
                 and (names_can_differ or self.Name == other.Name)
                 and self.Fontname == other.Fontname
                 and self.Fontsize == other.Fontsize
-                and self.PrimaryColor == other.PrimaryColor
-                and self.SecondaryColor == other.SecondaryColor
-                and self.OutlineColor == other.OutlineColor
-                and self.BackColor == other.BackColor
+                and self.PrimaryColour == other.PrimaryColour
+                and self.SecondaryColour == other.SecondaryColour
+                and self.OutlineColour == other.OutlineColour
+                and self.BackColour == other.BackColour
                 and self.Bold == other.Bold
                 and self.Italic == other.Italic
                 and self.Underline == other.Underline
@@ -307,10 +300,10 @@ class ASS:
         "Name": (Formatters.same, Formatters.same),
         "Fontname": (Formatters.same, Formatters.same),
         "Fontsize": (Formatters.str_to_number, Formatters.number_to_str),
-        "PrimaryColor": (Formatters.str_to_color, Formatters.color_to_str),
-        "SecondaryColor": (Formatters.str_to_color, Formatters.color_to_str),
-        "OutlineColor": (Formatters.str_to_color, Formatters.color_to_str),
-        "BackColor": (Formatters.str_to_color, Formatters.color_to_str),
+        "PrimaryColour": (Formatters.str_to_color, Formatters.color_to_str),
+        "SecondaryColour": (Formatters.str_to_color, Formatters.color_to_str),
+        "OutlineColour": (Formatters.str_to_color, Formatters.color_to_str),
+        "BackColour": (Formatters.str_to_color, Formatters.color_to_str),
         "Bold": (Formatters.str_to_n1bool, Formatters.n1bool_to_str),
         "Italic": (Formatters.str_to_n1bool, Formatters.n1bool_to_str),
         "Underline": (Formatters.str_to_n1bool, Formatters.n1bool_to_str),

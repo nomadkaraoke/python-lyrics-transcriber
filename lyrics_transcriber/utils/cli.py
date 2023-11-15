@@ -58,6 +58,12 @@ def main():
         help="Optional: directory where the output lyrics files will be saved. Default: current directory",
     )
 
+    parser.add_argument(
+        "--background",
+        default=None,
+        help="Optional: image file path to use for karaoke video background. Default: solid black",
+    )
+
     args = parser.parse_args()
 
     log_level = getattr(logging, args.log_level.upper())
@@ -84,6 +90,7 @@ def main():
         cache_dir=args.cache_dir,
         log_formatter=log_formatter,
         log_level=log_level,
+        background=args.background,
     )
 
     result_metadata = transcriber.generate()

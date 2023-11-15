@@ -26,6 +26,7 @@ class LyricsTranscriber:
         cache_dir="/tmp/lyrics-transcriber-cache/",
         log_level=logging.DEBUG,
         log_formatter=None,
+        background=None,
     ):
         self.logger = logging.getLogger(__name__)
         self.logger.setLevel(log_level)
@@ -45,6 +46,8 @@ class LyricsTranscriber:
         self.cache_dir = cache_dir
         self.output_dir = output_dir
         self.audio_filepath = audio_filepath
+
+        self.background = background
 
         self.artist = artist
         self.title = title
@@ -341,20 +344,7 @@ class LyricsTranscriber:
         intial_screens = self.create_screens()
         screens = subtitles.set_segment_end_times(intial_screens, int(self.result_metadata["song_duration"]))
         screens = subtitles.set_screen_start_times(screens)
-        lyric_subtitles_ass = subtitles.create_subtitles(
-            screens,
-            {
-                # "FontName": "Arial Narrow",
-                # "FontSize": 20,
-                # "PrimaryColor": (255, 0, 255, 255),
-                # "SecondaryColor": (0, 255, 255, 255),
-                "FontName": "Avenir Next",
-                "FontSize": 30,
-                "PrimaryColor": (4, 51, 255, 255),
-                "SecondaryColor": (255, 255, 255, 255),
-            },
-        )
-
+        lyric_subtitles_ass = subtitles.create_styled_subtitles(screens)
         lyric_subtitles_ass.write(ass_filepath)
 
     def create_video(self):
@@ -373,34 +363,79 @@ class LyricsTranscriber:
 
         ffmpeg_cmd = [
             "ffmpeg",
-            # Describe a video stream that is a black background
-            "-f",
-            "lavfi",
-            "-i",
-            # "color=c=black:s=1280x720:r=20",
-            "color=c=black:s=1920x1080:r=20",
-            # "color=c=black:s=3840x2160:r=30",
+            "-r", "30",  # Set frame rate to 30 fps for the following input
+        ]
+
+        background = False
+
+        # Check if a background image is provided, else use black background
+        if self.background:
+            self.logger.debug(f"self.background set to path: {self.background}")
+            if os.path.isfile(self.background):
+                self.logger.debug(f"background is valid file path: {self.background}")
+                background = self.background
+            else:
+                self.logger.error(f"background_image is NOT valid file path, falling back to black")
+
+        # fmt: off
+        if background:
+            self.logger.debug(f"background set: {background}")
+            ffmpeg_cmd += [
+                # Use provided image as background
+                "-loop", "1",  # Loop the image
+                "-i", self.background,  # Input image file
+            ]
+        else:
+            self.logger.debug(f"background not set, using solid black background")
+            ffmpeg_cmd += [
+                # Use black color as background
+                "-f", "lavfi",
+                # "-i", "color=c=black:s=1280x720:r=20",
+                # "-i", "color=c=black:s=1920x1080:r=20",
+                "-i", "color=c=black:s=3840x2160:r=30",
+            ]
+
+        video_codec = "libx264"
+        ffmpeg_codes = subprocess.getoutput("ffmpeg -codecs")
+
+        if "h264_videotoolbox" in ffmpeg_codes:
+            video_codec = "h264_videotoolbox"
+            self.logger.info(f"video codec set to hardware accelerated h264_videotoolbox")
+        elif "h264_qsv" in ffmpeg_codes:
+            video_codec = "h264_qsv"
+            self.logger.info(f"video codec set to hardware accelerated h264_qsv")
+
+        ffmpeg_cmd += [
             # Use accompaniment track as audio
-            "-i",
-            self.audio_filepath,
+            "-i", self.audio_filepath,
             # Set audio delay if needed
             # https://ffmpeg.org/ffmpeg-filters.html#adelay
             # "-af",
             # f"adelay=delays={audio_delay_ms}:all=1",
             # Re-encode audio as mp3
-            "-c:a",
-            "aac",
+            "-c:a", "aac",
             # Add subtitles
-            "-vf",
-            "ass=" + self.result_metadata["ass_subtitles_filepath"],
+            "-vf", "ass=" + self.result_metadata["ass_subtitles_filepath"],
+            # Encode as H264 using hardware acceleration if available
+            "-c:v", video_codec,
+            # Increase output video quality
+            "-preset", "slow",  # Use a slower preset for better compression efficiency
+            # "-crf", "1",  # Lower CRF for higher quality. Adjust as needed, lower is better quality
+            "-b:v", "5000k",  # Set the video bitrate, for example, 5000 kbps
+            "-minrate", "5000k",  # Minimum bitrate
+            "-maxrate", "20000k",  # Maximum bitrate
+            "-bufsize", "10000k",  # Set the buffer size, typically 2x maxrate
             # End encoding after the shortest stream
             "-shortest",
             # Overwrite files without asking
             "-y",
+            # Only encode the first 30 seconds (for testing, fast iteration when editing this)
+            # "-t", "30",
             *video_metadata,
             # Output path of video
             self.result_metadata["karaoke_video_filepath"],
         ]
+        # fmt: on
 
         self.logger.debug(f"running ffmpeg command to generate video: {ffmpeg_cmd}")
         ffmpeg_output = subprocess.check_output(ffmpeg_cmd, universal_newlines=True)
