@@ -203,8 +203,10 @@ class LyricsTranscriber:
             # TODO: Add some additional filtering and cleanup of whisper results before sending to LLM,
             #       e.g. remove segments with low confidence, remove segments with no words, maybe.
 
-            # TODO: Add more to the LLM instructions (or consider post-processing cleanup) to get rid of overlapping words
+            # TODO: Add more to the LLM instructions (or consider post-processing cleanup) to get rid of overlapping segments
             # when there are background vocals or other overlapping lyrics 
+
+            # TODO: Test if results are cleaner when using the vocal file from a background vocal audio separation model
 
             for segment in self.whisper_result_dict["segments"]:
                 simplified_segment = {
