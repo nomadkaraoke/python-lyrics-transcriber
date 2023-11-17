@@ -1,4 +1,5 @@
 import os
+import sys
 import re
 import json
 import logging
@@ -11,7 +12,8 @@ import lyricsgenius
 import syrics.api
 from datetime import timedelta
 from .utils import subtitles
-from typing import Dict, List, Optional
+from typing import List, Optional
+from openai import OpenAI
 
 
 class LyricsTranscriber:
@@ -107,6 +109,8 @@ class LyricsTranscriber:
         self.write_spotify_lyrics_plain_text()
 
         self.whisper_result_dict_corrected = self.correct_whisper_lyrics()
+        if self.whisper_result_dict_corrected is None:
+            self.whisper_result_dict_corrected = self.whisper_result_dict
 
         self.result_metadata["midico_lrc_filepath"] = self.get_cache_filepath(".lrc")
         self.write_midico_lrc_file()
@@ -151,14 +155,55 @@ class LyricsTranscriber:
             self.result_metadata["karaoke_video_filepath"] = shutil.copy(self.result_metadata["karaoke_video_filepath"], self.output_dir)
 
     def correct_whisper_lyrics(self):
-        # TODO: this function should return a fully corrected version of the whisper_result_dict,
-        # using the same structure and format but with correct words and correct (or estimated) word timings.
+        self.logger.debug(f"correct_whisper_lyrics initiating OpenAI client")
+        client = OpenAI()
+        llm_instructions = ""
 
-        # The correction itself should be performed by making an API call to OpenAI's assistants API,
-        # passing in the self.whisper_result_dict and self.spotify_lyrics_data_dict as inputs.
-        # The Assistant can then use the accurate lyrics from the spotify data to correct the words in the whisper timing object.
+        with open("lyrics_transcriber/llm_correction_instructions.txt", "r") as file:
+            llm_instructions = file.read()
 
-        return None
+        whisper_result_simplified = {"segments": []}
+
+        for segment in self.whisper_result_dict["segments"]:
+            whisper_result_simplified["segments"].append(
+                {
+                    "id": segment["id"],
+                    "start": segment["start"],
+                    "end": segment["end"],
+                    "text": segment["text"],
+                    "confidence": segment["confidence"],
+                    "words": segment["words"],
+                }
+            )
+        whisper_result_simplified_str = json.dumps(whisper_result_simplified, indent=4)
+
+        data_string = f"Data input 1:\n{whisper_result_simplified_str} \n\nData input 2:\n{self.spotify_lyrics_text}\n"
+
+        self.logger.debug("about to call chat.completions API with system instructions and data inputs")
+        print(llm_instructions)
+        print(data_string)
+
+        response = client.chat.completions.create(
+            model="gpt-4-1106-preview",
+            response_format={"type": "json_object"},
+            messages=[{"role": "system", "content": llm_instructions}, {"role": "user", "content": data_string}],
+        )
+
+        print(response)
+
+        message = response["choices"][0]["message"]["content"]
+        finish_reason = response["choices"][0]["finish_reason"]
+
+        if finish_reason == "stop":
+            try:
+                corrected_whisper_lyrics_dict = json.loads(message)
+                print(corrected_whisper_lyrics_dict)
+                return corrected_whisper_lyrics_dict
+            except json.JSONDecodeError as e:
+                raise Exception("Failed to parse response from GPT as JSON") from e
+        else:
+            self.logger.warning(f"OpenAI API call did not finish successfully, finish_reason: {finish_reason}")
+            return None
 
     def write_spotify_lyrics_data_file(self):
         if self.spotify_cookie and self.song_known:
@@ -221,9 +266,12 @@ class LyricsTranscriber:
 
             lines = self.result_metadata["spotify_lyrics_data_dict"]["lyrics"]["lines"]
 
+            self.spotify_lyrics_text = ""
+
             self.logger.debug(f"writing lyrics plain text to spotify_lyrics_text_filepath: {spotify_lyrics_text_filepath}")
             with open(spotify_lyrics_text_filepath, "w") as f:
                 for line in lines:
+                    self.spotify_lyrics_text += line["words"] + "\n"
                     f.write(line["words"] + "\n")
 
     def write_genius_lyrics_file(self):
@@ -310,7 +358,7 @@ class LyricsTranscriber:
         self.logger.debug(f"writing midico formatted word timestamps to LRC file: {lrc_filename}")
         with open(lrc_filename, "w") as f:
             f.write("[re:MidiCo]\n")
-            for segment in self.whisper_result_dict["segments"]:
+            for segment in self.whisper_result_dict_corrected["segments"]:
                 for i, word in enumerate(segment["words"]):
                     start_time = self.format_time_lrc(word["start"])
                     if i != len(segment["words"]) - 1:
@@ -325,7 +373,7 @@ class LyricsTranscriber:
         screen: Optional[subtitles.LyricsScreen] = None
 
         lines_in_current_screen = 0
-        for whisper_line in self.whisper_result_dict["segments"]:
+        for whisper_line in self.whisper_result_dict_corrected["segments"]:
             self.logger.debug(f"lines_in_current_screen: {lines_in_current_screen} whisper_line: {whisper_line['text']}")
             if screen is None:
                 self.logger.debug(f"screen is none, creating new LyricsScreen")
@@ -375,13 +423,17 @@ class LyricsTranscriber:
         lyric_subtitles_ass.write(ass_filepath)
 
     def resize_background_image(self):
-        self.logger.debug(f"resize_background_image attempting to resize background image: {self.video_background_image} to resolution: {self.video_resolution}")
+        self.logger.debug(
+            f"resize_background_image attempting to resize background image: {self.video_background_image} to resolution: {self.video_resolution}"
+        )
         background_image_resized = self.get_cache_filepath(f"-{self.video_resolution}.png")
 
         if os.path.isfile(background_image_resized):
-            self.logger.debug(f"resize_background_image found existing resized background image, skipping resize: {background_image_resized}")
+            self.logger.debug(
+                f"resize_background_image found existing resized background image, skipping resize: {background_image_resized}"
+            )
             return background_image_resized
-            
+
         resize_command = ["ffmpeg", "-i", self.video_background_image]
 
         if self.video_resolution == "360p":
