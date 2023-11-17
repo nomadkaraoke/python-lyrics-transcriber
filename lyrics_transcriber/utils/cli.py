@@ -59,6 +59,12 @@ def main():
     )
 
     parser.add_argument(
+        "--llm_model",
+        default="gpt-3.5-turbo-1106",
+        help="Optional: LLM model to use (currently only supports OpenAI chat completion models, e.g. gpt-4-1106-preview). Default: gpt-3.5-turbo-1106",
+    )
+
+    parser.add_argument(
         "--render_video",
         action="store_true",
         help="Optional: render a karaoke video with the generated lyrics",
@@ -108,6 +114,7 @@ def main():
         cache_dir=args.cache_dir,
         log_formatter=log_formatter,
         log_level=log_level,
+        llm_model=args.llm_model,
         render_video=args.render_video,
         video_resolution=args.video_resolution,
         video_background_image=args.video_background_image,
@@ -129,10 +136,12 @@ def main():
 
     logger.info(f"*** Outputs: ***")
     logger.info(f"Whisper transcription output JSON file: {result_metadata['whisper_json_filepath']}")
+    logger.info(f"LLM Token Usage: prompt: {result_metadata['llm_token_usage']['prompt']} completion: {result_metadata['llm_token_usage']['completion']}")
     logger.info(f"MidiCo LRC output file: {result_metadata['midico_lrc_filepath']}")
     logger.info(f"Genius lyrics output file: {result_metadata['genius_lyrics_filepath']}")
     logger.info(f"Spotify lyrics data file: {result_metadata['spotify_lyrics_data_filepath']}")
     logger.info(f"Spotify lyrics text file: {result_metadata['spotify_lyrics_text_filepath']}")
+    logger.info(f"Corrected lyrics text file: {result_metadata['corrected_lyrics_text_filepath']}")
     logger.info(f"ASS subtitles file: {result_metadata['ass_subtitles_filepath']}")
     logger.info(f"Karaoke Video file: {result_metadata['karaoke_video_filepath']}")
 

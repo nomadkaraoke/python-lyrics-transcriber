@@ -27,4 +27,3 @@ The response JSON object needs to contain all of the following fields:
     - start: The start timestamp for this word, estimated if not known for sure.
     - end: The end timestamp for this word, estimated if not known for sure.
     - confidence: Your self-assessed confidence score (from 0 to 1) of how likely it is that this word is accurate. If the word has not changed from data input 1, keep the existing confidence value.
-

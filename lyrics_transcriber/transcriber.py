@@ -28,6 +28,7 @@ class LyricsTranscriber:
         cache_dir="/tmp/lyrics-transcriber-cache/",
         log_level=logging.DEBUG,
         log_formatter=None,
+        llm_model="gpt-3.5-turbo-1106",
         render_video=False,
         video_resolution="360p",
         video_background_image=None,
@@ -57,6 +58,7 @@ class LyricsTranscriber:
 
         self.genius_api_token = os.getenv("GENIUS_API_TOKEN", default=genius_api_token)
         self.spotify_cookie = os.getenv("SPOTIFY_COOKIE_SP_DC", default=spotify_cookie)
+        self.llm_model = llm_model
 
         self.render_video = render_video
         self.video_resolution = video_resolution
@@ -75,7 +77,6 @@ class LyricsTranscriber:
                 raise FileNotFoundError(f"video_background is not a valid file path: {self.video_background_image}")
 
         self.whisper_result_dict = None
-
         self.result_metadata = {
             "whisper_json_filepath": None,
             "genius_lyrics": None,
@@ -83,6 +84,8 @@ class LyricsTranscriber:
             "spotify_lyrics_data_dict": None,
             "spotify_lyrics_data_filepath": None,
             "spotify_lyrics_text_filepath": None,
+            "llm_token_usage": {"prompt": 0, "completion": 0},
+            "corrected_lyrics_text_filepath": None,
             "midico_lrc_filepath": None,
             "ass_subtitles_filepath": None,
             "karaoke_video_filepath": None,
@@ -108,9 +111,12 @@ class LyricsTranscriber:
         self.spotify_lyrics_data_dict = self.write_spotify_lyrics_data_file()
         self.write_spotify_lyrics_plain_text()
 
-        self.whisper_result_dict_corrected = self.correct_whisper_lyrics()
-        if self.whisper_result_dict_corrected is None:
-            self.whisper_result_dict_corrected = self.whisper_result_dict
+        self.corrected_lyrics_data_dict = self.write_corrected_lyrics_data_file()
+        self.write_corrected_lyrics_plain_text()
+
+        # Fall back to pure whisper results if the correction process bails so video can still be generated
+        if self.corrected_lyrics_data_dict is None:
+            self.corrected_lyrics_data_dict = self.whisper_result_dict
 
         self.result_metadata["midico_lrc_filepath"] = self.get_cache_filepath(".lrc")
         self.write_midico_lrc_file()
@@ -148,70 +154,121 @@ class LyricsTranscriber:
                 self.result_metadata["spotify_lyrics_text_filepath"], self.output_dir
             )
 
+        if self.result_metadata["corrected_lyrics_data_filepath"] is not None:
+            self.result_metadata["corrected_lyrics_data_filepath"] = shutil.copy(
+                self.result_metadata["corrected_lyrics_data_filepath"], self.output_dir
+            )
+
+        if self.result_metadata["corrected_lyrics_text_filepath"] is not None:
+            self.result_metadata["corrected_lyrics_text_filepath"] = shutil.copy(
+                self.result_metadata["corrected_lyrics_text_filepath"], self.output_dir
+            )
+
         if self.result_metadata["ass_subtitles_filepath"] is not None:
             self.result_metadata["ass_subtitles_filepath"] = shutil.copy(self.result_metadata["ass_subtitles_filepath"], self.output_dir)
 
         if self.result_metadata["karaoke_video_filepath"] is not None:
             self.result_metadata["karaoke_video_filepath"] = shutil.copy(self.result_metadata["karaoke_video_filepath"], self.output_dir)
 
-    def correct_whisper_lyrics(self):
-        self.logger.debug("correct_whisper_lyrics initiating OpenAI client")
-        client = OpenAI()
-        llm_instructions = ""
+    def write_corrected_lyrics_data_file(self):
+        self.logger.debug("write_corrected_lyrics_data_file initiating OpenAI client")
 
-        with open("lyrics_transcriber/llm_correction_instructions.txt", "r") as file:
-            llm_instructions = file.read()
+        corrected_lyrics_data_json_cache_filepath = os.path.join(self.cache_dir, "lyrics-" + self.get_song_slug() + "-corrected.json")
 
-        whisper_result_simplified = {"segments": []}
-
-        # Splitting the segments into batches of 4
-        segment_batches = [self.whisper_result_dict["segments"][i : i + 4] for i in range(0, len(self.whisper_result_dict["segments"]), 4)]
-        all_corrected_segments = []
-
-        for batch in segment_batches:
-            whisper_result_simplified["segments"].clear()
-
-            for segment in batch:
-                whisper_result_simplified["segments"].append(
-                    {
-                        "id": segment["id"],
-                        "start": segment["start"],
-                        "end": segment["end"],
-                        "text": segment["text"],
-                        "confidence": segment["confidence"],
-                        "words": segment["words"],
-                    }
-                )
-            whisper_result_simplified_str = json.dumps(whisper_result_simplified, indent=4)
-            data_string = f"Data input 1:\n{whisper_result_simplified_str} \n\nData input 2:\n{self.spotify_lyrics_text}\n"
-
-            self.logger.debug("About to call chat.completions API with system instructions and data inputs")
-            print(llm_instructions)
-            print(data_string)
-
-            # API call for each batch
-            response = client.chat.completions.create(
-                model="gpt-4-1106-preview",
-                response_format={"type": "json_object"},
-                messages=[{"role": "system", "content": llm_instructions}, {"role": "user", "content": data_string}],
+        if os.path.isfile(corrected_lyrics_data_json_cache_filepath):
+            self.logger.debug(
+                f"found existing file at corrected_lyrics_data_json_cache_filepath, reading: {corrected_lyrics_data_json_cache_filepath}"
             )
 
-            print(response)
+            with open(corrected_lyrics_data_json_cache_filepath, "r") as corrected_lyrics_data_json:
+                self.result_metadata["corrected_lyrics_data_filepath"] = corrected_lyrics_data_json_cache_filepath
 
-            message = response.choices[0].message.content
-            finish_reason = response.choices[0].finish_reason
+                corrected_lyrics_data_dict = json.load(corrected_lyrics_data_json)
+                self.result_metadata["corrected_lyrics_data_dict"] = corrected_lyrics_data_dict
+                return corrected_lyrics_data_dict
 
-            if finish_reason == "stop":
-                try:
-                    corrected_whisper_lyrics_dict = json.loads(message)
-                    print(corrected_whisper_lyrics_dict)
-                    all_corrected_segments.extend(corrected_whisper_lyrics_dict["segments"])
-                except json.JSONDecodeError as e:
-                    raise Exception("Failed to parse response from GPT as JSON") from e
-            else:
-                self.logger.warning(f"OpenAI API call did not finish successfully, finish_reason: {finish_reason}")
+        self.logger.debug(
+            f"no cached lyrics found at corrected_lyrics_data_json_cache_filepath: {corrected_lyrics_data_json_cache_filepath}, attempting to run correction using LLM"
+        )
 
-        return {"segments": all_corrected_segments}
+        try:
+            corrected_lyrics_dict = {"segments": []}
+
+            with open("lyrics_transcriber/llm_correction_instructions_2.txt", "r") as file:
+                llm_instructions = file.read()
+
+            llm_instructions += f"Reference data:\n{self.spotify_lyrics_text}"
+            openai_client = OpenAI()
+
+            for segment in self.whisper_result_dict["segments"]:
+                simplified_segment = {
+                    "id": segment["id"],
+                    "start": segment["start"],
+                    "end": segment["end"],
+                    "confidence": segment["confidence"],
+                    "text": segment["text"],
+                    "words": segment["words"],
+                }
+
+                simplified_segment_str = json.dumps(simplified_segment)
+                data_input_str = f"Data input:\n{simplified_segment_str}\n"
+
+                self.logger.info(f'Calling completion model {self.llm_model} with instructions and data input for segment {segment["id"]}:')
+                # self.logger.debug(data_input_str)
+
+                # API call for each segment
+                response = openai_client.chat.completions.create(
+                    model=self.llm_model,
+                    response_format={"type": "json_object"},
+                    messages=[{"role": "system", "content": llm_instructions}, {"role": "user", "content": data_input_str}],
+                )
+
+                message = response.choices[0].message.content
+                finish_reason = response.choices[0].finish_reason
+
+                self.result_metadata["llm_token_usage"]["prompt"] += response.usage.prompt_tokens
+                self.result_metadata["llm_token_usage"]["completion"] += response.usage.completion_tokens
+
+                # self.logger.debug(f"response finish_reason: {finish_reason} message: \n{message}")
+
+                if finish_reason == "stop":
+                    try:
+                        corrected_segment_dict = json.loads(message)
+                        corrected_lyrics_dict["segments"].append(corrected_segment_dict)
+                        self.logger.info("Successfully parsed response from GPT as JSON and appended to corrected_lyrics_dict.segments")
+                    except json.JSONDecodeError as e:
+                        raise Exception("Failed to parse response from GPT as JSON") from e
+                else:
+                    self.logger.warning(f"OpenAI API call did not finish successfully, finish_reason: {finish_reason}")
+
+            self.logger.info(f'Successfully processed correction for all {len(corrected_lyrics_dict["segments"])} lyrics segments')
+
+            self.logger.debug(
+                f"writing lyrics data JSON to corrected_lyrics_data_json_cache_filepath: {corrected_lyrics_data_json_cache_filepath}"
+            )
+            with open(corrected_lyrics_data_json_cache_filepath, "w") as f:
+                f.write(json.dumps(corrected_lyrics_dict, indent=4))
+        except Exception as e:
+            self.logger.warn(f"caught exception while attempting to correct lyrics: ", e)
+
+        self.result_metadata["corrected_lyrics_data_filepath"] = corrected_lyrics_data_json_cache_filepath
+        self.result_metadata["corrected_lyrics_data_dict"] = corrected_lyrics_dict
+        return corrected_lyrics_dict
+
+    def write_corrected_lyrics_plain_text(self):
+        if self.result_metadata["corrected_lyrics_data_dict"]:
+            self.logger.debug(f"corrected_lyrics_data_dict exists, writing plain text lyrics file")
+
+            corrected_lyrics_text_filepath = os.path.join(self.cache_dir, "lyrics-" + self.get_song_slug() + "-corrected.txt")
+            self.result_metadata["corrected_lyrics_text_filepath"] = corrected_lyrics_text_filepath
+
+            self.corrected_lyrics_text = ""
+
+            self.logger.debug(f"writing lyrics plain text to corrected_lyrics_text_filepath: {corrected_lyrics_text_filepath}")
+            with open(corrected_lyrics_text_filepath, "w") as f:
+                for corrected_segment in self.corrected_lyrics_data_dict["segments"]:
+                    self.corrected_lyrics_text += corrected_segment["text"] + "\n"
+                    f.write(corrected_segment["text"] + "\n")
 
     def write_spotify_lyrics_data_file(self):
         if self.spotify_cookie and self.song_known:
@@ -366,7 +423,7 @@ class LyricsTranscriber:
         self.logger.debug(f"writing midico formatted word timestamps to LRC file: {lrc_filename}")
         with open(lrc_filename, "w") as f:
             f.write("[re:MidiCo]\n")
-            for segment in self.whisper_result_dict_corrected["segments"]:
+            for segment in self.corrected_lyrics_data_dict["segments"]:
                 for i, word in enumerate(segment["words"]):
                     start_time = self.format_time_lrc(word["start"])
                     if i != len(segment["words"]) - 1:
@@ -381,7 +438,7 @@ class LyricsTranscriber:
         screen: Optional[subtitles.LyricsScreen] = None
 
         lines_in_current_screen = 0
-        for whisper_line in self.whisper_result_dict_corrected["segments"]:
+        for whisper_line in self.corrected_lyrics_data_dict["segments"]:
             self.logger.debug(f"lines_in_current_screen: {lines_in_current_screen} whisper_line: {whisper_line['text']}")
             if screen is None:
                 self.logger.debug(f"screen is none, creating new LyricsScreen")
