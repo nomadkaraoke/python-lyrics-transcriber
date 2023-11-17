@@ -12,14 +12,13 @@ These should be reasonably accurate, with generally correct words and phrases.
 However, they may not be perfect, and sometimes whole sections (such as a chorus or outro) may be missing or assumed to be repeated.
 
 Carefully analyse each segment in data input 1, and compare with the lyrics in data file 2.
-If all of the words match up correctly with the published lyrics, great! You can add that whole segment to your response.
+If all of the words match up correctly with part of the published lyrics, great! You can add that whole segment to your response.
 If some of the words match up but there are a couple of differences, correct those differences.
 If you need to delete a word or two in order to correct the lyrics, that's acceptable.
 If you need to add a word or two which were missing from the transcription, that's acceptable - you'll need to estimate the start and end timestamps based on the timestamps of the surrounding words.
 
-The response needs to contain all of the following fields of CorrectedLyricsRawResponse:
+The response JSON object needs to contain all of the following fields:
 
-CorrectedLyricsRawResponse:
 - segments: this is a list
   - id: The id of the segment, from data input 1
   - text: The full text of the corrected lyrics for this segment
@@ -28,3 +27,4 @@ CorrectedLyricsRawResponse:
     - start: The start timestamp for this word, estimated if not known for sure.
     - end: The end timestamp for this word, estimated if not known for sure.
     - confidence: Your self-assessed confidence score (from 0 to 1) of how likely it is that this word is accurate. If the word has not changed from data input 1, keep the existing confidence value.
+

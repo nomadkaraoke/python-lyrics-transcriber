@@ -155,7 +155,7 @@ class LyricsTranscriber:
             self.result_metadata["karaoke_video_filepath"] = shutil.copy(self.result_metadata["karaoke_video_filepath"], self.output_dir)
 
     def correct_whisper_lyrics(self):
-        self.logger.debug(f"correct_whisper_lyrics initiating OpenAI client")
+        self.logger.debug("correct_whisper_lyrics initiating OpenAI client")
         client = OpenAI()
         llm_instructions = ""
 
@@ -164,46 +164,54 @@ class LyricsTranscriber:
 
         whisper_result_simplified = {"segments": []}
 
-        for segment in self.whisper_result_dict["segments"]:
-            whisper_result_simplified["segments"].append(
-                {
-                    "id": segment["id"],
-                    "start": segment["start"],
-                    "end": segment["end"],
-                    "text": segment["text"],
-                    "confidence": segment["confidence"],
-                    "words": segment["words"],
-                }
+        # Splitting the segments into batches of 4
+        segment_batches = [self.whisper_result_dict["segments"][i : i + 4] for i in range(0, len(self.whisper_result_dict["segments"]), 4)]
+        all_corrected_segments = []
+
+        for batch in segment_batches:
+            whisper_result_simplified["segments"].clear()
+
+            for segment in batch:
+                whisper_result_simplified["segments"].append(
+                    {
+                        "id": segment["id"],
+                        "start": segment["start"],
+                        "end": segment["end"],
+                        "text": segment["text"],
+                        "confidence": segment["confidence"],
+                        "words": segment["words"],
+                    }
+                )
+            whisper_result_simplified_str = json.dumps(whisper_result_simplified, indent=4)
+            data_string = f"Data input 1:\n{whisper_result_simplified_str} \n\nData input 2:\n{self.spotify_lyrics_text}\n"
+
+            self.logger.debug("About to call chat.completions API with system instructions and data inputs")
+            print(llm_instructions)
+            print(data_string)
+
+            # API call for each batch
+            response = client.chat.completions.create(
+                model="gpt-4-1106-preview",
+                response_format={"type": "json_object"},
+                messages=[{"role": "system", "content": llm_instructions}, {"role": "user", "content": data_string}],
             )
-        whisper_result_simplified_str = json.dumps(whisper_result_simplified, indent=4)
 
-        data_string = f"Data input 1:\n{whisper_result_simplified_str} \n\nData input 2:\n{self.spotify_lyrics_text}\n"
+            print(response)
 
-        self.logger.debug("about to call chat.completions API with system instructions and data inputs")
-        print(llm_instructions)
-        print(data_string)
+            message = response.choices[0].message.content
+            finish_reason = response.choices[0].finish_reason
 
-        response = client.chat.completions.create(
-            model="gpt-4-1106-preview",
-            response_format={"type": "json_object"},
-            messages=[{"role": "system", "content": llm_instructions}, {"role": "user", "content": data_string}],
-        )
+            if finish_reason == "stop":
+                try:
+                    corrected_whisper_lyrics_dict = json.loads(message)
+                    print(corrected_whisper_lyrics_dict)
+                    all_corrected_segments.extend(corrected_whisper_lyrics_dict["segments"])
+                except json.JSONDecodeError as e:
+                    raise Exception("Failed to parse response from GPT as JSON") from e
+            else:
+                self.logger.warning(f"OpenAI API call did not finish successfully, finish_reason: {finish_reason}")
 
-        print(response)
-
-        message = response["choices"][0]["message"]["content"]
-        finish_reason = response["choices"][0]["finish_reason"]
-
-        if finish_reason == "stop":
-            try:
-                corrected_whisper_lyrics_dict = json.loads(message)
-                print(corrected_whisper_lyrics_dict)
-                return corrected_whisper_lyrics_dict
-            except json.JSONDecodeError as e:
-                raise Exception("Failed to parse response from GPT as JSON") from e
-        else:
-            self.logger.warning(f"OpenAI API call did not finish successfully, finish_reason: {finish_reason}")
-            return None
+        return {"segments": all_corrected_segments}
 
     def write_spotify_lyrics_data_file(self):
         if self.spotify_cookie and self.song_known:
