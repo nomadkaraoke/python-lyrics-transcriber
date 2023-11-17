@@ -10,7 +10,7 @@ import whisper_timestamped as whisper
 import lyricsgenius
 import syrics.api
 from datetime import timedelta
-from .tuul_utils import timing_data, subtitles
+from .utils import subtitles
 from typing import Dict, List, Optional
 
 
@@ -26,7 +26,10 @@ class LyricsTranscriber:
         cache_dir="/tmp/lyrics-transcriber-cache/",
         log_level=logging.DEBUG,
         log_formatter=None,
-        background=None,
+        render_video=False,
+        video_resolution="360p",
+        video_background_image=None,
+        video_background_color="black",
     ):
         self.logger = logging.getLogger(__name__)
         self.logger.setLevel(log_level)
@@ -46,15 +49,28 @@ class LyricsTranscriber:
         self.cache_dir = cache_dir
         self.output_dir = output_dir
         self.audio_filepath = audio_filepath
-
-        self.background = background
-
         self.artist = artist
         self.title = title
         self.song_known = self.artist is not None and self.title is not None
 
         self.genius_api_token = os.getenv("GENIUS_API_TOKEN", default=genius_api_token)
         self.spotify_cookie = os.getenv("SPOTIFY_COOKIE_SP_DC", default=spotify_cookie)
+
+        self.render_video = render_video
+        self.video_resolution = video_resolution
+        self.video_background_image = video_background_image
+        self.video_background_color = video_background_color
+
+        # Validate video_resolution value
+        if self.video_resolution and video_resolution not in ["4k", "1080p", "720p", "360p"]:
+            raise ValueError("Invalid video_background value. Must be one of: 4k, 1080p, 720p, 360p")
+
+        # If a video background is provided, validate file exists
+        if self.video_background_image is not None:
+            if os.path.isfile(self.video_background_image):
+                self.logger.debug(f"video_background is valid file path: {self.video_background_image}")
+            else:
+                raise FileNotFoundError(f"video_background is not a valid file path: {self.video_background_image}")
 
         self.whisper_result_dict = None
 
@@ -87,10 +103,10 @@ class LyricsTranscriber:
         self.calculate_singing_percentage()
 
         self.write_genius_lyrics_file()
-        self.write_spotify_lyrics_data_file()
+        self.spotify_lyrics_data_dict = self.write_spotify_lyrics_data_file()
         self.write_spotify_lyrics_plain_text()
 
-        # TODO: attempt to match up segments from genius lyrics with whisper segments
+        self.whisper_result_dict_corrected = self.correct_whisper_lyrics()
 
         self.result_metadata["midico_lrc_filepath"] = self.get_cache_filepath(".lrc")
         self.write_midico_lrc_file()
@@ -98,8 +114,9 @@ class LyricsTranscriber:
         self.result_metadata["ass_subtitles_filepath"] = self.get_cache_filepath(".ass")
         self.write_ass_file()
 
-        self.result_metadata["karaoke_video_filepath"] = self.get_cache_filepath(".mp4")
-        self.create_video()
+        if self.render_video:
+            self.result_metadata["karaoke_video_filepath"] = self.get_cache_filepath(".mp4")
+            self.create_video()
 
         self.copy_files_to_output_dir()
 
@@ -132,6 +149,16 @@ class LyricsTranscriber:
 
         if self.result_metadata["karaoke_video_filepath"] is not None:
             self.result_metadata["karaoke_video_filepath"] = shutil.copy(self.result_metadata["karaoke_video_filepath"], self.output_dir)
+
+    def correct_whisper_lyrics(self):
+        # TODO: this function should return a fully corrected version of the whisper_result_dict,
+        # using the same structure and format but with correct words and correct (or estimated) word timings.
+
+        # The correction itself should be performed by making an API call to OpenAI's assistants API,
+        # passing in the self.whisper_result_dict and self.spotify_lyrics_data_dict as inputs.
+        # The Assistant can then use the accurate lyrics from the spotify data to correct the words in the whisper timing object.
+
+        return None
 
     def write_spotify_lyrics_data_file(self):
         if self.spotify_cookie and self.song_known:
@@ -347,6 +374,35 @@ class LyricsTranscriber:
         lyric_subtitles_ass = subtitles.create_styled_subtitles(screens)
         lyric_subtitles_ass.write(ass_filepath)
 
+    def resize_background_image(self):
+        self.logger.debug(f"resize_background_image attempting to resize background image: {self.video_background_image} to resolution: {self.video_resolution}")
+        background_image_resized = self.get_cache_filepath(f"-{self.video_resolution}.png")
+
+        if os.path.isfile(background_image_resized):
+            self.logger.debug(f"resize_background_image found existing resized background image, skipping resize: {background_image_resized}")
+            return background_image_resized
+            
+        resize_command = ["ffmpeg", "-i", self.video_background_image]
+
+        if self.video_resolution == "360p":
+            resize_command += ["-vf", "scale=640x360"]
+        elif self.video_resolution == "720p":
+            resize_command += ["-vf", "scale=1280x720"]
+        elif self.video_resolution == "1080p":
+            resize_command += ["-vf", "scale=1920x1080"]
+        elif self.video_resolution == "4k":
+            resize_command += ["-vf", "scale=3840x2160"]
+
+        resize_command += [background_image_resized]
+        subprocess.check_output(resize_command, universal_newlines=True)
+
+        if not os.path.isfile(background_image_resized):
+            raise FileNotFoundError(
+                f"background_image_resized was not a valid file after running ffmpeg to resize: {background_image_resized}"
+            )
+
+        return background_image_resized
+
     def create_video(self):
         self.logger.debug(f"create_video attempting to generate video file: {self.result_metadata['karaoke_video_filepath']}")
 
@@ -361,40 +417,37 @@ class LyricsTranscriber:
             video_metadata.append("-metadata")
             video_metadata.append(f"title={self.title}")
 
+        # fmt: off
         ffmpeg_cmd = [
             "ffmpeg",
-            "-r", "30",  # Set frame rate to 30 fps for the following input
+            "-r", "30", # Set frame rate to 30 fps
         ]
 
-        background = False
+        if self.video_background_image:
+            self.logger.debug(f"background image set: {self.video_background_image}, resizing to resolution: {self.video_resolution}")
 
-        # Check if a background image is provided, else use black background
-        if self.background:
-            self.logger.debug(f"self.background set to path: {self.background}")
-            if os.path.isfile(self.background):
-                self.logger.debug(f"background is valid file path: {self.background}")
-                background = self.background
-            else:
-                self.logger.error(f"background_image is NOT valid file path, falling back to black")
+            background_image_resized = self.resize_background_image()
 
-        # fmt: off
-        if background:
-            self.logger.debug(f"background set: {background}")
             ffmpeg_cmd += [
                 # Use provided image as background
                 "-loop", "1",  # Loop the image
-                "-i", self.background,  # Input image file
-            ]
-        else:
-            self.logger.debug(f"background not set, using solid black background")
-            ffmpeg_cmd += [
-                # Use black color as background
-                "-f", "lavfi",
-                # "-i", "color=c=black:s=1280x720:r=20",
-                # "-i", "color=c=black:s=1920x1080:r=20",
-                "-i", "color=c=black:s=3840x2160:r=30",
+                "-i", background_image_resized,  # Input image file
             ]
 
+        else:
+            self.logger.debug(f"background not set, using solid {self.video_background_color} background with resolution: {self.video_resolution}")
+            ffmpeg_cmd += ["-f", "lavfi"]
+            if self.video_resolution == "360p":
+                ffmpeg_cmd += ["-i", f"color=c={self.video_background_color}:s=640x360:r=30"]
+            elif self.video_resolution == "720p":
+                ffmpeg_cmd += ["-i", f"color=c={self.video_background_color}:s=1280x720:r=30"]
+            elif self.video_resolution == "1080p":
+                ffmpeg_cmd += ["-i", f"color=c={self.video_background_color}:s=1920x1080:r=30"]
+            elif self.video_resolution == "4k":
+                ffmpeg_cmd += ["-i", f"color=c={self.video_background_color}:s=3840x2160:r=30"]
+
+
+        # Check for hardware acclerated h.264 encoding and use if available
         video_codec = "libx264"
         ffmpeg_codes = subprocess.getoutput("ffmpeg -codecs")
 
@@ -437,7 +490,7 @@ class LyricsTranscriber:
         ]
         # fmt: on
 
-        self.logger.debug(f"running ffmpeg command to generate video: {ffmpeg_cmd}")
+        self.logger.debug(f"running ffmpeg command to generate video: {' '.join(ffmpeg_cmd)}")
         ffmpeg_output = subprocess.check_output(ffmpeg_cmd, universal_newlines=True)
         return ffmpeg_output
 

@@ -4,8 +4,9 @@ from typing import Dict, List, Optional
 import json
 import itertools
 from pathlib import Path
+from enum import IntEnum
 
-from . import ass, timing_data
+from . import ass
 
 
 """
@@ -14,6 +15,31 @@ Functions for generating ASS subtitles from lyric data
 
 VIDEO_SIZE = (400, 320)
 LINE_HEIGHT = 30
+
+
+class LyricMarker(IntEnum):
+    SEGMENT_START = 1
+    SEGMENT_END = 2
+
+
+class LyricSegmentIterator:
+    def __init__(self, lyrics_segments: List[str]):
+        self._segments = lyrics_segments
+        self._current_segment = None
+
+    def __iter__(self):
+        self._current_sement = 0
+        return self
+
+    def __next__(self):
+        if self._current_segment >= len(self._segments):
+            raise StopIteration
+        val = self._segments[self._current_segment]
+        self._current_segment += 1
+        return val
+
+    def __len__(self):
+        return len(self._segments)
 
 
 @dataclass
@@ -160,7 +186,7 @@ class LyricsObjectJSONEncoder(json.JSONEncoder):
 
 
 def create_screens(logger, lyrics_segments, events_tuples):
-    segments = iter(timing_data.LyricSegmentIterator(lyrics_segments=lyrics_segments))
+    segments = iter(LyricSegmentIterator(lyrics_segments=lyrics_segments))
     events = iter(events_tuples)
     screens: List[LyricsScreen] = []
     prev_segment: Optional[LyricSegment] = None
@@ -171,7 +197,7 @@ def create_screens(logger, lyrics_segments, events_tuples):
         for event in events:
             ts = event[0]
             marker = event[1]
-            if marker == timing_data.LyricMarker.SEGMENT_START:
+            if marker == LyricMarker.SEGMENT_START:
                 segment_text: str = next(segments)
                 segment = LyricSegment(segment_text, ts)
                 if screen is None:
@@ -186,7 +212,7 @@ def create_screens(logger, lyrics_segments, events_tuples):
                     screens.append(screen)
                     screen = None
                 prev_segment = segment
-            elif marker == timing_data.LyricMarker.SEGMENT_END:
+            elif marker == LyricMarker.SEGMENT_END:
                 if prev_segment is not None:
                     prev_segment.end_ts = ts
         if line is not None:
@@ -266,7 +292,7 @@ def create_styled_subtitles(lyric_screens: List[LyricsScreen]) -> ass.ASS:
     style.PrimaryColour = (112, 112, 247, 255)
     style.SecondaryColour = (255, 255, 255, 255)
     style.OutlineColour = (26, 58, 235, 255)
-    style.BackColour = (0, 255, 0, 255) # (26, 58, 235, 255)
+    style.BackColour = (0, 255, 0, 255)  # (26, 58, 235, 255)
 
     style.Bold = False
     style.Italic = False

@@ -59,9 +59,27 @@ def main():
     )
 
     parser.add_argument(
-        "--background",
+        "--render_video",
+        action="store_true",
+        help="Optional: render a karaoke video with the generated lyrics",
+    )
+
+    parser.add_argument(
+        "--video_resolution",
+        default="4k",
+        help="Optional: resolution of the karaoke video to render. Must be one of: 4k, 1080p, 720p, 360p. Default: 360p",
+    )
+
+    parser.add_argument(
+        "--video_background_image",
         default=None,
-        help="Optional: image file path to use for karaoke video background. Default: solid black",
+        help="Optional: image file path to use for karaoke video background",
+    )
+
+    parser.add_argument(
+        "--video_background_color",
+        default="black",
+        help="Optional: color to use for karaoke video background, in hex format or FFmpeg color name. Default: black",
     )
 
     args = parser.parse_args()
@@ -90,7 +108,10 @@ def main():
         cache_dir=args.cache_dir,
         log_formatter=log_formatter,
         log_level=log_level,
-        background=args.background,
+        render_video=args.render_video,
+        video_resolution=args.video_resolution,
+        video_background_image=args.video_background_image,
+        video_background_color=args.video_background_color,
     )
 
     result_metadata = transcriber.generate()
