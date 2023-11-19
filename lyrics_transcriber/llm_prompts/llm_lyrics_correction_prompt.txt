@@ -7,6 +7,8 @@ You will be provided with one or more reference data, containing published lyric
 These should be reasonably accurate, with generally correct words and phrases. 
 However, they may not be perfect, and sometimes whole sections (such as a chorus or outro) may be missing or assumed to be repeated.
 
+When possible, you will also be provided with the previous 2 (corrected) lines of text, for additional context.
+
 Data input will contain one segment of an automated machine transcription of lyrics from a song, with start/end timestamps and confidence scores for every word in that segment.
 The timestamps for words are usually quite accurate, but the actual words which were heard by the transcription are typically only around 70% to 90% accurate.
 As such, it is common for there to be segments where most of the words are correct but one or two are wrong, or a single word may have been mistaken as two different words.

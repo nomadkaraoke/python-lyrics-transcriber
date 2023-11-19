@@ -68,7 +68,7 @@ class LyricsTranscriber:
         self.video_resolution = video_resolution
         self.video_background_image = video_background_image
         self.video_background_color = video_background_color
-        self.font_size = 120
+        self.font_size = 100
 
         match video_resolution:
             case "4k":
@@ -101,6 +101,7 @@ class LyricsTranscriber:
             "spotify_lyrics_text_filepath": None,
             "llm_token_usage": {"input": 0, "output": 0},
             "llm_costs_usd": {"input": 0.0, "output": 0.0, "total": 0.0},
+            "llm_transcript": None,
             "corrected_lyrics_text": None,
             "corrected_lyrics_text_filepath": None,
             "midico_lrc_filepath": None,
@@ -258,54 +259,93 @@ class LyricsTranscriber:
 
             # TODO: Test if results are cleaner when using the vocal file from a background vocal audio separation model
 
-            for segment in self.outputs["transcription_data_dict"]["segments"]:
-                simplified_segment = {
-                    "id": segment["id"],
-                    "start": segment["start"],
-                    "end": segment["end"],
-                    "confidence": segment["confidence"],
-                    "text": segment["text"],
-                    "words": segment["words"],
-                }
+            # TODO: Record more info about the correction process (e.g before/after diffs for each segment) to a file for debugging
+            # TODO: Possibly add a step after segment-based correct to get the LLM to self-analyse the diff
 
-                simplified_segment_str = json.dumps(simplified_segment)
-                data_input_str = f"Data input:\n{simplified_segment_str}\n"
+            llm_transcript_filepath = os.path.join(self.cache_dir, "llm-transcript-" + self.get_song_slug() + ".txt")
+            self.outputs["llm_transcript"] = ""
 
-                self.logger.info(f'Calling completion model {self.llm_model} with instructions and data input for segment {segment["id"]}:')
-                # self.logger.debug(data_input_str)
+            total_segments = len(self.outputs["transcription_data_dict"]["segments"])
+            self.logger.info(f"Beginning correction using LLM, total segments: {total_segments}")
 
-                # API call for each segment
-                response = self.openai_client.chat.completions.create(
-                    model=self.llm_model,
-                    response_format={"type": "json_object"},
-                    messages=[{"role": "system", "content": llm_instructions}, {"role": "user", "content": data_input_str}],
-                )
+            with open(llm_transcript_filepath, "a") as llm_transcript_file:
+                self.logger.debug(f"writing LLM chat instructions: {llm_transcript_filepath}")
+                llm_instructions_header = f"--- SYSTEM instructions passed in for all segments ---:\n\n"
+                self.outputs["llm_transcript"] += llm_instructions_header + llm_instructions + "\n"
+                llm_transcript_file.write(llm_instructions_header + llm_instructions + "\n")
 
-                message = response.choices[0].message.content
-                finish_reason = response.choices[0].finish_reason
+                for segment in self.outputs["transcription_data_dict"]["segments"]:
+                    simplified_segment = {
+                        "id": segment["id"],
+                        "start": segment["start"],
+                        "end": segment["end"],
+                        "confidence": segment["confidence"],
+                        "text": segment["text"],
+                        "words": segment["words"],
+                    }
 
-                self.outputs["llm_token_usage"]["input"] += response.usage.prompt_tokens
-                self.outputs["llm_token_usage"]["output"] += response.usage.completion_tokens
+                    simplified_segment_str = json.dumps(simplified_segment)
 
-                # self.logger.debug(f"response finish_reason: {finish_reason} message: \n{message}")
+                    previous_two_lines = ""
 
-                if finish_reason == "stop":
-                    try:
-                        corrected_segment_dict = json.loads(message)
-                        corrected_lyrics_dict["segments"].append(corrected_segment_dict)
-                        self.logger.info("Successfully parsed response from GPT as JSON and appended to corrected_lyrics_dict.segments")
-                    except json.JSONDecodeError as e:
-                        raise Exception("Failed to parse response from GPT as JSON") from e
-                else:
-                    self.logger.warning(f"OpenAI API call did not finish successfully, finish_reason: {finish_reason}")
+                    if segment["id"] > 2:
+                        previous_two_lines = "Previous two lines:\n\n"
 
-            self.logger.info(f'Successfully processed correction for all {len(corrected_lyrics_dict["segments"])} lyrics segments')
+                        for previous_segment in corrected_lyrics_dict["segments"]:
+                            if previous_segment["id"] == (segment["id"] - 2):
+                                previous_two_lines += previous_segment["text"].strip() + "\n"
 
-            self.logger.debug(
-                f"writing lyrics data JSON to corrected_lyrics_data_json_cache_filepath: {corrected_lyrics_data_json_cache_filepath}"
-            )
-            with open(corrected_lyrics_data_json_cache_filepath, "w") as f:
-                f.write(json.dumps(corrected_lyrics_dict, indent=4))
+                        for previous_segment in corrected_lyrics_dict["segments"]:
+                            if previous_segment["id"] == (segment["id"] - 1):
+                                previous_two_lines += previous_segment["text"].strip() + "\n"
+
+                    data_input_str = f"{previous_two_lines}\nData input:\n\n{simplified_segment_str}\n"
+
+                    self.logger.info(
+                        f'Calling completion model {self.llm_model} with instructions and data input for segment {segment["id"]}:'
+                    )
+                    # self.logger.debug(data_input_str)
+
+                    llm_transcript_segment = f"--- INPUT for segment {segment['id']} / {total_segments} ---:\n\n"
+                    llm_transcript_segment += data_input_str
+
+                    response = self.openai_client.chat.completions.create(
+                        model=self.llm_model,
+                        response_format={"type": "json_object"},
+                        messages=[{"role": "system", "content": llm_instructions}, {"role": "user", "content": data_input_str}],
+                    )
+
+                    message = response.choices[0].message.content
+                    finish_reason = response.choices[0].finish_reason
+
+                    llm_transcript_segment += f"\n--- RESPONSE for segment {segment['id']} ---:\n\n"
+                    llm_transcript_segment += message
+                    llm_transcript_segment += f"\n--- END segment {segment['id']} / {total_segments} ---:\n\n"
+
+                    self.logger.debug(f"writing LLM chat transcript for segment to: {llm_transcript_filepath}")
+                    llm_transcript_file.write(llm_transcript_segment)
+                    self.outputs["llm_transcript"] += llm_transcript_segment
+
+                    self.outputs["llm_token_usage"]["input"] += response.usage.prompt_tokens
+                    self.outputs["llm_token_usage"]["output"] += response.usage.completion_tokens
+
+                    # self.logger.debug(f"response finish_reason: {finish_reason} message: \n{message}")
+
+                    if finish_reason == "stop":
+                        try:
+                            corrected_segment_dict = json.loads(message)
+                            corrected_lyrics_dict["segments"].append(corrected_segment_dict)
+                            self.logger.info("Successfully parsed response from GPT as JSON and appended to corrected_lyrics_dict.segments")
+                        except json.JSONDecodeError as e:
+                            raise Exception("Failed to parse response from GPT as JSON") from e
+                    else:
+                        self.logger.warning(f"OpenAI API call did not finish successfully, finish_reason: {finish_reason}")
+
+                self.logger.info(f'Successfully processed correction for all {len(corrected_lyrics_dict["segments"])} lyrics segments')
+
+                self.logger.debug(f"writing corrected lyrics data JSON filepath: {corrected_lyrics_data_json_cache_filepath}")
+                with open(corrected_lyrics_data_json_cache_filepath, "w") as corrected_lyrics_data_json_cache_file:
+                    corrected_lyrics_data_json_cache_file.write(json.dumps(corrected_lyrics_dict, indent=4))
         except Exception as e:
             self.logger.warn(f"caught exception while attempting to correct lyrics: ", e)
 
@@ -535,7 +575,7 @@ class LyricsTranscriber:
                     lines_in_current_screen += 1
                     line = None
 
-            # If current screen has 3 lines already, add screen to list and start new screen
+            # If current screen has 2 lines already, add screen to list and start new screen
             # Before looping to the next line
             if lines_in_current_screen == 2:
                 self.logger.debug(f"lines_in_current_screen is 2, adding screen to list and starting new screen")
