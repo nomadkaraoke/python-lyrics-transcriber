@@ -254,9 +254,10 @@ def set_screen_start_times(screens: List[LyricsScreen]) -> List[LyricsScreen]:
     return screens
 
 
-def create_styled_subtitles(lyric_screens: List[LyricsScreen]) -> ass.ASS:
+def create_styled_subtitles(lyric_screens: List[LyricsScreen], resolution, fontsize) -> ass.ASS:
     a = ass.ASS()
-
+    a.set_resolution(resolution)
+    
     a.styles_format = [
         "Name",  # The name of the Style. Case sensitive. Cannot include commas.
         "Fontname",  # The fontname as used by Windows. Case-sensitive.
@@ -287,7 +288,7 @@ def create_styled_subtitles(lyric_screens: List[LyricsScreen]) -> ass.ASS:
     style.type = "Style"
     style.Name = "Nomad"
     style.Fontname = "Avenir Next Bold"
-    style.Fontsize = 32
+    style.Fontsize = fontsize
 
     style.PrimaryColour = (112, 112, 247, 255)
     style.SecondaryColour = (255, 255, 255, 255)

@@ -3,7 +3,7 @@ Your task is to take two lyrics data inputs with two different qualities, and us
 
 Your response needs to be in JSON format and will be sent to an API endpoint. Only output the JSON, nothing else, as the response will be converted to a Python dictionary.
 
-You will be provided with reference data containing published lyrics for a song, as plain text. 
+You will be provided with one or more reference data, containing published lyrics for a song, as plain text, from different online sources.
 These should be reasonably accurate, with generally correct words and phrases. 
 However, they may not be perfect, and sometimes whole sections (such as a chorus or outro) may be missing or assumed to be repeated.
 

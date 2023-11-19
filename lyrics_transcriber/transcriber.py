@@ -62,15 +62,25 @@ class LyricsTranscriber:
 
         self.transcription_model = transcription_model
         self.llm_model = llm_model
+        self.openai_client = OpenAI()
 
         self.render_video = render_video
         self.video_resolution = video_resolution
         self.video_background_image = video_background_image
         self.video_background_color = video_background_color
+        self.font_size = 120
 
-        # Validate video_resolution value
-        if self.video_resolution and video_resolution not in ["4k", "1080p", "720p", "360p"]:
-            raise ValueError("Invalid video_background value. Must be one of: 4k, 1080p, 720p, 360p")
+        match video_resolution:
+            case "4k":
+                self.video_resolution_num = ("3840", "2160")
+            case "1080p":
+                self.video_resolution_num = ("1920", "1080")
+            case "720p":
+                self.video_resolution_num = ("1280", "720")
+            case "360p":
+                self.video_resolution_num = ("640", "360")
+            case _:
+                raise ValueError("Invalid video_resolution value. Must be one of: 4k, 1080p, 720p, 360p")
 
         # If a video background is provided, validate file exists
         if self.video_background_image is not None:
@@ -79,17 +89,19 @@ class LyricsTranscriber:
             else:
                 raise FileNotFoundError(f"video_background is not a valid file path: {self.video_background_image}")
 
-        self.whisper_result_dict = None
-        self.result_metadata = {
-            "whisper_json_filepath": None,
+        self.outputs = {
+            "transcription_data_dict": None,
+            "transcription_data_filepath": None,
+            "transcribed_lyrics_text": None,
             "transcribed_lyrics_text_filepath": None,
-            "genius_lyrics": None,
+            "genius_lyrics_text": None,
             "genius_lyrics_filepath": None,
             "spotify_lyrics_data_dict": None,
             "spotify_lyrics_data_filepath": None,
             "spotify_lyrics_text_filepath": None,
             "llm_token_usage": {"input": 0, "output": 0},
             "llm_costs_usd": {"input": 0.0, "output": 0.0, "total": 0.0},
+            "corrected_lyrics_text": None,
             "corrected_lyrics_text_filepath": None,
             "midico_lrc_filepath": None,
             "ass_subtitles_filepath": None,
@@ -102,42 +114,41 @@ class LyricsTranscriber:
         if self.audio_filepath is None:
             raise Exception("audio_filepath must be specified as the input source to transcribe")
 
+        if not self.song_known:
+            raise Exception("cannot correct song lyrics without artist and title to fetch lyrics")
+
         self.create_folders()
 
     def generate(self):
         self.logger.debug(f"audio_filepath is set: {self.audio_filepath}, beginning initial whisper transcription")
 
-        self.result_metadata["whisper_json_filepath"] = self.get_cache_filepath(".json")
-        self.whisper_result_dict = self.transcribe()
+        self.transcribe()
         self.write_transcribed_lyrics_plain_text()
+
+        self.write_genius_lyrics_file()
+        self.write_spotify_lyrics_data_file()
+        self.write_spotify_lyrics_plain_text()
+
+        self.validate_lyrics_match_song()
+
+        self.write_corrected_lyrics_data_file()
+        self.write_corrected_lyrics_plain_text()
 
         self.calculate_singing_percentage()
 
-        self.write_genius_lyrics_file()
-        self.spotify_lyrics_data_dict = self.write_spotify_lyrics_data_file()
-        self.write_spotify_lyrics_plain_text()
-
-        self.corrected_lyrics_data_dict = self.write_corrected_lyrics_data_file()
-        self.write_corrected_lyrics_plain_text()
-        self.calculate_llm_costs()
-
-        # Fall back to pure whisper results if the correction process bails so video can still be generated
-        if self.corrected_lyrics_data_dict is None:
-            self.corrected_lyrics_data_dict = self.whisper_result_dict
-
-        self.result_metadata["midico_lrc_filepath"] = self.get_cache_filepath(".lrc")
         self.write_midico_lrc_file()
-
-        self.result_metadata["ass_subtitles_filepath"] = self.get_cache_filepath(".ass")
         self.write_ass_file()
 
         if self.render_video:
-            self.result_metadata["karaoke_video_filepath"] = self.get_cache_filepath(".mp4")
+            self.outputs["karaoke_video_filepath"] = self.get_cache_filepath(".mp4")
             self.create_video()
 
         self.copy_files_to_output_dir()
+        self.calculate_llm_costs()
 
-        return self.result_metadata
+        self.openai_client.close()
+
+        return self.outputs
 
     def copy_files_to_output_dir(self):
         if self.output_dir is None:
@@ -145,42 +156,65 @@ class LyricsTranscriber:
 
         self.logger.debug(f"copying temporary files to output dir: {self.output_dir}")
 
-        self.result_metadata["whisper_json_filepath"] = shutil.copy(self.result_metadata["whisper_json_filepath"], self.output_dir)
-        self.result_metadata["midico_lrc_filepath"] = shutil.copy(self.result_metadata["midico_lrc_filepath"], self.output_dir)
+        for key in self.outputs:
+            if key.endswith("_filepath"):
+                if self.outputs[key] and os.path.isfile(self.outputs[key]):
+                    shutil.copy(self.outputs[key], self.output_dir)
 
-        if self.result_metadata["genius_lyrics_filepath"] is not None:
-            self.result_metadata["genius_lyrics_filepath"] = shutil.copy(self.result_metadata["genius_lyrics_filepath"], self.output_dir)
+    def validate_lyrics_match_song(self):
+        at_least_one_online_lyrics_validated = False
 
-        if self.result_metadata["spotify_lyrics_data_filepath"] is not None:
-            self.result_metadata["spotify_lyrics_data_filepath"] = shutil.copy(
-                self.result_metadata["spotify_lyrics_data_filepath"], self.output_dir
+        with open("lyrics_transcriber/llm_prompts/llm_lyrics_matching_prompt.txt", "r") as file:
+            llm_matching_instructions = file.read()
+
+        for online_lyrics_source in ["genius", "spotify"]:
+            self.logger.debug(f"validating transcribed lyrics match lyrics from {online_lyrics_source}")
+
+            online_lyrics_text_key = f"{online_lyrics_source}_lyrics_text"
+            online_lyrics_filepath_key = f"{online_lyrics_source}_lyrics_filepath"
+
+            data_input_str = (
+                f'Data input 1:\n{self.outputs["transcribed_lyrics_text"]}\nData input 2:\n{self.outputs[online_lyrics_text_key]}\n'
             )
 
-        if self.result_metadata["transcribed_lyrics_text_filepath"] is not None:
-            self.result_metadata["transcribed_lyrics_text_filepath"] = shutil.copy(
-                self.result_metadata["transcribed_lyrics_text_filepath"], self.output_dir
+            # self.logger.debug(f"llm_instructions:\n{llm_instructions}\ndata_input_str:\n{data_input_str}")
+
+            self.logger.debug(f"making API call to LLM model {self.llm_model} to validate {online_lyrics_source} lyrics match")
+            response = self.openai_client.chat.completions.create(
+                model=self.llm_model,
+                messages=[{"role": "system", "content": llm_matching_instructions}, {"role": "user", "content": data_input_str}],
             )
 
-        if self.result_metadata["spotify_lyrics_text_filepath"] is not None:
-            self.result_metadata["spotify_lyrics_text_filepath"] = shutil.copy(
-                self.result_metadata["spotify_lyrics_text_filepath"], self.output_dir
+            message = response.choices[0].message.content
+            finish_reason = response.choices[0].finish_reason
+
+            self.outputs["llm_token_usage"]["input"] += response.usage.prompt_tokens
+            self.outputs["llm_token_usage"]["output"] += response.usage.completion_tokens
+
+            # self.logger.debug(f"LLM API response finish_reason: {finish_reason} message: \n{message}")
+
+            if finish_reason == "stop":
+                if message == "Yes":
+                    self.logger.info(f"{online_lyrics_source} lyrics successfully validated to match transcription")
+                    at_least_one_online_lyrics_validated = True
+                elif message == "No":
+                    self.logger.warning(f"{online_lyrics_source} lyrics do not match transcription, deleting that source from outputs")
+                    self.outputs[online_lyrics_text_key] = None
+                    self.outputs[online_lyrics_filepath_key] = None
+                else:
+                    self.logger.error(f"Unexpected response from LLM: {message}")
+            else:
+                self.logger.warning(f"OpenAI API call did not finish successfully, finish_reason: {finish_reason}")
+
+        self.logger.info(
+            f"Completed validation of transcription using online lyrics sources. Match found: {at_least_one_online_lyrics_validated}"
+        )
+
+        if not at_least_one_online_lyrics_validated:
+            self.logger.error(
+                f"Lyrics from Genius and Spotify did not match the transcription. Please check artist and title are set correctly."
             )
-
-        if self.result_metadata["corrected_lyrics_data_filepath"] is not None:
-            self.result_metadata["corrected_lyrics_data_filepath"] = shutil.copy(
-                self.result_metadata["corrected_lyrics_data_filepath"], self.output_dir
-            )
-
-        if self.result_metadata["corrected_lyrics_text_filepath"] is not None:
-            self.result_metadata["corrected_lyrics_text_filepath"] = shutil.copy(
-                self.result_metadata["corrected_lyrics_text_filepath"], self.output_dir
-            )
-
-        if self.result_metadata["ass_subtitles_filepath"] is not None:
-            self.result_metadata["ass_subtitles_filepath"] = shutil.copy(self.result_metadata["ass_subtitles_filepath"], self.output_dir)
-
-        if self.result_metadata["karaoke_video_filepath"] is not None:
-            self.result_metadata["karaoke_video_filepath"] = shutil.copy(self.result_metadata["karaoke_video_filepath"], self.output_dir)
+            raise Exception("Cannot proceed without internet lyrics to validate / correct transcription")
 
     def write_corrected_lyrics_data_file(self):
         self.logger.debug("write_corrected_lyrics_data_file initiating OpenAI client")
@@ -193,11 +227,11 @@ class LyricsTranscriber:
             )
 
             with open(corrected_lyrics_data_json_cache_filepath, "r") as corrected_lyrics_data_json:
-                self.result_metadata["corrected_lyrics_data_filepath"] = corrected_lyrics_data_json_cache_filepath
+                self.outputs["corrected_lyrics_data_filepath"] = corrected_lyrics_data_json_cache_filepath
 
                 corrected_lyrics_data_dict = json.load(corrected_lyrics_data_json)
-                self.result_metadata["corrected_lyrics_data_dict"] = corrected_lyrics_data_dict
-                return corrected_lyrics_data_dict
+                self.outputs["corrected_lyrics_data_dict"] = corrected_lyrics_data_dict
+                return
 
         self.logger.debug(
             f"no cached lyrics found at corrected_lyrics_data_json_cache_filepath: {corrected_lyrics_data_json_cache_filepath}, attempting to run correction using LLM"
@@ -206,21 +240,25 @@ class LyricsTranscriber:
         try:
             corrected_lyrics_dict = {"segments": []}
 
-            with open("lyrics_transcriber/llm_correction_instructions_2.txt", "r") as file:
+            with open("lyrics_transcriber/llm_prompts/llm_lyrics_correction_prompt.txt", "r") as file:
                 llm_instructions = file.read()
 
-            llm_instructions += f"Reference data:\n{self.spotify_lyrics_text}"
-            openai_client = OpenAI()
+            reference_data_count = 1
 
-            # TODO: Add some additional filtering and cleanup of whisper results before sending to LLM,
-            #       e.g. remove segments with low confidence, remove segments with no words, maybe.
+            if self.outputs["genius_lyrics_text"]:
+                llm_instructions += f'\nReference data {reference_data_count}:\n{self.outputs["genius_lyrics_text"]}\n'
+                reference_data_count += 1
+
+            if self.outputs["spotify_lyrics_text"]:
+                llm_instructions += f'\nReference data {reference_data_count}:\n{self.outputs["spotify_lyrics_text"]}\n'
+                reference_data_count += 1
 
             # TODO: Add more to the LLM instructions (or consider post-processing cleanup) to get rid of overlapping segments
             # when there are background vocals or other overlapping lyrics
 
             # TODO: Test if results are cleaner when using the vocal file from a background vocal audio separation model
 
-            for segment in self.whisper_result_dict["segments"]:
+            for segment in self.outputs["transcription_data_dict"]["segments"]:
                 simplified_segment = {
                     "id": segment["id"],
                     "start": segment["start"],
@@ -237,7 +275,7 @@ class LyricsTranscriber:
                 # self.logger.debug(data_input_str)
 
                 # API call for each segment
-                response = openai_client.chat.completions.create(
+                response = self.openai_client.chat.completions.create(
                     model=self.llm_model,
                     response_format={"type": "json_object"},
                     messages=[{"role": "system", "content": llm_instructions}, {"role": "user", "content": data_input_str}],
@@ -246,8 +284,8 @@ class LyricsTranscriber:
                 message = response.choices[0].message.content
                 finish_reason = response.choices[0].finish_reason
 
-                self.result_metadata["llm_token_usage"]["input"] += response.usage.prompt_tokens
-                self.result_metadata["llm_token_usage"]["output"] += response.usage.completion_tokens
+                self.outputs["llm_token_usage"]["input"] += response.usage.prompt_tokens
+                self.outputs["llm_token_usage"]["output"] += response.usage.completion_tokens
 
                 # self.logger.debug(f"response finish_reason: {finish_reason} message: \n{message}")
 
@@ -271,9 +309,8 @@ class LyricsTranscriber:
         except Exception as e:
             self.logger.warn(f"caught exception while attempting to correct lyrics: ", e)
 
-        self.result_metadata["corrected_lyrics_data_filepath"] = corrected_lyrics_data_json_cache_filepath
-        self.result_metadata["corrected_lyrics_data_dict"] = corrected_lyrics_dict
-        return corrected_lyrics_dict
+        self.outputs["corrected_lyrics_data_filepath"] = corrected_lyrics_data_json_cache_filepath
+        self.outputs["corrected_lyrics_data_dict"] = corrected_lyrics_dict
 
     def calculate_llm_costs(self):
         price_dollars_per_1000_tokens = {
@@ -287,26 +324,26 @@ class LyricsTranscriber:
             },
         }
 
-        input_cost = price_dollars_per_1000_tokens[self.llm_model]["input"] * (self.result_metadata["llm_token_usage"]["input"] / 1000)
-        output_cost = price_dollars_per_1000_tokens[self.llm_model]["output"] * (self.result_metadata["llm_token_usage"]["output"] / 1000)
+        input_cost = price_dollars_per_1000_tokens[self.llm_model]["input"] * (self.outputs["llm_token_usage"]["input"] / 1000)
+        output_cost = price_dollars_per_1000_tokens[self.llm_model]["output"] * (self.outputs["llm_token_usage"]["output"] / 1000)
 
-        self.result_metadata["llm_costs_usd"]["input"] = round(input_cost, 3)
-        self.result_metadata["llm_costs_usd"]["output"] = round(output_cost, 3)
-        self.result_metadata["llm_costs_usd"]["total"] = round(input_cost + output_cost, 3)
+        self.outputs["llm_costs_usd"]["input"] = round(input_cost, 3)
+        self.outputs["llm_costs_usd"]["output"] = round(output_cost, 3)
+        self.outputs["llm_costs_usd"]["total"] = round(input_cost + output_cost, 3)
 
     def write_corrected_lyrics_plain_text(self):
-        if self.result_metadata["corrected_lyrics_data_dict"]:
+        if self.outputs["corrected_lyrics_data_dict"]:
             self.logger.debug(f"corrected_lyrics_data_dict exists, writing plain text lyrics file")
 
             corrected_lyrics_text_filepath = os.path.join(self.cache_dir, "lyrics-" + self.get_song_slug() + "-corrected.txt")
-            self.result_metadata["corrected_lyrics_text_filepath"] = corrected_lyrics_text_filepath
+            self.outputs["corrected_lyrics_text_filepath"] = corrected_lyrics_text_filepath
 
-            self.corrected_lyrics_text = ""
+            self.outputs["corrected_lyrics_text"] = ""
 
             self.logger.debug(f"writing lyrics plain text to corrected_lyrics_text_filepath: {corrected_lyrics_text_filepath}")
             with open(corrected_lyrics_text_filepath, "w") as f:
-                for corrected_segment in self.corrected_lyrics_data_dict["segments"]:
-                    self.corrected_lyrics_text += corrected_segment["text"].strip() + "\n"
+                for corrected_segment in self.outputs["corrected_lyrics_data_dict"]["segments"]:
+                    self.outputs["corrected_lyrics_text"] += corrected_segment["text"].strip() + "\n"
                     f.write(corrected_segment["text".strip()] + "\n")
 
     def write_spotify_lyrics_data_file(self):
@@ -324,11 +361,10 @@ class LyricsTranscriber:
             )
 
             with open(spotify_lyrics_data_json_cache_filepath, "r") as spotify_lyrics_data_json:
-                self.result_metadata["spotify_lyrics_data_filepath"] = spotify_lyrics_data_json_cache_filepath
-
                 spotify_lyrics_data_dict = json.load(spotify_lyrics_data_json)
-                self.result_metadata["spotify_lyrics_data_dict"] = spotify_lyrics_data_dict
-                return spotify_lyrics_data_dict
+                self.outputs["spotify_lyrics_data_filepath"] = spotify_lyrics_data_json_cache_filepath
+                self.outputs["spotify_lyrics_data_dict"] = spotify_lyrics_data_dict
+                return
 
         self.logger.debug(
             f"no cached lyrics found at spotify_lyrics_data_json_cache_filepath: {spotify_lyrics_data_json_cache_filepath}, attempting to fetch from spotify"
@@ -357,25 +393,24 @@ class LyricsTranscriber:
         except Exception as e:
             self.logger.warn(f"caught exception while attempting to fetch from spotify: ", e)
 
-        self.result_metadata["spotify_lyrics_data_filepath"] = spotify_lyrics_data_json_cache_filepath
-        self.result_metadata["spotify_lyrics_data_dict"] = spotify_lyrics_dict
-        return spotify_lyrics_dict
+        self.outputs["spotify_lyrics_data_filepath"] = spotify_lyrics_data_json_cache_filepath
+        self.outputs["spotify_lyrics_data_dict"] = spotify_lyrics_dict
 
     def write_spotify_lyrics_plain_text(self):
-        if self.result_metadata["spotify_lyrics_data_dict"]:
+        if self.outputs["spotify_lyrics_data_dict"]:
             self.logger.debug(f"spotify_lyrics data found, checking/writing plain text lyrics file")
 
             spotify_lyrics_text_filepath = os.path.join(self.cache_dir, "lyrics-" + self.get_song_slug() + "-spotify.txt")
-            self.result_metadata["spotify_lyrics_text_filepath"] = spotify_lyrics_text_filepath
+            self.outputs["spotify_lyrics_text_filepath"] = spotify_lyrics_text_filepath
 
-            lines = self.result_metadata["spotify_lyrics_data_dict"]["lyrics"]["lines"]
+            lines = self.outputs["spotify_lyrics_data_dict"]["lyrics"]["lines"]
 
-            self.spotify_lyrics_text = ""
+            self.outputs["spotify_lyrics_text"] = ""
 
             self.logger.debug(f"writing lyrics plain text to spotify_lyrics_text_filepath: {spotify_lyrics_text_filepath}")
             with open(spotify_lyrics_text_filepath, "w") as f:
                 for line in lines:
-                    self.spotify_lyrics_text += line["words"].strip() + "\n"
+                    self.outputs["spotify_lyrics_text"] += line["words"].strip() + "\n"
                     f.write(line["words"].strip() + "\n")
 
     def write_genius_lyrics_file(self):
@@ -391,9 +426,9 @@ class LyricsTranscriber:
             self.logger.debug(f"found existing file at genius_lyrics_cache_filepath, reading: {genius_lyrics_cache_filepath}")
 
             with open(genius_lyrics_cache_filepath, "r") as cached_lyrics:
-                self.result_metadata["genius_lyrics_filepath"] = genius_lyrics_cache_filepath
-                self.result_metadata["genius_lyrics"] = cached_lyrics
-                return cached_lyrics
+                self.outputs["genius_lyrics_filepath"] = genius_lyrics_cache_filepath
+                self.outputs["genius_lyrics_text"] = cached_lyrics.read()
+                return
 
         self.logger.debug(f"no cached lyrics found at genius_lyrics_cache_filepath: {genius_lyrics_cache_filepath}, fetching from Genius")
         genius = lyricsgenius.Genius(self.genius_api_token, verbose=(self.log_level == logging.DEBUG))
@@ -408,9 +443,8 @@ class LyricsTranscriber:
         with open(genius_lyrics_cache_filepath, "w") as f:
             f.write(lyrics)
 
-        self.result_metadata["genius_lyrics_filepath"] = genius_lyrics_cache_filepath
-        self.result_metadata["genius_lyrics"] = lyrics
-        return lyrics
+        self.outputs["genius_lyrics_filepath"] = genius_lyrics_cache_filepath
+        self.outputs["genius_lyrics_text"] = lyrics
 
     def clean_genius_lyrics(self, lyrics):
         lyrics = lyrics.replace("\\n", "\n")
@@ -426,7 +460,7 @@ class LyricsTranscriber:
 
     def calculate_singing_percentage(self):
         # Calculate total seconds of singing using timings from whisper transcription results
-        total_singing_duration = sum(segment["end"] - segment["start"] for segment in self.whisper_result_dict["segments"])
+        total_singing_duration = sum(segment["end"] - segment["start"] for segment in self.outputs["transcription_data_dict"]["segments"])
 
         self.logger.debug(f"calculated total_singing_duration: {int(total_singing_duration)} seconds, now running ffprobe")
 
@@ -448,21 +482,21 @@ class LyricsTranscriber:
         # Calculate singing percentage
         singing_percentage = int((total_singing_duration / song_duration) * 100)
 
-        self.result_metadata["singing_percentage"] = singing_percentage
-        self.result_metadata["total_singing_duration"] = total_singing_duration
-        self.result_metadata["song_duration"] = song_duration
-
-        return singing_percentage, total_singing_duration, song_duration
+        self.outputs["singing_percentage"] = singing_percentage
+        self.outputs["total_singing_duration"] = total_singing_duration
+        self.outputs["song_duration"] = song_duration
 
     # Loops through lyrics segments (typically sentences) from whisper_timestamps JSON output,
     # then loops over each word and writes all words with MidiCo segment start/end formatting
     # and word-level timestamps to a MidiCo-compatible LRC file
     def write_midico_lrc_file(self):
-        lrc_filename = self.result_metadata["midico_lrc_filepath"]
+        self.outputs["midico_lrc_filepath"] = self.get_cache_filepath(".lrc")
+
+        lrc_filename = self.outputs["midico_lrc_filepath"]
         self.logger.debug(f"writing midico formatted word timestamps to LRC file: {lrc_filename}")
         with open(lrc_filename, "w") as f:
             f.write("[re:MidiCo]\n")
-            for segment in self.corrected_lyrics_data_dict["segments"]:
+            for segment in self.outputs["corrected_lyrics_data_dict"]["segments"]:
                 for i, word in enumerate(segment["words"]):
                     start_time = self.format_time_lrc(word["start"])
                     if i != len(segment["words"]) - 1:
@@ -477,8 +511,8 @@ class LyricsTranscriber:
         screen: Optional[subtitles.LyricsScreen] = None
 
         lines_in_current_screen = 0
-        for whisper_line in self.corrected_lyrics_data_dict["segments"]:
-            self.logger.debug(f"lines_in_current_screen: {lines_in_current_screen} whisper_line: {whisper_line['text']}")
+        for segment in self.outputs["corrected_lyrics_data_dict"]["segments"]:
+            self.logger.debug(f"lines_in_current_screen: {lines_in_current_screen} segment: {segment['text']}")
             if screen is None:
                 self.logger.debug(f"screen is none, creating new LyricsScreen")
                 screen = subtitles.LyricsScreen()
@@ -486,8 +520,8 @@ class LyricsTranscriber:
                 self.logger.debug(f"line is none, creating new LyricsLine")
                 line = subtitles.LyricsLine()
 
-            num_words_in_whisper_line = len(whisper_line["words"])
-            for word_index, word in enumerate(whisper_line["words"]):
+            num_words_in_segment = len(segment["words"])
+            for word_index, word in enumerate(segment["words"]):
                 segment = subtitles.LyricSegment(
                     text=word["text"], ts=timedelta(seconds=word["start"]), end_ts=timedelta(seconds=word["end"])
                 )
@@ -495,8 +529,8 @@ class LyricsTranscriber:
 
                 # If word is last in the line, add line to screen and start new line
                 # Before looping to the next word
-                if word_index == num_words_in_whisper_line - 1:
-                    self.logger.debug(f"word_index is last in whisper_line, adding line to screen and starting new line")
+                if word_index == num_words_in_segment - 1:
+                    self.logger.debug(f"word_index is last in segment, adding line to screen and starting new line")
                     screen.lines.append(line)
                     lines_in_current_screen += 1
                     line = None
@@ -517,13 +551,15 @@ class LyricsTranscriber:
         return screens
 
     def write_ass_file(self):
-        ass_filepath = self.result_metadata["ass_subtitles_filepath"]
+        self.outputs["ass_subtitles_filepath"] = self.get_cache_filepath(".ass")
+
+        ass_filepath = self.outputs["ass_subtitles_filepath"]
         self.logger.debug(f"writing ASS formatted subtitle file: {ass_filepath}")
 
         intial_screens = self.create_screens()
-        screens = subtitles.set_segment_end_times(intial_screens, int(self.result_metadata["song_duration"]))
+        screens = subtitles.set_segment_end_times(intial_screens, int(self.outputs["song_duration"]))
         screens = subtitles.set_screen_start_times(screens)
-        lyric_subtitles_ass = subtitles.create_styled_subtitles(screens)
+        lyric_subtitles_ass = subtitles.create_styled_subtitles(screens, self.video_resolution_num, self.font_size)
         lyric_subtitles_ass.write(ass_filepath)
 
     def resize_background_image(self):
@@ -539,15 +575,7 @@ class LyricsTranscriber:
             return background_image_resized
 
         resize_command = ["ffmpeg", "-i", self.video_background_image]
-
-        if self.video_resolution == "360p":
-            resize_command += ["-vf", "scale=640x360"]
-        elif self.video_resolution == "720p":
-            resize_command += ["-vf", "scale=1280x720"]
-        elif self.video_resolution == "1080p":
-            resize_command += ["-vf", "scale=1920x1080"]
-        elif self.video_resolution == "4k":
-            resize_command += ["-vf", "scale=3840x2160"]
+        resize_command += ["-vf", f"scale={self.video_resolution_num[0]}x{self.video_resolution_num[1]}"]
 
         resize_command += [background_image_resized]
         subprocess.check_output(resize_command, universal_newlines=True)
@@ -560,7 +588,7 @@ class LyricsTranscriber:
         return background_image_resized
 
     def create_video(self):
-        self.logger.debug(f"create_video attempting to generate video file: {self.result_metadata['karaoke_video_filepath']}")
+        self.logger.debug(f"create_video attempting to generate video file: {self.outputs['karaoke_video_filepath']}")
 
         audio_delay = 0
         audio_delay_ms = int(audio_delay * 1000)  # milliseconds
@@ -593,14 +621,7 @@ class LyricsTranscriber:
         else:
             self.logger.debug(f"background not set, using solid {self.video_background_color} background with resolution: {self.video_resolution}")
             ffmpeg_cmd += ["-f", "lavfi"]
-            if self.video_resolution == "360p":
-                ffmpeg_cmd += ["-i", f"color=c={self.video_background_color}:s=640x360:r=30"]
-            elif self.video_resolution == "720p":
-                ffmpeg_cmd += ["-i", f"color=c={self.video_background_color}:s=1280x720:r=30"]
-            elif self.video_resolution == "1080p":
-                ffmpeg_cmd += ["-i", f"color=c={self.video_background_color}:s=1920x1080:r=30"]
-            elif self.video_resolution == "4k":
-                ffmpeg_cmd += ["-i", f"color=c={self.video_background_color}:s=3840x2160:r=30"]
+            ffmpeg_cmd += ["-i", f"color=c={self.video_background_color}:s={self.video_resolution_num[0]}x{self.video_resolution_num[1]}:r=30"]
 
 
         # Check for hardware acclerated h.264 encoding and use if available
@@ -624,7 +645,7 @@ class LyricsTranscriber:
             # Re-encode audio as mp3
             "-c:a", "aac",
             # Add subtitles
-            "-vf", "ass=" + self.result_metadata["ass_subtitles_filepath"],
+            "-vf", "ass=" + self.outputs["ass_subtitles_filepath"],
             # Encode as H264 using hardware acceleration if available
             "-c:v", video_codec,
             # Increase output video quality
@@ -642,7 +663,7 @@ class LyricsTranscriber:
             # "-t", "30",
             *video_metadata,
             # Output path of video
-            self.result_metadata["karaoke_video_filepath"],
+            self.outputs["karaoke_video_filepath"],
         ]
         # fmt: on
 
@@ -658,37 +679,45 @@ class LyricsTranscriber:
         return formatted_time
 
     def write_transcribed_lyrics_plain_text(self):
-        if self.whisper_result_dict:
-            self.logger.debug(f"whisper_result_dict exists, writing plain text lyrics file")
-
+        if self.outputs["transcription_data_dict"]:
             transcribed_lyrics_text_filepath = os.path.join(self.cache_dir, "lyrics-" + self.get_song_slug() + "-transcribed.txt")
-            self.result_metadata["transcribed_lyrics_text_filepath"] = transcribed_lyrics_text_filepath
+            self.outputs["transcribed_lyrics_text_filepath"] = transcribed_lyrics_text_filepath
 
-            self.transcribed_lyrics_text = ""
+            self.outputs["transcribed_lyrics_text"] = ""
 
             self.logger.debug(f"writing lyrics plain text to transcribed_lyrics_text_filepath: {transcribed_lyrics_text_filepath}")
             with open(transcribed_lyrics_text_filepath, "w") as f:
-                for segment in self.whisper_result_dict["segments"]:
-                    self.transcribed_lyrics_text += segment["text"] + "\n"
+                for segment in self.outputs["transcription_data_dict"]["segments"]:
+                    self.outputs["transcribed_lyrics_text"] += segment["text"] + "\n"
                     f.write(segment["text"].strip() + "\n")
+        else:
+            raise Exception("Cannot write transcribed lyrics plain text as transcription_data_dict is not set")
 
     def transcribe(self):
-        whisper_cache_filepath = self.result_metadata["whisper_json_filepath"]
+        self.outputs["transcription_data_filepath"] = self.get_cache_filepath(".json")
+
+        whisper_cache_filepath = self.outputs["transcription_data_filepath"]
         if os.path.isfile(whisper_cache_filepath):
             self.logger.debug(f"transcribe found existing file at whisper_cache_filepath, reading: {whisper_cache_filepath}")
             with open(whisper_cache_filepath, "r") as cache_file:
-                return json.load(cache_file)
+                self.outputs["transcription_data_dict"] = json.load(cache_file)
+                return
 
         self.logger.debug(f"no cached transcription file found, running whisper transcribe")
         audio = whisper.load_audio(self.audio_filepath)
         model = whisper.load_model(self.transcription_model, device="cpu")
         result = whisper.transcribe(model, audio, language="en")
 
-        self.logger.debug(f"whisper transcription complete, writing JSON to cache file: {whisper_cache_filepath}")
+        self.logger.debug(f"transcription complete, performing post-processing cleanup")
+
+        # Remove segments with no words, only music
+        result["segments"] = [segment for segment in result["segments"] if segment["text"].strip() != "Music"]
+
+        self.logger.debug(f"writing transcription data JSON to cache file: {whisper_cache_filepath}")
         with open(whisper_cache_filepath, "w") as cache_file:
             json.dump(result, cache_file, indent=4)
 
-        return result
+        self.outputs["transcription_data_dict"] = result
 
     def get_cache_filepath(self, extension):
         filename = os.path.split(self.audio_filepath)[1]

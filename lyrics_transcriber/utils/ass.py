@@ -1216,6 +1216,10 @@ class ASS:
                 return "\n"
             return " "
 
+    def set_resolution(self, resolution):
+        self.__set_script_info("PlayResX", str(resolution[0]))
+        self.__set_script_info("PlayResY", str(resolution[1]))
+
     # Script resolution
     def resolution(self):
         w = 0

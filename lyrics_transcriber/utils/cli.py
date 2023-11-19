@@ -128,36 +128,33 @@ def main():
         video_background_color=args.video_background_color,
     )
 
-    result_metadata = transcriber.generate()
+    outputs = transcriber.generate()
 
     logger.info(f"*** Success! ***")
 
-    formatted_duration = f'{int(result_metadata["song_duration"] // 60):02d}:{int(result_metadata["song_duration"] % 60):02d}'
+    formatted_duration = f'{int(outputs["song_duration"] // 60):02d}:{int(outputs["song_duration"] % 60):02d}'
     logger.info(f"Total Song Duration: {formatted_duration}")
 
-    formatted_singing_duration = (
-        f'{int(result_metadata["total_singing_duration"] // 60):02d}:{int(result_metadata["total_singing_duration"] % 60):02d}'
-    )
+    formatted_singing_duration = f'{int(outputs["total_singing_duration"] // 60):02d}:{int(outputs["total_singing_duration"] % 60):02d}'
     logger.info(f"Total Singing Duration: {formatted_singing_duration}")
-    logger.info(f"Singing Percentage: {result_metadata['singing_percentage']}%")
+    logger.info(f"Singing Percentage: {outputs['singing_percentage']}%")
 
     logger.info(f"*** Outputs: ***")
-    logger.info(f"Whisper transcription output JSON file: {result_metadata['whisper_json_filepath']}")
-    logger.info(f"MidiCo LRC output file: {result_metadata['midico_lrc_filepath']}")
-    logger.info(f"Genius lyrics output file: {result_metadata['genius_lyrics_filepath']}")
-    logger.info(f"Spotify lyrics data file: {result_metadata['spotify_lyrics_data_filepath']}")
+    logger.info(f"Transcription output data file: {outputs['transcription_data_filepath']}")
+    logger.info(f"Genius lyrics output file: {outputs['genius_lyrics_filepath']}")
+    logger.info(f"Spotify lyrics data file: {outputs['spotify_lyrics_data_filepath']}")
 
-    logger.info(f"Transcribed lyrics text file: {result_metadata['transcribed_lyrics_text_filepath']}")
-    logger.info(f"Spotify lyrics text file: {result_metadata['spotify_lyrics_text_filepath']}")
-    logger.info(f"Corrected lyrics text file: {result_metadata['corrected_lyrics_text_filepath']}")
-    logger.info(f"ASS subtitles file: {result_metadata['ass_subtitles_filepath']}")
-    logger.info(f"Karaoke Video file: {result_metadata['karaoke_video_filepath']}")
+    logger.info(f"Transcribed lyrics text file: {outputs['transcribed_lyrics_text_filepath']}")
+    logger.info(f"Spotify lyrics text file: {outputs['spotify_lyrics_text_filepath']}")
+    logger.info(f"Corrected lyrics text file: {outputs['corrected_lyrics_text_filepath']}")
 
+    logger.info(f"MidiCo LRC output file: {outputs['midico_lrc_filepath']}")
+    logger.info(f"ASS subtitles file: {outputs['ass_subtitles_filepath']}")
+    logger.info(f"Karaoke Video file: {outputs['karaoke_video_filepath']}")
+
+    logger.info(f"LLM Token Usage: input: {outputs['llm_token_usage']['input']} output: {outputs['llm_token_usage']['output']}")
     logger.info(
-        f"LLM Token Usage: input: {result_metadata['llm_token_usage']['input']} output: {result_metadata['llm_token_usage']['output']}"
-    )
-    logger.info(
-        f'LLM usage costs: {result_metadata["llm_costs_usd"]["input"]} + {result_metadata["llm_costs_usd"]["output"]} = ${result_metadata["llm_costs_usd"]["total"]}'
+        f'LLM usage costs: {outputs["llm_costs_usd"]["input"]} + {outputs["llm_costs_usd"]["output"]} = ${outputs["llm_costs_usd"]["total"]}'
     )
 
 
