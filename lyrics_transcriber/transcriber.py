@@ -302,7 +302,7 @@ class LyricsTranscriber:
                     data_input_str = f"{previous_two_lines}\nData input:\n\n{simplified_segment_str}\n"
 
                     self.logger.info(
-                        f'Calling completion model {self.llm_model} with instructions and data input for segment {segment["id"]}:'
+                        f'Calling completion model {self.llm_model} with instructions and data input for segment {segment["id"]} / {total_segments}:'
                     )
                     # self.logger.debug(data_input_str)
 
