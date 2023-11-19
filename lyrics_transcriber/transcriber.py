@@ -102,6 +102,7 @@ class LyricsTranscriber:
             "llm_token_usage": {"input": 0, "output": 0},
             "llm_costs_usd": {"input": 0.0, "output": 0.0, "total": 0.0},
             "llm_transcript": None,
+            "llm_transcript_filepath": None,
             "corrected_lyrics_text": None,
             "corrected_lyrics_text_filepath": None,
             "midico_lrc_filepath": None,
@@ -110,6 +111,7 @@ class LyricsTranscriber:
             "singing_percentage": None,
             "total_singing_duration": None,
             "song_duration": None,
+            "output_dir": None
         }
 
         if self.audio_filepath is None:
@@ -161,6 +163,8 @@ class LyricsTranscriber:
             if key.endswith("_filepath"):
                 if self.outputs[key] and os.path.isfile(self.outputs[key]):
                     shutil.copy(self.outputs[key], self.output_dir)
+
+        self.outputs["output_dir"] = self.output_dir
 
     def validate_lyrics_match_song(self):
         at_least_one_online_lyrics_validated = False
@@ -262,19 +266,23 @@ class LyricsTranscriber:
             # TODO: Record more info about the correction process (e.g before/after diffs for each segment) to a file for debugging
             # TODO: Possibly add a step after segment-based correct to get the LLM to self-analyse the diff
 
-            llm_transcript_filepath = os.path.join(self.cache_dir, "llm-transcript-" + self.get_song_slug() + ".txt")
+            self.outputs["llm_transcript_filepath"] = os.path.join(self.cache_dir, "lyrics-" + self.get_song_slug() + "-llm-correction-transcript.txt")
             self.outputs["llm_transcript"] = ""
 
             total_segments = len(self.outputs["transcription_data_dict"]["segments"])
             self.logger.info(f"Beginning correction using LLM, total segments: {total_segments}")
 
-            with open(llm_transcript_filepath, "a") as llm_transcript_file:
-                self.logger.debug(f"writing LLM chat instructions: {llm_transcript_filepath}")
+            with open(self.outputs["llm_transcript_filepath"], "a") as llm_transcript_file:
+                self.logger.debug(f"writing LLM chat instructions: {self.outputs['llm_transcript_filepath']}")
                 llm_instructions_header = f"--- SYSTEM instructions passed in for all segments ---:\n\n"
                 self.outputs["llm_transcript"] += llm_instructions_header + llm_instructions + "\n"
                 llm_transcript_file.write(llm_instructions_header + llm_instructions + "\n")
 
                 for segment in self.outputs["transcription_data_dict"]["segments"]:
+                    # Don't waste dollars on GPT when testing, Andrew ;)
+                    # if segment["id"] > 10:
+                    #     break
+
                     simplified_segment = {
                         "id": segment["id"],
                         "start": segment["start"],
@@ -322,7 +330,7 @@ class LyricsTranscriber:
                     llm_transcript_segment += message
                     llm_transcript_segment += f"\n--- END segment {segment['id']} / {total_segments} ---:\n\n"
 
-                    self.logger.debug(f"writing LLM chat transcript for segment to: {llm_transcript_filepath}")
+                    self.logger.debug(f"writing LLM chat transcript for segment to: {self.outputs['llm_transcript_filepath']}")
                     llm_transcript_file.write(llm_transcript_segment)
                     self.outputs["llm_transcript"] += llm_transcript_segment
 

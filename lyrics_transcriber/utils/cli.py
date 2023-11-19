@@ -157,6 +157,8 @@ def main():
         f'LLM usage costs: {outputs["llm_costs_usd"]["input"]} + {outputs["llm_costs_usd"]["output"]} = ${outputs["llm_costs_usd"]["total"]}'
     )
 
+    logger.info(f"Files copied to output dir: {outputs['output_dir']}")
+
 
 if __name__ == "__main__":
     main()
