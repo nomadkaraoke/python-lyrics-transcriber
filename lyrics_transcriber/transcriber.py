@@ -28,6 +28,7 @@ class LyricsTranscriber:
         cache_dir="/tmp/lyrics-transcriber-cache/",
         log_level=logging.DEBUG,
         log_formatter=None,
+        transcription_model="medium",
         llm_model="gpt-3.5-turbo-1106",
         render_video=False,
         video_resolution="360p",
@@ -58,6 +59,8 @@ class LyricsTranscriber:
 
         self.genius_api_token = os.getenv("GENIUS_API_TOKEN", default=genius_api_token)
         self.spotify_cookie = os.getenv("SPOTIFY_COOKIE_SP_DC", default=spotify_cookie)
+
+        self.transcription_model = transcription_model
         self.llm_model = llm_model
 
         self.render_video = render_video
@@ -79,12 +82,14 @@ class LyricsTranscriber:
         self.whisper_result_dict = None
         self.result_metadata = {
             "whisper_json_filepath": None,
+            "transcribed_lyrics_text_filepath": None,
             "genius_lyrics": None,
             "genius_lyrics_filepath": None,
             "spotify_lyrics_data_dict": None,
             "spotify_lyrics_data_filepath": None,
             "spotify_lyrics_text_filepath": None,
-            "llm_token_usage": {"prompt": 0, "completion": 0},
+            "llm_token_usage": {"input": 0, "output": 0},
+            "llm_costs_usd": {"input": 0.0, "output": 0.0, "total": 0.0},
             "corrected_lyrics_text_filepath": None,
             "midico_lrc_filepath": None,
             "ass_subtitles_filepath": None,
@@ -104,6 +109,7 @@ class LyricsTranscriber:
 
         self.result_metadata["whisper_json_filepath"] = self.get_cache_filepath(".json")
         self.whisper_result_dict = self.transcribe()
+        self.write_transcribed_lyrics_plain_text()
 
         self.calculate_singing_percentage()
 
@@ -113,6 +119,7 @@ class LyricsTranscriber:
 
         self.corrected_lyrics_data_dict = self.write_corrected_lyrics_data_file()
         self.write_corrected_lyrics_plain_text()
+        self.calculate_llm_costs()
 
         # Fall back to pure whisper results if the correction process bails so video can still be generated
         if self.corrected_lyrics_data_dict is None:
@@ -147,6 +154,11 @@ class LyricsTranscriber:
         if self.result_metadata["spotify_lyrics_data_filepath"] is not None:
             self.result_metadata["spotify_lyrics_data_filepath"] = shutil.copy(
                 self.result_metadata["spotify_lyrics_data_filepath"], self.output_dir
+            )
+
+        if self.result_metadata["transcribed_lyrics_text_filepath"] is not None:
+            self.result_metadata["transcribed_lyrics_text_filepath"] = shutil.copy(
+                self.result_metadata["transcribed_lyrics_text_filepath"], self.output_dir
             )
 
         if self.result_metadata["spotify_lyrics_text_filepath"] is not None:
@@ -204,7 +216,7 @@ class LyricsTranscriber:
             #       e.g. remove segments with low confidence, remove segments with no words, maybe.
 
             # TODO: Add more to the LLM instructions (or consider post-processing cleanup) to get rid of overlapping segments
-            # when there are background vocals or other overlapping lyrics 
+            # when there are background vocals or other overlapping lyrics
 
             # TODO: Test if results are cleaner when using the vocal file from a background vocal audio separation model
 
@@ -234,8 +246,8 @@ class LyricsTranscriber:
                 message = response.choices[0].message.content
                 finish_reason = response.choices[0].finish_reason
 
-                self.result_metadata["llm_token_usage"]["prompt"] += response.usage.prompt_tokens
-                self.result_metadata["llm_token_usage"]["completion"] += response.usage.completion_tokens
+                self.result_metadata["llm_token_usage"]["input"] += response.usage.prompt_tokens
+                self.result_metadata["llm_token_usage"]["output"] += response.usage.completion_tokens
 
                 # self.logger.debug(f"response finish_reason: {finish_reason} message: \n{message}")
 
@@ -263,6 +275,25 @@ class LyricsTranscriber:
         self.result_metadata["corrected_lyrics_data_dict"] = corrected_lyrics_dict
         return corrected_lyrics_dict
 
+    def calculate_llm_costs(self):
+        price_dollars_per_1000_tokens = {
+            "gpt-3.5-turbo-1106": {
+                "input": 0.0010,
+                "output": 0.0020,
+            },
+            "gpt-4-1106-preview": {
+                "input": 0.01,
+                "output": 0.03,
+            },
+        }
+
+        input_cost = price_dollars_per_1000_tokens[self.llm_model]["input"] * (self.result_metadata["llm_token_usage"]["input"] / 1000)
+        output_cost = price_dollars_per_1000_tokens[self.llm_model]["output"] * (self.result_metadata["llm_token_usage"]["output"] / 1000)
+
+        self.result_metadata["llm_costs_usd"]["input"] = round(input_cost, 3)
+        self.result_metadata["llm_costs_usd"]["output"] = round(output_cost, 3)
+        self.result_metadata["llm_costs_usd"]["total"] = round(input_cost + output_cost, 3)
+
     def write_corrected_lyrics_plain_text(self):
         if self.result_metadata["corrected_lyrics_data_dict"]:
             self.logger.debug(f"corrected_lyrics_data_dict exists, writing plain text lyrics file")
@@ -275,8 +306,8 @@ class LyricsTranscriber:
             self.logger.debug(f"writing lyrics plain text to corrected_lyrics_text_filepath: {corrected_lyrics_text_filepath}")
             with open(corrected_lyrics_text_filepath, "w") as f:
                 for corrected_segment in self.corrected_lyrics_data_dict["segments"]:
-                    self.corrected_lyrics_text += corrected_segment["text"] + "\n"
-                    f.write(corrected_segment["text"] + "\n")
+                    self.corrected_lyrics_text += corrected_segment["text"].strip() + "\n"
+                    f.write(corrected_segment["text".strip()] + "\n")
 
     def write_spotify_lyrics_data_file(self):
         if self.spotify_cookie and self.song_known:
@@ -344,8 +375,8 @@ class LyricsTranscriber:
             self.logger.debug(f"writing lyrics plain text to spotify_lyrics_text_filepath: {spotify_lyrics_text_filepath}")
             with open(spotify_lyrics_text_filepath, "w") as f:
                 for line in lines:
-                    self.spotify_lyrics_text += line["words"] + "\n"
-                    f.write(line["words"] + "\n")
+                    self.spotify_lyrics_text += line["words"].strip() + "\n"
+                    f.write(line["words"].strip() + "\n")
 
     def write_genius_lyrics_file(self):
         if self.genius_api_token and self.song_known:
@@ -626,6 +657,21 @@ class LyricsTranscriber:
         formatted_time = f"{minutes:02d}:{seconds:02d}.{milliseconds:03d}"
         return formatted_time
 
+    def write_transcribed_lyrics_plain_text(self):
+        if self.whisper_result_dict:
+            self.logger.debug(f"whisper_result_dict exists, writing plain text lyrics file")
+
+            transcribed_lyrics_text_filepath = os.path.join(self.cache_dir, "lyrics-" + self.get_song_slug() + "-transcribed.txt")
+            self.result_metadata["transcribed_lyrics_text_filepath"] = transcribed_lyrics_text_filepath
+
+            self.transcribed_lyrics_text = ""
+
+            self.logger.debug(f"writing lyrics plain text to transcribed_lyrics_text_filepath: {transcribed_lyrics_text_filepath}")
+            with open(transcribed_lyrics_text_filepath, "w") as f:
+                for segment in self.whisper_result_dict["segments"]:
+                    self.transcribed_lyrics_text += segment["text"] + "\n"
+                    f.write(segment["text"].strip() + "\n")
+
     def transcribe(self):
         whisper_cache_filepath = self.result_metadata["whisper_json_filepath"]
         if os.path.isfile(whisper_cache_filepath):
@@ -635,7 +681,7 @@ class LyricsTranscriber:
 
         self.logger.debug(f"no cached transcription file found, running whisper transcribe")
         audio = whisper.load_audio(self.audio_filepath)
-        model = whisper.load_model("medium.en", device="cpu")
+        model = whisper.load_model(self.transcription_model, device="cpu")
         result = whisper.transcribe(model, audio, language="en")
 
         self.logger.debug(f"whisper transcription complete, writing JSON to cache file: {whisper_cache_filepath}")
