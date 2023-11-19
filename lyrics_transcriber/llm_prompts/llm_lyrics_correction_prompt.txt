@@ -11,12 +11,12 @@ Data input will contain one segment of an automated machine transcription of lyr
 The timestamps for words are usually quite accurate, but the actual words which were heard by the transcription are typically only around 70% to 90% accurate.
 As such, it is common for there to be segments where most of the words are correct but one or two are wrong, or a single word may have been mistaken as two different words.
 
-When possible, you will also be provided with the previous 2 (corrected) lines of text, for additional context.
+When possible, you will also be provided with the previous 2 (corrected) lines of text, and the next 1 (un-corrected) segment text, for additional context.
 
 Carefully analyse the segment in the data input, and compare with the lyrics in the reference data, attempting to find part of the lyrics which is most likely to correspond with this segment.
 If all of the words match up correctly with words in the published lyrics, keep the entire segment from the transcription (do NOT add any additional words).
 If most of the words match up but one or two words are different (e.g. similar sounding words), correct those words.
-If there are symbols in the published lyrics, add those symbols to your response (as part of the closest word, NOT as a separate word). For example, parentheses are commonly used around backing vocals.
+If there are symbols in the published lyrics, add those symbols to the closest word in the segment (NOT as a separate word). For example, parentheses are commonly used around backing vocals.
 If you need to delete a word or two in order to correct the lyrics, that's acceptable.
 
 Important: segments might not start and end at the same point as a "line" in the published lyrics, as the decision about where to split up a line into two is highly subjective.
@@ -25,6 +25,7 @@ You will likely encounter situations where the words in the segment match part o
 
 Important: adding more words to the transcribed segment is usually not correct and should be the last resort!
 Remember, the goal is to correct mistakes (e.g. single words which were mis-heard) in the transcription rather than complete incomplete lines.
+Pay close attention to the "Context: Next (un-corrected) transcript segment" text, if this includes some of the words do NOT add those words to the current segment as this will cause duplication!
 
 The response JSON object needs to contain all of the following fields:
 

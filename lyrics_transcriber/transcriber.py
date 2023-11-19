@@ -63,6 +63,7 @@ class LyricsTranscriber:
         self.transcription_model = transcription_model
         self.llm_model = llm_model
         self.openai_client = OpenAI()
+        self.openai_client.log = self.log_level
 
         self.render_video = render_video
         self.video_resolution = video_resolution
@@ -111,7 +112,7 @@ class LyricsTranscriber:
             "singing_percentage": None,
             "total_singing_duration": None,
             "song_duration": None,
-            "output_dir": None
+            "output_dir": None,
         }
 
         if self.audio_filepath is None:
@@ -242,120 +243,127 @@ class LyricsTranscriber:
             f"no cached lyrics found at corrected_lyrics_data_json_cache_filepath: {corrected_lyrics_data_json_cache_filepath}, attempting to run correction using LLM"
         )
 
-        try:
-            corrected_lyrics_dict = {"segments": []}
+        corrected_lyrics_dict = {"segments": []}
 
-            with open("lyrics_transcriber/llm_prompts/llm_lyrics_correction_prompt.txt", "r") as file:
-                llm_instructions = file.read()
+        with open("lyrics_transcriber/llm_prompts/llm_lyrics_correction_prompt.txt", "r") as file:
+            llm_instructions = file.read()
 
-            reference_data_count = 1
+        reference_data_count = 1
 
-            if self.outputs["genius_lyrics_text"]:
-                llm_instructions += f'\nReference data {reference_data_count}:\n{self.outputs["genius_lyrics_text"]}\n'
-                reference_data_count += 1
+        if self.outputs["genius_lyrics_text"]:
+            llm_instructions += f'\nReference data {reference_data_count}:\n{self.outputs["genius_lyrics_text"]}\n'
+            reference_data_count += 1
 
-            if self.outputs["spotify_lyrics_text"]:
-                llm_instructions += f'\nReference data {reference_data_count}:\n{self.outputs["spotify_lyrics_text"]}\n'
-                reference_data_count += 1
+        if self.outputs["spotify_lyrics_text"]:
+            llm_instructions += f'\nReference data {reference_data_count}:\n{self.outputs["spotify_lyrics_text"]}\n'
+            reference_data_count += 1
 
-            # TODO: Add more to the LLM instructions (or consider post-processing cleanup) to get rid of overlapping segments
-            # when there are background vocals or other overlapping lyrics
+        # TODO: Add more to the LLM instructions (or consider post-processing cleanup) to get rid of overlapping segments
+        # when there are background vocals or other overlapping lyrics
 
-            # TODO: Test if results are cleaner when using the vocal file from a background vocal audio separation model
+        # TODO: Test if results are cleaner when using the vocal file from a background vocal audio separation model
 
-            # TODO: Record more info about the correction process (e.g before/after diffs for each segment) to a file for debugging
-            # TODO: Possibly add a step after segment-based correct to get the LLM to self-analyse the diff
+        # TODO: Record more info about the correction process (e.g before/after diffs for each segment) to a file for debugging
+        # TODO: Possibly add a step after segment-based correct to get the LLM to self-analyse the diff
 
-            self.outputs["llm_transcript_filepath"] = os.path.join(self.cache_dir, "lyrics-" + self.get_song_slug() + "-llm-correction-transcript.txt")
-            self.outputs["llm_transcript"] = ""
+        self.outputs["llm_transcript_filepath"] = os.path.join(
+            self.cache_dir, "lyrics-" + self.get_song_slug() + "-llm-correction-transcript.txt"
+        )
+        self.outputs["llm_transcript"] = ""
 
-            total_segments = len(self.outputs["transcription_data_dict"]["segments"])
-            self.logger.info(f"Beginning correction using LLM, total segments: {total_segments}")
+        total_segments = len(self.outputs["transcription_data_dict"]["segments"])
+        self.logger.info(f"Beginning correction using LLM, total segments: {total_segments}")
 
-            with open(self.outputs["llm_transcript_filepath"], "a") as llm_transcript_file:
-                self.logger.debug(f"writing LLM chat instructions: {self.outputs['llm_transcript_filepath']}")
-                llm_instructions_header = f"--- SYSTEM instructions passed in for all segments ---:\n\n"
-                self.outputs["llm_transcript"] += llm_instructions_header + llm_instructions + "\n"
-                llm_transcript_file.write(llm_instructions_header + llm_instructions + "\n")
+        with open(self.outputs["llm_transcript_filepath"], "a", buffering=1) as llm_transcript_file:
+            self.logger.debug(f"writing LLM chat instructions: {self.outputs['llm_transcript_filepath']}")
+            llm_instructions_header = f"--- SYSTEM instructions passed in for all segments ---:\n\n"
+            self.outputs["llm_transcript"] += llm_instructions_header + llm_instructions + "\n"
+            llm_transcript_file.write(llm_instructions_header + llm_instructions + "\n")
 
-                for segment in self.outputs["transcription_data_dict"]["segments"]:
-                    # Don't waste dollars on GPT when testing, Andrew ;)
-                    # if segment["id"] > 10:
-                    #     break
+            for segment in self.outputs["transcription_data_dict"]["segments"]:
+                # Don't waste dollars on GPT when testing, Andrew ;)
+                # if segment["id"] > 10:
+                #     break
 
-                    simplified_segment = {
-                        "id": segment["id"],
-                        "start": segment["start"],
-                        "end": segment["end"],
-                        "confidence": segment["confidence"],
-                        "text": segment["text"],
-                        "words": segment["words"],
-                    }
+                simplified_segment = {
+                    "id": segment["id"],
+                    "start": segment["start"],
+                    "end": segment["end"],
+                    "confidence": segment["confidence"],
+                    "text": segment["text"],
+                    "words": segment["words"],
+                }
 
-                    simplified_segment_str = json.dumps(simplified_segment)
+                simplified_segment_str = json.dumps(simplified_segment)
 
-                    previous_two_lines = ""
+                extra_context_prompt = ""
 
-                    if segment["id"] > 2:
-                        previous_two_lines = "Previous two lines:\n\n"
+                if segment["id"] > 2:
+                    extra_context_prompt = "Context: Previous two corrected lines:\n\n"
 
-                        for previous_segment in corrected_lyrics_dict["segments"]:
-                            if previous_segment["id"] == (segment["id"] - 2):
-                                previous_two_lines += previous_segment["text"].strip() + "\n"
+                    for previous_segment in corrected_lyrics_dict["segments"]:
+                        if previous_segment["id"] == (segment["id"] - 2):
+                            extra_context_prompt += previous_segment["text"].strip() + "\n"
+                            break
 
-                        for previous_segment in corrected_lyrics_dict["segments"]:
-                            if previous_segment["id"] == (segment["id"] - 1):
-                                previous_two_lines += previous_segment["text"].strip() + "\n"
+                    for previous_segment in corrected_lyrics_dict["segments"]:
+                        if previous_segment["id"] == (segment["id"] - 1):
+                            extra_context_prompt += previous_segment["text"].strip() + "\n"
+                            break
 
-                    data_input_str = f"{previous_two_lines}\nData input:\n\n{simplified_segment_str}\n"
+                    for next_segment in self.outputs["transcription_data_dict"]["segments"]:
+                        if next_segment["id"] == (segment["id"] + 1):
+                            extra_context_prompt += "Context: Next (un-corrected) transcript segment:\n\n"
+                            extra_context_prompt += next_segment["text"].strip() + "\n"
+                            break
 
-                    self.logger.info(
-                        f'Calling completion model {self.llm_model} with instructions and data input for segment {segment["id"]} / {total_segments}:'
-                    )
-                    # self.logger.debug(data_input_str)
+                data_input_str = f"{extra_context_prompt}\nData input:\n\n{simplified_segment_str}\n"
 
-                    llm_transcript_segment = f"--- INPUT for segment {segment['id']} / {total_segments} ---:\n\n"
-                    llm_transcript_segment += data_input_str
+                self.logger.info(
+                    f'Calling completion model {self.llm_model} with instructions and data input for segment {segment["id"]} / {total_segments}:'
+                )
+                # self.logger.debug(data_input_str)
 
-                    response = self.openai_client.chat.completions.create(
-                        model=self.llm_model,
-                        response_format={"type": "json_object"},
-                        messages=[{"role": "system", "content": llm_instructions}, {"role": "user", "content": data_input_str}],
-                    )
+                llm_transcript_segment = f"--- INPUT for segment {segment['id']} / {total_segments} ---:\n\n"
+                llm_transcript_segment += data_input_str
 
-                    message = response.choices[0].message.content
-                    finish_reason = response.choices[0].finish_reason
+                response = self.openai_client.chat.completions.create(
+                    model=self.llm_model,
+                    response_format={"type": "json_object"},
+                    messages=[{"role": "system", "content": llm_instructions}, {"role": "user", "content": data_input_str}],
+                )
 
-                    llm_transcript_segment += f"\n--- RESPONSE for segment {segment['id']} ---:\n\n"
-                    llm_transcript_segment += message
-                    llm_transcript_segment += f"\n--- END segment {segment['id']} / {total_segments} ---:\n\n"
+                message = response.choices[0].message.content
+                finish_reason = response.choices[0].finish_reason
 
-                    self.logger.debug(f"writing LLM chat transcript for segment to: {self.outputs['llm_transcript_filepath']}")
-                    llm_transcript_file.write(llm_transcript_segment)
-                    self.outputs["llm_transcript"] += llm_transcript_segment
+                llm_transcript_segment += f"\n--- RESPONSE for segment {segment['id']} ---:\n\n"
+                llm_transcript_segment += message
+                llm_transcript_segment += f"\n--- END segment {segment['id']} / {total_segments} ---:\n\n"
 
-                    self.outputs["llm_token_usage"]["input"] += response.usage.prompt_tokens
-                    self.outputs["llm_token_usage"]["output"] += response.usage.completion_tokens
+                self.logger.debug(f"writing LLM chat transcript for segment to: {self.outputs['llm_transcript_filepath']}")
+                llm_transcript_file.write(llm_transcript_segment)
+                self.outputs["llm_transcript"] += llm_transcript_segment
 
-                    # self.logger.debug(f"response finish_reason: {finish_reason} message: \n{message}")
+                self.outputs["llm_token_usage"]["input"] += response.usage.prompt_tokens
+                self.outputs["llm_token_usage"]["output"] += response.usage.completion_tokens
 
-                    if finish_reason == "stop":
-                        try:
-                            corrected_segment_dict = json.loads(message)
-                            corrected_lyrics_dict["segments"].append(corrected_segment_dict)
-                            self.logger.info("Successfully parsed response from GPT as JSON and appended to corrected_lyrics_dict.segments")
-                        except json.JSONDecodeError as e:
-                            raise Exception("Failed to parse response from GPT as JSON") from e
-                    else:
-                        self.logger.warning(f"OpenAI API call did not finish successfully, finish_reason: {finish_reason}")
+                # self.logger.debug(f"response finish_reason: {finish_reason} message: \n{message}")
 
-                self.logger.info(f'Successfully processed correction for all {len(corrected_lyrics_dict["segments"])} lyrics segments')
+                if finish_reason == "stop":
+                    try:
+                        corrected_segment_dict = json.loads(message)
+                        corrected_lyrics_dict["segments"].append(corrected_segment_dict)
+                        self.logger.info("Successfully parsed response from GPT as JSON and appended to corrected_lyrics_dict.segments")
+                    except json.JSONDecodeError as e:
+                        raise Exception("Failed to parse response from GPT as JSON") from e
+                else:
+                    self.logger.warning(f"OpenAI API call did not finish successfully, finish_reason: {finish_reason}")
 
-                self.logger.debug(f"writing corrected lyrics data JSON filepath: {corrected_lyrics_data_json_cache_filepath}")
-                with open(corrected_lyrics_data_json_cache_filepath, "w") as corrected_lyrics_data_json_cache_file:
-                    corrected_lyrics_data_json_cache_file.write(json.dumps(corrected_lyrics_dict, indent=4))
-        except Exception as e:
-            self.logger.warn(f"caught exception while attempting to correct lyrics: ", e)
+            self.logger.info(f'Successfully processed correction for all {len(corrected_lyrics_dict["segments"])} lyrics segments')
+
+            self.logger.debug(f"writing corrected lyrics data JSON filepath: {corrected_lyrics_data_json_cache_filepath}")
+            with open(corrected_lyrics_data_json_cache_filepath, "w") as corrected_lyrics_data_json_cache_file:
+                corrected_lyrics_data_json_cache_file.write(json.dumps(corrected_lyrics_dict, indent=4))
 
         self.outputs["corrected_lyrics_data_filepath"] = corrected_lyrics_data_json_cache_filepath
         self.outputs["corrected_lyrics_data_dict"] = corrected_lyrics_dict
