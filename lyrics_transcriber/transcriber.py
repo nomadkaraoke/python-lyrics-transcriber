@@ -29,7 +29,7 @@ class LyricsTranscriber:
         log_level=logging.DEBUG,
         log_formatter=None,
         transcription_model="medium",
-        llm_model="gpt-3.5-turbo-1106",
+        llm_model="gpt-4-1106-preview",
         render_video=False,
         video_resolution="360p",
         video_background_image=None,
@@ -743,7 +743,7 @@ class LyricsTranscriber:
                 self.outputs["transcription_data_dict"] = json.load(cache_file)
                 return
 
-        self.logger.debug(f"no cached transcription file found, running whisper transcribe")
+        self.logger.debug(f"no cached transcription file found, running whisper transcribe with model: {self.transcription_model}")
         audio = whisper.load_audio(self.audio_filepath)
         model = whisper.load_model(self.transcription_model, device="cpu")
         result = whisper.transcribe(model, audio, language="en")
