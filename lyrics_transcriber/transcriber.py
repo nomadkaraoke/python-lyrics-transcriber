@@ -76,17 +76,21 @@ class LyricsTranscriber:
 
         match video_resolution:
             case "4k":
-                self.video_resolution_num = ("3840", "2160")
+                self.video_resolution_num = (3840, 2160)
                 self.font_size = 250
+                self.line_height = 250
             case "1080p":
-                self.video_resolution_num = ("1920", "1080")
-                self.font_size = 140
+                self.video_resolution_num = (1920, 1080)
+                self.font_size = 120
+                self.line_height = 120
             case "720p":
-                self.video_resolution_num = ("1280", "720")
+                self.video_resolution_num = (1280, 720)
                 self.font_size = 100
+                self.line_height = 100
             case "360p":
-                self.video_resolution_num = ("640", "360")
+                self.video_resolution_num = (640, 360)
                 self.font_size = 50
+                self.line_height = 50
             case _:
                 raise ValueError("Invalid video_resolution value. Must be one of: 4k, 1080p, 720p, 360p")
 
@@ -577,6 +581,8 @@ class LyricsTranscriber:
             if screen is None:
                 self.logger.debug(f"screen is none, creating new LyricsScreen")
                 screen = subtitles.LyricsScreen()
+                screen.video_size = self.video_resolution_num
+                screen.line_height = self.line_height
             if line is None:
                 self.logger.debug(f"line is none, creating new LyricsLine")
                 line = subtitles.LyricsLine()

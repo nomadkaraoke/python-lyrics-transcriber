@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "lyrics-transcriber"
-version = "0.12.7"
+version = "0.12.8"
 description = "Automatically create synchronised lyrics files in ASS and MidiCo LRC formats with word-level timestamps, using Whisper and lyrics from Genius and Spotify"
 authors = ["Andrew Beveridge <andrew@beveridge.uk>"]
 license = "MIT"
@@ -26,7 +26,7 @@ lyricsgenius = "^3"
 python-slugify = "^8"
 syrics = "^0"
 openai = "^1"
-openai-whisper = "20231106"
+openai-whisper = "20231117"
 whisper-timestamped = "^1"
 # Note: after adding openai-whisper and whisper-timestamped with poetry lock, I then removed all traces of triton
 # from poetry.lock before running poetry install, as triton doesn't support macOS but isn't actually needed for whisper.

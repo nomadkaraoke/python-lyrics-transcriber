@@ -1,6 +1,6 @@
 from dataclasses import dataclass, field
 from datetime import timedelta
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Tuple
 import json
 import itertools
 from pathlib import Path
@@ -12,14 +12,6 @@ from . import ass
 """
 Functions for generating ASS subtitles from lyric data
 """
-
-VIDEO_SIZE = (400, 320)
-LINE_HEIGHT = 30
-
-
-class LyricMarker(IntEnum):
-    SEGMENT_START = 1
-    SEGMENT_END = 2
 
 
 class LyricSegmentIterator:
@@ -143,16 +135,17 @@ class LyricsLine:
 class LyricsScreen:
     lines: List[LyricsLine] = field(default_factory=list)
     start_ts: Optional[timedelta] = None
+    video_size: Tuple[int, int] = None
+    line_height: int = None
 
     @property
     def end_ts(self) -> timedelta:
         return self.lines[-1].end_ts
 
     def get_line_y(self, line_num: int) -> int:
-        _, h = VIDEO_SIZE
+        _, h = self.video_size
         line_count = len(self.lines)
-        line_height = LINE_HEIGHT
-        return (h / 2) - (line_count * line_height / 2) + (line_num * line_height)
+        return (h / 2) - (line_count * self.line_height / 2) + (line_num * self.line_height)
 
     def as_ass_events(self, style: ass.ASS.Style) -> List[ass.ASS.Event]:
         return [line.as_ass_event(self.start_ts, self.end_ts, style, self.get_line_y(i)) for i, line in enumerate(self.lines)]
@@ -185,46 +178,6 @@ class LyricsObjectJSONEncoder(json.JSONEncoder):
         return super().default(o)
 
 
-def create_screens(logger, lyrics_segments, events_tuples):
-    segments = iter(LyricSegmentIterator(lyrics_segments=lyrics_segments))
-    events = iter(events_tuples)
-    screens: List[LyricsScreen] = []
-    prev_segment: Optional[LyricSegment] = None
-    line: Optional[LyricsLine] = None
-    screen: Optional[LyricsScreen] = None
-
-    try:
-        for event in events:
-            ts = event[0]
-            marker = event[1]
-            if marker == LyricMarker.SEGMENT_START:
-                segment_text: str = next(segments)
-                segment = LyricSegment(segment_text, ts)
-                if screen is None:
-                    screen = LyricsScreen()
-                if line is None:
-                    line = LyricsLine()
-                line.segments.append(segment)
-                if segment_text.endswith("\n"):
-                    screen.lines.append(line)
-                    line = None
-                if segment_text.endswith("\n\n"):
-                    screens.append(screen)
-                    screen = None
-                prev_segment = segment
-            elif marker == LyricMarker.SEGMENT_END:
-                if prev_segment is not None:
-                    prev_segment.end_ts = ts
-        if line is not None:
-            screen.lines.append(line)  # type: ignore[union-attr]
-        if screen is not None and len(screen.lines) > 0:
-            screens.append(screen)  # type: ignore[arg-type]
-    except StopIteration as si:
-        logger.error(f"Reached end of segments before end of events. Events: {list(events)}, lyrics: {list(segments)}")
-
-    return screens
-
-
 def set_segment_end_times(screens: List[LyricsScreen], song_duration_seconds: int) -> List[LyricsScreen]:
     """
     Infer end times of lines for screens where they are not already set.
@@ -254,10 +207,14 @@ def set_screen_start_times(screens: List[LyricsScreen]) -> List[LyricsScreen]:
     return screens
 
 
-def create_styled_subtitles(lyric_screens: List[LyricsScreen], resolution, fontsize) -> ass.ASS:
+def create_styled_subtitles(
+    lyric_screens: List[LyricsScreen],
+    resolution,
+    fontsize,
+) -> ass.ASS:
     a = ass.ASS()
     a.set_resolution(resolution)
-    
+
     a.styles_format = [
         "Name",  # The name of the Style. Case sensitive. Cannot include commas.
         "Fontname",  # The fontname as used by Windows. Case-sensitive.
@@ -278,9 +235,9 @@ def create_styled_subtitles(lyric_screens: List[LyricsScreen], resolution, fonts
         "Outline",  # If BorderStyle is 1,  then this specifies the width of the outline around the text, in pixels. Values may be 0, 1, 2, 3 or 4.
         "Shadow",  # If BorderStyle is 1,  then this specifies the depth of the drop shadow behind the text, in pixels. Values may be 0, 1, 2, 3 or 4. Drop shadow is always used in addition to an outline - SSA will force an outline of 1 pixel if no outline width is given.
         "Alignment",  # This sets how text is "justified" within the Left/Right onscreen margins, and also the vertical placing. Values may be 1=Left, 2=Centered, 3=Right. Add 4 to the value for a "Toptitle". Add 8 to the value for a "Midtitle". eg. 5 = left-justified toptitle
-        "MarginL",  #
-        "MarginR",  #
-        "MarginV",  #
+        "MarginL",  # This defines the Left Margin in pixels. It is the distance from the left-hand edge of the screen.The three onscreen margins (MarginL, MarginR, MarginV) define areas in which the subtitle text will be displayed.
+        "MarginR",  # This defines the Right Margin in pixels. It is the distance from the right-hand edge of the screen.
+        "MarginV",  # MarginV. This defines the vertical Left Margin in pixels. For a subtitle, it is the distance from the bottom of the screen. For a toptitle, it is the distance from the top of the screen. For a midtitle, the value is ignored - the text will be vertically centred
         "Encoding",  #
     ]
 
