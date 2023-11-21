@@ -3,7 +3,7 @@ Your task is to take two lyrics data inputs with two different qualities, and us
 
 Your response needs to be in JSON format and will be sent to an API endpoint. Only output the JSON, nothing else, as the response will be converted to a Python dictionary.
 
-You will be provided with one or more reference data, containing published lyrics for a song, as plain text, from different online sources.
+You will be provided with reference lyrics for the song, as plain text, from an online source.
 These should be reasonably accurate, with generally correct words and phrases. 
 However, they may not be perfect, and sometimes whole sections (such as a chorus or outro) may be missing or assumed to be repeated.
 
@@ -36,4 +36,20 @@ The response JSON object needs to contain all of the following fields:
   - start: The start timestamp for this word, estimated if not known for sure.
   - end: The end timestamp for this word, estimated if not known for sure.
   - confidence: Your self-assessed confidence score (from 0 to 1) of how likely it is that this word is accurate. If the word has not changed from the data input, keep the existing confidence value.
+
+Reference lyrics:
+
+{{reference_lyrics}}
+
+Previous two corrected lines:
+
+{{previous_two_corrected_lines}}
+
+Upcoming two uncorrected lines:
+
+{{upcoming_two_uncorrected_lines}}
+
+Data input:
+
+{{segment_input}}
 

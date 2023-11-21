@@ -30,6 +30,8 @@ class LyricsTranscriber:
         log_formatter=None,
         transcription_model="medium",
         llm_model="gpt-4-1106-preview",
+        llm_prompt_matching="lyrics_transcriber/llm_prompts/llm_prompt_lyrics_matching_andrew_handwritten_20231118.txt",
+        llm_prompt_correction="lyrics_transcriber/llm_prompts/llm_prompt_lyrics_correction_andrew_handwritten_20231118.txt",
         render_video=False,
         video_resolution="360p",
         video_background_image=None,
@@ -62,6 +64,8 @@ class LyricsTranscriber:
 
         self.transcription_model = transcription_model
         self.llm_model = llm_model
+        self.llm_prompt_matching = llm_prompt_matching
+        self.llm_prompt_correction = llm_prompt_correction
         self.openai_client = OpenAI()
         self.openai_client.log = self.log_level
 
@@ -69,17 +73,20 @@ class LyricsTranscriber:
         self.video_resolution = video_resolution
         self.video_background_image = video_background_image
         self.video_background_color = video_background_color
-        self.font_size = 100
 
         match video_resolution:
             case "4k":
                 self.video_resolution_num = ("3840", "2160")
+                self.font_size = 250
             case "1080p":
                 self.video_resolution_num = ("1920", "1080")
+                self.font_size = 140
             case "720p":
                 self.video_resolution_num = ("1280", "720")
+                self.font_size = 100
             case "360p":
                 self.video_resolution_num = ("640", "360")
+                self.font_size = 50
             case _:
                 raise ValueError("Invalid video_resolution value. Must be one of: 4k, 1080p, 720p, 360p")
 
@@ -170,7 +177,7 @@ class LyricsTranscriber:
     def validate_lyrics_match_song(self):
         at_least_one_online_lyrics_validated = False
 
-        with open("lyrics_transcriber/llm_prompts/llm_lyrics_matching_prompt.txt", "r") as file:
+        with open(self.llm_prompt_matching, "r") as file:
             llm_matching_instructions = file.read()
 
         for online_lyrics_source in ["genius", "spotify"]:
@@ -183,7 +190,7 @@ class LyricsTranscriber:
                 f'Data input 1:\n{self.outputs["transcribed_lyrics_text"]}\nData input 2:\n{self.outputs[online_lyrics_text_key]}\n'
             )
 
-            # self.logger.debug(f"llm_instructions:\n{llm_instructions}\ndata_input_str:\n{data_input_str}")
+            # self.logger.debug(f"system_prompt:\n{system_prompt}\ndata_input_str:\n{data_input_str}")
 
             self.logger.debug(f"making API call to LLM model {self.llm_model} to validate {online_lyrics_source} lyrics match")
             response = self.openai_client.chat.completions.create(
@@ -245,93 +252,91 @@ class LyricsTranscriber:
 
         corrected_lyrics_dict = {"segments": []}
 
-        with open("lyrics_transcriber/llm_prompts/llm_lyrics_correction_prompt.txt", "r") as file:
-            llm_instructions = file.read()
+        with open(self.llm_prompt_correction, "r") as file:
+            system_prompt_template = file.read()
 
-        reference_data_count = 1
-
-        if self.outputs["genius_lyrics_text"]:
-            llm_instructions += f'\nReference data {reference_data_count}:\n{self.outputs["genius_lyrics_text"]}\n'
-            reference_data_count += 1
-
-        if self.outputs["spotify_lyrics_text"]:
-            llm_instructions += f'\nReference data {reference_data_count}:\n{self.outputs["spotify_lyrics_text"]}\n'
-            reference_data_count += 1
-
-        # TODO: Add more to the LLM instructions (or consider post-processing cleanup) to get rid of overlapping segments
-        # when there are background vocals or other overlapping lyrics
+        reference_lyrics = self.outputs["genius_lyrics_text"] or self.outputs["spotify_lyrics_text"]
+        system_prompt = system_prompt_template.replace("{{reference_lyrics}}", reference_lyrics)
 
         # TODO: Test if results are cleaner when using the vocal file from a background vocal audio separation model
-
         # TODO: Record more info about the correction process (e.g before/after diffs for each segment) to a file for debugging
         # TODO: Possibly add a step after segment-based correct to get the LLM to self-analyse the diff
 
+        self.outputs["llm_transcript"] = ""
         self.outputs["llm_transcript_filepath"] = os.path.join(
             self.cache_dir, "lyrics-" + self.get_song_slug() + "-llm-correction-transcript.txt"
         )
-        self.outputs["llm_transcript"] = ""
 
         total_segments = len(self.outputs["transcription_data_dict"]["segments"])
         self.logger.info(f"Beginning correction using LLM, total segments: {total_segments}")
 
         with open(self.outputs["llm_transcript_filepath"], "a", buffering=1) as llm_transcript_file:
             self.logger.debug(f"writing LLM chat instructions: {self.outputs['llm_transcript_filepath']}")
-            llm_instructions_header = f"--- SYSTEM instructions passed in for all segments ---:\n\n"
-            self.outputs["llm_transcript"] += llm_instructions_header + llm_instructions + "\n"
-            llm_transcript_file.write(llm_instructions_header + llm_instructions + "\n")
+
+            llm_transcript_header = f"--- SYSTEM instructions passed in for all segments ---:\n\n{system_prompt}\n"
+            self.outputs["llm_transcript"] += llm_transcript_header
+            llm_transcript_file.write(llm_transcript_header)
 
             for segment in self.outputs["transcription_data_dict"]["segments"]:
-                # Don't waste dollars on GPT when testing, Andrew ;)
+                # # Don't waste OpenAI dollars when testing!
                 # if segment["id"] > 10:
-                #     break
+                #     continue
+                # if segment["id"] < 20 or segment["id"] > 24:
+                #     continue
 
-                simplified_segment = {
-                    "id": segment["id"],
-                    "start": segment["start"],
-                    "end": segment["end"],
-                    "confidence": segment["confidence"],
-                    "text": segment["text"],
-                    "words": segment["words"],
-                }
+                llm_transcript_segment = ""
+                segment_input = json.dumps(
+                    {
+                        "id": segment["id"],
+                        "start": segment["start"],
+                        "end": segment["end"],
+                        "confidence": segment["confidence"],
+                        "text": segment["text"],
+                        "words": segment["words"],
+                    }
+                )
 
-                simplified_segment_str = json.dumps(simplified_segment)
-
-                extra_context_prompt = ""
+                previous_two_corrected_lines = ""
+                upcoming_two_uncorrected_lines = ""
 
                 if segment["id"] > 2:
-                    extra_context_prompt = "Context: Previous two corrected lines:\n\n"
-
                     for previous_segment in corrected_lyrics_dict["segments"]:
-                        if previous_segment["id"] == (segment["id"] - 2):
-                            extra_context_prompt += previous_segment["text"].strip() + "\n"
-                            break
-
-                    for previous_segment in corrected_lyrics_dict["segments"]:
-                        if previous_segment["id"] == (segment["id"] - 1):
-                            extra_context_prompt += previous_segment["text"].strip() + "\n"
-                            break
+                        if previous_segment["id"] in (segment["id"] - 2, segment["id"] - 1):
+                            previous_two_corrected_lines += previous_segment["text"].strip() + "\n"
 
                     for next_segment in self.outputs["transcription_data_dict"]["segments"]:
-                        if next_segment["id"] == (segment["id"] + 1):
-                            extra_context_prompt += "Context: Next (un-corrected) transcript segment:\n\n"
-                            extra_context_prompt += next_segment["text"].strip() + "\n"
-                            break
+                        if next_segment["id"] in (segment["id"] + 1, segment["id"] + 2):
+                            upcoming_two_uncorrected_lines += next_segment["text"].strip() + "\n"
 
-                data_input_str = f"{extra_context_prompt}\nData input:\n\n{simplified_segment_str}\n"
+                llm_transcript_segment += f"--- Segment {segment['id']} / {total_segments} ---\n"
+                llm_transcript_segment += f"Previous two corrected lines:\n\n{previous_two_corrected_lines}\nUpcoming two uncorrected lines:\n\n{upcoming_two_uncorrected_lines}\nData input:\n\n{segment_input}\n"
+
+                # fmt: off
+                segment_prompt = system_prompt_template.replace(
+                    "{{previous_two_corrected_lines}}", previous_two_corrected_lines
+                ).replace(
+                    "{{upcoming_two_uncorrected_lines}}", upcoming_two_uncorrected_lines
+                ).replace(
+                    "{{segment_input}}", segment_input
+                )
 
                 self.logger.info(
                     f'Calling completion model {self.llm_model} with instructions and data input for segment {segment["id"]} / {total_segments}:'
                 )
-                # self.logger.debug(data_input_str)
-
-                llm_transcript_segment = f"--- INPUT for segment {segment['id']} / {total_segments} ---:\n\n"
-                llm_transcript_segment += data_input_str
 
                 response = self.openai_client.chat.completions.create(
                     model=self.llm_model,
                     response_format={"type": "json_object"},
-                    messages=[{"role": "system", "content": llm_instructions}, {"role": "user", "content": data_input_str}],
+                    seed=10,
+                    temperature=0.4,
+                    messages=[
+                        {
+                            "role": "user", 
+                            "content": segment_prompt
+                        }
+                    ],
                 )
+                # fmt: on
 
                 message = response.choices[0].message.content
                 finish_reason = response.choices[0].finish_reason

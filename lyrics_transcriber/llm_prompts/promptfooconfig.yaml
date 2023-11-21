@@ -1,0 +1,39 @@
+# This configuration runs each prompt through a series of example inputs and checks if they meet requirements.
+# Learn more: https://promptfoo.dev/docs/configuration/guide
+
+prompts:
+  - file://llm_prompt_lyrics_correction_*.txt
+providers: [openai:gpt-3.5-turbo-0613, openai:gpt-4-1106-preview]
+tests:
+  - description: First test case - automatic review
+    vars:
+      var1: first variable's value
+      var2: another value
+      var3: some other value
+    # For more information on assertions, see https://promptfoo.dev/docs/configuration/expected-outputs
+    assert:
+      - type: equals
+        value: expected LLM output goes here
+      - type: contains
+        value: some text
+      - type: javascript
+        value: 1 / (output.length + 1)  # prefer shorter outputs
+
+  - description: Second test case - manual review
+    # Test cases don't need assertions if you prefer to manually review the output
+    vars:
+      var1: new value
+      var2: another value
+      var3: third value
+
+  - description: Third test case - other types of automatic review
+    vars:
+      var1: yet another value
+      var2: and another
+      var3: dear llm, please output your response in json format
+    assert:
+      - type: contains-json
+      - type: similar
+        value: ensures that output is semantically similar to this text
+      - type: model-graded-closedqa
+        value: ensure that output contains a reference to X
