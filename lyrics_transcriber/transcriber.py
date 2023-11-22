@@ -303,14 +303,13 @@ class LyricsTranscriber:
                 previous_two_corrected_lines = ""
                 upcoming_two_uncorrected_lines = ""
 
-                if segment["id"] > 2:
-                    for previous_segment in corrected_lyrics_dict["segments"]:
-                        if previous_segment["id"] in (segment["id"] - 2, segment["id"] - 1):
-                            previous_two_corrected_lines += previous_segment["text"].strip() + "\n"
+                for previous_segment in corrected_lyrics_dict["segments"]:
+                    if previous_segment["id"] in (segment["id"] - 2, segment["id"] - 1):
+                        previous_two_corrected_lines += previous_segment["text"].strip() + "\n"
 
-                    for next_segment in self.outputs["transcription_data_dict"]["segments"]:
-                        if next_segment["id"] in (segment["id"] + 1, segment["id"] + 2):
-                            upcoming_two_uncorrected_lines += next_segment["text"].strip() + "\n"
+                for next_segment in self.outputs["transcription_data_dict"]["segments"]:
+                    if next_segment["id"] in (segment["id"] + 1, segment["id"] + 2):
+                        upcoming_two_uncorrected_lines += next_segment["text"].strip() + "\n"
 
                 llm_transcript_segment += f"--- Segment {segment['id']} / {total_segments} ---\n"
                 llm_transcript_segment += f"Previous two corrected lines:\n\n{previous_two_corrected_lines}\nUpcoming two uncorrected lines:\n\n{upcoming_two_uncorrected_lines}\nData input:\n\n{segment_input}\n"
