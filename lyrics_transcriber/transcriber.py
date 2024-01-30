@@ -190,6 +190,9 @@ class LyricsTranscriber:
             online_lyrics_text_key = f"{online_lyrics_source}_lyrics_text"
             online_lyrics_filepath_key = f"{online_lyrics_source}_lyrics_filepath"
 
+            if online_lyrics_text_key not in self.outputs:
+                continue
+
             data_input_str = (
                 f'Data input 1:\n{self.outputs["transcribed_lyrics_text"]}\nData input 2:\n{self.outputs[online_lyrics_text_key]}\n'
             )
