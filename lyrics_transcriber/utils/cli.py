@@ -2,7 +2,6 @@
 import argparse
 import logging
 import pkg_resources
-from lyrics_transcriber import LyricsTranscriber
 
 
 def main():
@@ -109,6 +108,9 @@ def main():
         exit(1)
 
     logger.debug("Loading LyricsTranscriber class")
+
+    # Lazy load this class so help output is printed quickly rather than waiting for heavy libraries to load
+    from lyrics_transcriber import LyricsTranscriber
 
     transcriber = LyricsTranscriber(
         args.audio_filepath,
