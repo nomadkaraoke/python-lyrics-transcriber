@@ -277,7 +277,7 @@ class LyricsTranscriber:
         total_segments = len(self.outputs["transcription_data_dict"]["segments"])
         self.logger.info(f"Beginning correction using LLM, total segments: {total_segments}")
 
-        with open(self.outputs["llm_transcript_filepath"], "a", buffering=1) as llm_transcript_file:
+        with open(self.outputs["llm_transcript_filepath"], "a", buffering=1, encoding="utf-8") as llm_transcript_file:
             self.logger.debug(f"writing LLM chat instructions: {self.outputs['llm_transcript_filepath']}")
 
             llm_transcript_header = f"--- SYSTEM instructions passed in for all segments ---:\n\n{system_prompt}\n"
@@ -373,7 +373,7 @@ class LyricsTranscriber:
             self.logger.info(f'Successfully processed correction for all {len(corrected_lyrics_dict["segments"])} lyrics segments')
 
             self.logger.debug(f"writing corrected lyrics data JSON filepath: {corrected_lyrics_data_json_cache_filepath}")
-            with open(corrected_lyrics_data_json_cache_filepath, "w") as corrected_lyrics_data_json_cache_file:
+            with open(corrected_lyrics_data_json_cache_filepath, "w", encoding="utf-8") as corrected_lyrics_data_json_cache_file:
                 corrected_lyrics_data_json_cache_file.write(json.dumps(corrected_lyrics_dict, indent=4))
 
         self.outputs["corrected_lyrics_data_filepath"] = corrected_lyrics_data_json_cache_filepath
@@ -408,7 +408,7 @@ class LyricsTranscriber:
             self.outputs["corrected_lyrics_text"] = ""
 
             self.logger.debug(f"writing lyrics plain text to corrected_lyrics_text_filepath: {corrected_lyrics_text_filepath}")
-            with open(corrected_lyrics_text_filepath, "w") as f:
+            with open(corrected_lyrics_text_filepath, "w", encoding="utf-8") as f:
                 for corrected_segment in self.outputs["corrected_lyrics_data_dict"]["segments"]:
                     self.outputs["corrected_lyrics_text"] += corrected_segment["text"].strip() + "\n"
                     f.write(corrected_segment["text".strip()] + "\n")
@@ -455,7 +455,7 @@ class LyricsTranscriber:
             self.logger.debug(
                 f"writing lyrics data JSON to spotify_lyrics_data_json_cache_filepath: {spotify_lyrics_data_json_cache_filepath}"
             )
-            with open(spotify_lyrics_data_json_cache_filepath, "w") as f:
+            with open(spotify_lyrics_data_json_cache_filepath, "w", encoding="utf-8") as f:
                 f.write(spotify_lyrics_json)
         except Exception as e:
             self.logger.warn(f"caught exception while attempting to fetch from spotify: ", e)
@@ -475,7 +475,7 @@ class LyricsTranscriber:
             self.outputs["spotify_lyrics_text"] = ""
 
             self.logger.debug(f"writing lyrics plain text to spotify_lyrics_text_filepath: {spotify_lyrics_text_filepath}")
-            with open(spotify_lyrics_text_filepath, "w") as f:
+            with open(spotify_lyrics_text_filepath, "w", encoding="utf-8") as f:
                 for line in lines:
                     self.outputs["spotify_lyrics_text"] += line["words"].strip() + "\n"
                     f.write(line["words"].strip() + "\n")
@@ -507,7 +507,7 @@ class LyricsTranscriber:
         lyrics = self.clean_genius_lyrics(song.lyrics)
 
         self.logger.debug(f"writing clean lyrics to genius_lyrics_cache_filepath: {genius_lyrics_cache_filepath}")
-        with open(genius_lyrics_cache_filepath, "w") as f:
+        with open(genius_lyrics_cache_filepath, "w", encoding="utf-8") as f:
             f.write(lyrics)
 
         self.outputs["genius_lyrics_filepath"] = genius_lyrics_cache_filepath
@@ -561,7 +561,7 @@ class LyricsTranscriber:
 
         lrc_filename = self.outputs["midico_lrc_filepath"]
         self.logger.debug(f"writing midico formatted word timestamps to LRC file: {lrc_filename}")
-        with open(lrc_filename, "w") as f:
+        with open(lrc_filename, "w", encoding="utf-8") as f:
             f.write("[re:MidiCo]\n")
             for segment in self.outputs["corrected_lyrics_data_dict"]["segments"]:
                 for i, word in enumerate(segment["words"]):
@@ -755,7 +755,7 @@ class LyricsTranscriber:
             self.outputs["transcribed_lyrics_text"] = ""
 
             self.logger.debug(f"writing lyrics plain text to transcribed_lyrics_text_filepath: {transcribed_lyrics_text_filepath}")
-            with open(transcribed_lyrics_text_filepath, "w") as f:
+            with open(transcribed_lyrics_text_filepath, "w", encoding="utf-8") as f:
                 for segment in self.outputs["transcription_data_dict"]["segments"]:
                     self.outputs["transcribed_lyrics_text"] += segment["text"] + "\n"
                     f.write(segment["text"].strip() + "\n")
