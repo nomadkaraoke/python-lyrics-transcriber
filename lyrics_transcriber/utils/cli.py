@@ -65,8 +65,8 @@ def main():
 
     parser.add_argument(
         "--llm_model",
-        default="gpt-4-1106-preview",
-        help="Optional: LLM model to use (currently only supports OpenAI chat completion models, e.g. gpt-4-1106-preview). Default: gpt-3.5-turbo-1106",
+        default="gpt-4o",
+        help="Optional: LLM model to use (currently only supports OpenAI chat completion compatible models",
     )
 
     parser.add_argument(

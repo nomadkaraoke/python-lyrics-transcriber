@@ -29,7 +29,7 @@ class LyricsTranscriber:
         log_level=logging.DEBUG,
         log_formatter=None,
         transcription_model="medium",
-        llm_model="gpt-4-1106-preview",
+        llm_model="gpt-4o",
         llm_prompt_matching="lyrics_transcriber/llm_prompts/llm_prompt_lyrics_matching_andrew_handwritten_20231118.txt",
         llm_prompt_correction="lyrics_transcriber/llm_prompts/llm_prompt_lyrics_correction_andrew_handwritten_20231118.txt",
         render_video=False,
@@ -66,7 +66,15 @@ class LyricsTranscriber:
         self.llm_model = llm_model
         self.llm_prompt_matching = llm_prompt_matching
         self.llm_prompt_correction = llm_prompt_correction
+
         self.openai_client = OpenAI()
+
+        # Uncomment for local models e.g. with ollama
+        # self.openai_client = OpenAI(
+        #     base_url="http://localhost:11434/v1",
+        #     api_key="ollama",
+        # )
+
         self.openai_client.log = self.log_level
 
         self.render_video = render_video
@@ -391,8 +399,11 @@ class LyricsTranscriber:
             },
         }
 
-        input_cost = price_dollars_per_1000_tokens[self.llm_model]["input"] * (self.outputs["llm_token_usage"]["input"] / 1000)
-        output_cost = price_dollars_per_1000_tokens[self.llm_model]["output"] * (self.outputs["llm_token_usage"]["output"] / 1000)
+        input_price = price_dollars_per_1000_tokens.get(self.llm_model, {"input": 0, "output": 0})["input"]
+        output_price = price_dollars_per_1000_tokens.get(self.llm_model, {"input": 0, "output": 0})["output"]
+
+        input_cost = input_price * (self.outputs["llm_token_usage"]["input"] / 1000)
+        output_cost = output_price * (self.outputs["llm_token_usage"]["output"] / 1000)
 
         self.outputs["llm_costs_usd"]["input"] = round(input_cost, 3)
         self.outputs["llm_costs_usd"]["output"] = round(output_cost, 3)
