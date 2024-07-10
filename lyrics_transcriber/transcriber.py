@@ -786,7 +786,7 @@ class LyricsTranscriber:
         self.logger.debug(f"no cached transcription file found, running whisper transcribe with model: {self.transcription_model}")
         audio = whisper.load_audio(self.audio_filepath)
         model = whisper.load_model(self.transcription_model, device="cpu")
-        result = whisper.transcribe(model, audio, language="en")
+        result = whisper.transcribe(model, audio, language="en", vad="auditok", beam_size=5, temperature=0.2, best_of=5)
 
         self.logger.debug(f"transcription complete, performing post-processing cleanup")
 
