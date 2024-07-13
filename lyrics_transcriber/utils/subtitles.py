@@ -153,14 +153,14 @@ class LyricsScreen:
         # Calculate the y-position for this specific line
         line_y = top_margin + (line_num * self.line_height)
 
-        if self.logger:
-            self.logger.debug(f"Line {line_num + 1} positioning:")
-            self.logger.debug(f"  Video height: {h}")
-            self.logger.debug(f"  Total lines: {line_count}")
-            self.logger.debug(f"  Line height: {self.line_height}")
-            self.logger.debug(f"  Total lyrics height: {total_height}")
-            self.logger.debug(f"  Top margin: {top_margin}")
-            self.logger.debug(f"  Line y: {line_y}")
+        # if self.logger:
+        #     self.logger.debug(f"Line {line_num + 1} positioning:")
+        #     self.logger.debug(f"  Video height: {h}")
+        #     self.logger.debug(f"  Total lines: {line_count}")
+        #     self.logger.debug(f"  Line height: {self.line_height}")
+        #     self.logger.debug(f"  Total lyrics height: {total_height}")
+        #     self.logger.debug(f"  Top margin: {top_margin}")
+        #     self.logger.debug(f"  Line y: {line_y}")
 
         return int(line_y)
 
@@ -168,8 +168,10 @@ class LyricsScreen:
         events = []
         for i, line in enumerate(self.lines):
             y_position = self.get_line_y(i)
-            if self.logger:
-                self.logger.debug(f"Creating ASS event for line {i + 1} at y-position: {y_position}")
+            
+            # if self.logger:
+            #     self.logger.debug(f"Creating ASS event for line {i + 1} at y-position: {y_position}")
+            
             event = line.as_ass_event(self.start_ts, self.end_ts, style, y_position)
             events.append(event)
         return events

@@ -607,8 +607,8 @@ class LyricsTranscriber:
 
             for word in words:
                 self.logger.debug(f"Processing word: '{word['text']}'")
-                if len(current_line_text) + len(word["text"]) + 1 > max_line_length:
-                    self.logger.debug(f"Current line would exceed max length. Line: '{current_line_text}'")
+                if len(current_line_text) + len(word["text"]) + 1 > max_line_length or (current_line_text and word["text"][0].isupper()):
+                    self.logger.debug(f"Current line would exceed max length or new capitalized word. Line: '{current_line_text}'")
                     if current_line.segments:
                         screen.lines.append(current_line)
                         self.logger.debug(f"Added line to screen. Lines on current screen: {len(screen.lines)}")
@@ -616,7 +616,7 @@ class LyricsTranscriber:
                             screen = subtitles.LyricsScreen(
                                 video_size=self.video_resolution_num,
                                 line_height=self.line_height,
-                                logger=self.logger,  # Pass the logger here
+                                logger=self.logger,
                             )
                             screens.append(screen)
                             self.logger.debug(f"Screen full, created new screen. Total screens: {len(screens)}")
@@ -784,63 +784,104 @@ class LyricsTranscriber:
         else:
             raise Exception("Cannot write transcribed lyrics plain text as transcription_data_dict is not set")
 
-    def split_long_segments(self, segments, max_length, use_space=True):
+    def find_best_split_point(self, text, max_length):
+        self.logger.debug(f"Finding best split point for text: '{text}' (max_length: {max_length})")
+        words = text.split()
+        mid_word_index = len(words) // 2
+        mid_point = len(" ".join(words[:mid_word_index]))
+        self.logger.debug(f"Mid point is at character {mid_point}")
+
+        # Check for a comma within one or two words of the middle word
+        if "," in text:
+            comma_indices = [i for i, char in enumerate(text) if char == ","]
+            self.logger.debug(f"Found commas at indices: {comma_indices}")
+            for index in comma_indices:
+                if abs(mid_point - index) < 20 and len(text[: index + 1].strip()) <= max_length:
+                    self.logger.debug(f"Choosing comma at index {index} as split point")
+                    return index + 1  # Include the comma in the first part
+
+        # Check for 'and'
+        if " and " in text:
+            and_indices = [m.start() for m in re.finditer(" and ", text)]
+            self.logger.debug(f"Found 'and' at indices: {and_indices}")
+            for index in sorted(and_indices, key=lambda x: abs(x - mid_point)):
+                if len(text[: index + len(" and ")].strip()) <= max_length:
+                    self.logger.debug(f"Choosing 'and' at index {index} as split point")
+                    return index + len(" and ")
+
+        # Check for words starting with a capital letter
+        capital_word_indices = [m.start() for m in re.finditer(r"\s[A-Z]", text)]
+        self.logger.debug(f"Found capital words at indices: {capital_word_indices}")
+        for index in sorted(capital_word_indices, key=lambda x: abs(x - mid_point)):
+            if index > 0 and len(text[:index].strip()) <= max_length:
+                self.logger.debug(f"Choosing capital word at index {index} as split point")
+                return index
+
+        # If no better split point is found, try splitting at the middle word
+        if len(words) > 2 and mid_word_index > 0:
+            split_at_middle = len(" ".join(words[:mid_word_index]))
+            if split_at_middle <= max_length:
+                self.logger.debug(f"Choosing middle word split at index {split_at_middle}")
+                return split_at_middle
+
+        # If the text is still too long, forcibly split at the maximum length
+        self.logger.debug(f"No suitable split point found, forcibly splitting at max_length {max_length}")
+        return max_length
+
+    def split_long_segments(self, segments, max_length):
+        self.logger.debug(f"Splitting long segments (max_length: {max_length})")
         new_segments = []
         for segment in segments:
             text = segment["text"]
+            self.logger.debug(f"Processing segment: '{text}' (length: {len(text)})")
             if len(text) <= max_length:
+                self.logger.debug("Segment is within max_length, keeping as is")
                 new_segments.append(segment)
             else:
+                self.logger.debug("Segment exceeds max_length, splitting")
                 meta_words = segment["words"]
-                # Note: we do this in case punctuation were removed from words
-                if use_space:
-                    # Split text around spaces and punctuations (keeping punctuations)
-                    words = text.split()
-                else:
-                    words = [w["text"] for w in meta_words]
-                if len(words) != len(meta_words):
-                    new_words = [w["text"] for w in meta_words]
-                    print(f"WARNING: {' '.join(words)} != {' '.join(new_words)}")
-                    words = new_words
                 current_text = ""
                 current_start = segment["start"]
-                current_best_idx = None
-                current_best_end = None
-                current_best_next_start = None
-                for i, (word, meta) in enumerate(zip(words, meta_words)):
-                    current_text_before = current_text
-                    if current_text and use_space:
+                current_words = []
+
+                for i, meta in enumerate(meta_words):
+                    word = meta["text"]
+                    if current_text:
                         current_text += " "
                     current_text += word
+                    current_words.append(meta)
 
-                    if len(current_text) > max_length and len(current_text_before):
-                        start = current_start
-                        if current_best_idx is not None:
-                            text = current_text[:current_best_idx]
-                            end = current_best_end
-                            current_text = current_text[current_best_idx + 1 :]
-                            current_start = current_best_next_start
+                    should_split = len(current_text) > max_length or (i > 0 and word[0].isupper())
+                    if should_split:
+                        self.logger.debug(f"Splitting at: '{current_text}'")
+                        # If splitting due to capitalization, don't include the capitalized word
+                        if word[0].isupper() and len(current_text.strip()) > len(word):
+                            split_text = current_text[: -(len(word) + 1)].strip()
+                            current_words = current_words[:-1]
                         else:
-                            text = current_text_before
-                            end = meta_words[i - 1]["end"]
+                            split_text = current_text.strip()
+
+                        new_segment = {"text": split_text, "start": current_start, "end": current_words[-1]["end"], "words": current_words}
+                        new_segments.append(new_segment)
+                        self.logger.debug(f"Added new segment: {new_segment}")
+
+                        # Reset for next segment
+                        if word[0].isupper() and len(current_text.strip()) > len(word):
                             current_text = word
-                            current_start = meta["start"]
+                            current_words = [meta]
+                        else:
+                            current_text = ""
+                            current_words = []
+                        current_start = meta["start"]
 
-                        current_best_idx = None
-                        current_best_end = None
-                        current_best_next_start = None
+                # Add any remaining text as a final segment
+                if current_text:
+                    self.logger.debug(f"Adding final segment: '{current_text}'")
+                    new_segments.append(
+                        {"text": current_text.strip(), "start": current_start, "end": segment["end"], "words": current_words}
+                    )
 
-                        new_segments.append({"text": text, "start": start, "end": end})
-
-                    # Try to cut after punctuation
-                    if current_text and current_text[-1] in _punctuation:
-                        current_best_idx = len(current_text)
-                        current_best_end = meta["end"]
-                        current_best_next_start = meta_words[i + 1]["start"] if i + 1 < len(meta_words) else None
-
-                if len(current_text):
-                    new_segments.append({"text": current_text, "start": current_start, "end": segment["end"]})
-
+        self.logger.debug(f"Splitting complete. Original segments: {len(segments)}, New segments: {len(new_segments)}")
         return new_segments
 
     def transcribe(self):
@@ -868,9 +909,12 @@ class LyricsTranscriber:
 
             # Remove segments with no words, only music
             result["segments"] = [segment for segment in result["segments"] if segment["text"].strip() != "Music"]
+            self.logger.debug(f"Removed 'Music' segments. Remaining segments: {len(result['segments'])}")
 
             # Split long segments
+            self.logger.debug("Starting to split long segments")
             result["segments"] = self.split_long_segments(result["segments"], max_length=36)
+            self.logger.debug(f"Finished splitting segments. Total segments after splitting: {len(result['segments'])}")
 
         self.logger.debug(f"writing transcription data JSON to cache file: {whisper_cache_filepath}")
         with open(whisper_cache_filepath, "w") as cache_file:
