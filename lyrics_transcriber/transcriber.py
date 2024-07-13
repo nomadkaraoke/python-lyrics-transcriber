@@ -146,9 +146,6 @@ class LyricsTranscriber:
         if self.audio_filepath is None:
             raise Exception("audio_filepath must be specified as the input source to transcribe")
 
-        if not self.song_known:
-            raise Exception("cannot correct song lyrics without artist and title to fetch lyrics")
-
         self.create_folders()
 
     def generate(self):
