@@ -17,7 +17,10 @@ Automatically create synchronised lyrics files in ASS and MidiCo LRC formats wit
 ### Prerequisites
 
 - Python 3.9 or higher
-- [Optional] A Genius API token if you want to fetch lyrics from Genius
+- [Optional] Genius API token if you want to fetch lyrics from Genius
+- [Optional] Spotify cookie value if you want to fetch lyrics from Spotify
+- [Optional] OpenAI API token if you want to use LLM correction of the transcribed lyrics
+- [Optional] AudioShake API token if you want to use a much higher quality (but paid) API for lyrics transcription
 
 ```
 pip install lyrics-transcriber
@@ -25,6 +28,23 @@ pip install lyrics-transcriber
 
 > **Warning**
 > The package published to PyPI was created by manually editing `poetry.lock` to remove [triton](https://github.com/openai/triton), as it is technically a sub-dependency from openai-whisper but is currently only supported on Linux (whisper still works fine without it, and I want this package to be usable on any platform)
+
+## Docker
+
+You can use the pre-built container image `beveradb/lyrics-transcriber:0.16.0` on Docker hub if you want, here's an example:
+
+```sh
+docker run \
+ -v `pwd`/input:/input \
+ -v `pwd`/output:/output \
+beveradb/lyrics-transcriber:0.16.0 \
+ --log_level debug \
+ --output_dir /output \
+ --render_video \
+ --video_background_image /input/your-background-image.png \
+ --video_resolution 360p \
+ /input/song.flac
+```
 
 ## Usage 🚀
 
