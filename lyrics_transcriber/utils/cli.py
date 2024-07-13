@@ -35,6 +35,11 @@ def main():
         help="Optional: song title for lyrics lookup and auto-correction",
     )
     parser.add_argument(
+        "--audioshake_api_token",
+        default=None,
+        help="Optional: AudioShake API token for lyrics transcription and alignment. Can also be set with AUDIOSHAKE_API_TOKEN env var.",
+    )
+    parser.add_argument(
         "--genius_api_token",
         default=None,
         help="Optional: Genius API token for lyrics fetching. Can also be set with GENIUS_API_TOKEN env var.",
@@ -77,7 +82,7 @@ def main():
 
     parser.add_argument(
         "--video_resolution",
-        default="4k",
+        default="360p",
         help="Optional: resolution of the karaoke video to render. Must be one of: 4k, 1080p, 720p, 360p. Default: 360p",
     )
 
@@ -114,6 +119,7 @@ def main():
 
     transcriber = LyricsTranscriber(
         args.audio_filepath,
+        audioshake_api_token=args.audioshake_api_token,
         genius_api_token=args.genius_api_token,
         spotify_cookie=args.spotify_cookie,
         artist=args.artist,

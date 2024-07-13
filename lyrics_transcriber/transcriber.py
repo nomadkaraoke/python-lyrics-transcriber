@@ -22,6 +22,7 @@ class LyricsTranscriber:
         audio_filepath,
         artist=None,
         title=None,
+        audioshake_api_token=None,
         genius_api_token=None,
         spotify_cookie=None,
         output_dir=None,
@@ -61,6 +62,7 @@ class LyricsTranscriber:
 
         self.genius_api_token = os.getenv("GENIUS_API_TOKEN", default=genius_api_token)
         self.spotify_cookie = os.getenv("SPOTIFY_COOKIE_SP_DC", default=spotify_cookie)
+        self.audioshake_api_token = os.getenv("AUDIOSHAKE_TOKEN", default=audioshake_api_token)
 
         self.transcription_model = transcription_model
         self.llm_model = llm_model
@@ -583,51 +585,57 @@ class LyricsTranscriber:
                     f.write(line)
 
     def create_screens(self):
-        self.logger.debug(f"create_screens beginning generation of screens from whisper results")
+        self.logger.debug("create_screens beginning generation of screens from whisper results")
         screens: List[subtitles.LyricsScreen] = []
-        line: Optional[subtitles.LyricsLine] = None
         screen: Optional[subtitles.LyricsScreen] = None
 
-        lines_in_current_screen = 0
-        for segment in self.outputs["corrected_lyrics_data_dict"]["segments"]:
-            self.logger.debug(f"lines_in_current_screen: {lines_in_current_screen} segment: {segment['text']}")
-            if screen is None:
-                self.logger.debug(f"screen is none, creating new LyricsScreen")
-                screen = subtitles.LyricsScreen()
-                screen.video_size = self.video_resolution_num
-                screen.line_height = self.line_height
-            if line is None:
-                self.logger.debug(f"line is none, creating new LyricsLine")
-                line = subtitles.LyricsLine()
+        max_lines_per_screen = 4
+        max_line_length = 36  # Maximum characters per line
+        self.logger.debug(f"Max lines per screen: {max_lines_per_screen}, Max line length: {max_line_length}")
 
-            num_words_in_segment = len(segment["words"])
-            for word_index, word in enumerate(segment["words"]):
-                segment = subtitles.LyricSegment(
+        for segment in self.outputs["corrected_lyrics_data_dict"]["segments"]:
+            self.logger.debug(f"Processing segment: {segment['text']}")
+            if screen is None or len(screen.lines) >= max_lines_per_screen:
+                screen = subtitles.LyricsScreen(video_size=self.video_resolution_num, line_height=self.line_height, logger=self.logger)
+                screens.append(screen)
+                self.logger.debug(f"Created new screen. Total screens: {len(screens)}")
+
+            words = segment["words"]
+            current_line = subtitles.LyricsLine()
+            current_line_text = ""
+            self.logger.debug(f"Processing {len(words)} words in segment")
+
+            for word in words:
+                self.logger.debug(f"Processing word: '{word['text']}'")
+                if len(current_line_text) + len(word["text"]) + 1 > max_line_length:
+                    self.logger.debug(f"Current line would exceed max length. Line: '{current_line_text}'")
+                    if current_line.segments:
+                        screen.lines.append(current_line)
+                        self.logger.debug(f"Added line to screen. Lines on current screen: {len(screen.lines)}")
+                        if len(screen.lines) >= max_lines_per_screen:
+                            screen = subtitles.LyricsScreen(
+                                video_size=self.video_resolution_num,
+                                line_height=self.line_height,
+                                logger=self.logger,  # Pass the logger here
+                            )
+                            screens.append(screen)
+                            self.logger.debug(f"Screen full, created new screen. Total screens: {len(screens)}")
+                    current_line = subtitles.LyricsLine()
+                    current_line_text = ""
+                    self.logger.debug("Reset current line")
+
+                current_line_text += (" " if current_line_text else "") + word["text"]
+                lyric_segment = subtitles.LyricSegment(
                     text=word["text"], ts=timedelta(seconds=word["start"]), end_ts=timedelta(seconds=word["end"])
                 )
-                line.segments.append(segment)
+                current_line.segments.append(lyric_segment)
+                self.logger.debug(f"Added word to current line. Current line: '{current_line_text}'")
 
-                # If word is last in the line, add line to screen and start new line
-                # Before looping to the next word
-                if word_index == num_words_in_segment - 1:
-                    self.logger.debug(f"word_index is last in segment, adding line to screen and starting new line")
-                    screen.lines.append(line)
-                    lines_in_current_screen += 1
-                    line = None
+            if current_line.segments:
+                screen.lines.append(current_line)
+                self.logger.debug(f"Added final line of segment to screen. Lines on current screen: {len(screen.lines)}")
 
-            # If current screen has 2 lines already, add screen to list and start new screen
-            # Before looping to the next line
-            if lines_in_current_screen == 2:
-                self.logger.debug(f"lines_in_current_screen is 2, adding screen to list and starting new screen")
-                screens.append(screen)
-                screen = None
-                lines_in_current_screen = 0
-
-        if line is not None:
-            screen.lines.append(line)  # type: ignore[union-attr]
-        if screen is not None and len(screen.lines) > 0:
-            screens.append(screen)  # type: ignore[arg-type]
-
+        self.logger.debug(f"Finished creating screens. Total screens created: {len(screens)}")
         return screens
 
     def write_ass_file(self):
@@ -760,7 +768,10 @@ class LyricsTranscriber:
 
     def write_transcribed_lyrics_plain_text(self):
         if self.outputs["transcription_data_dict"]:
-            transcribed_lyrics_text_filepath = os.path.join(self.cache_dir, "lyrics-" + self.get_song_slug() + "-transcribed.txt")
+            transcription_cache_suffix = "-audioshake-transcribed.txt" if self.audioshake_api_token else "-whisper-transcribed.txt"
+            self.logger.debug(f"transcription_cache_suffix: {transcription_cache_suffix}")
+
+            transcribed_lyrics_text_filepath = os.path.join(self.cache_dir, "lyrics-" + self.get_song_slug() + transcription_cache_suffix)
             self.outputs["transcribed_lyrics_text_filepath"] = transcribed_lyrics_text_filepath
 
             self.outputs["transcribed_lyrics_text"] = ""
@@ -773,8 +784,68 @@ class LyricsTranscriber:
         else:
             raise Exception("Cannot write transcribed lyrics plain text as transcription_data_dict is not set")
 
+    def split_long_segments(self, segments, max_length, use_space=True):
+        new_segments = []
+        for segment in segments:
+            text = segment["text"]
+            if len(text) <= max_length:
+                new_segments.append(segment)
+            else:
+                meta_words = segment["words"]
+                # Note: we do this in case punctuation were removed from words
+                if use_space:
+                    # Split text around spaces and punctuations (keeping punctuations)
+                    words = text.split()
+                else:
+                    words = [w["text"] for w in meta_words]
+                if len(words) != len(meta_words):
+                    new_words = [w["text"] for w in meta_words]
+                    print(f"WARNING: {' '.join(words)} != {' '.join(new_words)}")
+                    words = new_words
+                current_text = ""
+                current_start = segment["start"]
+                current_best_idx = None
+                current_best_end = None
+                current_best_next_start = None
+                for i, (word, meta) in enumerate(zip(words, meta_words)):
+                    current_text_before = current_text
+                    if current_text and use_space:
+                        current_text += " "
+                    current_text += word
+
+                    if len(current_text) > max_length and len(current_text_before):
+                        start = current_start
+                        if current_best_idx is not None:
+                            text = current_text[:current_best_idx]
+                            end = current_best_end
+                            current_text = current_text[current_best_idx + 1 :]
+                            current_start = current_best_next_start
+                        else:
+                            text = current_text_before
+                            end = meta_words[i - 1]["end"]
+                            current_text = word
+                            current_start = meta["start"]
+
+                        current_best_idx = None
+                        current_best_end = None
+                        current_best_next_start = None
+
+                        new_segments.append({"text": text, "start": start, "end": end})
+
+                    # Try to cut after punctuation
+                    if current_text and current_text[-1] in _punctuation:
+                        current_best_idx = len(current_text)
+                        current_best_end = meta["end"]
+                        current_best_next_start = meta_words[i + 1]["start"] if i + 1 < len(meta_words) else None
+
+                if len(current_text):
+                    new_segments.append({"text": current_text, "start": current_start, "end": segment["end"]})
+
+        return new_segments
+
     def transcribe(self):
-        self.outputs["transcription_data_filepath"] = self.get_cache_filepath(".json")
+        transcription_cache_suffix = "-audioshake" if self.audioshake_api_token else "-whisper"
+        self.outputs["transcription_data_filepath"] = self.get_cache_filepath(f"{transcription_cache_suffix}.json")
 
         whisper_cache_filepath = self.outputs["transcription_data_filepath"]
         if os.path.isfile(whisper_cache_filepath):
@@ -783,15 +854,23 @@ class LyricsTranscriber:
                 self.outputs["transcription_data_dict"] = json.load(cache_file)
                 return
 
-        self.logger.debug(f"no cached transcription file found, running whisper transcribe with model: {self.transcription_model}")
-        audio = whisper.load_audio(self.audio_filepath)
-        model = whisper.load_model(self.transcription_model, device="cpu")
-        result = whisper.transcribe(model, audio, language="en", vad="auditok", beam_size=5, temperature=0.2, best_of=5)
+        if self.audioshake_api_token:
+            self.logger.debug(f"Using AudioShake API for transcription")
+            from .audioshake_transcriber import AudioShakeTranscriber
 
-        self.logger.debug(f"transcription complete, performing post-processing cleanup")
+            audioshake = AudioShakeTranscriber(self.audioshake_api_token, log_level=self.log_level)
+            result = audioshake.transcribe(self.audio_filepath)
+        else:
+            self.logger.debug(f"Using Whisper for transcription with model: {self.transcription_model}")
+            audio = whisper.load_audio(self.audio_filepath)
+            model = whisper.load_model(self.transcription_model, device="cpu")
+            result = whisper.transcribe(model, audio, language="en", vad="auditok", beam_size=5, temperature=0.2, best_of=5)
 
-        # Remove segments with no words, only music
-        result["segments"] = [segment for segment in result["segments"] if segment["text"].strip() != "Music"]
+            # Remove segments with no words, only music
+            result["segments"] = [segment for segment in result["segments"] if segment["text"].strip() != "Music"]
+
+            # Split long segments
+            result["segments"] = self.split_long_segments(result["segments"], max_length=36)
 
         self.logger.debug(f"writing transcription data JSON to cache file: {whisper_cache_filepath}")
         with open(whisper_cache_filepath, "w") as cache_file:

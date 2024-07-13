@@ -5,6 +5,7 @@ import json
 import itertools
 from pathlib import Path
 from enum import IntEnum
+import logging
 
 from . import ass
 
@@ -85,21 +86,19 @@ class LyricsLine:
     def __str__(self):
         return "".join([f"{{{s.text}}}" for s in self.segments])
 
-    def as_ass_event(
-        self,
-        screen_start: timedelta,
-        screen_end: timedelta,
-        style: ass.ASS.Style,
-        top_margin: int,
-    ):
+    def as_ass_event(self, screen_start: timedelta, screen_end: timedelta, style: ass.ASS.Style, y_position: int):
         e = ass.ASS.Event()
         e.type = "Dialogue"
         e.Layer = 0
         e.Style = style
         e.Start = screen_start.total_seconds()
         e.End = screen_end.total_seconds()
-        e.MarginV = top_margin
+        e.MarginV = y_position
         e.Text = self.decorate_ass_line(self.segments, screen_start)
+
+        # Set alignment to top-center
+        e.Text = "{\\an8}" + e.Text
+
         return e
 
     def decorate_ass_line(self, segments, screen_start_ts: timedelta):
@@ -137,6 +136,7 @@ class LyricsScreen:
     start_ts: Optional[timedelta] = None
     video_size: Tuple[int, int] = None
     line_height: int = None
+    logger: logging.Logger = None
 
     @property
     def end_ts(self) -> timedelta:
@@ -145,10 +145,34 @@ class LyricsScreen:
     def get_line_y(self, line_num: int) -> int:
         _, h = self.video_size
         line_count = len(self.lines)
-        return (h / 2) - (line_count * self.line_height / 2) + (line_num * self.line_height)
+        total_height = line_count * self.line_height
+
+        # Calculate the top margin to center the lyrics block
+        top_margin = (h - total_height) / 2
+
+        # Calculate the y-position for this specific line
+        line_y = top_margin + (line_num * self.line_height)
+
+        if self.logger:
+            self.logger.debug(f"Line {line_num + 1} positioning:")
+            self.logger.debug(f"  Video height: {h}")
+            self.logger.debug(f"  Total lines: {line_count}")
+            self.logger.debug(f"  Line height: {self.line_height}")
+            self.logger.debug(f"  Total lyrics height: {total_height}")
+            self.logger.debug(f"  Top margin: {top_margin}")
+            self.logger.debug(f"  Line y: {line_y}")
+
+        return int(line_y)
 
     def as_ass_events(self, style: ass.ASS.Style) -> List[ass.ASS.Event]:
-        return [line.as_ass_event(self.start_ts, self.end_ts, style, self.get_line_y(i)) for i, line in enumerate(self.lines)]
+        events = []
+        for i, line in enumerate(self.lines):
+            y_position = self.get_line_y(i)
+            if self.logger:
+                self.logger.debug(f"Creating ASS event for line {i + 1} at y-position: {y_position}")
+            event = line.as_ass_event(self.start_ts, self.end_ts, style, y_position)
+            events.append(event)
+        return events
 
     def __str__(self):
         lines = [f"{self.start_ts} - {self.end_ts}:"]
@@ -264,7 +288,7 @@ def create_styled_subtitles(
     style.BorderStyle = 1
     style.Outline = 1
     style.Shadow = 0
-    style.Alignment = ass.ASS.ALIGN_MIDDLE_CENTER
+    style.Alignment = ass.ASS.ALIGN_TOP_CENTER
     style.MarginL = 0
     style.MarginR = 0
     style.MarginV = 0
