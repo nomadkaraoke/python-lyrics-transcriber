@@ -98,6 +98,12 @@ def main():
         help="Optional: color to use for karaoke video background, in hex format or FFmpeg color name. Default: black",
     )
 
+    parser.add_argument(
+        "--openai_api_key",
+        default=None,
+        help="Optional: OpenAI API key for LLM model usage. Can also be set with OPENAI_API_KEY env var.",
+    )
+
     args = parser.parse_args()
 
     log_level = getattr(logging, args.log_level.upper())
@@ -122,6 +128,7 @@ def main():
         audioshake_api_token=args.audioshake_api_token,
         genius_api_token=args.genius_api_token,
         spotify_cookie=args.spotify_cookie,
+        openai_api_key=args.openai_api_key,
         artist=args.artist,
         title=args.title,
         output_dir=args.output_dir,

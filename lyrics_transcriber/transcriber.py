@@ -22,6 +22,7 @@ class LyricsTranscriber:
         audio_filepath,
         artist=None,
         title=None,
+        openai_api_key=None,
         audioshake_api_token=None,
         genius_api_token=None,
         spotify_cookie=None,
@@ -60,6 +61,7 @@ class LyricsTranscriber:
         self.title = title
         self.song_known = self.artist is not None and self.title is not None
 
+        self.openai_api_key = os.getenv("OPENAI_API_KEY", default=openai_api_key)
         self.genius_api_token = os.getenv("GENIUS_API_TOKEN", default=genius_api_token)
         self.spotify_cookie = os.getenv("SPOTIFY_COOKIE_SP_DC", default=spotify_cookie)
         self.audioshake_api_token = os.getenv("AUDIOSHAKE_TOKEN", default=audioshake_api_token)
@@ -69,15 +71,20 @@ class LyricsTranscriber:
         self.llm_prompt_matching = llm_prompt_matching
         self.llm_prompt_correction = llm_prompt_correction
 
-        self.openai_client = OpenAI()
+        self.openai_client = None
 
-        # Uncomment for local models e.g. with ollama
-        # self.openai_client = OpenAI(
-        #     base_url="http://localhost:11434/v1",
-        #     api_key="ollama",
-        # )
+        if self.openai_api_key:
+            self.openai_client = OpenAI(api_key=self.openai_api_key)
 
-        self.openai_client.log = self.log_level
+            # Uncomment for local models e.g. with ollama
+            # self.openai_client = OpenAI(
+            #     base_url="http://localhost:11434/v1",
+            #     api_key="ollama",
+            # )
+
+            self.openai_client.log = self.log_level
+        else:
+            self.logger.error("No OpenAI API key found, no correction will be applied to transcription")
 
         self.render_video = render_video
         self.video_resolution = video_resolution
@@ -156,8 +163,13 @@ class LyricsTranscriber:
 
         self.validate_lyrics_match_song()
 
-        self.write_corrected_lyrics_data_file()
-        self.write_corrected_lyrics_plain_text()
+        if self.openai_client:
+            self.write_corrected_lyrics_data_file()
+            self.write_corrected_lyrics_plain_text()
+        else:
+            self.logger.warning("Skipping LLM correction as no OpenAI client is available")
+            self.outputs["corrected_lyrics_data_dict"] = self.outputs["transcription_data_dict"]
+            self.write_corrected_lyrics_plain_text()
 
         self.calculate_singing_percentage()
 
@@ -171,7 +183,8 @@ class LyricsTranscriber:
         self.copy_files_to_output_dir()
         self.calculate_llm_costs()
 
-        self.openai_client.close()
+        if self.openai_client:
+            self.openai_client.close()
 
         return self.outputs
 
@@ -200,41 +213,55 @@ class LyricsTranscriber:
             online_lyrics_text_key = f"{online_lyrics_source}_lyrics_text"
             online_lyrics_filepath_key = f"{online_lyrics_source}_lyrics_filepath"
 
-            if online_lyrics_text_key not in self.outputs:
+            if online_lyrics_text_key not in self.outputs or self.outputs[online_lyrics_text_key] is None:
                 continue
 
-            data_input_str = (
-                f'Data input 1:\n{self.outputs["transcribed_lyrics_text"]}\nData input 2:\n{self.outputs[online_lyrics_text_key]}\n'
-            )
+            if self.openai_client:
+                data_input_str = (
+                    f'Data input 1:\n{self.outputs["transcribed_lyrics_text"]}\nData input 2:\n{self.outputs[online_lyrics_text_key]}\n'
+                )
 
-            # self.logger.debug(f"system_prompt:\n{system_prompt}\ndata_input_str:\n{data_input_str}")
+                self.logger.debug(f"making API call to LLM model {self.llm_model} to validate {online_lyrics_source} lyrics match")
+                response = self.openai_client.chat.completions.create(
+                    model=self.llm_model,
+                    messages=[{"role": "system", "content": llm_matching_instructions}, {"role": "user", "content": data_input_str}],
+                )
 
-            self.logger.debug(f"making API call to LLM model {self.llm_model} to validate {online_lyrics_source} lyrics match")
-            response = self.openai_client.chat.completions.create(
-                model=self.llm_model,
-                messages=[{"role": "system", "content": llm_matching_instructions}, {"role": "user", "content": data_input_str}],
-            )
+                message = response.choices[0].message.content
+                finish_reason = response.choices[0].finish_reason
 
-            message = response.choices[0].message.content
-            finish_reason = response.choices[0].finish_reason
+                self.outputs["llm_token_usage"]["input"] += response.usage.prompt_tokens
+                self.outputs["llm_token_usage"]["output"] += response.usage.completion_tokens
 
-            self.outputs["llm_token_usage"]["input"] += response.usage.prompt_tokens
-            self.outputs["llm_token_usage"]["output"] += response.usage.completion_tokens
+                if finish_reason == "stop":
+                    if message == "Yes":
+                        self.logger.info(f"{online_lyrics_source} lyrics successfully validated to match transcription")
+                        at_least_one_online_lyrics_validated = True
+                    elif message == "No":
+                        self.logger.warning(f"{online_lyrics_source} lyrics do not match transcription, deleting that source from outputs")
+                        self.outputs[online_lyrics_text_key] = None
+                        self.outputs[online_lyrics_filepath_key] = None
+                    else:
+                        self.logger.error(f"Unexpected response from LLM: {message}")
+                else:
+                    self.logger.warning(f"OpenAI API call did not finish successfully, finish_reason: {finish_reason}")
+            else:
+                # Fallback primitive word matching
+                self.logger.debug(f"Using primitive word matching to validate {online_lyrics_source} lyrics match")
+                transcribed_words = set(self.outputs["transcribed_lyrics_text"].split())
+                online_lyrics_words = set(self.outputs[online_lyrics_text_key].split())
+                common_words = transcribed_words & online_lyrics_words
+                match_percentage = len(common_words) / len(online_lyrics_words) * 100
 
-            # self.logger.debug(f"LLM API response finish_reason: {finish_reason} message: \n{message}")
-
-            if finish_reason == "stop":
-                if message == "Yes":
-                    self.logger.info(f"{online_lyrics_source} lyrics successfully validated to match transcription")
+                if match_percentage >= 50:
+                    self.logger.info(
+                        f"{online_lyrics_source} lyrics successfully validated to match transcription with {match_percentage:.2f}% word match"
+                    )
                     at_least_one_online_lyrics_validated = True
-                elif message == "No":
+                else:
                     self.logger.warning(f"{online_lyrics_source} lyrics do not match transcription, deleting that source from outputs")
                     self.outputs[online_lyrics_text_key] = None
                     self.outputs[online_lyrics_filepath_key] = None
-                else:
-                    self.logger.error(f"Unexpected response from LLM: {message}")
-            else:
-                self.logger.warning(f"OpenAI API call did not finish successfully, finish_reason: {finish_reason}")
 
         self.logger.info(
             f"Completed validation of transcription using online lyrics sources. Match found: {at_least_one_online_lyrics_validated}"
@@ -244,9 +271,12 @@ class LyricsTranscriber:
             self.logger.error(
                 f"Lyrics from Genius and Spotify did not match the transcription. Please check artist and title are set correctly."
             )
-            raise Exception("Cannot proceed without internet lyrics to validate / correct transcription")
 
     def write_corrected_lyrics_data_file(self):
+        if not self.openai_client:
+            self.logger.warning("Skipping LLM correction as no OpenAI client is available")
+            return
+
         self.logger.debug("write_corrected_lyrics_data_file initiating OpenAI client")
 
         corrected_lyrics_data_json_cache_filepath = os.path.join(self.cache_dir, "lyrics-" + self.get_song_slug() + "-corrected.json")
