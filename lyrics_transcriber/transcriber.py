@@ -32,8 +32,8 @@ class LyricsTranscriber:
         log_formatter=None,
         transcription_model="medium",
         llm_model="gpt-4o",
-        llm_prompt_matching="lyrics_transcriber/llm_prompts/llm_prompt_lyrics_matching_andrew_handwritten_20231118.txt",
-        llm_prompt_correction="lyrics_transcriber/llm_prompts/llm_prompt_lyrics_correction_andrew_handwritten_20231118.txt",
+        llm_prompt_matching=None,
+        llm_prompt_correction=None,
         render_video=False,
         video_resolution="360p",
         video_background_image=None,
@@ -68,8 +68,24 @@ class LyricsTranscriber:
 
         self.transcription_model = transcription_model
         self.llm_model = llm_model
+
+        # Use package-relative paths for prompt files
+        if llm_prompt_matching is None:
+            llm_prompt_matching = os.path.join(
+                os.path.dirname(__file__), "llm_prompts", "llm_prompt_lyrics_matching_andrew_handwritten_20231118.txt"
+            )
+        if llm_prompt_correction is None:
+            llm_prompt_correction = os.path.join(
+                os.path.dirname(__file__), "llm_prompts", "llm_prompt_lyrics_correction_andrew_handwritten_20231118.txt"
+            )
+
         self.llm_prompt_matching = llm_prompt_matching
         self.llm_prompt_correction = llm_prompt_correction
+
+        if not os.path.exists(self.llm_prompt_matching):
+            raise FileNotFoundError(f"LLM prompt file not found: {self.llm_prompt_matching}")
+        if not os.path.exists(self.llm_prompt_correction):
+            raise FileNotFoundError(f"LLM prompt file not found: {self.llm_prompt_correction}")
 
         self.openai_client = None
 
@@ -958,8 +974,11 @@ class LyricsTranscriber:
         return cache_filepath
 
     def get_song_slug(self):
-        artist_slug = slugify.slugify(self.artist, lowercase=False)
-        title_slug = slugify.slugify(self.title, lowercase=False)
+        if not self.artist and not self.title:
+            return "unknown_song_" + self.get_file_hash(self.audio_filepath)
+
+        artist_slug = slugify.slugify(self.artist or "unknown_artist", lowercase=False)
+        title_slug = slugify.slugify(self.title or "unknown_title", lowercase=False)
         return artist_slug + "-" + title_slug
 
     def get_file_hash(self, filepath):
