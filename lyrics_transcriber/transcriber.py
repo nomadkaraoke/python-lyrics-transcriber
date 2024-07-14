@@ -762,9 +762,6 @@ class LyricsTranscriber:
         if "h264_videotoolbox" in ffmpeg_codes:
             video_codec = "h264_videotoolbox"
             self.logger.info(f"video codec set to hardware accelerated h264_videotoolbox")
-        elif "h264_qsv" in ffmpeg_codes:
-            video_codec = "h264_qsv"
-            self.logger.info(f"video codec set to hardware accelerated h264_qsv")
 
         ffmpeg_cmd += [
             # Use accompaniment track as audio
