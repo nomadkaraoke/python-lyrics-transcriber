@@ -944,10 +944,10 @@ class LyricsTranscriber:
         transcription_cache_suffix = "-audioshake" if self.audioshake_api_token else "-whisper"
         self.outputs["transcription_data_filepath"] = self.get_cache_filepath(f"{transcription_cache_suffix}.json")
 
-        whisper_cache_filepath = self.outputs["transcription_data_filepath"]
-        if os.path.isfile(whisper_cache_filepath):
-            self.logger.debug(f"transcribe found existing file at whisper_cache_filepath, reading: {whisper_cache_filepath}")
-            with open(whisper_cache_filepath, "r") as cache_file:
+        transcription_cache_filepath = self.outputs["transcription_data_filepath"]
+        if os.path.isfile(transcription_cache_filepath):
+            self.logger.debug(f"transcribe found existing file at transcription_cache_filepath, reading: {transcription_cache_filepath}")
+            with open(transcription_cache_filepath, "r") as cache_file:
                 self.outputs["transcription_data_dict"] = json.load(cache_file)
                 return
 
@@ -955,28 +955,28 @@ class LyricsTranscriber:
             self.logger.debug(f"Using AudioShake API for transcription")
             from .audioshake_transcriber import AudioShakeTranscriber
 
-            audioshake = AudioShakeTranscriber(self.audioshake_api_token, log_level=self.log_level)
-            result = audioshake.transcribe(self.audio_filepath)
+            audioshake = AudioShakeTranscriber(self.audioshake_api_token, logger=self.logger)
+            transcription_data = audioshake.transcribe(self.audio_filepath)
         else:
             self.logger.debug(f"Using Whisper for transcription with model: {self.transcription_model}")
             audio = whisper.load_audio(self.audio_filepath)
             model = whisper.load_model(self.transcription_model, device="cpu")
-            result = whisper.transcribe(model, audio, language="en", vad="auditok", beam_size=5, temperature=0.2, best_of=5)
+            transcription_data = whisper.transcribe(model, audio, language="en", vad="auditok", beam_size=5, temperature=0.2, best_of=5)
 
             # Remove segments with no words, only music
-            result["segments"] = [segment for segment in result["segments"] if segment["text"].strip() != "Music"]
-            self.logger.debug(f"Removed 'Music' segments. Remaining segments: {len(result['segments'])}")
+            transcription_data["segments"] = [segment for segment in transcription_data["segments"] if segment["text"].strip() != "Music"]
+            self.logger.debug(f"Removed 'Music' segments. Remaining segments: {len(transcription_data['segments'])}")
 
             # Split long segments
             self.logger.debug("Starting to split long segments")
-            result["segments"] = self.split_long_segments(result["segments"], max_length=36)
-            self.logger.debug(f"Finished splitting segments. Total segments after splitting: {len(result['segments'])}")
+            transcription_data["segments"] = self.split_long_segments(transcription_data["segments"], max_length=36)
+            self.logger.debug(f"Finished splitting segments. Total segments after splitting: {len(transcription_data['segments'])}")
 
-        self.logger.debug(f"writing transcription data JSON to cache file: {whisper_cache_filepath}")
-        with open(whisper_cache_filepath, "w") as cache_file:
-            json.dump(result, cache_file, indent=4)
+        self.logger.debug(f"writing transcription data JSON to cache file: {transcription_cache_filepath}")
+        with open(transcription_cache_filepath, "w") as cache_file:
+            json.dump(transcription_data, cache_file, indent=4)
 
-        self.outputs["transcription_data_dict"] = result
+        self.outputs["transcription_data_dict"] = transcription_data
 
     def get_cache_filepath(self, extension):
         filename = os.path.split(self.audio_filepath)[1]
