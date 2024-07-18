@@ -14,6 +14,8 @@ from datetime import timedelta
 from .utils import subtitles
 from typing import List, Optional
 from openai import OpenAI
+from tenacity import retry, stop_after_delay, wait_exponential, retry_if_exception_type
+import requests
 
 
 class LyricsTranscriber:
@@ -536,6 +538,16 @@ class LyricsTranscriber:
                     self.outputs["spotify_lyrics_text"] += line["words"].strip() + "\n"
                     f.write(line["words"].strip() + "\n")
 
+    @retry(
+        stop=stop_after_delay(120),  # Stop after 2 minutes
+        wait=wait_exponential(multiplier=1, min=4, max=60),  # Exponential backoff starting at 4 seconds
+        retry=retry_if_exception_type(requests.exceptions.RequestException),  # Retry on request exceptions
+        reraise=True,  # Reraise the last exception if all retries fail
+    )
+    def fetch_genius_lyrics(self, genius, title, artist):
+        self.logger.debug(f"fetch_genius_lyrics attempting to fetch lyrics from Genius for {title} by {artist}")
+        return genius.search_song(title, artist)
+
     def write_genius_lyrics_file(self):
         if self.genius_api_token and self.song_known:
             self.logger.debug(f"attempting genius fetch as genius_api_token and song name was set")
@@ -556,18 +568,22 @@ class LyricsTranscriber:
         self.logger.debug(f"no cached lyrics found at genius_lyrics_cache_filepath: {genius_lyrics_cache_filepath}, fetching from Genius")
         genius = lyricsgenius.Genius(self.genius_api_token, verbose=(self.log_level == logging.DEBUG))
 
-        song = genius.search_song(self.title, self.artist)
-        if song is None:
-            self.logger.warning(f'Could not find lyrics on Genius for "{self.title}" by {self.artist}')
-            return
-        lyrics = self.clean_genius_lyrics(song.lyrics)
+        try:
+            song = self.fetch_genius_lyrics(genius, self.title, self.artist)
+            if song is None:
+                self.logger.warning(f'Could not find lyrics on Genius for "{self.title}" by {self.artist}')
+                return
+            lyrics = self.clean_genius_lyrics(song.lyrics)
 
-        self.logger.debug(f"writing clean lyrics to genius_lyrics_cache_filepath: {genius_lyrics_cache_filepath}")
-        with open(genius_lyrics_cache_filepath, "w", encoding="utf-8") as f:
-            f.write(lyrics)
+            self.logger.debug(f"writing clean lyrics to genius_lyrics_cache_filepath: {genius_lyrics_cache_filepath}")
+            with open(genius_lyrics_cache_filepath, "w", encoding="utf-8") as f:
+                f.write(lyrics)
 
-        self.outputs["genius_lyrics_filepath"] = genius_lyrics_cache_filepath
-        self.outputs["genius_lyrics_text"] = lyrics
+            self.outputs["genius_lyrics_filepath"] = genius_lyrics_cache_filepath
+            self.outputs["genius_lyrics_text"] = lyrics
+        except requests.exceptions.RequestException as e:
+            self.logger.error(f"Failed to fetch lyrics from Genius after multiple retries: {e}")
+            raise
 
     def clean_genius_lyrics(self, lyrics):
         lyrics = lyrics.replace("\\n", "\n")
