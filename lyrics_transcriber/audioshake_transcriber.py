@@ -15,35 +15,35 @@ class AudioShakeTranscriber:
 
         # Step 1: Upload the audio file
         asset_id = self._upload_file(audio_filepath)
-        self.logger.debug(f"File uploaded successfully. Asset ID: {asset_id}")
+        self.logger.info(f"File uploaded successfully. Asset ID: {asset_id}")
 
         # Step 2: Create a job for transcription and alignment
         job_id = self._create_job(asset_id)
-        self.logger.debug(f"Job created successfully. Job ID: {job_id}")
+        self.logger.info(f"Job created successfully. Job ID: {job_id}")
 
         # Step 3: Wait for the job to complete and get the results
         result = self._get_job_result(job_id)
-        self.logger.debug(f"Job completed. Processing results...")
+        self.logger.info(f"Job completed. Processing results...")
 
         # Step 4: Process the result and return in the required format
         return self._process_result(result)
 
     def _upload_file(self, filepath):
-        self.logger.debug(f"Uploading {filepath} to AudioShake")
+        self.logger.info(f"Uploading {filepath} to AudioShake")
         url = f"{self.base_url}/upload"
         headers = {"Authorization": f"Bearer {self.api_token}"}
         with open(filepath, "rb") as file:
             files = {"file": (os.path.basename(filepath), file)}
             response = requests.post(url, headers=headers, files=files)
 
-        self.logger.debug(f"Upload response status code: {response.status_code}")
-        self.logger.debug(f"Upload response content: {response.text}")
+        self.logger.info(f"Upload response status code: {response.status_code}")
+        self.logger.info(f"Upload response content: {response.text}")
 
         response.raise_for_status()
         return response.json()["id"]
 
     def _create_job(self, asset_id):
-        self.logger.debug(f"Creating job for asset {asset_id}")
+        self.logger.info(f"Creating job for asset {asset_id}")
         url = f"{self.base_url}/job/"
         headers = {"Authorization": f"Bearer {self.api_token}", "Content-Type": "application/json"}
         data = {
@@ -56,7 +56,7 @@ class AudioShakeTranscriber:
         return response.json()["job"]["id"]
 
     def _get_job_result(self, job_id):
-        self.logger.debug(f"Getting job result for job {job_id}")
+        self.logger.info(f"Getting job result for job {job_id}")
         url = f"{self.base_url}/job/{job_id}"
         headers = {"Authorization": f"Bearer {self.api_token}", "Content-Type": "application/json"}
         while True:
@@ -70,16 +70,29 @@ class AudioShakeTranscriber:
             time.sleep(5)  # Wait 5 seconds before checking again
 
     def _process_result(self, job_data):
-        self.logger.debug(f"Processing result for job {job_data}")
-        output_asset = next((asset for asset in job_data["outputAssets"] if asset["name"] == "transcription.json"), None)
+        self.logger.debug(f"Processing result for job {job_data['id']}")
+        self.logger.debug(f"Job data: {json.dumps(job_data, indent=2)}")
+
+        output_assets = job_data.get("outputAssets", [])
+        self.logger.debug(f"Output assets: {output_assets}")
+
+        output_asset = next((asset for asset in output_assets if asset["name"] == "transcription.json"), None)
+        if not output_asset:
+            self.logger.warning("'transcription.json' not found, looking for 'alignment.json'")
+            output_asset = next((asset for asset in output_assets if asset["name"] == "alignment.json"), None)
 
         if not output_asset:
-            raise Exception("Transcription output not found in job results")
+            self.logger.error("Neither 'transcription.json' nor 'alignment.json' found in job results")
+            self.logger.error(f"Available output assets: {[asset['name'] for asset in output_assets]}")
+            raise Exception("Required output not found in job results")
 
         transcription_url = output_asset["link"]
+        self.logger.debug(f"Output URL: {transcription_url}")
+
         response = requests.get(transcription_url)
         response.raise_for_status()
         transcription_data = response.json()
+        self.logger.debug(f"Output data: {json.dumps(transcription_data, indent=2)}")
 
         transcription_data = {"segments": transcription_data.get("lines", []), "text": transcription_data.get("text", "")}
 
