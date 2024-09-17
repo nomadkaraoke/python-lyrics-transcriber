@@ -308,6 +308,13 @@ class LyricsTranscriber:
                 self.outputs["corrected_lyrics_data_dict"] = corrected_lyrics_data_dict
                 return
 
+        reference_lyrics = self.outputs.get("genius_lyrics_text") or self.outputs.get("spotify_lyrics_text")
+
+        if not reference_lyrics:
+            self.logger.warning("No reference lyrics found from Genius or Spotify. Skipping LLM correction.")
+            self.outputs["corrected_lyrics_data_dict"] = self.outputs["transcription_data_dict"]
+            return
+
         self.logger.debug(
             f"no cached lyrics found at corrected_lyrics_data_json_cache_filepath: {corrected_lyrics_data_json_cache_filepath}, attempting to run correction using LLM"
         )
@@ -317,7 +324,6 @@ class LyricsTranscriber:
         with open(self.llm_prompt_correction, "r") as file:
             system_prompt_template = file.read()
 
-        reference_lyrics = self.outputs["genius_lyrics_text"] or self.outputs["spotify_lyrics_text"]
         system_prompt = system_prompt_template.replace("{{reference_lyrics}}", reference_lyrics)
 
         # TODO: Test if results are cleaner when using the vocal file from a background vocal audio separation model
@@ -639,7 +645,9 @@ class LyricsTranscriber:
                 for i, word in enumerate(segment["words"]):
                     start_time = self.format_time_lrc(word["start"])
                     if i != len(segment["words"]) - 1:
-                        word["text"] += " "
+                        if not word["text"].endswith(" "):
+                            self.logger.debug(f"word '{word['text']}' does not end with a space, adding one")
+                            word["text"] += " "
                     line = "[{}]1:{}{}\n".format(start_time, "/" if i == 0 else "", word["text"])
                     f.write(line)
 
