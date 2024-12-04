@@ -969,7 +969,10 @@ class LyricsTranscriber:
             self.logger.debug(f"Using Whisper for transcription with model: {self.transcription_model}")
             audio = whisper.load_audio(self.audio_filepath)
             model = whisper.load_model(self.transcription_model, device="cpu")
-            transcription_data = whisper.transcribe(model, audio, language="en", vad="auditok", beam_size=5, temperature=0.2, best_of=5)
+            transcription_data = whisper.transcribe(model, audio, language="en", beam_size=5, temperature=0.2, best_of=5)
+            
+            # auditok is needed for voice activity detection, but it has OS package dependencies that are hard to install on some platforms
+            # transcription_data = whisper.transcribe(model, audio, language="en", vad="auditok", beam_size=5, temperature=0.2, best_of=5)
 
             # Remove segments with no words, only music
             transcription_data["segments"] = [segment for segment in transcription_data["segments"] if segment["text"].strip() != "Music"]

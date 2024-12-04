@@ -27,13 +27,11 @@ python-slugify = ">=8"
 syrics = ">=0"
 openai = "^1"
 transformers = ">=4"
-auditok = ">=0.2"
 whisper-timestamped = ">=1"
 tenacity = ">=8"
 openai-whisper = ">=20231117"
-# Note: after adding openai-whisper and whisper-timestamped with poetry lock, I then removed all traces of triton and pyaudio
-# from poetry.lock before running poetry install, as triton doesn't support macOS but isn't actually needed for whisper,
-# and pyaudio is only needed for voice input to auditok which we don't use.
+# Note: after adding openai-whisper and whisper-timestamped with poetry lock, I then removed all traces of triton
+# from poetry.lock before running poetry install, as triton doesn't support macOS but isn't actually needed for whisper
 # This was the only way I was able to get a working cross-platform build published to PyPI.
 # To update the lockfile and install/upgrade dependencies, modify the dependency list above then run:
 # poetry lock; patch -p0 poetry.lock <.github/removetriton.patch; poetry install
