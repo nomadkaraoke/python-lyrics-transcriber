@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "lyrics-transcriber"
-version = "0.17.2"
+version = "0.18.0"
 description = "Automatically create synchronised lyrics files in ASS and MidiCo LRC formats with word-level timestamps, using Whisper and lyrics from Genius and Spotify"
 authors = ["Andrew Beveridge <andrew@beveridge.uk>"]
 license = "MIT"
@@ -26,13 +26,14 @@ lyricsgenius = ">=3"
 python-slugify = ">=8"
 syrics = ">=0"
 openai = "^1"
-openai-whisper = ">=20231117"
 transformers = ">=4"
 auditok = ">=0.2"
 whisper-timestamped = ">=1"
 tenacity = ">=8"
-# Note: after adding openai-whisper and whisper-timestamped with poetry lock, I then removed all traces of triton
-# from poetry.lock before running poetry install, as triton doesn't support macOS but isn't actually needed for whisper.
+openai-whisper = ">=20231117"
+# Note: after adding openai-whisper and whisper-timestamped with poetry lock, I then removed all traces of triton and pyaudio
+# from poetry.lock before running poetry install, as triton doesn't support macOS but isn't actually needed for whisper,
+# and pyaudio is only needed for voice input to auditok which we don't use.
 # This was the only way I was able to get a working cross-platform build published to PyPI.
 # To update the lockfile and install/upgrade dependencies, modify the dependency list above then run:
 # poetry lock; patch -p0 poetry.lock <.github/removetriton.patch; poetry install
