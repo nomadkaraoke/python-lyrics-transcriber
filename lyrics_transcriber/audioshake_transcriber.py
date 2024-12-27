@@ -89,13 +89,10 @@ class AudioShakeTranscriber:
         output_assets = job_data.get("outputAssets", [])
         self.logger.debug(f"Output assets: {output_assets}")
 
-        output_asset = next((asset for asset in output_assets if asset["name"] == "transcription.json"), None)
-        if not output_asset:
-            self.logger.warning("'transcription.json' not found, looking for 'alignment.json'")
-            output_asset = next((asset for asset in output_assets if asset["name"] == "alignment.json"), None)
+        output_asset = next((asset for asset in output_assets if asset["name"] == "alignment.json"), None)
 
         if not output_asset:
-            self.logger.error("Neither 'transcription.json' nor 'alignment.json' found in job results")
+            self.logger.error("'alignment.json' found in job results")
             self.logger.error(f"Available output assets: {[asset['name'] for asset in output_assets]}")
             raise Exception("Required output not found in job results")
 
