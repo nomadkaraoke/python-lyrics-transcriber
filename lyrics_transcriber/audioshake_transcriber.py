@@ -5,10 +5,11 @@ import json
 
 
 class AudioShakeTranscriber:
-    def __init__(self, api_token, logger):
+    def __init__(self, api_token, logger, output_prefix):
         self.api_token = api_token
         self.base_url = "https://groovy.audioshake.ai"
         self.logger = logger
+        self.output_prefix = output_prefix
 
     def transcribe(self, audio_filepath):
         self.logger.info(f"Transcribing {audio_filepath} using AudioShake API")
@@ -103,4 +104,10 @@ class AudioShakeTranscriber:
             if "text" not in segment:
                 segment["text"] = " ".join(word["text"] for word in segment["words"])
 
+        transcription_data["output_filename"] = self.get_output_filename(" (AudioShake)")
+
         return transcription_data
+
+    def get_output_filename(self, suffix):
+        """Generate consistent filename with (Purpose) suffix pattern"""
+        return f"{self.output_prefix}{suffix}"

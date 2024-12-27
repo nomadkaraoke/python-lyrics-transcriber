@@ -166,6 +166,8 @@ class LyricsTranscriber:
 
         self.create_folders()
 
+        self.output_prefix = f"{artist} - {title}"
+
     def generate(self):
         self.logger.debug(f"audio_filepath is set: {self.audio_filepath}, beginning initial whisper transcription")
 
@@ -294,7 +296,7 @@ class LyricsTranscriber:
 
         self.logger.debug("write_corrected_lyrics_data_file initiating OpenAI client")
 
-        corrected_lyrics_data_json_cache_filepath = os.path.join(self.cache_dir, "lyrics-" + self.get_song_slug() + "-corrected.json")
+        corrected_lyrics_data_json_cache_filepath = os.path.join(self.cache_dir, self.get_output_filename(" (Lyrics Corrected).json"))
 
         if os.path.isfile(corrected_lyrics_data_json_cache_filepath):
             self.logger.debug(
@@ -331,9 +333,7 @@ class LyricsTranscriber:
         # TODO: Possibly add a step after segment-based correct to get the LLM to self-analyse the diff
 
         self.outputs["llm_transcript"] = ""
-        self.outputs["llm_transcript_filepath"] = os.path.join(
-            self.cache_dir, "lyrics-" + self.get_song_slug() + "-llm-correction-transcript.txt"
-        )
+        self.outputs["llm_transcript_filepath"] = os.path.join(self.cache_dir, self.get_output_filename(" (LLM Transcript).txt"))
 
         total_segments = len(self.outputs["transcription_data_dict"]["segments"])
         self.logger.info(f"Beginning correction using LLM, total segments: {total_segments}")
@@ -466,7 +466,9 @@ class LyricsTranscriber:
         if self.outputs["corrected_lyrics_data_dict"]:
             self.logger.debug(f"corrected_lyrics_data_dict exists, writing plain text lyrics file")
 
-            corrected_lyrics_text_filepath = os.path.join(self.cache_dir, "lyrics-" + self.get_song_slug() + "-corrected.txt")
+            corrected_lyrics_text_filepath = os.path.join(
+                self.cache_dir, self.get_output_filename(" (Lyrics Corrected).txt")  # Updated to use consistent naming
+            )
             self.outputs["corrected_lyrics_text_filepath"] = corrected_lyrics_text_filepath
 
             self.outputs["corrected_lyrics_text"] = ""
@@ -475,7 +477,7 @@ class LyricsTranscriber:
             with open(corrected_lyrics_text_filepath, "w", encoding="utf-8") as f:
                 for corrected_segment in self.outputs["corrected_lyrics_data_dict"]["segments"]:
                     self.outputs["corrected_lyrics_text"] += corrected_segment["text"].strip() + "\n"
-                    f.write(corrected_segment["text".strip()] + "\n")
+                    f.write(corrected_segment["text"].strip() + "\n")
 
     def write_spotify_lyrics_data_file(self):
         if self.spotify_cookie and self.song_known:
@@ -484,7 +486,9 @@ class LyricsTranscriber:
             self.logger.warning(f"skipping spotify fetch as not all spotify params were set")
             return
 
-        spotify_lyrics_data_json_cache_filepath = os.path.join(self.cache_dir, "lyrics-" + self.get_song_slug() + "-spotify.json")
+        spotify_lyrics_data_json_cache_filepath = os.path.join(
+            self.cache_dir, self.get_output_filename(" (Lyrics Spotify).json")  # Updated to use consistent naming
+        )
 
         if os.path.isfile(spotify_lyrics_data_json_cache_filepath):
             self.logger.debug(
@@ -531,7 +535,9 @@ class LyricsTranscriber:
         if self.outputs["spotify_lyrics_data_dict"]:
             self.logger.debug(f"spotify_lyrics data found, checking/writing plain text lyrics file")
 
-            spotify_lyrics_text_filepath = os.path.join(self.cache_dir, "lyrics-" + self.get_song_slug() + "-spotify.txt")
+            spotify_lyrics_text_filepath = os.path.join(
+                self.cache_dir, self.get_output_filename(" (Lyrics Spotify).txt")  # Updated to use consistent naming
+            )
             self.outputs["spotify_lyrics_text_filepath"] = spotify_lyrics_text_filepath
 
             lines = self.outputs["spotify_lyrics_data_dict"]["lyrics"]["lines"]
@@ -561,7 +567,7 @@ class LyricsTranscriber:
             self.logger.warning(f"skipping genius fetch as not all genius params were set")
             return
 
-        genius_lyrics_cache_filepath = os.path.join(self.cache_dir, "lyrics-" + self.get_song_slug() + "-genius.txt")
+        genius_lyrics_cache_filepath = os.path.join(self.cache_dir, self.get_output_filename(" (Lyrics Genius).txt"))
 
         if os.path.isfile(genius_lyrics_cache_filepath):
             self.logger.debug(f"found existing file at genius_lyrics_cache_filepath, reading: {genius_lyrics_cache_filepath}")
@@ -635,7 +641,9 @@ class LyricsTranscriber:
     # then loops over each word and writes all words with MidiCo segment start/end formatting
     # and word-level timestamps to a MidiCo-compatible LRC file
     def write_midico_lrc_file(self):
-        self.outputs["midico_lrc_filepath"] = self.get_cache_filepath(".lrc")
+        self.outputs["midico_lrc_filepath"] = os.path.join(
+            self.cache_dir, self.get_output_filename(" (Lyrics Corrected).lrc")  # Updated suffix
+        )
 
         lrc_filename = self.outputs["midico_lrc_filepath"]
         self.logger.debug(f"writing midico formatted word timestamps to LRC file: {lrc_filename}")
@@ -692,9 +700,15 @@ class LyricsTranscriber:
                     self.logger.debug("Reset current line")
 
                 current_line_text += (" " if current_line_text else "") + word["text"]
+
+                # fmt: off
                 lyric_segment = subtitles.LyricSegment(
-                    text=word["text"], ts=timedelta(seconds=word["start"]), end_ts=timedelta(seconds=word["end"])
+                    text=word["text"], 
+                    ts=timedelta(seconds=word["start"]), 
+                    end_ts=timedelta(seconds=word["end"])
                 )
+                # fmt: on
+
                 current_line.segments.append(lyric_segment)
                 self.logger.debug(f"Added word to current line. Current line: '{current_line_text}'")
 
@@ -706,7 +720,7 @@ class LyricsTranscriber:
         return screens
 
     def write_ass_file(self):
-        self.outputs["ass_subtitles_filepath"] = self.get_cache_filepath(".ass")
+        self.outputs["ass_subtitles_filepath"] = os.path.join(self.cache_dir, self.get_output_filename(" (Lyrics Corrected).ass"))
 
         ass_filepath = self.outputs["ass_subtitles_filepath"]
         self.logger.debug(f"writing ASS formatted subtitle file: {ass_filepath}")
@@ -832,10 +846,10 @@ class LyricsTranscriber:
 
     def write_transcribed_lyrics_plain_text(self):
         if self.outputs["transcription_data_dict"]:
-            transcription_cache_suffix = "-audioshake-transcribed.txt" if self.audioshake_api_token else "-whisper-transcribed.txt"
+            transcription_cache_suffix = " (Lyrics AudioShake).txt" if self.audioshake_api_token else " (Lyrics Whisper).txt"
             self.logger.debug(f"transcription_cache_suffix: {transcription_cache_suffix}")
 
-            transcribed_lyrics_text_filepath = os.path.join(self.cache_dir, "lyrics-" + self.get_song_slug() + transcription_cache_suffix)
+            transcribed_lyrics_text_filepath = os.path.join(self.cache_dir, self.get_output_filename(transcription_cache_suffix))
             self.outputs["transcribed_lyrics_text_filepath"] = transcribed_lyrics_text_filepath
 
             self.outputs["transcribed_lyrics_text"] = ""
@@ -949,8 +963,8 @@ class LyricsTranscriber:
         return new_segments
 
     def transcribe(self):
-        transcription_cache_suffix = "-audioshake" if self.audioshake_api_token else "-whisper"
-        self.outputs["transcription_data_filepath"] = self.get_cache_filepath(f"{transcription_cache_suffix}.json")
+        transcription_cache_suffix = " (AudioShake).json" if self.audioshake_api_token else " (Whisper).json"
+        self.outputs["transcription_data_filepath"] = self.get_cache_filepath(transcription_cache_suffix)
 
         transcription_cache_filepath = self.outputs["transcription_data_filepath"]
         if os.path.isfile(transcription_cache_filepath):
@@ -963,14 +977,14 @@ class LyricsTranscriber:
             self.logger.debug(f"Using AudioShake API for transcription")
             from .audioshake_transcriber import AudioShakeTranscriber
 
-            audioshake = AudioShakeTranscriber(self.audioshake_api_token, logger=self.logger)
+            audioshake = AudioShakeTranscriber(api_token=self.audioshake_api_token, logger=self.logger, output_prefix=self.output_prefix)
             transcription_data = audioshake.transcribe(self.audio_filepath)
         else:
             self.logger.debug(f"Using Whisper for transcription with model: {self.transcription_model}")
             audio = whisper.load_audio(self.audio_filepath)
             model = whisper.load_model(self.transcription_model, device="cpu")
             transcription_data = whisper.transcribe(model, audio, language="en", beam_size=5, temperature=0.2, best_of=5)
-            
+
             # auditok is needed for voice activity detection, but it has OS package dependencies that are hard to install on some platforms
             # transcription_data = whisper.transcribe(model, audio, language="en", vad="auditok", beam_size=5, temperature=0.2, best_of=5)
 
@@ -990,10 +1004,8 @@ class LyricsTranscriber:
         self.outputs["transcription_data_dict"] = transcription_data
 
     def get_cache_filepath(self, extension):
-        filename = os.path.split(self.audio_filepath)[1]
-        filename_slug = slugify.slugify(filename, lowercase=False)
-        hash_value = self.get_file_hash(self.audio_filepath)
-        cache_filepath = os.path.join(self.cache_dir, filename_slug + "_" + hash_value + extension)
+        # Instead of using slugify and hash, use the consistent naming pattern
+        cache_filepath = os.path.join(self.cache_dir, self.get_output_filename(extension))
         self.logger.debug(f"get_cache_filepath returning cache_filepath: {cache_filepath}")
         return cache_filepath
 
@@ -1014,3 +1026,7 @@ class LyricsTranscriber:
 
         if self.output_dir is not None:
             os.makedirs(self.output_dir, exist_ok=True)
+
+    def get_output_filename(self, suffix):
+        """Generate consistent filename with (Purpose) suffix pattern"""
+        return f"{self.output_prefix}{suffix}"
