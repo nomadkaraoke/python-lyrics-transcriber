@@ -13,9 +13,9 @@ import syrics.api
 from datetime import timedelta
 from .utils import subtitles
 from typing import List, Optional
-from openai import OpenAI
 from tenacity import retry, stop_after_delay, wait_exponential, retry_if_exception_type
 import requests
+from .corrector import LyricsTranscriptionCorrector
 
 
 class LyricsTranscriber:
@@ -24,7 +24,6 @@ class LyricsTranscriber:
         audio_filepath,
         artist=None,
         title=None,
-        openai_api_key=None,
         audioshake_api_token=None,
         genius_api_token=None,
         spotify_cookie=None,
@@ -33,9 +32,6 @@ class LyricsTranscriber:
         log_level=logging.DEBUG,
         log_formatter=None,
         transcription_model="medium",
-        llm_model="gpt-4o",
-        llm_prompt_matching=None,
-        llm_prompt_correction=None,
         render_video=False,
         video_resolution="360p",
         video_background_image=None,
@@ -63,47 +59,11 @@ class LyricsTranscriber:
         self.title = title
         self.song_known = self.artist is not None and self.title is not None
 
-        self.openai_api_key = os.getenv("OPENAI_API_KEY", default=openai_api_key)
+        self.audioshake_api_token = os.getenv("AUDIOSHAKE_API_TOKEN", default=audioshake_api_token)
         self.genius_api_token = os.getenv("GENIUS_API_TOKEN", default=genius_api_token)
         self.spotify_cookie = os.getenv("SPOTIFY_COOKIE_SP_DC", default=spotify_cookie)
-        self.audioshake_api_token = os.getenv("AUDIOSHAKE_API_TOKEN", default=audioshake_api_token)
 
         self.transcription_model = transcription_model
-        self.llm_model = llm_model
-
-        # Use package-relative paths for prompt files
-        if llm_prompt_matching is None:
-            llm_prompt_matching = os.path.join(
-                os.path.dirname(__file__), "llm_prompts", "llm_prompt_lyrics_matching_andrew_handwritten_20231118.txt"
-            )
-        if llm_prompt_correction is None:
-            llm_prompt_correction = os.path.join(
-                os.path.dirname(__file__), "llm_prompts", "llm_prompt_lyrics_correction_andrew_handwritten_20231118.txt"
-            )
-
-        self.llm_prompt_matching = llm_prompt_matching
-        self.llm_prompt_correction = llm_prompt_correction
-
-        if not os.path.exists(self.llm_prompt_matching):
-            raise FileNotFoundError(f"LLM prompt file not found: {self.llm_prompt_matching}")
-        if not os.path.exists(self.llm_prompt_correction):
-            raise FileNotFoundError(f"LLM prompt file not found: {self.llm_prompt_correction}")
-
-        self.openai_client = None
-
-        if self.openai_api_key:
-            self.openai_client = OpenAI(api_key=self.openai_api_key)
-
-            # Uncomment for local models e.g. with ollama
-            # self.openai_client = OpenAI(
-            #     base_url="http://localhost:11434/v1",
-            #     api_key="ollama",
-            # )
-
-            self.openai_client.log = self.log_level
-        else:
-            self.logger.warning("No OpenAI API key found, no correction will be applied to transcription")
-
         self.render_video = render_video
         self.video_resolution = video_resolution
         self.video_background_image = video_background_image
@@ -154,10 +114,6 @@ class LyricsTranscriber:
             "spotify_lyrics_data_dict": None,
             "spotify_lyrics_data_filepath": None,
             "spotify_lyrics_text_filepath": None,
-            "llm_token_usage": {"input": 0, "output": 0},
-            "llm_costs_usd": {"input": 0.0, "output": 0.0, "total": 0.0},
-            "llm_transcript": None,
-            "llm_transcript_filepath": None,
             "corrected_lyrics_text": None,
             "corrected_lyrics_text_filepath": None,
             "midico_lrc_filepath": None,
@@ -191,13 +147,7 @@ class LyricsTranscriber:
 
         self.validate_lyrics_match_song()
 
-        if self.openai_client:
-            self.write_corrected_lyrics_data_file()
-            self.write_corrected_lyrics_plain_text()
-        else:
-            self.logger.warning("Skipping LLM correction as no OpenAI client is available")
-            self.outputs["corrected_lyrics_data_dict"] = self.outputs["transcription_data_dict_primary"]
-            self.write_corrected_lyrics_plain_text()
+        self.correct_lyrics_transcription()
 
         self.calculate_singing_percentage()
 
@@ -209,10 +159,6 @@ class LyricsTranscriber:
             self.create_video()
 
         self.copy_files_to_output_dir()
-        self.calculate_llm_costs()
-
-        if self.openai_client:
-            self.openai_client.close()
 
         return self.outputs
 
@@ -236,9 +182,6 @@ class LyricsTranscriber:
     def validate_lyrics_match_song(self):
         at_least_one_online_lyrics_validated = False
 
-        with open(self.llm_prompt_matching, "r") as file:
-            llm_matching_instructions = file.read()
-
         for online_lyrics_source in ["genius", "spotify"]:
             self.logger.debug(f"validating transcribed lyrics match lyrics from {online_lyrics_source}")
 
@@ -248,50 +191,21 @@ class LyricsTranscriber:
             if online_lyrics_text_key not in self.outputs or self.outputs[online_lyrics_text_key] is None:
                 continue
 
-            if self.openai_client:
-                data_input_str = f'Data input 1:\n{self.outputs["transcribed_lyrics_text_primary"]}\nData input 2:\n{self.outputs[online_lyrics_text_key]}\n'
+            self.logger.debug(f"Using primitive word matching to validate {online_lyrics_source} lyrics match")
+            transcribed_words = set(self.outputs["transcribed_lyrics_text_primary"].split())
+            online_lyrics_words = set(self.outputs[online_lyrics_text_key].split())
+            common_words = transcribed_words & online_lyrics_words
+            match_percentage = len(common_words) / len(online_lyrics_words) * 100
 
-                self.logger.debug(f"making API call to LLM model {self.llm_model} to validate {online_lyrics_source} lyrics match")
-                response = self.openai_client.chat.completions.create(
-                    model=self.llm_model,
-                    messages=[{"role": "system", "content": llm_matching_instructions}, {"role": "user", "content": data_input_str}],
+            if match_percentage >= 50:
+                self.logger.info(
+                    f"{online_lyrics_source} lyrics successfully validated to match transcription with {match_percentage:.2f}% word match"
                 )
-
-                message = response.choices[0].message.content
-                finish_reason = response.choices[0].finish_reason
-
-                self.outputs["llm_token_usage"]["input"] += response.usage.prompt_tokens
-                self.outputs["llm_token_usage"]["output"] += response.usage.completion_tokens
-
-                if finish_reason == "stop":
-                    if message == "Yes":
-                        self.logger.info(f"{online_lyrics_source} lyrics successfully validated to match transcription")
-                        at_least_one_online_lyrics_validated = True
-                    elif message == "No":
-                        self.logger.warning(f"{online_lyrics_source} lyrics do not match transcription, deleting that source from outputs")
-                        self.outputs[online_lyrics_text_key] = None
-                        self.outputs[online_lyrics_filepath_key] = None
-                    else:
-                        self.logger.error(f"Unexpected response from LLM: {message}")
-                else:
-                    self.logger.warning(f"OpenAI API call did not finish successfully, finish_reason: {finish_reason}")
+                at_least_one_online_lyrics_validated = True
             else:
-                # Fallback primitive word matching
-                self.logger.debug(f"Using primitive word matching to validate {online_lyrics_source} lyrics match")
-                transcribed_words = set(self.outputs["transcribed_lyrics_text_primary"].split())
-                online_lyrics_words = set(self.outputs[online_lyrics_text_key].split())
-                common_words = transcribed_words & online_lyrics_words
-                match_percentage = len(common_words) / len(online_lyrics_words) * 100
-
-                if match_percentage >= 50:
-                    self.logger.info(
-                        f"{online_lyrics_source} lyrics successfully validated to match transcription with {match_percentage:.2f}% word match"
-                    )
-                    at_least_one_online_lyrics_validated = True
-                else:
-                    self.logger.warning(f"{online_lyrics_source} lyrics do not match transcription, deleting that source from outputs")
-                    self.outputs[online_lyrics_text_key] = None
-                    self.outputs[online_lyrics_filepath_key] = None
+                self.logger.warning(f"{online_lyrics_source} lyrics do not match transcription, deleting that source from outputs")
+                self.outputs[online_lyrics_text_key] = None
+                self.outputs[online_lyrics_filepath_key] = None
 
         self.logger.info(
             f"Completed validation of transcription using online lyrics sources. Match found: {at_least_one_online_lyrics_validated}"
@@ -302,178 +216,37 @@ class LyricsTranscriber:
                 f"Lyrics from Genius and Spotify did not match the transcription. Please check artist and title are set correctly."
             )
 
-    def write_corrected_lyrics_data_file(self):
-        if not self.openai_client:
-            self.logger.warning("Skipping LLM correction as no OpenAI client is available")
-            return
-
-        self.logger.debug("write_corrected_lyrics_data_file initiating OpenAI client")
-
+    def correct_lyrics_transcription(self):
         corrected_lyrics_data_json_cache_filepath = os.path.join(self.cache_dir, self.get_output_filename(" (Lyrics Corrected).json"))
 
         if os.path.isfile(corrected_lyrics_data_json_cache_filepath):
-            self.logger.debug(
+            self.logger.info(
                 f"found existing file at corrected_lyrics_data_json_cache_filepath, reading: {corrected_lyrics_data_json_cache_filepath}"
             )
 
             with open(corrected_lyrics_data_json_cache_filepath, "r") as corrected_lyrics_data_json:
                 self.outputs["corrected_lyrics_data_filepath"] = corrected_lyrics_data_json_cache_filepath
-
-                corrected_lyrics_data_dict = json.load(corrected_lyrics_data_json)
-                self.outputs["corrected_lyrics_data_dict"] = corrected_lyrics_data_dict
+                self.outputs["corrected_lyrics_data_dict"] = json.load(corrected_lyrics_data_json)
                 return
 
-        reference_lyrics = self.outputs.get("genius_lyrics_text") or self.outputs.get("spotify_lyrics_text")
-
-        if not reference_lyrics:
-            self.logger.warning("No reference lyrics found from Genius or Spotify. Skipping LLM correction.")
-            self.outputs["corrected_lyrics_data_dict"] = self.outputs["transcription_data_dict_primary"]
-            return
-
-        self.logger.debug(
-            f"no cached lyrics found at corrected_lyrics_data_json_cache_filepath: {corrected_lyrics_data_json_cache_filepath}, attempting to run correction using LLM"
+        lyrics_corrector = LyricsTranscriptionCorrector(logger=self.logger)
+        lyrics_corrector.set_input_data(
+            spotify_lyrics_data_dict=self.outputs["spotify_lyrics_data_dict"],
+            spotify_lyrics_text=self.outputs["spotify_lyrics_text"],
+            genius_lyrics_text=self.outputs["genius_lyrics_text"],
+            transcription_data_dict_whisper=self.outputs["transcription_data_dict_whisper"],
+            transcription_data_dict_audioshake=self.outputs["transcription_data_dict_audioshake"],
         )
+        self.outputs["corrected_lyrics_data_dict"] = lyrics_corrector.run_corrector()
 
-        corrected_lyrics_dict = {"segments": []}
-
-        with open(self.llm_prompt_correction, "r") as file:
-            system_prompt_template = file.read()
-
-        system_prompt = system_prompt_template.replace("{{reference_lyrics}}", reference_lyrics)
-
-        # TODO: Test if results are cleaner when using the vocal file from a background vocal audio separation model
-        # TODO: Record more info about the correction process (e.g before/after diffs for each segment) to a file for debugging
-        # TODO: Possibly add a step after segment-based correct to get the LLM to self-analyse the diff
-
-        self.outputs["llm_transcript"] = ""
-        self.outputs["llm_transcript_filepath"] = os.path.join(self.cache_dir, self.get_output_filename(" (LLM Transcript).txt"))
-
-        total_segments = len(self.outputs["transcription_data_dict_primary"]["segments"])
-        self.logger.info(f"Beginning correction using LLM, total segments: {total_segments}")
-
-        with open(self.outputs["llm_transcript_filepath"], "a", buffering=1, encoding="utf-8") as llm_transcript_file:
-            self.logger.debug(f"writing LLM chat instructions: {self.outputs['llm_transcript_filepath']}")
-
-            llm_transcript_header = f"--- SYSTEM instructions passed in for all segments ---:\n\n{system_prompt}\n"
-            self.outputs["llm_transcript"] += llm_transcript_header
-            llm_transcript_file.write(llm_transcript_header)
-
-            for segment in self.outputs["transcription_data_dict_primary"]["segments"]:
-                # # Don't waste OpenAI dollars when testing!
-                # if segment["id"] > 10:
-                #     continue
-                # if segment["id"] < 20 or segment["id"] > 24:
-                #     continue
-
-                llm_transcript_segment = ""
-                segment_input = json.dumps(
-                    {
-                        "id": segment["id"],
-                        "start": segment["start"],
-                        "end": segment["end"],
-                        "confidence": segment["confidence"],
-                        "text": segment["text"],
-                        "words": segment["words"],
-                    }
-                )
-
-                previous_two_corrected_lines = ""
-                upcoming_two_uncorrected_lines = ""
-
-                for previous_segment in corrected_lyrics_dict["segments"]:
-                    if previous_segment["id"] in (segment["id"] - 2, segment["id"] - 1):
-                        previous_two_corrected_lines += previous_segment["text"].strip() + "\n"
-
-                for next_segment in self.outputs["transcription_data_dict_primary"]["segments"]:
-                    if next_segment["id"] in (segment["id"] + 1, segment["id"] + 2):
-                        upcoming_two_uncorrected_lines += next_segment["text"].strip() + "\n"
-
-                llm_transcript_segment += f"--- Segment {segment['id']} / {total_segments} ---\n"
-                llm_transcript_segment += f"Previous two corrected lines:\n\n{previous_two_corrected_lines}\nUpcoming two uncorrected lines:\n\n{upcoming_two_uncorrected_lines}\nData input:\n\n{segment_input}\n"
-
-                # fmt: off
-                segment_prompt = system_prompt_template.replace(
-                    "{{previous_two_corrected_lines}}", previous_two_corrected_lines
-                ).replace(
-                    "{{upcoming_two_uncorrected_lines}}", upcoming_two_uncorrected_lines
-                ).replace(
-                    "{{segment_input}}", segment_input
-                )
-
-                self.logger.info(
-                    f'Calling completion model {self.llm_model} with instructions and data input for segment {segment["id"]} / {total_segments}:'
-                )
-
-                response = self.openai_client.chat.completions.create(
-                    model=self.llm_model,
-                    response_format={"type": "json_object"},
-                    seed=10,
-                    temperature=0.4,
-                    messages=[
-                        {
-                            "role": "user", 
-                            "content": segment_prompt
-                        }
-                    ],
-                )
-                # fmt: on
-
-                message = response.choices[0].message.content
-                finish_reason = response.choices[0].finish_reason
-
-                llm_transcript_segment += f"\n--- RESPONSE for segment {segment['id']} ---:\n\n"
-                llm_transcript_segment += message
-                llm_transcript_segment += f"\n--- END segment {segment['id']} / {total_segments} ---:\n\n"
-
-                self.logger.debug(f"writing LLM chat transcript for segment to: {self.outputs['llm_transcript_filepath']}")
-                llm_transcript_file.write(llm_transcript_segment)
-                self.outputs["llm_transcript"] += llm_transcript_segment
-
-                self.outputs["llm_token_usage"]["input"] += response.usage.prompt_tokens
-                self.outputs["llm_token_usage"]["output"] += response.usage.completion_tokens
-
-                # self.logger.debug(f"response finish_reason: {finish_reason} message: \n{message}")
-
-                if finish_reason == "stop":
-                    try:
-                        corrected_segment_dict = json.loads(message)
-                        corrected_lyrics_dict["segments"].append(corrected_segment_dict)
-                        self.logger.info("Successfully parsed response from GPT as JSON and appended to corrected_lyrics_dict.segments")
-                    except json.JSONDecodeError as e:
-                        raise Exception("Failed to parse response from GPT as JSON") from e
-                else:
-                    self.logger.warning(f"OpenAI API call did not finish successfully, finish_reason: {finish_reason}")
-
-            self.logger.info(f'Successfully processed correction for all {len(corrected_lyrics_dict["segments"])} lyrics segments')
-
-            self.logger.debug(f"writing corrected lyrics data JSON filepath: {corrected_lyrics_data_json_cache_filepath}")
-            with open(corrected_lyrics_data_json_cache_filepath, "w", encoding="utf-8") as corrected_lyrics_data_json_cache_file:
-                corrected_lyrics_data_json_cache_file.write(json.dumps(corrected_lyrics_dict, indent=4))
+        # Save the corrected lyrics to output JSON file
+        self.logger.debug(f"writing corrected lyrics data JSON filepath: {corrected_lyrics_data_json_cache_filepath}")
+        with open(corrected_lyrics_data_json_cache_filepath, "w", encoding="utf-8") as f:
+            f.write(json.dumps(self.outputs["corrected_lyrics_data_dict"], indent=4))
 
         self.outputs["corrected_lyrics_data_filepath"] = corrected_lyrics_data_json_cache_filepath
-        self.outputs["corrected_lyrics_data_dict"] = corrected_lyrics_dict
 
-    def calculate_llm_costs(self):
-        price_dollars_per_1000_tokens = {
-            "gpt-3.5-turbo-1106": {
-                "input": 0.0010,
-                "output": 0.0020,
-            },
-            "gpt-4-1106-preview": {
-                "input": 0.01,
-                "output": 0.03,
-            },
-        }
-
-        input_price = price_dollars_per_1000_tokens.get(self.llm_model, {"input": 0, "output": 0})["input"]
-        output_price = price_dollars_per_1000_tokens.get(self.llm_model, {"input": 0, "output": 0})["output"]
-
-        input_cost = input_price * (self.outputs["llm_token_usage"]["input"] / 1000)
-        output_cost = output_price * (self.outputs["llm_token_usage"]["output"] / 1000)
-
-        self.outputs["llm_costs_usd"]["input"] = round(input_cost, 3)
-        self.outputs["llm_costs_usd"]["output"] = round(output_cost, 3)
-        self.outputs["llm_costs_usd"]["total"] = round(input_cost + output_cost, 3)
+        self.write_corrected_lyrics_plain_text()
 
     def write_corrected_lyrics_plain_text(self):
         if self.outputs["corrected_lyrics_data_dict"]:
