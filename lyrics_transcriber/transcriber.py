@@ -15,6 +15,7 @@ from .utils import subtitles
 from typing import List, Optional
 from tenacity import retry, stop_after_delay, wait_exponential, retry_if_exception_type
 import requests
+from karaoke_lyrics_processor import KaraokeLyricsProcessor
 from .corrector import LyricsTranscriptionCorrector
 
 
@@ -27,6 +28,7 @@ class LyricsTranscriber:
         audioshake_api_token=None,
         genius_api_token=None,
         spotify_cookie=None,
+        skip_transcription=False,
         output_dir=None,
         cache_dir="/tmp/lyrics-transcriber-cache/",
         log_level=logging.DEBUG,
@@ -110,10 +112,12 @@ class LyricsTranscriber:
             "transcribed_lyrics_text_primary": None,
             "transcribed_lyrics_text_primary_filepath": None,
             "genius_lyrics_text": None,
-            "genius_lyrics_filepath": None,
+            "genius_lyrics_text_filepath": None,
+            "genius_lyrics_processed_filepath": None,
             "spotify_lyrics_data_dict": None,
             "spotify_lyrics_data_filepath": None,
             "spotify_lyrics_text_filepath": None,
+            "spotify_lyrics_processed_filepath": None,
             "corrected_lyrics_text": None,
             "corrected_lyrics_text_filepath": None,
             "midico_lrc_filepath": None,
@@ -132,31 +136,45 @@ class LyricsTranscriber:
 
         self.output_prefix = f"{artist} - {title}"
 
+        self.skip_transcription = skip_transcription
+
     def generate(self):
         self.logger.debug(f"Starting generate() with cache_dir: {self.cache_dir} and output_dir: {self.output_dir}")
 
         self.logger.debug(f"audio_filepath is set: {self.audio_filepath}, beginning initial whisper transcription")
 
-        self.transcribe()
-
-        self.write_transcribed_lyrics_plain_text()
-
-        self.write_genius_lyrics_file()
         self.write_spotify_lyrics_data_file()
         self.write_spotify_lyrics_plain_text()
+        if self.outputs["spotify_lyrics_text_filepath"]:
+            self.outputs["spotify_lyrics_processed_filepath"] = os.path.join(
+                self.cache_dir, self.get_output_filename(" (Lyrics Spotify Processed).txt")
+            )
+            self.write_processed_lyrics(self.outputs["spotify_lyrics_text_filepath"], self.outputs["spotify_lyrics_processed_filepath"])
 
-        self.validate_lyrics_match_song()
+        self.write_genius_lyrics_file()
+        if self.outputs["genius_lyrics_text_filepath"]:
+            self.outputs["genius_lyrics_processed_filepath"] = os.path.join(
+                self.cache_dir, self.get_output_filename(" (Lyrics Genius Processed).txt")
+            )
+            self.write_processed_lyrics(self.outputs["genius_lyrics_text_filepath"], self.outputs["genius_lyrics_processed_filepath"])
 
-        self.correct_lyrics_transcription()
+        if not self.skip_transcription:
+            self.transcribe()
+            self.validate_lyrics_match_song()
 
-        self.calculate_singing_percentage()
+            self.correct_lyrics_transcription()
 
-        self.write_midico_lrc_file()
-        self.write_ass_file()
+            self.calculate_singing_percentage()
 
-        if self.render_video:
-            self.outputs["karaoke_video_filepath"] = self.get_cache_filepath(".mp4")
-            self.create_video()
+            self.write_midico_lrc_file()
+            self.write_ass_file()
+
+            if self.render_video:
+                self.outputs["karaoke_video_filepath"] = self.get_cache_filepath(".mp4")
+                self.create_video()
+        else:
+            self.outputs["corrected_lyrics_text_filepath"] = self.outputs["genius_lyrics_text_filepath"]
+            self.outputs["corrected_lyrics_text"] = self.outputs["genius_lyrics_text"]
 
         self.copy_files_to_output_dir()
 
@@ -360,7 +378,7 @@ class LyricsTranscriber:
             self.logger.debug(f"found existing file at genius_lyrics_cache_filepath, reading: {genius_lyrics_cache_filepath}")
 
             with open(genius_lyrics_cache_filepath, "r") as cached_lyrics:
-                self.outputs["genius_lyrics_filepath"] = genius_lyrics_cache_filepath
+                self.outputs["genius_lyrics_text_filepath"] = genius_lyrics_cache_filepath
                 self.outputs["genius_lyrics_text"] = cached_lyrics.read()
                 return
         self.logger.debug(f"no cached lyrics found at genius_lyrics_cache_filepath: {genius_lyrics_cache_filepath}, fetching from Genius")
@@ -384,7 +402,7 @@ class LyricsTranscriber:
             with open(genius_lyrics_cache_filepath, "w", encoding="utf-8") as f:
                 f.write(lyrics)
 
-            self.outputs["genius_lyrics_filepath"] = genius_lyrics_cache_filepath
+            self.outputs["genius_lyrics_text_filepath"] = genius_lyrics_cache_filepath
             self.outputs["genius_lyrics_text"] = lyrics
             return lyrics.split("\n")  # Return lines like write_lyrics_from_genius
 
@@ -871,6 +889,21 @@ class LyricsTranscriber:
                 )
             self.outputs["transcribed_lyrics_text_primary"] = self.outputs["transcribed_lyrics_text_whisper"]
             self.outputs["transcribed_lyrics_text_primary_filepath"] = self.outputs["transcribed_lyrics_text_whisper_filepath"]
+
+    def write_processed_lyrics(self, lyrics_file, processed_lyrics_file):
+        self.logger.info(f"Processing lyrics from {lyrics_file} and writing to {processed_lyrics_file}")
+
+        processor = KaraokeLyricsProcessor(
+            log_level=self.log_level,
+            log_formatter=self.log_formatter,
+            input_filename=lyrics_file,
+            output_filename=processed_lyrics_file,
+            max_line_length=36,
+        )
+        processor.process()
+        processor.write_to_output_file()
+
+        self.logger.info(f"Lyrics processing complete, processed lyrics written to: {processed_lyrics_file}")
 
     def get_cache_filepath(self, extension):
         # Instead of using slugify and hash, use the consistent naming pattern
