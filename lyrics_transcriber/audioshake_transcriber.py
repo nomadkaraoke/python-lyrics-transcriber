@@ -11,8 +11,9 @@ class AudioShakeTranscriber:
         self.logger = logger
         self.output_prefix = output_prefix
 
-    def transcribe(self, audio_filepath):
-        self.logger.info(f"Transcribing {audio_filepath} using AudioShake API")
+    def start_transcription(self, audio_filepath):
+        """Starts the transcription job and returns the job ID without waiting for completion"""
+        self.logger.info(f"Starting transcription for {audio_filepath} using AudioShake API")
 
         # Step 1: Upload the audio file
         asset_id = self._upload_file(audio_filepath)
@@ -22,12 +23,23 @@ class AudioShakeTranscriber:
         job_id = self._create_job(asset_id)
         self.logger.info(f"Job created successfully. Job ID: {job_id}")
 
+        return job_id
+
+    def get_transcription_result(self, job_id):
+        """Gets the results for a previously started job"""
+        self.logger.info(f"Getting results for job ID: {job_id}")
+
         # Step 3: Wait for the job to complete and get the results
         result = self._get_job_result(job_id)
         self.logger.info(f"Job completed. Processing results...")
 
         # Step 4: Process the result and return in the required format
         return self._process_result(result)
+
+    def transcribe(self, audio_filepath):
+        """Original method now just combines the two steps"""
+        job_id = self.start_transcription(audio_filepath)
+        return self.get_transcription_result(job_id)
 
     def _upload_file(self, filepath):
         self.logger.info(f"Uploading {filepath} to AudioShake")

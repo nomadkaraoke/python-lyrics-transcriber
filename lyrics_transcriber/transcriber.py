@@ -66,7 +66,7 @@ class LyricsTranscriber:
         self.openai_api_key = os.getenv("OPENAI_API_KEY", default=openai_api_key)
         self.genius_api_token = os.getenv("GENIUS_API_TOKEN", default=genius_api_token)
         self.spotify_cookie = os.getenv("SPOTIFY_COOKIE_SP_DC", default=spotify_cookie)
-        self.audioshake_api_token = os.getenv("AUDIOSHAKE_TOKEN", default=audioshake_api_token)
+        self.audioshake_api_token = os.getenv("AUDIOSHAKE_API_TOKEN", default=audioshake_api_token)
 
         self.transcription_model = transcription_model
         self.llm_model = llm_model
@@ -102,7 +102,7 @@ class LyricsTranscriber:
 
             self.openai_client.log = self.log_level
         else:
-            self.logger.error("No OpenAI API key found, no correction will be applied to transcription")
+            self.logger.warning("No OpenAI API key found, no correction will be applied to transcription")
 
         self.render_video = render_video
         self.video_resolution = video_resolution
@@ -137,10 +137,18 @@ class LyricsTranscriber:
                 raise FileNotFoundError(f"video_background is not a valid file path: {self.video_background_image}")
 
         self.outputs = {
-            "transcription_data_dict": None,
-            "transcription_data_filepath": None,
-            "transcribed_lyrics_text": None,
-            "transcribed_lyrics_text_filepath": None,
+            "transcription_data_dict_whisper": None,
+            "transcription_data_whisper_filepath": None,
+            "transcribed_lyrics_text_whisper": None,
+            "transcribed_lyrics_text_whisper_filepath": None,
+            "transcription_data_dict_audioshake": None,
+            "transcription_data_audioshake_filepath": None,
+            "transcribed_lyrics_text_audioshake": None,
+            "transcribed_lyrics_text_audioshake_filepath": None,
+            "transcription_data_dict_primary": None,
+            "transcription_data_primary_filepath": None,
+            "transcribed_lyrics_text_primary": None,
+            "transcribed_lyrics_text_primary_filepath": None,
             "genius_lyrics_text": None,
             "genius_lyrics_filepath": None,
             "spotify_lyrics_data_dict": None,
@@ -169,9 +177,12 @@ class LyricsTranscriber:
         self.output_prefix = f"{artist} - {title}"
 
     def generate(self):
+        self.logger.debug(f"Starting generate() with cache_dir: {self.cache_dir} and output_dir: {self.output_dir}")
+
         self.logger.debug(f"audio_filepath is set: {self.audio_filepath}, beginning initial whisper transcription")
 
         self.transcribe()
+
         self.write_transcribed_lyrics_plain_text()
 
         self.write_genius_lyrics_file()
@@ -185,7 +196,7 @@ class LyricsTranscriber:
             self.write_corrected_lyrics_plain_text()
         else:
             self.logger.warning("Skipping LLM correction as no OpenAI client is available")
-            self.outputs["corrected_lyrics_data_dict"] = self.outputs["transcription_data_dict"]
+            self.outputs["corrected_lyrics_data_dict"] = self.outputs["transcription_data_dict_primary"]
             self.write_corrected_lyrics_plain_text()
 
         self.calculate_singing_percentage()
@@ -210,11 +221,15 @@ class LyricsTranscriber:
             self.output_dir = os.getcwd()
 
         self.logger.debug(f"copying temporary files to output dir: {self.output_dir}")
-
-        for key in self.outputs:
+        self.logger.debug("Files to copy:")
+        for key, value in self.outputs.items():
             if key.endswith("_filepath"):
-                if self.outputs[key] and os.path.isfile(self.outputs[key]):
-                    shutil.copy(self.outputs[key], self.output_dir)
+                self.logger.debug(f"  {key}: {value}")
+                if value and os.path.isfile(value):
+                    self.logger.debug(f"    File exists, copying to {self.output_dir}")
+                    shutil.copy(value, self.output_dir)
+                else:
+                    self.logger.debug(f"    File doesn't exist or is None")
 
         self.outputs["output_dir"] = self.output_dir
 
@@ -234,9 +249,7 @@ class LyricsTranscriber:
                 continue
 
             if self.openai_client:
-                data_input_str = (
-                    f'Data input 1:\n{self.outputs["transcribed_lyrics_text"]}\nData input 2:\n{self.outputs[online_lyrics_text_key]}\n'
-                )
+                data_input_str = f'Data input 1:\n{self.outputs["transcribed_lyrics_text_primary"]}\nData input 2:\n{self.outputs[online_lyrics_text_key]}\n'
 
                 self.logger.debug(f"making API call to LLM model {self.llm_model} to validate {online_lyrics_source} lyrics match")
                 response = self.openai_client.chat.completions.create(
@@ -265,7 +278,7 @@ class LyricsTranscriber:
             else:
                 # Fallback primitive word matching
                 self.logger.debug(f"Using primitive word matching to validate {online_lyrics_source} lyrics match")
-                transcribed_words = set(self.outputs["transcribed_lyrics_text"].split())
+                transcribed_words = set(self.outputs["transcribed_lyrics_text_primary"].split())
                 online_lyrics_words = set(self.outputs[online_lyrics_text_key].split())
                 common_words = transcribed_words & online_lyrics_words
                 match_percentage = len(common_words) / len(online_lyrics_words) * 100
@@ -314,7 +327,7 @@ class LyricsTranscriber:
 
         if not reference_lyrics:
             self.logger.warning("No reference lyrics found from Genius or Spotify. Skipping LLM correction.")
-            self.outputs["corrected_lyrics_data_dict"] = self.outputs["transcription_data_dict"]
+            self.outputs["corrected_lyrics_data_dict"] = self.outputs["transcription_data_dict_primary"]
             return
 
         self.logger.debug(
@@ -335,7 +348,7 @@ class LyricsTranscriber:
         self.outputs["llm_transcript"] = ""
         self.outputs["llm_transcript_filepath"] = os.path.join(self.cache_dir, self.get_output_filename(" (LLM Transcript).txt"))
 
-        total_segments = len(self.outputs["transcription_data_dict"]["segments"])
+        total_segments = len(self.outputs["transcription_data_dict_primary"]["segments"])
         self.logger.info(f"Beginning correction using LLM, total segments: {total_segments}")
 
         with open(self.outputs["llm_transcript_filepath"], "a", buffering=1, encoding="utf-8") as llm_transcript_file:
@@ -345,7 +358,7 @@ class LyricsTranscriber:
             self.outputs["llm_transcript"] += llm_transcript_header
             llm_transcript_file.write(llm_transcript_header)
 
-            for segment in self.outputs["transcription_data_dict"]["segments"]:
+            for segment in self.outputs["transcription_data_dict_primary"]["segments"]:
                 # # Don't waste OpenAI dollars when testing!
                 # if segment["id"] > 10:
                 #     continue
@@ -371,7 +384,7 @@ class LyricsTranscriber:
                     if previous_segment["id"] in (segment["id"] - 2, segment["id"] - 1):
                         previous_two_corrected_lines += previous_segment["text"].strip() + "\n"
 
-                for next_segment in self.outputs["transcription_data_dict"]["segments"]:
+                for next_segment in self.outputs["transcription_data_dict_primary"]["segments"]:
                     if next_segment["id"] in (segment["id"] + 1, segment["id"] + 2):
                         upcoming_two_uncorrected_lines += next_segment["text"].strip() + "\n"
 
@@ -569,6 +582,7 @@ class LyricsTranscriber:
 
         genius_lyrics_cache_filepath = os.path.join(self.cache_dir, self.get_output_filename(" (Lyrics Genius).txt"))
 
+        # Check cache first
         if os.path.isfile(genius_lyrics_cache_filepath):
             self.logger.debug(f"found existing file at genius_lyrics_cache_filepath, reading: {genius_lyrics_cache_filepath}")
 
@@ -576,15 +590,21 @@ class LyricsTranscriber:
                 self.outputs["genius_lyrics_filepath"] = genius_lyrics_cache_filepath
                 self.outputs["genius_lyrics_text"] = cached_lyrics.read()
                 return
-
         self.logger.debug(f"no cached lyrics found at genius_lyrics_cache_filepath: {genius_lyrics_cache_filepath}, fetching from Genius")
-        genius = lyricsgenius.Genius(self.genius_api_token, verbose=(self.log_level == logging.DEBUG))
+
+        # Initialize Genius with better defaults
+        genius = lyricsgenius.Genius(
+            self.genius_api_token,
+            verbose=(self.log_level == logging.DEBUG),
+            remove_section_headers=True,
+        )
 
         try:
             song = self.fetch_genius_lyrics(genius, self.title, self.artist)
             if song is None:
                 self.logger.warning(f'Could not find lyrics on Genius for "{self.title}" by {self.artist}')
-                return
+                return None
+
             lyrics = self.clean_genius_lyrics(song.lyrics)
 
             self.logger.debug(f"writing clean lyrics to genius_lyrics_cache_filepath: {genius_lyrics_cache_filepath}")
@@ -593,6 +613,8 @@ class LyricsTranscriber:
 
             self.outputs["genius_lyrics_filepath"] = genius_lyrics_cache_filepath
             self.outputs["genius_lyrics_text"] = lyrics
+            return lyrics.split("\n")  # Return lines like write_lyrics_from_genius
+
         except requests.exceptions.RequestException as e:
             self.logger.error(f"Failed to fetch lyrics from Genius after multiple retries: {e}")
             raise
@@ -600,8 +622,13 @@ class LyricsTranscriber:
     def clean_genius_lyrics(self, lyrics):
         lyrics = lyrics.replace("\\n", "\n")
         lyrics = re.sub(r"You might also like", "", lyrics)
-        # Remove the song name and word "Lyrics" if this has a non-newline char at the start
-        lyrics = re.sub(r".*?Lyrics([A-Z])", r"\1", lyrics)
+        lyrics = re.sub(
+            r".*?Lyrics([A-Z])", r"\1", lyrics
+        )  # Remove the song name and word "Lyrics" if this has a non-newline char at the start
+        lyrics = re.sub(r"^[0-9]* Contributors.*Lyrics", "", lyrics)  # Remove this example: 27 ContributorsSex Bomb Lyrics
+        lyrics = re.sub(
+            r"See.*Live.*Get tickets as low as \$[0-9]+", "", lyrics
+        )  # Remove this example: See Tom Jones LiveGet tickets as low as $71
         lyrics = re.sub(r"[0-9]+Embed$", "", lyrics)  # Remove the word "Embed" at end of line with preceding numbers if found
         lyrics = re.sub(r"(\S)Embed$", r"\1", lyrics)  # Remove the word "Embed" if it has been tacked onto a word at the end of a line
         lyrics = re.sub(r"^Embed$", r"", lyrics)  # Remove the word "Embed" if it has been tacked onto a word at the end of a line
@@ -611,7 +638,9 @@ class LyricsTranscriber:
 
     def calculate_singing_percentage(self):
         # Calculate total seconds of singing using timings from whisper transcription results
-        total_singing_duration = sum(segment["end"] - segment["start"] for segment in self.outputs["transcription_data_dict"]["segments"])
+        total_singing_duration = sum(
+            segment["end"] - segment["start"] for segment in self.outputs["transcription_data_dict_primary"]["segments"]
+        )
 
         self.logger.debug(f"calculated total_singing_duration: {int(total_singing_duration)} seconds, now running ffprobe")
 
@@ -641,9 +670,7 @@ class LyricsTranscriber:
     # then loops over each word and writes all words with MidiCo segment start/end formatting
     # and word-level timestamps to a MidiCo-compatible LRC file
     def write_midico_lrc_file(self):
-        self.outputs["midico_lrc_filepath"] = os.path.join(
-            self.cache_dir, self.get_output_filename(" (Lyrics Corrected).lrc")  # Updated suffix
-        )
+        self.outputs["midico_lrc_filepath"] = os.path.join(self.cache_dir, self.get_output_filename(" (Lyrics Corrected).lrc"))
 
         lrc_filename = self.outputs["midico_lrc_filepath"]
         self.logger.debug(f"writing midico formatted word timestamps to LRC file: {lrc_filename}")
@@ -660,7 +687,7 @@ class LyricsTranscriber:
                     f.write(line)
 
     def create_screens(self):
-        self.logger.debug("create_screens beginning generation of screens from whisper results")
+        self.logger.debug("create_screens beginning generation of screens from transcription results")
         screens: List[subtitles.LyricsScreen] = []
         screen: Optional[subtitles.LyricsScreen] = None
 
@@ -725,8 +752,8 @@ class LyricsTranscriber:
         ass_filepath = self.outputs["ass_subtitles_filepath"]
         self.logger.debug(f"writing ASS formatted subtitle file: {ass_filepath}")
 
-        intial_screens = self.create_screens()
-        screens = subtitles.set_segment_end_times(intial_screens, int(self.outputs["song_duration"]))
+        initial_screens = self.create_screens()
+        screens = subtitles.set_segment_end_times(initial_screens, int(self.outputs["song_duration"]))
         screens = subtitles.set_screen_start_times(screens)
         lyric_subtitles_ass = subtitles.create_styled_subtitles(screens, self.video_resolution_num, self.font_size)
         lyric_subtitles_ass.write(ass_filepath)
@@ -845,22 +872,29 @@ class LyricsTranscriber:
         return formatted_time
 
     def write_transcribed_lyrics_plain_text(self):
-        if self.outputs["transcription_data_dict"]:
-            transcription_cache_suffix = " (Lyrics AudioShake).txt" if self.audioshake_api_token else " (Lyrics Whisper).txt"
-            self.logger.debug(f"transcription_cache_suffix: {transcription_cache_suffix}")
+        if self.outputs["transcription_data_dict_whisper"]:
+            transcribed_lyrics_text_whisper_filepath = os.path.join(self.cache_dir, self.get_output_filename(" (Lyrics Whisper).txt"))
+            self.logger.debug(f"Setting Whisper text filepath to: {transcribed_lyrics_text_whisper_filepath}")
+            self.outputs["transcribed_lyrics_text_whisper_filepath"] = transcribed_lyrics_text_whisper_filepath
+            self.outputs["transcribed_lyrics_text_whisper"] = ""
 
-            transcribed_lyrics_text_filepath = os.path.join(self.cache_dir, self.get_output_filename(transcription_cache_suffix))
-            self.outputs["transcribed_lyrics_text_filepath"] = transcribed_lyrics_text_filepath
-
-            self.outputs["transcribed_lyrics_text"] = ""
-
-            self.logger.debug(f"writing lyrics plain text to transcribed_lyrics_text_filepath: {transcribed_lyrics_text_filepath}")
-            with open(transcribed_lyrics_text_filepath, "w", encoding="utf-8") as f:
-                for segment in self.outputs["transcription_data_dict"]["segments"]:
-                    self.outputs["transcribed_lyrics_text"] += segment["text"] + "\n"
+            self.logger.debug(f"Writing Whisper lyrics to: {transcribed_lyrics_text_whisper_filepath}")
+            with open(transcribed_lyrics_text_whisper_filepath, "w", encoding="utf-8") as f:
+                for segment in self.outputs["transcription_data_dict_whisper"]["segments"]:
+                    self.outputs["transcribed_lyrics_text_whisper"] += segment["text"] + "\n"
                     f.write(segment["text"].strip() + "\n")
-        else:
-            raise Exception("Cannot write transcribed lyrics plain text as transcription_data_dict is not set")
+            self.logger.debug(f"Finished writing Whisper lyrics, file exists: {os.path.exists(transcribed_lyrics_text_whisper_filepath)}")
+
+        if self.outputs["transcription_data_dict_audioshake"]:
+            transcribed_lyrics_text_audioshake_filepath = os.path.join(self.cache_dir, self.get_output_filename(" (Lyrics AudioShake).txt"))
+            self.outputs["transcribed_lyrics_text_audioshake_filepath"] = transcribed_lyrics_text_audioshake_filepath
+            self.outputs["transcribed_lyrics_text_audioshake"] = ""
+
+            self.logger.debug(f"Writing AudioShake lyrics to: {transcribed_lyrics_text_audioshake_filepath}")
+            with open(transcribed_lyrics_text_audioshake_filepath, "w", encoding="utf-8") as f:
+                for segment in self.outputs["transcription_data_dict_audioshake"]["segments"]:
+                    self.outputs["transcribed_lyrics_text_audioshake"] += segment["text"] + "\n"
+                    f.write(segment["text"].strip() + "\n")
 
     def find_best_split_point(self, text, max_length):
         self.logger.debug(f"Finding best split point for text: '{text}' (max_length: {max_length})")
@@ -963,45 +997,107 @@ class LyricsTranscriber:
         return new_segments
 
     def transcribe(self):
-        transcription_cache_suffix = " (AudioShake).json" if self.audioshake_api_token else " (Whisper).json"
-        self.outputs["transcription_data_filepath"] = self.get_cache_filepath(transcription_cache_suffix)
+        # Check cache first
+        transcription_cache_filepath_whisper = self.get_cache_filepath(" (Lyrics Whisper).json")
+        transcription_cache_filepath_audioshake = self.get_cache_filepath(" (Lyrics AudioShake).json")
 
-        transcription_cache_filepath = self.outputs["transcription_data_filepath"]
-        if os.path.isfile(transcription_cache_filepath):
-            self.logger.debug(f"transcribe found existing file at transcription_cache_filepath, reading: {transcription_cache_filepath}")
-            with open(transcription_cache_filepath, "r") as cache_file:
-                self.outputs["transcription_data_dict"] = json.load(cache_file)
-                return
+        self.logger.debug(f"Cache directory: {self.cache_dir}")
+        self.logger.debug(f"Output directory: {self.output_dir}")
 
-        if self.audioshake_api_token:
-            self.logger.debug(f"Using AudioShake API for transcription")
+        if os.path.isfile(transcription_cache_filepath_whisper):
+            self.logger.debug(f"Found existing Whisper transcription, reading: {transcription_cache_filepath_whisper}")
+            with open(transcription_cache_filepath_whisper, "r") as cache_file:
+                self.outputs["transcription_data_dict_whisper"] = json.load(cache_file)
+                self.outputs["transcription_data_whisper_filepath"] = transcription_cache_filepath_whisper
+                self.logger.debug(f"Loaded Whisper data and set filepath to: {self.outputs['transcription_data_whisper_filepath']}")
+
+        if os.path.isfile(transcription_cache_filepath_audioshake):
+            self.logger.debug(f"Found existing AudioShake transcription, reading: {transcription_cache_filepath_audioshake}")
+            with open(transcription_cache_filepath_audioshake, "r") as cache_file:
+                self.outputs["transcription_data_dict_audioshake"] = json.load(cache_file)
+                self.outputs["transcription_data_audioshake_filepath"] = transcription_cache_filepath_audioshake
+
+        # If we have both cached transcriptions, set primary and return early
+        if self.outputs["transcription_data_dict_whisper"] and self.outputs["transcription_data_dict_audioshake"]:
+            self.set_primary_transcription()
+            return
+        # If we have Whisper cached and AudioShake isn't available, set primary and return early
+        elif self.outputs["transcription_data_dict_whisper"] and not self.audioshake_api_token:
+            self.set_primary_transcription()
+            return
+
+        # Continue with transcription for any missing data...
+        audioshake_job_id = None
+        if self.audioshake_api_token and not self.outputs["transcription_data_dict_audioshake"]:
+            self.logger.debug(f"Starting AudioShake transcription")
             from .audioshake_transcriber import AudioShakeTranscriber
 
             audioshake = AudioShakeTranscriber(api_token=self.audioshake_api_token, logger=self.logger, output_prefix=self.output_prefix)
-            transcription_data = audioshake.transcribe(self.audio_filepath)
-        else:
+            audioshake_job_id = audioshake.start_transcription(self.audio_filepath)
+
+        # Run Whisper transcription if needed while AudioShake processes
+        if not self.outputs["transcription_data_dict_whisper"]:
             self.logger.debug(f"Using Whisper for transcription with model: {self.transcription_model}")
             audio = whisper.load_audio(self.audio_filepath)
             model = whisper.load_model(self.transcription_model, device="cpu")
-            transcription_data = whisper.transcribe(model, audio, language="en", beam_size=5, temperature=0.2, best_of=5)
-
-            # auditok is needed for voice activity detection, but it has OS package dependencies that are hard to install on some platforms
-            # transcription_data = whisper.transcribe(model, audio, language="en", vad="auditok", beam_size=5, temperature=0.2, best_of=5)
+            whisper_data = whisper.transcribe(model, audio, language="en", beam_size=5, temperature=0.2, best_of=5)
 
             # Remove segments with no words, only music
-            transcription_data["segments"] = [segment for segment in transcription_data["segments"] if segment["text"].strip() != "Music"]
-            self.logger.debug(f"Removed 'Music' segments. Remaining segments: {len(transcription_data['segments'])}")
+            whisper_data["segments"] = [segment for segment in whisper_data["segments"] if segment["text"].strip() != "Music"]
+            self.logger.debug(f"Removed 'Music' segments. Remaining segments: {len(whisper_data['segments'])}")
 
             # Split long segments
             self.logger.debug("Starting to split long segments")
-            transcription_data["segments"] = self.split_long_segments(transcription_data["segments"], max_length=36)
-            self.logger.debug(f"Finished splitting segments. Total segments after splitting: {len(transcription_data['segments'])}")
+            whisper_data["segments"] = self.split_long_segments(whisper_data["segments"], max_length=36)
+            self.logger.debug(f"Finished splitting segments. Total segments after splitting: {len(whisper_data['segments'])}")
 
-        self.logger.debug(f"writing transcription data JSON to cache file: {transcription_cache_filepath}")
-        with open(transcription_cache_filepath, "w") as cache_file:
-            json.dump(transcription_data, cache_file, indent=4)
+            # Store Whisper results
+            self.outputs["transcription_data_dict_whisper"] = whisper_data
+            self.outputs["transcription_data_whisper_filepath"] = transcription_cache_filepath_whisper
+            with open(transcription_cache_filepath_whisper, "w") as cache_file:
+                json.dump(whisper_data, cache_file, indent=4)
 
-        self.outputs["transcription_data_dict"] = transcription_data
+        # Now that Whisper is done, get AudioShake results if available
+        if audioshake_job_id:
+            self.logger.debug("Getting AudioShake results")
+            audioshake_data = audioshake.get_transcription_result(audioshake_job_id)
+            self.outputs["transcription_data_dict_audioshake"] = audioshake_data
+            self.outputs["transcription_data_audioshake_filepath"] = transcription_cache_filepath_audioshake
+            with open(transcription_cache_filepath_audioshake, "w") as cache_file:
+                json.dump(audioshake_data, cache_file, indent=4)
+
+        # Set the primary transcription source
+        self.set_primary_transcription()
+
+        # Write the text files
+        self.write_transcribed_lyrics_plain_text()
+
+    def set_primary_transcription(self):
+        """Set the primary transcription source (AudioShake if available, otherwise Whisper)"""
+        if self.outputs["transcription_data_dict_audioshake"]:
+            self.logger.info("Using AudioShake as primary transcription source")
+            self.outputs["transcription_data_dict_primary"] = self.outputs["transcription_data_dict_audioshake"]
+            self.outputs["transcription_data_primary_filepath"] = self.outputs["transcription_data_audioshake_filepath"]
+
+            # Set the primary text content
+            if "transcribed_lyrics_text_audioshake" not in self.outputs or not self.outputs["transcribed_lyrics_text_audioshake"]:
+                self.outputs["transcribed_lyrics_text_audioshake"] = "\n".join(
+                    segment["text"].strip() for segment in self.outputs["transcription_data_dict_audioshake"]["segments"]
+                )
+            self.outputs["transcribed_lyrics_text_primary"] = self.outputs["transcribed_lyrics_text_audioshake"]
+            self.outputs["transcribed_lyrics_text_primary_filepath"] = self.outputs["transcribed_lyrics_text_audioshake_filepath"]
+        else:
+            self.logger.info("Using Whisper as primary transcription source")
+            self.outputs["transcription_data_dict_primary"] = self.outputs["transcription_data_dict_whisper"]
+            self.outputs["transcription_data_primary_filepath"] = self.outputs["transcription_data_whisper_filepath"]
+
+            # Set the primary text content
+            if "transcribed_lyrics_text_whisper" not in self.outputs or not self.outputs["transcribed_lyrics_text_whisper"]:
+                self.outputs["transcribed_lyrics_text_whisper"] = "\n".join(
+                    segment["text"].strip() for segment in self.outputs["transcription_data_dict_whisper"]["segments"]
+                )
+            self.outputs["transcribed_lyrics_text_primary"] = self.outputs["transcribed_lyrics_text_whisper"]
+            self.outputs["transcribed_lyrics_text_primary_filepath"] = self.outputs["transcribed_lyrics_text_whisper_filepath"]
 
     def get_cache_filepath(self, extension):
         # Instead of using slugify and hash, use the consistent naming pattern
