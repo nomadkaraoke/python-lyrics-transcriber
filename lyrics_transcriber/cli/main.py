@@ -4,7 +4,7 @@ import logging
 import os
 from pathlib import Path
 from typing import Dict
-import pkg_resources
+from importlib.metadata import version
 from dotenv import load_dotenv
 
 from lyrics_transcriber import LyricsTranscriber
@@ -27,7 +27,7 @@ def create_arg_parser() -> argparse.ArgumentParser:
     )
 
     # Version
-    package_version = pkg_resources.get_distribution("lyrics-transcriber").version
+    package_version = version("lyrics-transcriber")
     parser.add_argument("-v", "--version", action="version", version=f"%(prog)s {package_version}")
 
     # Optional arguments
@@ -192,7 +192,3 @@ def main() -> None:
     except Exception as e:
         logger.error(f"Processing failed: {str(e)}")
         exit(1)
-
-
-if __name__ == "__main__":
-    main()

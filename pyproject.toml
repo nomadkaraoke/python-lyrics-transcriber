@@ -23,6 +23,9 @@ pydub = ">=0.25"
 
 [tool.poetry.group.dev.dependencies]
 black = ">=23"
+pytest = ">=7.0"
+pytest-cov = ">=4.0"
+pytest-mock = ">=3.10"
 
 [tool.black]
 line-length = 140
@@ -33,3 +36,11 @@ lyrics-transcriber = 'lyrics_transcriber.cli.main:main'
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+addopts = "-v --cov=lyrics_transcriber --cov-report=term-missing"
+filterwarnings = [
+    "ignore:'audioop' is deprecated:DeprecationWarning"
+]
