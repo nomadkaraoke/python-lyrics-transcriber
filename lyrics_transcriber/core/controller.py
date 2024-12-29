@@ -1,11 +1,11 @@
 import os
 import logging
 from dataclasses import dataclass
-from typing import Dict, Optional, List
+from typing import Dict, Optional
 from ..transcribers.base import BaseTranscriber
 from ..transcribers.audioshake import AudioShakeTranscriber
 from ..transcribers.whisper import WhisperTranscriber
-from .fetcher import LyricsFetcher
+from .fetcher import LyricsFetcher, LyricsFetcherConfig
 from ..output.generator import OutputGenerator
 from .corrector import LyricsTranscriptionCorrector
 
@@ -142,7 +142,10 @@ class LyricsTranscriber:
     def _initialize_lyrics_fetcher(self) -> LyricsFetcher:
         """Initialize lyrics fetching service."""
         return LyricsFetcher(
-            genius_api_token=self.lyrics_config.genius_api_token, spotify_cookie=self.lyrics_config.spotify_cookie, logger=self.logger
+            config=LyricsFetcherConfig(
+                genius_api_token=self.lyrics_config.genius_api_token, spotify_cookie=self.lyrics_config.spotify_cookie
+            ),
+            logger=self.logger,
         )
 
     def _initialize_output_generator(self) -> OutputGenerator:
