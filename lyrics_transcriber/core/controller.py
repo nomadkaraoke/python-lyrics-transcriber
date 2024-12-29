@@ -3,8 +3,8 @@ import logging
 from dataclasses import dataclass
 from typing import Dict, Optional
 from ..transcribers.base import BaseTranscriber
-from ..transcribers.audioshake import AudioShakeTranscriber
-from ..transcribers.whisper import WhisperTranscriber
+from ..transcribers.audioshake import AudioShakeTranscriber, AudioShakeConfig
+from ..transcribers.whisper import WhisperTranscriber, WhisperConfig
 from .fetcher import LyricsFetcher, LyricsFetcherConfig
 from ..output.generator import OutputGenerator, OutputGeneratorConfig
 from .corrector import LyricsCorrector, TranscriptionData, CorrectionResult
@@ -132,16 +132,19 @@ class LyricsTranscriber:
 
         if self.transcriber_config.audioshake_api_token:
             self.logger.debug("Initializing AudioShake transcriber")
-            transcribers["audioshake"] = AudioShakeTranscriber(api_token=self.transcriber_config.audioshake_api_token, logger=self.logger)
+            transcribers["audioshake"] = AudioShakeTranscriber(
+                config=AudioShakeConfig(api_token=self.transcriber_config.audioshake_api_token), logger=self.logger
+            )
         else:
             self.logger.debug("Skipping AudioShake transcriber - no API token provided")
 
         if self.transcriber_config.runpod_api_key and self.transcriber_config.whisper_runpod_id:
             self.logger.debug("Initializing Whisper transcriber")
             transcribers["whisper"] = WhisperTranscriber(
+                config=WhisperConfig(
+                    runpod_api_key=self.transcriber_config.runpod_api_key, endpoint_id=self.transcriber_config.whisper_runpod_id
+                ),
                 logger=self.logger,
-                runpod_api_key=self.transcriber_config.runpod_api_key,
-                endpoint_id=self.transcriber_config.whisper_runpod_id,
             )
         else:
             self.logger.debug("Skipping Whisper transcriber - missing runpod_api_key or whisper_runpod_id")

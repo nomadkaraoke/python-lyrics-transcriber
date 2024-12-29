@@ -1,6 +1,13 @@
 import pytest
 from unittest.mock import Mock, patch
-from lyrics_transcriber.core.controller import LyricsTranscriber, TranscriberConfig, LyricsConfig, OutputConfig
+from lyrics_transcriber.core.controller import (
+    LyricsTranscriber,
+    TranscriberConfig,
+    LyricsConfig,
+    OutputConfig,
+    WhisperConfig,
+    AudioShakeConfig,
+)
 import logging
 
 
@@ -89,8 +96,10 @@ def test_transcriber_with_configs(
     assert transcriber.output_config.render_video is True
 
     # Verify transcribers were initialized correctly
-    mock_whisper_class.assert_called_once_with(logger=test_logger, runpod_api_key="test_key", endpoint_id="test_id")
-    mock_audioshake_class.assert_called_once_with(api_token="test_token", logger=test_logger)
+    mock_whisper_class.assert_called_once_with(config=WhisperConfig(runpod_api_key="test_key", endpoint_id="test_id"), logger=test_logger)
+    mock_audioshake_class.assert_called_once_with(
+        config=AudioShakeConfig(api_token="test_token", base_url="https://groovy.audioshake.ai", output_prefix=None), logger=test_logger
+    )
 
 
 def test_process_with_artist_and_title(basic_transcriber, mock_lyrics_fetcher):
@@ -251,10 +260,10 @@ def test_process_with_successful_correction(basic_transcriber, mock_corrector):
     # Setup mock data
     basic_transcriber.results.transcription_primary = {"test": "data"}
     mock_corrector.run_corrector.return_value = {"test": "corrected_data"}
-    
+
     # Run correction
     basic_transcriber.correct_lyrics()
-    
+
     # Verify correction was successful
     assert basic_transcriber.results.transcription_corrected == {"test": "corrected_data"}
 
@@ -264,10 +273,10 @@ def test_transcribe_with_successful_whisper(basic_transcriber, mock_whisper_tran
     # Setup mock
     mock_whisper_transcriber.transcribe.return_value = {"test": "whisper_data"}
     basic_transcriber.transcribers = {"whisper": mock_whisper_transcriber}
-    
+
     # Run transcription
     basic_transcriber.transcribe()
-    
+
     # Verify whisper results were stored
     assert basic_transcriber.results.transcription_whisper == {"test": "whisper_data"}
     assert basic_transcriber.results.transcription_primary == {"test": "whisper_data"}
@@ -281,15 +290,15 @@ def test_process_full_successful_workflow(basic_transcriber, mock_lyrics_fetcher
         "source": "test",
         "genius_lyrics": "Test genius lyrics",
         "spotify_lyrics": "Test spotify lyrics",
-        "spotify_lyrics_data": {"test": "data"}
+        "spotify_lyrics_data": {"test": "data"},
     }
     basic_transcriber.transcribers = {"whisper": mock_whisper_transcriber}
     mock_whisper_transcriber.transcribe.return_value = {"test": "whisper_data"}
     mock_corrector.run_corrector.return_value = {"test": "corrected_data"}
-    
+
     # Run full process
     result = basic_transcriber.process()
-    
+
     # Verify complete workflow
     assert result.lyrics_text == "Test lyrics"
     assert result.transcription_whisper == {"test": "whisper_data"}

@@ -22,7 +22,6 @@ class AudioShakeAPI:
     def __init__(self, config: AudioShakeConfig, logger):
         self.config = config
         self.logger = logger
-        self._validate_config()
 
     def _validate_config(self) -> None:
         """Validate API configuration."""
@@ -31,11 +30,13 @@ class AudioShakeAPI:
 
     def _get_headers(self) -> Dict[str, str]:
         """Get headers for API requests."""
+        self._validate_config()  # Validate before making any API calls
         return {"Authorization": f"Bearer {self.config.api_token}", "Content-Type": "application/json"}
 
     def upload_file(self, filepath: str) -> str:
         """Upload audio file and return asset ID."""
         self.logger.info(f"Uploading {filepath} to AudioShake")
+        self._validate_config()  # Validate before making API call
 
         url = f"{self.config.base_url}/upload"
         with open(filepath, "rb") as file:
@@ -83,13 +84,13 @@ class AudioShakeTranscriber(BaseTranscriber):
 
     def __init__(
         self,
-        api_token: Optional[str] = None,
+        config: Optional[AudioShakeConfig] = None,
         logger: Optional[Any] = None,
-        output_prefix: Optional[str] = None,
         api_client: Optional[AudioShakeAPI] = None,
     ):
         super().__init__(logger)
-        self.config = AudioShakeConfig(api_token=api_token or os.getenv("AUDIOSHAKE_API_TOKEN"), output_prefix=output_prefix)
+        # Initialize configuration
+        self.config = config or AudioShakeConfig(api_token=os.getenv("AUDIOSHAKE_API_TOKEN"))
         self.api = api_client or AudioShakeAPI(self.config, self.logger)
 
     def get_name(self) -> str:
@@ -118,7 +119,7 @@ class AudioShakeTranscriber(BaseTranscriber):
     def start_transcription(self, audio_filepath: str) -> str:
         """Starts the transcription job and returns the job ID."""
         self.logger.debug(f"Entering start_transcription() for {audio_filepath}")
-        
+
         # Upload file and create job
         asset_id = self.api.upload_file(audio_filepath)
         self.logger.debug(f"File uploaded successfully. Asset ID: {asset_id}")

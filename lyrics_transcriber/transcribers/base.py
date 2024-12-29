@@ -80,7 +80,7 @@ class BaseTranscriber(ABC):
 
     def __init__(self, logger: Optional[LoggerProtocol] = None):
         self.logger = logger or logging.getLogger(__name__)
-        self.cache_dir = os.path.join(tempfile.gettempdir(), "lyrics-transcriber-cache")
+        self.cache_dir = os.path.join("/tmp", "lyrics-transcriber-cache")
         os.makedirs(self.cache_dir, exist_ok=True)
         self.logger.debug(f"Initialized {self.__class__.__name__} with cache dir: {self.cache_dir}")
 

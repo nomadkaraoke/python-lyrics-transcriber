@@ -44,9 +44,21 @@ class TestAudioShakeAPI:
     def api(self, config, mock_logger):
         return AudioShakeAPI(config, mock_logger)
 
-    def test_init_without_token(self, mock_logger):
+    def test_api_calls_without_token(self, mock_logger):
+        """Test that API calls fail when no token is provided"""
+        api = AudioShakeAPI(AudioShakeConfig(), mock_logger)
+
+        # Test upload_file
         with pytest.raises(ValueError, match="AudioShake API token must be provided"):
-            AudioShakeAPI(AudioShakeConfig(), mock_logger)
+            api.upload_file("test.mp3")
+
+        # Test create_job
+        with pytest.raises(ValueError, match="AudioShake API token must be provided"):
+            api.create_job("asset123")
+
+        # Test get_job_result
+        with pytest.raises(ValueError, match="AudioShake API token must be provided"):
+            api.get_job_result("job123")
 
     def test_get_headers(self, api):
         headers = api._get_headers()
@@ -134,11 +146,23 @@ class TestAudioShakeTranscriber:
 
     @pytest.fixture
     def transcriber(self, mock_logger, mock_api):
-        return AudioShakeTranscriber(api_token="test_token", logger=mock_logger, api_client=mock_api)
+        config = AudioShakeConfig(api_token="test_token")
+        return AudioShakeTranscriber(config=config, logger=mock_logger, api_client=mock_api)
 
     def test_init_with_token(self, transcriber):
         assert transcriber.config.api_token == "test_token"
         assert transcriber.api is not None
+
+    def test_init_with_env_var(self, mock_logger):
+        with patch.dict(os.environ, {"AUDIOSHAKE_API_TOKEN": "env_token"}):
+            transcriber = AudioShakeTranscriber(logger=mock_logger)
+            assert transcriber.config.api_token == "env_token"
+
+    def test_init_without_token(self, mock_logger):
+        with patch.dict(os.environ, clear=True):
+            transcriber = AudioShakeTranscriber(logger=mock_logger)
+            assert transcriber.config.api_token is None
+            # API initialization will fail when actually used
 
     def test_get_name(self, transcriber):
         assert transcriber.get_name() == "AudioShake"
