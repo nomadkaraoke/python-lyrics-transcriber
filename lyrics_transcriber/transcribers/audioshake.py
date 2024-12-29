@@ -95,46 +95,51 @@ class AudioShakeTranscriber(BaseTranscriber):
     def get_name(self) -> str:
         return "AudioShake"
 
-    def transcribe(self, audio_filepath: str) -> TranscriptionData:
-        """
-        Transcribe an audio file using AudioShake API.
-
-        Args:
-            audio_filepath: Path to the audio file to transcribe
-
-        Returns:
-            TranscriptionData containing segments, text, and metadata
-        """
+    def _perform_transcription(self, audio_filepath: str) -> TranscriptionData:
+        """Actually perform the transcription using AudioShake API."""
+        self.logger.debug(f"Entering _perform_transcription() for {audio_filepath}")
         self.logger.info(f"Starting transcription for {audio_filepath}")
 
-        # Start job and get results
-        job_id = self.start_transcription(audio_filepath)
-        result = self.get_transcription_result(job_id)
+        try:
+            # Start job and get results
+            self.logger.debug("Calling start_transcription()")
+            job_id = self.start_transcription(audio_filepath)
+            self.logger.debug(f"Got job_id: {job_id}")
 
-        # The metadata is already set in _process_result
-        return result
+            self.logger.debug("Calling get_transcription_result()")
+            result = self.get_transcription_result(job_id)
+            self.logger.debug("Got transcription result")
+
+            return result
+        except Exception as e:
+            self.logger.error(f"Error in _perform_transcription: {str(e)}")
+            raise
 
     def start_transcription(self, audio_filepath: str) -> str:
         """Starts the transcription job and returns the job ID."""
+        self.logger.debug(f"Entering start_transcription() for {audio_filepath}")
+        
         # Upload file and create job
         asset_id = self.api.upload_file(audio_filepath)
-        self.logger.info(f"File uploaded successfully. Asset ID: {asset_id}")
+        self.logger.debug(f"File uploaded successfully. Asset ID: {asset_id}")
 
         job_id = self.api.create_job(asset_id)
-        self.logger.info(f"Job created successfully. Job ID: {job_id}")
+        self.logger.debug(f"Job created successfully. Job ID: {job_id}")
 
         return job_id
 
-    def get_transcription_result(self, job_id: str) -> Dict[str, Any]:
+    def get_transcription_result(self, job_id: str) -> TranscriptionData:
         """Gets the results for a previously started job."""
-        self.logger.info(f"Getting results for job ID: {job_id}")
+        self.logger.debug(f"Entering get_transcription_result() for job ID: {job_id}")
 
         # Wait for job completion
         job_data = self.api.get_job_result(job_id)
-        self.logger.info("Job completed. Processing results...")
+        self.logger.debug("Job completed. Processing results...")
 
         # Process and return in standard format
-        return self._process_result(job_data)
+        result = self._process_result(job_data)
+        self.logger.debug("Results processed successfully")
+        return result
 
     def _process_result(self, job_data: Dict[str, Any]) -> TranscriptionData:
         """Process raw API response into standard format."""

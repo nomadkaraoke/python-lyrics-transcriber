@@ -318,18 +318,26 @@ class LyricsCorrector:
     def run_corrector(self) -> CorrectionResult:
         """Execute the correction process using configured strategy."""
         if not self.primary_transcription:
+            self.logger.error("No primary transcription data available")
             raise ValueError("No primary transcription data available")
 
         try:
+            self.logger.debug(f"Running correction with strategy: {self.correction_strategy.__class__.__name__}")
+            self.logger.debug(f"Primary transcription: {self.primary_transcription}")
+            self.logger.debug(f"Reference transcription: {self.reference_transcription}")
+            self.logger.debug(f"Internet lyrics sources: {len(self.internet_lyrics)}")
+
             result = self.correction_strategy.correct(
                 primary_transcription=self.primary_transcription,
                 reference_transcription=self.reference_transcription,
                 internet_lyrics=self.internet_lyrics,
             )
+
+            self.logger.debug(f"Correction completed. Made {result.corrections_made} corrections")
             return result
 
         except Exception as e:
-            self.logger.error(f"Correction failed: {str(e)}")
+            self.logger.error(f"Correction failed: {str(e)}", exc_info=True)
             # Return uncorrected transcription as fallback
             return CorrectionResult(
                 segments=self.primary_transcription.segments,

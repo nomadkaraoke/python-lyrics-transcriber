@@ -162,40 +162,71 @@ class WhisperTranscriber(BaseTranscriber):
     def get_name(self) -> str:
         return "Whisper"
 
-    def transcribe(self, audio_filepath: str) -> TranscriptionData:
-        """
-        Transcribe an audio file using Whisper API via RunPod.
-
-        Args:
-            audio_filepath: Path to the audio file to transcribe
-
-        Returns:
-            TranscriptionData containing segments and metadata
-        """
+    def _perform_transcription(self, audio_filepath: str) -> TranscriptionData:
+        """Actually perform the transcription using Whisper API."""
         self.logger.info(f"Starting transcription for {audio_filepath}")
-        self._validate_audio_file(audio_filepath)
+        processed_filepath = None
 
         try:
-            # Process and upload file
-            file_hash = self.audio_processor.get_file_md5(audio_filepath)
-            processed_filepath = self.audio_processor.convert_to_flac(audio_filepath)
+            # If input is already a URL, use it directly
+            if audio_filepath.startswith(("http://", "https://")):
+                audio_url = audio_filepath
+            else:
+                # Process and upload local file
+                file_hash = self.audio_processor.get_file_md5(audio_filepath)
+                processed_filepath = self.audio_processor.convert_to_flac(audio_filepath)
 
-            try:
                 # Upload and get URL
                 dropbox_path = f"/transcription_temp/{file_hash}{os.path.splitext(processed_filepath)[1]}"
                 audio_url = self._upload_and_get_link(processed_filepath, dropbox_path)
 
-                # Run transcription
-                return self._run_transcription(audio_url)
+            # Run transcription
+            try:
+                job_id = self.runpod.submit_job(audio_url)
+            except Exception as e:
+                raise TranscriptionError(f"Failed to submit job: {str(e)}") from e
 
-            finally:
-                # Clean up temporary FLAC file
-                if processed_filepath != audio_filepath:
-                    self.logger.debug(f"Cleaning up temporary file: {processed_filepath}")
-                    os.unlink(processed_filepath)
+            while True:
+                status_data = self.runpod.get_job_status(job_id)
+
+                if status_data["status"] == "COMPLETED":
+                    raw_data = status_data["output"]
+
+                    # Convert to standard format
+                    segments = []
+                    for seg in raw_data.get("segments", []):
+                        words = [
+                            Word(text=word["text"], start_time=word["start"], end_time=word["end"], confidence=word.get("probability", 1.0))
+                            for word in seg.get("words", [])
+                        ]
+                        segments.append(LyricsSegment(text=seg["text"], words=words, start_time=seg["start"], end_time=seg["end"]))
+
+                    return TranscriptionData(
+                        segments=segments,
+                        text=raw_data["text"],
+                        source=self.get_name(),
+                        metadata={"language": raw_data.get("language", "en"), "model": "large-v2", "job_id": job_id},
+                    )
+
+                elif status_data["status"] == "FAILED":
+                    raise TranscriptionError(f"Transcription failed: {status_data.get('error', 'Unknown error')}")
+
+                sleep(2)
 
         except Exception as e:
-            raise TranscriptionError(f"Whisper transcription failed: {str(e)}") from e
+            if not isinstance(e, TranscriptionError):
+                raise TranscriptionError(f"Whisper transcription failed: {str(e)}") from e
+            raise
+
+        finally:
+            # Clean up temporary FLAC file if it exists and is different from input
+            if processed_filepath and processed_filepath != audio_filepath:
+                try:
+                    if os.path.exists(processed_filepath):
+                        self.logger.debug(f"Cleaning up temporary file: {processed_filepath}")
+                        os.unlink(processed_filepath)
+                except Exception as e:
+                    self.logger.warning(f"Failed to clean up temporary file: {e}")
 
     def _upload_and_get_link(self, filepath: str, dropbox_path: str) -> str:
         """Upload file to storage and return shared link."""
@@ -209,53 +240,3 @@ class WhisperTranscriber(BaseTranscriber):
         audio_url = self.storage.create_or_get_shared_link(dropbox_path)
         self.logger.debug(f"Using shared link: {audio_url}")
         return audio_url
-
-    def _run_transcription(self, audio_url: str) -> TranscriptionData:
-        """Submit transcription job and wait for results."""
-        job_id = self.runpod.submit_job(audio_url)
-
-        while True:
-            status_data = self.runpod.get_job_status(job_id)
-
-            if status_data["status"] == "COMPLETED":
-                raw_data = status_data["output"]
-
-                # Convert to standard format
-                segments = []
-                for seg in raw_data.get("segments", []):
-                    words = [
-                        Word(
-                            text=word["text"],
-                            start_time=word["start"],
-                            end_time=word["end"],
-                            confidence=word.get("probability", 1.0)
-                        )
-                        for word in seg.get("words", [])
-                    ]
-
-                    segments.append(
-                        LyricsSegment(
-                            text=seg["text"],
-                            words=words,
-                            start_time=seg["start"],
-                            end_time=seg["end"]
-                        )
-                    )
-
-                return TranscriptionData(
-                    segments=segments,
-                    text=raw_data["text"],
-                    source=self.get_name(),
-                    metadata={
-                        "language": raw_data.get("language", "en"),
-                        "model": "large-v2",
-                        "job_id": job_id
-                    }
-                )
-
-            elif status_data["status"] == "FAILED":
-                raise TranscriptionError(
-                    f"Transcription failed: {status_data.get('error', 'Unknown error')}"
-                )
-
-            sleep(2)

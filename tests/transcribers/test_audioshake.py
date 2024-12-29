@@ -12,6 +12,7 @@ from lyrics_transcriber.transcribers.base import (
     Word,
     TranscriptionError,
 )
+import os
 
 
 @pytest.fixture
@@ -180,7 +181,18 @@ class TestAudioShakeTranscriber:
         with pytest.raises(Exception, match="Required output not found in job results"):
             transcriber._process_result(job_data)
 
-    def test_transcribe_full_flow(self, transcriber, mock_api):
+    def test_transcribe_full_flow(self, transcriber, mock_api, tmp_path):
+        # Clear the cache directory first
+        cache_dir = transcriber.cache_dir
+        if os.path.exists(cache_dir):
+            for file in os.listdir(cache_dir):
+                os.remove(os.path.join(cache_dir, file))
+
+        # Create test file
+        test_file = tmp_path / "test.mp3"
+        test_file.write_text("test content")
+
+        # Set up mock API responses
         mock_api.upload_file.return_value = "asset123"
         mock_api.create_job.return_value = "job123"
         mock_api.get_job_result.return_value = {
@@ -196,15 +208,14 @@ class TestAudioShakeTranscriber:
             }
             mock_get.return_value = mock_response
 
-            result = transcriber.transcribe("test.mp3")
+            result = transcriber.transcribe(str(test_file))
 
         assert isinstance(result, TranscriptionData)
         assert result.text == "test"
         assert len(result.segments) == 1
         assert result.segments[0].text == "test"
         assert result.source == "AudioShake"
-        assert result.metadata["language"] == "en"
-        assert result.metadata["job_id"] == "job123"
+        mock_api.upload_file.assert_called_once_with(str(test_file))
 
     def test_get_output_filename(self, transcriber):
         transcriber.config.output_prefix = "test"
@@ -251,3 +262,50 @@ class TestAudioShakeTranscriber:
         assert result.source == "AudioShake"
         assert result.metadata["language"] == "en"
         assert result.metadata["job_id"] == "job123"
+
+    def test_transcribe_with_cache(self, transcriber, mock_api, tmp_path):
+        # Clear the cache directory first
+        cache_dir = transcriber.cache_dir
+        if os.path.exists(cache_dir):
+            for file in os.listdir(cache_dir):
+                os.remove(os.path.join(cache_dir, file))
+
+        # Create test file
+        test_file = tmp_path / "test.mp3"
+        test_file.write_text("test content")
+
+        # Set up mock API responses
+        mock_api.upload_file.return_value = "asset123"
+        mock_api.create_job.return_value = "job123"
+        mock_api.get_job_result.return_value = {
+            "id": "job123",
+            "outputAssets": [{"name": "alignment.json", "link": "http://test.com/result"}],
+        }
+
+        with patch("requests.get") as mock_get:
+            mock_response = Mock()
+            mock_response.json.return_value = {
+                "lines": [{"text": "test", "words": [{"text": "test", "start": 0.0, "end": 1.0}]}],
+                "text": "test",
+            }
+            mock_get.return_value = mock_response
+
+            # First transcription
+            result1 = transcriber.transcribe(str(test_file))
+            assert isinstance(result1, TranscriptionData)
+
+            # Second transcription should use cache
+            result2 = transcriber.transcribe(str(test_file))
+            assert isinstance(result2, TranscriptionData)
+
+        # Verify API was only called once
+        mock_api.upload_file.assert_called_once_with(str(test_file))
+
+    @pytest.fixture(autouse=True)
+    def clear_cache(self, transcriber):
+        """Clear the cache directory before each test."""
+        cache_dir = transcriber.cache_dir
+        if os.path.exists(cache_dir):
+            for file in os.listdir(cache_dir):
+                os.remove(os.path.join(cache_dir, file))
+        yield

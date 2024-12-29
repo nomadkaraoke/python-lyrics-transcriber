@@ -127,16 +127,26 @@ class LyricsTranscriber:
         """Initialize available transcription services."""
         transcribers = {}
 
+        # Add debug logging for config values
+        self.logger.debug(f"Initializing transcribers with config: {self.transcriber_config}")
+
         if self.transcriber_config.audioshake_api_token:
+            self.logger.debug("Initializing AudioShake transcriber")
             transcribers["audioshake"] = AudioShakeTranscriber(api_token=self.transcriber_config.audioshake_api_token, logger=self.logger)
+        else:
+            self.logger.debug("Skipping AudioShake transcriber - no API token provided")
 
         if self.transcriber_config.runpod_api_key and self.transcriber_config.whisper_runpod_id:
+            self.logger.debug("Initializing Whisper transcriber")
             transcribers["whisper"] = WhisperTranscriber(
                 logger=self.logger,
                 runpod_api_key=self.transcriber_config.runpod_api_key,
                 endpoint_id=self.transcriber_config.whisper_runpod_id,
             )
+        else:
+            self.logger.debug("Skipping Whisper transcriber - missing runpod_api_key or whisper_runpod_id")
 
+        self.logger.debug(f"Initialized transcribers: {list(transcribers.keys())}")
         return transcribers
 
     def _initialize_lyrics_fetcher(self) -> LyricsFetcher:
@@ -221,11 +231,13 @@ class LyricsTranscriber:
 
     def transcribe(self) -> None:
         """Run transcription using all available transcribers."""
-        self.logger.info("Starting transcription process")
+        self.logger.info(f"Starting transcription with providers: {list(self.transcribers.keys())}")
 
         for name, transcriber in self.transcribers.items():
+            self.logger.info(f"Running transcription with {name}")
             try:
                 result = transcriber.transcribe(self.audio_filepath)
+                self.logger.debug(f"Transcription completed for {name}")
 
                 # Store result based on transcriber type
                 if name == "whisper":
@@ -236,9 +248,10 @@ class LyricsTranscriber:
                 # Use first successful transcription as primary
                 if not self.results.transcription_primary:
                     self.results.transcription_primary = result
+                    self.logger.debug(f"Set {name} transcription as primary")
 
             except Exception as e:
-                self.logger.error(f"Transcription failed for {name}: {str(e)}")
+                self.logger.error(f"Transcription failed for {name}: {str(e)}", exc_info=True)
                 continue
 
     def correct_lyrics(self) -> None:
@@ -248,22 +261,23 @@ class LyricsTranscriber:
         try:
             # Set input data for correction
             self.corrector.set_input_data(
+                transcription_data_whisper=self.results.transcription_whisper,
+                transcription_data_audioshake=self.results.transcription_audioshake,
                 spotify_lyrics_data_dict=self.results.spotify_lyrics_data,
                 spotify_lyrics_text=self.results.lyrics_spotify,
                 genius_lyrics_text=self.results.lyrics_genius,
-                transcription_data_dict_whisper=self.results.transcription_whisper,
-                transcription_data_dict_audioshake=self.results.transcription_audioshake,
             )
 
             # Run correction
             corrected_data = self.corrector.run_corrector()
+            self.logger.debug(f"Correction result: {corrected_data}")
 
             # Store corrected results
             self.results.transcription_corrected = corrected_data
             self.logger.info("Lyrics correction completed")
 
         except Exception as e:
-            self.logger.error(f"Failed to correct lyrics: {str(e)}")
+            self.logger.error(f"Failed to correct lyrics: {str(e)}", exc_info=True)  # Added exc_info for stack trace
             # Use uncorrected transcription as fallback
             self.results.transcription_corrected = self.results.transcription_primary
             self.logger.warning("Using uncorrected transcription as fallback")

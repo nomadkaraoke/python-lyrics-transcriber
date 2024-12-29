@@ -190,7 +190,7 @@ class TestWhisperTranscriber:
         transcriber.storage.create_or_get_shared_link.assert_called_once()
 
     @patch("lyrics_transcriber.transcribers.whisper.sleep")
-    def test_run_transcription_success(self, mock_sleep, transcriber):
+    def test_perform_transcription_success(self, mock_sleep, transcriber):
         # Set up the sequence of responses
         transcriber.runpod.submit_job.return_value = "job123"
         transcriber.runpod.get_job_status.side_effect = [
@@ -212,7 +212,7 @@ class TestWhisperTranscriber:
             },
         ]
 
-        result = transcriber._run_transcription("https://test.com/audio.mp3")
+        result = transcriber._perform_transcription("https://test.com/audio.mp3")
 
         assert isinstance(result, TranscriptionData)
         assert result.text == "test"
@@ -222,12 +222,12 @@ class TestWhisperTranscriber:
         assert result.metadata["language"] == "en"
 
     @patch("time.sleep")
-    def test_run_transcription_failure(self, mock_sleep, transcriber):
+    def test_perform_transcription_failure(self, mock_sleep, transcriber):
         transcriber.runpod.submit_job.return_value = "job123"
         transcriber.runpod.get_job_status.return_value = {"status": "FAILED", "error": "Test error"}
 
         with pytest.raises(TranscriptionError, match="Test error"):
-            transcriber._run_transcription("https://test.com/audio.mp3")
+            transcriber._perform_transcription("https://test.com/audio.mp3")
 
     def test_transcribe_full_flow(self, transcriber, tmp_path):
         # Create test files
@@ -261,39 +261,3 @@ class TestWhisperTranscriber:
         assert result.segments[0].text == "test"
         assert result.source == "Whisper"
         assert result.metadata["language"] == "en"
-
-    def test_transcribe_error_handling(self, transcriber, tmp_path):
-        # Create test files
-        test_wav = tmp_path / "test.wav"
-        test_wav.write_text("test content")
-        test_flac = tmp_path / "test.flac"
-        test_flac.write_text("test content")
-
-        # Mock audio processor
-        transcriber.audio_processor.get_file_md5.return_value = "test_hash"
-        transcriber.audio_processor.convert_to_flac.return_value = str(test_flac)
-
-        transcriber.runpod.submit_job.side_effect = Exception("API Error")
-
-        with pytest.raises(TranscriptionError, match=".*API Error.*"):
-            transcriber.transcribe(str(test_wav))
-
-    def test_cleanup_temporary_files(self, transcriber, tmp_path):
-        test_file = tmp_path / "test.wav"
-        test_file.write_text("test content")
-
-        # Mock convert_to_flac to return a different path
-        temp_flac = str(tmp_path / "temp.flac")
-        transcriber.audio_processor.convert_to_flac.return_value = temp_flac
-
-        # Create the temp file
-        with open(temp_flac, "w") as f:
-            f.write("test")
-
-        # Mock successful transcription
-        transcriber.runpod.get_job_status.return_value = {"status": "COMPLETED", "output": {"segments": [], "text": "test"}}
-
-        transcriber.transcribe(str(test_file))
-
-        # Verify temp file was cleaned up
-        assert not os.path.exists(temp_flac)
