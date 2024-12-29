@@ -323,8 +323,8 @@ class LyricsCorrector:
 
         try:
             self.logger.debug(f"Running correction with strategy: {self.correction_strategy.__class__.__name__}")
-            self.logger.debug(f"Primary transcription: {self.primary_transcription}")
-            self.logger.debug(f"Reference transcription: {self.reference_transcription}")
+            # self.logger.debug(f"Primary transcription: {self.primary_transcription}")
+            # self.logger.debug(f"Reference transcription: {self.reference_transcription}")
             self.logger.debug(f"Internet lyrics sources: {len(self.internet_lyrics)}")
 
             result = self.correction_strategy.correct(

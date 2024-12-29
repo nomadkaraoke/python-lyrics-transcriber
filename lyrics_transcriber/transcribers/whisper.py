@@ -151,12 +151,33 @@ class WhisperTranscriber(BaseTranscriber):
         """Initialize storage client."""
         from ..storage.dropbox import DropboxHandler, DropboxConfig
 
+        # Log raw environment variables (first few chars only for security)
+        self.logger.debug("Raw environment variables:")
+        env_vars = {
+            "WHISPER_DROPBOX_APP_KEY": os.getenv("WHISPER_DROPBOX_APP_KEY"),
+            "WHISPER_DROPBOX_APP_SECRET": os.getenv("WHISPER_DROPBOX_APP_SECRET"),
+            "WHISPER_DROPBOX_REFRESH_TOKEN": os.getenv("WHISPER_DROPBOX_REFRESH_TOKEN"),
+            "WHISPER_DROPBOX_ACCESS_TOKEN": os.getenv("WHISPER_DROPBOX_ACCESS_TOKEN"),
+        }
+        for key, value in env_vars.items():
+            safe_value = value[:4] + "..." if value else "Not set"
+            self.logger.debug(f"{key}: {safe_value}")
+
+        # Create config using env_vars directly
         config = DropboxConfig(
-            app_key=self.config.dropbox_app_key,
-            app_secret=self.config.dropbox_app_secret,
-            refresh_token=self.config.dropbox_refresh_token,
-            access_token=self.config.dropbox_access_token,
+            app_key=env_vars["WHISPER_DROPBOX_APP_KEY"],
+            app_secret=env_vars["WHISPER_DROPBOX_APP_SECRET"],
+            refresh_token=env_vars["WHISPER_DROPBOX_REFRESH_TOKEN"],
+            access_token=env_vars["WHISPER_DROPBOX_ACCESS_TOKEN"],
         )
+
+        # Log the actual config values being used
+        self.logger.debug("Creating DropboxHandler with config values:")
+        self.logger.debug(f"app_key present: {bool(config.app_key)}")
+        self.logger.debug(f"app_secret present: {bool(config.app_secret)}")
+        self.logger.debug(f"refresh_token present: {bool(config.refresh_token)}")
+        self.logger.debug(f"access_token present: {bool(config.access_token)}")
+
         return DropboxHandler(config=config)
 
     def get_name(self) -> str:
@@ -192,24 +213,45 @@ class WhisperTranscriber(BaseTranscriber):
                 if status_data["status"] == "COMPLETED":
                     raw_data = status_data["output"]
 
+                    # Log the raw output for debugging
+                    self.logger.debug(f"Raw transcription output: {json.dumps(raw_data, indent=2)}")
+
+                    # Check if required fields are present
+                    if not raw_data or not isinstance(raw_data, dict):
+                        raise TranscriptionError(f"Invalid response format: {raw_data}")
+
+                    if "transcription" not in raw_data:
+                        raise TranscriptionError(f"Missing 'transcription' field in response: {raw_data}")
+
+                    if "segments" not in raw_data:
+                        raise TranscriptionError(f"Missing 'segments' field in response: {raw_data}")
+
                     # Convert to standard format
                     segments = []
-                    for seg in raw_data.get("segments", []):
+                    for seg in raw_data["segments"]:
                         words = [
-                            Word(text=word["text"], start_time=word["start"], end_time=word["end"], confidence=word.get("probability", 1.0))
-                            for word in seg.get("words", [])
+                            Word(
+                                text=word["word"].strip(),
+                                start_time=word["start"],
+                                end_time=word["end"],
+                                confidence=word.get("probability", 1.0),
+                            )
+                            for word in raw_data.get("word_timestamps", [])
+                            if seg["start"] <= word["start"] < seg["end"]
                         ]
-                        segments.append(LyricsSegment(text=seg["text"], words=words, start_time=seg["start"], end_time=seg["end"]))
+                        segments.append(LyricsSegment(text=seg["text"].strip(), words=words, start_time=seg["start"], end_time=seg["end"]))
 
                     return TranscriptionData(
                         segments=segments,
-                        text=raw_data["text"],
+                        text=raw_data["transcription"],
                         source=self.get_name(),
-                        metadata={"language": raw_data.get("language", "en"), "model": "large-v2", "job_id": job_id},
+                        metadata={"language": raw_data.get("detected_language", "en"), "model": "large-v2", "job_id": job_id},
                     )
 
                 elif status_data["status"] == "FAILED":
-                    raise TranscriptionError(f"Transcription failed: {status_data.get('error', 'Unknown error')}")
+                    error_msg = status_data.get("error", "Unknown error")
+                    self.logger.error(f"Job failed with error: {error_msg}")
+                    raise TranscriptionError(f"Transcription failed: {error_msg}")
 
                 sleep(2)
 

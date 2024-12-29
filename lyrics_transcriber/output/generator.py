@@ -5,6 +5,7 @@ from typing import Dict, Any, Optional, Tuple
 import subprocess
 from datetime import timedelta
 from .subtitles import create_styled_subtitles, LyricsScreen, LyricsLine, LyricSegment
+from ..core.corrector import CorrectionResult
 
 
 @dataclass
@@ -73,13 +74,13 @@ class OutputGenerator:
         """Generate full output path for a file."""
         return os.path.join(self.config.output_dir or self.config.cache_dir, f"{output_prefix}.{extension}")
 
-    def generate_lrc(self, transcription_data: Dict[str, Any], output_prefix: str) -> str:
+    def generate_lrc(self, transcription_data: CorrectionResult, output_prefix: str) -> str:
         """Generate LRC format lyrics file."""
         self.logger.info("Generating LRC format lyrics")
         output_path = self._get_output_path(output_prefix, "lrc")
 
         try:
-            self._write_lrc_file(output_path, transcription_data["segments"])
+            self._write_lrc_file(output_path, transcription_data.segments)
             self.logger.info(f"LRC file generated: {output_path}")
             return output_path
 
@@ -91,17 +92,17 @@ class OutputGenerator:
         """Write LRC file content."""
         with open(output_path, "w", encoding="utf-8") as f:
             for segment in segments:
-                start_time = self._format_lrc_timestamp(segment["start"])
-                line = f"[{start_time}]{segment['text']}\n"
+                start_time = self._format_lrc_timestamp(segment.start_time)
+                line = f"[{start_time}]{segment.text}\n"
                 f.write(line)
 
-    def generate_ass(self, transcription_data: Dict[str, Any], output_prefix: str) -> str:
+    def generate_ass(self, transcription_data: CorrectionResult, output_prefix: str) -> str:
         """Generate ASS format subtitles file."""
         self.logger.info("Generating ASS format subtitles")
         output_path = self._get_output_path(output_prefix, "ass")
 
         try:
-            self._write_ass_file(output_path, transcription_data["segments"])
+            self._write_ass_file(output_path, transcription_data.segments)
             self.logger.info(f"ASS file generated: {output_path}")
             return output_path
 
@@ -114,9 +115,10 @@ class OutputGenerator:
         with open(output_path, "w", encoding="utf-8") as f:
             f.write(self._get_ass_header())
             for segment in segments:
-                start_time = self._format_ass_timestamp(segment["start"])
-                end_time = self._format_ass_timestamp(segment["end"])
-                line = f"Dialogue: 0,{start_time},{end_time},Default,,0,0,0,,{segment['text']}\n"
+                # Change from ts/end_ts to start_time/end_time
+                start_time = self._format_ass_timestamp(segment.start_time)
+                end_time = self._format_ass_timestamp(segment.end_time)
+                line = f"Dialogue: 0,{start_time},{end_time},Default,,0,0,0,,{segment.text}\n"
                 f.write(line)
 
     def generate_video(self, ass_path: str, audio_path: str, output_prefix: str) -> str:

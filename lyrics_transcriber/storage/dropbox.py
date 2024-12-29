@@ -56,12 +56,17 @@ class DefaultTokenRefresher:
 
     def refresh_token(self, refresh_token: str, app_key: str, app_secret: str) -> str:
         """Refresh the access token using the refresh token."""
+        if not all([refresh_token, app_key, app_secret]):
+            raise ValueError("refresh_token, app_key, and app_secret are required for token refresh")
+
         response = requests.post(
             "https://api.dropbox.com/oauth2/token",
-            data={"grant_type": "refresh_token", "refresh_token": refresh_token},
-            auth=(app_key, app_secret),
+            data={"grant_type": "refresh_token", "refresh_token": refresh_token, "client_id": app_key, "client_secret": app_secret},
         )
-        response.raise_for_status()
+
+        if response.status_code != 200:
+            raise ValueError(f"Token refresh failed: {response.text}")
+
         return response.json()["access_token"]
 
 
@@ -79,22 +84,67 @@ class DropboxHandler:
         self._validate_config()
 
         self.token_refresher = token_refresher or DefaultTokenRefresher()
-        self.client = client or Dropbox(self.config.access_token)
+        self.client = client or Dropbox(
+            app_key=self.config.app_key,
+            app_secret=self.config.app_secret,
+            oauth2_access_token=self.config.access_token,
+            oauth2_refresh_token=self.config.refresh_token,
+        )
 
     def _validate_config(self) -> None:
         """Validate the configuration."""
-        if not all([self.config.app_key, self.config.app_secret, self.config.refresh_token, self.config.access_token]):
-            raise ValueError("Missing required Dropbox configuration")
+        # Log the actual values (safely)
+        logger.debug("Validating DropboxConfig with values:")
+        logger.debug(f"app_key: {self.config.app_key[:4] + '...' if self.config.app_key else 'None'}")
+        logger.debug(f"app_secret: {self.config.app_secret[:4] + '...' if self.config.app_secret else 'None'}")
+        logger.debug(f"refresh_token: {self.config.refresh_token[:4] + '...' if self.config.refresh_token else 'None'}")
+        logger.debug(f"access_token: {self.config.access_token[:4] + '...' if self.config.access_token else 'None'}")
+
+        missing = []
+        if not self.config.app_key:
+            missing.append("app_key")
+        if not self.config.app_secret:
+            missing.append("app_secret")
+        if not self.config.refresh_token:
+            missing.append("refresh_token")
+        if not self.config.access_token:
+            missing.append("access_token")
+
+        if missing:
+            error_msg = f"Missing Dropbox configuration values: {', '.join(missing)}"
+            logger.error(error_msg)
+            raise ValueError(error_msg)
 
     def _refresh_access_token(self) -> None:
         """Refresh the access token using the refresh token."""
         try:
+            # Validate required fields before attempting refresh
+            if not self.config.refresh_token:
+                raise ValueError("refresh_token is required for token refresh")
+            if not self.config.app_key:
+                raise ValueError("app_key is required for token refresh")
+            if not self.config.app_secret:
+                raise ValueError("app_secret is required for token refresh")
+
             logger.debug("Refreshing access token")
+            logger.debug(f"Using refresh token: {self.config.refresh_token[:4]}...")
+            logger.debug(f"Using app key: {self.config.app_key[:4]}...")
+            logger.debug(f"Using app secret: {self.config.app_secret[:4]}...")
+
             self.config.access_token = self.token_refresher.refresh_token(
                 self.config.refresh_token, self.config.app_key, self.config.app_secret
             )
-            self.client = Dropbox(self.config.access_token)
+            self.client = Dropbox(
+                app_key=self.config.app_key,
+                app_secret=self.config.app_secret,
+                oauth2_access_token=self.config.access_token,
+                oauth2_refresh_token=self.config.refresh_token,
+            )
             logger.info("Successfully refreshed access token")
+            logger.debug(f"New access token: {self.config.access_token[:4]}...")
+        except ValueError as e:
+            logger.error(f"Configuration error during token refresh: {str(e)}")
+            raise
         except Exception as e:
             logger.error(f"Error refreshing access token: {str(e)}", exc_info=True)
             raise
@@ -105,13 +155,37 @@ class DropboxHandler:
 
         def wrapper(self, *args, **kwargs):
             try:
+                logger.debug(f"Executing {func.__name__} with args: {args}, kwargs: {kwargs}")
                 return func(self, *args, **kwargs)
             except AuthError as e:
+                logger.debug(f"Caught AuthError in {func.__name__}: {str(e)}")
+                logger.debug(f"Error type: {type(e.error)}")
+                logger.debug(f"Error value: {e.error}")
+
+                # More detailed error inspection
+                if hasattr(e, "error"):
+                    if isinstance(e.error, dict):
+                        logger.debug(f"Error is dict with keys: {e.error.keys()}")
+                        logger.debug(f"'.tag' value: {e.error.get('.tag')}")
+                    else:
+                        logger.debug(f"Error is not dict, direct value: {e.error}")
+
                 # Check if it's an expired token error
-                if hasattr(e, "error") and isinstance(e.error, dict) and e.error.get(".tag") == "expired_access_token":
-                    logger.info(f"Access token expired in {func.__name__}, refreshing...")
-                    self._refresh_access_token()
-                    return func(self, *args, **kwargs)
+                if hasattr(e, "error") and (
+                    isinstance(e.error, dict)
+                    and e.error.get(".tag") == "expired_access_token"
+                    or getattr(e.error, "error", None) == "expired_access_token"
+                    or e.error == "expired_access_token"
+                ):
+                    try:
+                        logger.info(f"Access token expired in {func.__name__}, refreshing...")
+                        self._refresh_access_token()
+                        logger.debug("Token refresh completed, retrying original function")
+                        return func(self, *args, **kwargs)
+                    except ValueError as ve:
+                        logger.error(f"Token refresh failed due to configuration error: {str(ve)}")
+                        raise AuthError(str(e), "Token refresh failed: " + str(ve))
+
                 logger.error(f"Unhandled Dropbox error in {func.__name__}: {str(e)}")
                 raise
             except ApiError as e:
@@ -127,9 +201,16 @@ class DropboxHandler:
             try:
                 logger.debug(f"Attempting file upload to {path} (attempt {attempt + 1}/{max_retries})")
                 file.seek(0)
-                self.client.files_upload(file.read(), path, mode=WriteMode.overwrite)
-                logger.debug(f"Successfully uploaded file to {path}")
-                return
+                try:
+                    self.client.files_upload(file.read(), path, mode=WriteMode.overwrite)
+                    logger.debug(f"Successfully uploaded file to {path}")
+                    return
+                except AuthError as e:
+                    if hasattr(e, "error") and e.error == "expired_access_token":
+                        logger.info("Access token expired, attempting refresh...")
+                        self._refresh_access_token()
+                        continue
+                    raise
             except ApiError as e:
                 logger.warning(f"Upload attempt {attempt + 1} failed: {str(e)}")
                 if attempt == max_retries - 1:

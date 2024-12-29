@@ -273,7 +273,7 @@ class LyricsTranscriber:
 
             # Run correction
             corrected_data = self.corrector.run_corrector()
-            self.logger.debug(f"Correction result: {corrected_data}")
+            # self.logger.debug(f"Correction result: {corrected_data}")
 
             # Store corrected results
             self.results.transcription_corrected = corrected_data
@@ -297,10 +297,10 @@ class LyricsTranscriber:
                 render_video=self.output_config.render_video,
             )
 
-            # Store output paths
-            self.results.lrc_filepath = output_files.get("lrc")
-            self.results.ass_filepath = output_files.get("ass")
-            self.results.video_filepath = output_files.get("video")
+            # Store output paths - access attributes directly instead of using .get()
+            self.results.lrc_filepath = output_files.lrc
+            self.results.ass_filepath = output_files.ass
+            self.results.video_filepath = output_files.video
 
         except Exception as e:
             self.logger.error(f"Failed to generate outputs: {str(e)}")
