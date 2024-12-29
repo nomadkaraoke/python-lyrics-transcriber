@@ -7,7 +7,7 @@ from ..transcribers.audioshake import AudioShakeTranscriber
 from ..transcribers.whisper import WhisperTranscriber
 from .fetcher import LyricsFetcher, LyricsFetcherConfig
 from ..output.generator import OutputGenerator
-from .corrector import LyricsTranscriptionCorrector
+from .corrector import LyricsCorrector, TranscriptionData, CorrectionResult
 
 
 @dataclass
@@ -51,10 +51,10 @@ class TranscriptionResult:
     spotify_lyrics_data: Optional[Dict] = None
 
     # Transcription results
-    transcription_whisper: Optional[Dict] = None
-    transcription_audioshake: Optional[Dict] = None
-    transcription_primary: Optional[Dict] = None
-    transcription_corrected: Optional[Dict] = None
+    transcription_whisper: Optional[TranscriptionData] = None
+    transcription_audioshake: Optional[TranscriptionData] = None
+    transcription_primary: Optional[TranscriptionData] = None
+    transcription_corrected: Optional[CorrectionResult] = None
 
     # Output files
     lrc_filepath: Optional[str] = None
@@ -80,7 +80,7 @@ class LyricsTranscriber:
         lyrics_config: Optional[LyricsConfig] = None,
         output_config: Optional[OutputConfig] = None,
         lyrics_fetcher: Optional[LyricsFetcher] = None,
-        corrector: Optional[LyricsTranscriptionCorrector] = None,
+        corrector: Optional[LyricsCorrector] = None,
         output_generator: Optional[OutputGenerator] = None,
         logger: Optional[logging.Logger] = None,
         log_level: int = logging.DEBUG,
@@ -120,7 +120,7 @@ class LyricsTranscriber:
         # Initialize components (with dependency injection)
         self.transcribers = self._initialize_transcribers()
         self.lyrics_fetcher = lyrics_fetcher or self._initialize_lyrics_fetcher()
-        self.corrector = corrector or LyricsTranscriptionCorrector(logger=self.logger)
+        self.corrector = corrector or LyricsCorrector(logger=self.logger)
         self.output_generator = output_generator or self._initialize_output_generator()
 
     def _initialize_transcribers(self) -> Dict[str, BaseTranscriber]:

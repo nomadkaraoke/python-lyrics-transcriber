@@ -1,21 +1,113 @@
-import json
+from dataclasses import dataclass
+from typing import Dict, List, Optional, Protocol
 import logging
-from typing import Dict, Optional
 
 
-class LyricsTranscriptionCorrector:
+@dataclass
+class Word:
+    """Represents a single word with its timing and confidence information."""
+
+    text: str
+    start_time: float
+    end_time: float
+    confidence: float = 1.0
+
+
+@dataclass
+class LyricsSegment:
+    """Represents a segment/line of lyrics with timing information."""
+
+    text: str
+    words: List[Word]
+    start_time: float
+    end_time: float
+
+
+@dataclass
+class TranscriptionData:
+    """Structured container for transcription results."""
+
+    segments: List[LyricsSegment]
+    text: str
+    source: str  # e.g., "whisper", "audioshake"
+
+
+@dataclass
+class InternetLyrics:
+    """Container for lyrics fetched from internet sources."""
+
+    text: str
+    source: str  # e.g., "genius", "spotify"
+    structured_data: Optional[Dict] = None  # For Spotify's JSON format
+
+
+@dataclass
+class CorrectionResult:
+    """Container for correction results."""
+
+    segments: List[LyricsSegment]
+    text: str
+    confidence: float
+    corrections_made: int
+    source_mapping: Dict[str, str]  # Maps corrected words to their source
+
+
+class CorrectionStrategy(Protocol):
+    """Interface for different lyrics correction strategies."""
+
+    def correct(
+        self,
+        primary_transcription: TranscriptionData,
+        reference_transcription: Optional[TranscriptionData],
+        internet_lyrics: List[InternetLyrics],
+    ) -> CorrectionResult:
+        """Apply correction strategy to transcribed lyrics."""
+        ...
+
+
+class DiffBasedCorrector:
+    """
+    Implements word-diff based correction strategy using anchor words
+    to align and correct transcribed lyrics.
+    """
+
+    def __init__(self, logger: Optional[logging.Logger] = None):
+        self.logger = logger or logging.getLogger(__name__)
+
+    def correct(
+        self,
+        primary_transcription: TranscriptionData,
+        reference_transcription: Optional[TranscriptionData],
+        internet_lyrics: List[InternetLyrics],
+    ) -> CorrectionResult:
+        """
+        TODO: Implement diff-based correction algorithm:
+        1. Identify anchor words between transcription and internet lyrics
+        2. Create alignment mapping between sources
+        3. Apply corrections where confidence is low
+        """
+        # Placeholder implementation
+        raise NotImplementedError
+
+
+class LyricsCorrector:
+    """
+    Coordinates lyrics correction process using multiple data sources
+    and correction strategies.
+    """
+
     def __init__(
         self,
+        correction_strategy: Optional[CorrectionStrategy] = None,
         logger: Optional[logging.Logger] = None,
     ):
         self.logger = logger or logging.getLogger(__name__)
+        self.correction_strategy = correction_strategy or DiffBasedCorrector(logger=self.logger)
 
-        # Initialize instance variables for input data
-        self.spotify_lyrics_data_dict = None
-        self.spotify_lyrics_text = None
-        self.genius_lyrics_text = None
-        self.transcription_data_dict_whisper = None
-        self.transcription_data_dict_audioshake = None
+        # Input data containers
+        self.primary_transcription: Optional[TranscriptionData] = None
+        self.reference_transcription: Optional[TranscriptionData] = None
+        self.internet_lyrics: List[InternetLyrics] = []
 
     def set_input_data(
         self,
@@ -25,32 +117,64 @@ class LyricsTranscriptionCorrector:
         transcription_data_dict_whisper: Optional[Dict] = None,
         transcription_data_dict_audioshake: Optional[Dict] = None,
     ) -> None:
-        """Store the input data as instance variables"""
-        self.spotify_lyrics_data_dict = spotify_lyrics_data_dict
-        self.spotify_lyrics_text = spotify_lyrics_text
-        self.genius_lyrics_text = genius_lyrics_text
-        self.transcription_data_dict_whisper = transcription_data_dict_whisper
-        self.transcription_data_dict_audioshake = transcription_data_dict_audioshake
+        """
+        Process and store input data in structured format.
+        """
+        # Store internet lyrics sources
+        if spotify_lyrics_text:
+            self.internet_lyrics.append(
+                InternetLyrics(text=spotify_lyrics_text, source="spotify", structured_data=spotify_lyrics_data_dict)
+            )
+        if genius_lyrics_text:
+            self.internet_lyrics.append(InternetLyrics(text=genius_lyrics_text, source="genius"))
+
+        # Convert and store transcription data
+        if transcription_data_dict_audioshake:
+            self.primary_transcription = self._convert_audioshake_format(transcription_data_dict_audioshake)
+        if transcription_data_dict_whisper:
+            self.reference_transcription = self._convert_whisper_format(transcription_data_dict_whisper)
 
     def run_corrector(self) -> Dict:
         """
-        Test implementation that replaces every third word with 'YOLO' in the AudioShake transcription.
+        Execute the correction process using configured strategy.
         """
-        self.logger.info("Running corrector (test implementation - replacing every 3rd word with YOLO)")
+        if not self.primary_transcription:
+            raise ValueError("No primary transcription data available")
 
-        # Create a deep copy to avoid modifying the original
-        modified_data = json.loads(json.dumps(self.transcription_data_dict_audioshake))
+        try:
+            result = self.correction_strategy.correct(
+                primary_transcription=self.primary_transcription,
+                reference_transcription=self.reference_transcription,
+                internet_lyrics=self.internet_lyrics,
+            )
 
-        # Process each segment
-        for segment in modified_data["segments"]:
-            # Replace every third word in the words list
-            for i in range(2, len(segment["words"]), 3):
-                segment["words"][i]["text"] = "YOLO"
+            # Convert result back to compatible output format
+            return self._convert_to_output_format(result)
 
-            # Reconstruct the segment text from the modified words
-            segment["text"] = " ".join(word["text"] for word in segment["words"])
+        except Exception as e:
+            self.logger.error(f"Correction failed: {str(e)}")
+            # Return uncorrected transcription as fallback
+            return self._convert_to_output_format(
+                CorrectionResult(
+                    segments=self.primary_transcription.segments,
+                    text=self.primary_transcription.text,
+                    confidence=1.0,
+                    corrections_made=0,
+                    source_mapping={},
+                )
+            )
 
-        # Reconstruct the full text from all segments
-        modified_data["text"] = "".join(segment["text"] for segment in modified_data["segments"])
+    def _convert_audioshake_format(self, data: Dict) -> TranscriptionData:
+        """Convert AudioShake JSON format to internal TranscriptionData format."""
+        # TODO: Implement conversion
+        raise NotImplementedError
 
-        return modified_data
+    def _convert_whisper_format(self, data: Dict) -> TranscriptionData:
+        """Convert Whisper JSON format to internal TranscriptionData format."""
+        # TODO: Implement conversion
+        raise NotImplementedError
+
+    def _convert_to_output_format(self, result: CorrectionResult) -> Dict:
+        """Convert correction result to compatible output format."""
+        # TODO: Implement conversion
+        raise NotImplementedError
