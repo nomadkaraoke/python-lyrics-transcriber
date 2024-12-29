@@ -1,6 +1,3 @@
-import warnings
+from .core.controller import LyricsTranscriber, TranscriberConfig, LyricsConfig, OutputConfig
 
-warnings.simplefilter("ignore")
-
-from .transcriber import LyricsTranscriber
-
+__all__ = ["LyricsTranscriber", "TranscriberConfig", "LyricsConfig", "OutputConfig"]

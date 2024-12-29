@@ -1,6 +1,5 @@
 import json
 import logging
-from openai import OpenAI
 from typing import Dict, Optional
 
 

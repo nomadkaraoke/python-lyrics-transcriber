@@ -2,19 +2,53 @@ import requests
 import time
 import os
 import json
+from .base import BaseTranscriber
 
 
-class AudioShakeTranscriber:
-    def __init__(self, api_token, logger, output_prefix):
-        self.api_token = api_token
+class AudioShakeTranscriber(BaseTranscriber):
+    """Transcription service using AudioShake's API."""
+
+    def __init__(self, api_token=None, logger=None, output_prefix=None):
+        super().__init__(logger)
+        self.api_token = api_token or os.getenv("AUDIOSHAKE_API_TOKEN")
         self.base_url = "https://groovy.audioshake.ai"
-        self.logger = logger
         self.output_prefix = output_prefix
 
-    def start_transcription(self, audio_filepath):
-        """Starts the transcription job and returns the job ID without waiting for completion"""
+        if not self.api_token:
+            raise ValueError("AudioShake API token must be provided either directly or via AUDIOSHAKE_API_TOKEN env var")
+
+    def get_name(self) -> str:
+        return "AudioShake"
+
+    def transcribe(self, audio_filepath: str) -> dict:
+        """
+        Transcribe an audio file using AudioShake API.
+
+        Args:
+            audio_filepath: Path to the audio file to transcribe
+
+        Returns:
+            Dict containing:
+                - segments: List of segments with start/end times and word-level data
+                - text: Full text transcription
+                - metadata: Dict of additional info
+        """
         self.logger.info(f"Starting transcription for {audio_filepath} using AudioShake API")
 
+        # Start job and get results
+        job_id = self.start_transcription(audio_filepath)
+        result = self.get_transcription_result(job_id)
+
+        # Add metadata to the result
+        result["metadata"] = {
+            "service": self.get_name(),
+            "language": "en",  # AudioShake currently only supports English
+        }
+
+        return result
+
+    def start_transcription(self, audio_filepath: str) -> str:
+        """Starts the transcription job and returns the job ID."""
         # Step 1: Upload the audio file
         asset_id = self._upload_file(audio_filepath)
         self.logger.info(f"File uploaded successfully. Asset ID: {asset_id}")
@@ -25,21 +59,16 @@ class AudioShakeTranscriber:
 
         return job_id
 
-    def get_transcription_result(self, job_id):
-        """Gets the results for a previously started job"""
+    def get_transcription_result(self, job_id: str) -> dict:
+        """Gets the results for a previously started job."""
         self.logger.info(f"Getting results for job ID: {job_id}")
 
-        # Step 3: Wait for the job to complete and get the results
+        # Wait for job completion and get results
         result = self._get_job_result(job_id)
         self.logger.info(f"Job completed. Processing results...")
 
-        # Step 4: Process the result and return in the required format
+        # Process and return in standard format
         return self._process_result(result)
-
-    def transcribe(self, audio_filepath):
-        """Original method now just combines the two steps"""
-        job_id = self.start_transcription(audio_filepath)
-        return self.get_transcription_result(job_id)
 
     def _upload_file(self, filepath):
         self.logger.info(f"Uploading {filepath} to AudioShake")
