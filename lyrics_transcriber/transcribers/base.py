@@ -70,12 +70,12 @@ class BaseTranscriber(ABC):
             TranscriptionError: If transcription fails
             FileNotFoundError: If audio file doesn't exist
         """
-        pass
+        pass  # pragma: no cover
 
     @abstractmethod
     def get_name(self) -> str:
         """Return the name of this transcription service."""
-        pass
+        pass  # pragma: no cover
 
     def _validate_audio_file(self, audio_filepath: str) -> None:
         """Validate that the audio file exists and is accessible."""
