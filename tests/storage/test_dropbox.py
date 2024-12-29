@@ -8,8 +8,6 @@ from dropbox.exceptions import AuthError, ApiError
 from lyrics_transcriber.storage.dropbox import (
     DropboxConfig,
     DropboxHandler,
-    DefaultTokenRefresher,
-    TokenRefresher,
 )
 from tempfile import TemporaryDirectory
 
@@ -23,37 +21,12 @@ class TestDropboxConfig:
                 "WHISPER_DROPBOX_APP_KEY": "test_key",
                 "WHISPER_DROPBOX_APP_SECRET": "test_secret",
                 "WHISPER_DROPBOX_REFRESH_TOKEN": "test_refresh",
-                "WHISPER_DROPBOX_ACCESS_TOKEN": "test_access",
             },
         ):
             config = DropboxConfig.from_env()
             assert config.app_key == "test_key"
             assert config.app_secret == "test_secret"
             assert config.refresh_token == "test_refresh"
-            assert config.access_token == "test_access"
-
-
-class TestDefaultTokenRefresher:
-    def test_refresh_token_success(self):
-        """Test successful token refresh."""
-        refresher = DefaultTokenRefresher()
-        with patch("requests.post") as mock_post:
-            mock_post.return_value.json.return_value = {"access_token": "new_token"}
-            new_token = refresher.refresh_token("refresh", "key", "secret")
-            assert new_token == "new_token"
-            mock_post.assert_called_once_with(
-                "https://api.dropbox.com/oauth2/token",
-                data={"grant_type": "refresh_token", "refresh_token": "refresh"},
-                auth=("key", "secret"),
-            )
-
-    def test_refresh_token_failure(self):
-        """Test token refresh failure."""
-        refresher = DefaultTokenRefresher()
-        with patch("requests.post") as mock_post:
-            mock_post.side_effect = Exception("API Error")
-            with pytest.raises(Exception, match="API Error"):
-                refresher.refresh_token("refresh", "key", "secret")
 
 
 class TestDropboxHandler:
@@ -62,23 +35,17 @@ class TestDropboxHandler:
         return Mock()
 
     @pytest.fixture
-    def mock_refresher(self):
-        return Mock()
-
-    @pytest.fixture
     def config(self):
         return DropboxConfig(
             app_key="test_key",
             app_secret="test_secret",
             refresh_token="test_refresh",
-            access_token="test_access",
         )
 
     @pytest.fixture
-    def handler(self, config, mock_client, mock_refresher):
+    def handler(self, config, mock_client):
         return DropboxHandler(
             config=config,
-            token_refresher=mock_refresher,
             client=mock_client,
         )
 
@@ -90,7 +57,6 @@ class TestDropboxHandler:
                 "WHISPER_DROPBOX_APP_KEY": "test_key",
                 "WHISPER_DROPBOX_APP_SECRET": "test_secret",
                 "WHISPER_DROPBOX_REFRESH_TOKEN": "test_refresh",
-                "WHISPER_DROPBOX_ACCESS_TOKEN": "test_access",
             },
         ):
             handler = DropboxHandler()
@@ -199,29 +165,6 @@ class TestDropboxHandler:
 
         handler.client.files_get_metadata.side_effect = Exception()
         assert handler.file_exists("/test/path") is False
-
-    def test_refresh_access_token(self, handler):
-        """Test access token refresh."""
-        # Setup
-        handler.token_refresher.refresh_token.return_value = "new_token"
-
-        # Execute
-        handler._refresh_access_token()
-
-        # Verify
-        handler.token_refresher.refresh_token.assert_called_once_with(
-            handler.config.refresh_token, handler.config.app_key, handler.config.app_secret
-        )
-        assert handler.config.access_token == "new_token"
-
-    def test_refresh_access_token_failure(self, handler):
-        """Test access token refresh failure."""
-        # Setup
-        handler.token_refresher.refresh_token.side_effect = Exception("Refresh failed")
-
-        # Execute and verify
-        with pytest.raises(Exception, match="Refresh failed"):
-            handler._refresh_access_token()
 
     def test_upload_string_with_retry_success(self, handler):
         """Test successful string upload."""
@@ -543,61 +486,3 @@ class TestDropboxHandler:
                 ],
                 any_order=True,
             )
-
-    def test_handle_auth_error_decorator(self, handler):
-        """Test the auth error handling decorator."""
-        # Setup
-        mock_error = AuthError(request_id="test_request_id", error={".tag": "expired_access_token"})
-
-        # Create a mock method that will fail once then succeed
-        mock_method = Mock(side_effect=[mock_error, "success"])
-        mock_method.__name__ = "test_method"  # Add name for logging
-
-        # Add the decorator to the mock method
-        decorated_method = handler._handle_auth_error(mock_method)
-
-        # Execute
-        result = decorated_method(handler)
-
-        # Verify
-        assert result == "success"
-        assert mock_method.call_count == 2
-        handler.token_refresher.refresh_token.assert_called_once_with(
-            handler.config.refresh_token, handler.config.app_key, handler.config.app_secret
-        )
-
-    def test_handle_auth_error_decorator_other_auth_error(self, handler):
-        """Test the decorator with a non-expired token AuthError."""
-        # Setup
-        mock_error = AuthError(request_id="test_request_id", error={"error": {".tag": "invalid_token"}})  # Different error type
-
-        mock_method = Mock(side_effect=mock_error)
-        mock_method.__name__ = "test_method"
-
-        decorated_method = handler._handle_auth_error(mock_method)
-
-        # Execute and verify
-        with pytest.raises(AuthError) as exc_info:
-            decorated_method(handler)
-
-        assert exc_info.value == mock_error
-        handler.token_refresher.refresh_token.assert_not_called()
-
-    def test_handle_auth_error_decorator_api_error(self, handler):
-        """Test the decorator with an ApiError."""
-        # Setup
-        mock_error = ApiError(
-            request_id="test_request_id", error="test_error", user_message_text="Test user message", user_message_locale="en"
-        )
-
-        mock_method = Mock(side_effect=mock_error)
-        mock_method.__name__ = "test_method"
-
-        decorated_method = handler._handle_auth_error(mock_method)
-
-        # Execute and verify
-        with pytest.raises(ApiError) as exc_info:
-            decorated_method(handler)
-
-        assert exc_info.value == mock_error
-        handler.token_refresher.refresh_token.assert_not_called()

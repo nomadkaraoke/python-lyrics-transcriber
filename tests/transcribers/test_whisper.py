@@ -28,7 +28,6 @@ def config():
         dropbox_app_key="test_dropbox_key",
         dropbox_app_secret="test_dropbox_secret",
         dropbox_refresh_token="test_refresh_token",
-        dropbox_access_token="test_access_token",
     )
 
 
@@ -48,7 +47,6 @@ class TestWhisperConfig:
         assert config.dropbox_app_key is None
         assert config.dropbox_app_secret is None
         assert config.dropbox_refresh_token is None
-        assert config.dropbox_access_token is None
 
     def test_custom_config(self, config):
         assert config.runpod_api_key == "test_key"
@@ -162,7 +160,16 @@ class TestWhisperTranscriber:
         )
 
     def test_init_with_env_vars(self):
-        with patch.dict(os.environ, {"RUNPOD_API_KEY": "env_key", "WHISPER_RUNPOD_ID": "env_endpoint"}):
+        with patch.dict(
+            os.environ,
+            {
+                "RUNPOD_API_KEY": "env_key",
+                "WHISPER_RUNPOD_ID": "env_endpoint",
+                "WHISPER_DROPBOX_APP_KEY": "dropbox_key",
+                "WHISPER_DROPBOX_APP_SECRET": "dropbox_secret",
+                "WHISPER_DROPBOX_REFRESH_TOKEN": "dropbox_token",
+            },
+        ):
             transcriber = WhisperTranscriber()
             assert transcriber.config.runpod_api_key == "env_key"
             assert transcriber.config.endpoint_id == "env_endpoint"
@@ -206,8 +213,9 @@ class TestWhisperTranscriber:
                             "words": [{"text": "test", "start": 0.0, "end": 1.0, "probability": 0.9}],
                         }
                     ],
-                    "text": "test",
-                    "language": "en",
+                    "transcription": "test",
+                    "detected_language": "en",
+                    "word_timestamps": [{"word": "test", "start": 0.0, "end": 1.0, "probability": 0.9}],
                 },
             },
         ]
@@ -248,8 +256,9 @@ class TestWhisperTranscriber:
                 "segments": [
                     {"text": "test", "start": 0.0, "end": 1.0, "words": [{"text": "test", "start": 0.0, "end": 1.0, "probability": 0.9}]}
                 ],
-                "text": "test",
-                "language": "en",
+                "transcription": "test",
+                "detected_language": "en",
+                "word_timestamps": [{"word": "test", "start": 0.0, "end": 1.0, "probability": 0.9}],
             },
         }
 

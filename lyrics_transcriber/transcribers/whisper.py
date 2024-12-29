@@ -20,7 +20,6 @@ class WhisperConfig:
     dropbox_app_key: Optional[str] = None
     dropbox_app_secret: Optional[str] = None
     dropbox_refresh_token: Optional[str] = None
-    dropbox_access_token: Optional[str] = None
 
 
 class FileStorageProtocol(Protocol):
@@ -139,7 +138,6 @@ class WhisperTranscriber(BaseTranscriber):
             dropbox_app_key=os.getenv("WHISPER_DROPBOX_APP_KEY"),
             dropbox_app_secret=os.getenv("WHISPER_DROPBOX_APP_SECRET"),
             dropbox_refresh_token=os.getenv("WHISPER_DROPBOX_REFRESH_TOKEN"),
-            dropbox_access_token=os.getenv("WHISPER_DROPBOX_ACCESS_TOKEN"),
         )
 
         # Initialize components (with dependency injection)
@@ -151,24 +149,11 @@ class WhisperTranscriber(BaseTranscriber):
         """Initialize storage client."""
         from ..storage.dropbox import DropboxHandler, DropboxConfig
 
-        # Log raw environment variables (first few chars only for security)
-        self.logger.debug("Raw environment variables:")
-        env_vars = {
-            "WHISPER_DROPBOX_APP_KEY": os.getenv("WHISPER_DROPBOX_APP_KEY"),
-            "WHISPER_DROPBOX_APP_SECRET": os.getenv("WHISPER_DROPBOX_APP_SECRET"),
-            "WHISPER_DROPBOX_REFRESH_TOKEN": os.getenv("WHISPER_DROPBOX_REFRESH_TOKEN"),
-            "WHISPER_DROPBOX_ACCESS_TOKEN": os.getenv("WHISPER_DROPBOX_ACCESS_TOKEN"),
-        }
-        for key, value in env_vars.items():
-            safe_value = value[:4] + "..." if value else "Not set"
-            self.logger.debug(f"{key}: {safe_value}")
-
-        # Create config using env_vars directly
+        # Create config using os.getenv directly
         config = DropboxConfig(
-            app_key=env_vars["WHISPER_DROPBOX_APP_KEY"],
-            app_secret=env_vars["WHISPER_DROPBOX_APP_SECRET"],
-            refresh_token=env_vars["WHISPER_DROPBOX_REFRESH_TOKEN"],
-            access_token=env_vars["WHISPER_DROPBOX_ACCESS_TOKEN"],
+            app_key=os.getenv("WHISPER_DROPBOX_APP_KEY"),
+            app_secret=os.getenv("WHISPER_DROPBOX_APP_SECRET"),
+            refresh_token=os.getenv("WHISPER_DROPBOX_REFRESH_TOKEN"),
         )
 
         # Log the actual config values being used
@@ -176,7 +161,6 @@ class WhisperTranscriber(BaseTranscriber):
         self.logger.debug(f"app_key present: {bool(config.app_key)}")
         self.logger.debug(f"app_secret present: {bool(config.app_secret)}")
         self.logger.debug(f"refresh_token present: {bool(config.refresh_token)}")
-        self.logger.debug(f"access_token present: {bool(config.access_token)}")
 
         return DropboxHandler(config=config)
 

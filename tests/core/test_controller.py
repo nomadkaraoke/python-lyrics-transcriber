@@ -9,6 +9,15 @@ from lyrics_transcriber.core.controller import (
     AudioShakeConfig,
 )
 import logging
+from dataclasses import dataclass
+from typing import Optional
+
+
+@dataclass
+class MockOutputPaths:
+    lrc: Optional[str] = None
+    ass: Optional[str] = None
+    video: Optional[str] = None
 
 
 @pytest.fixture
@@ -139,8 +148,15 @@ def test_process_without_artist_and_title(sample_audio_file, test_logger, mock_l
 
 
 def test_generate_outputs(basic_transcriber, mock_output_generator):
+    # Create a mock OutputPaths-like object
+    class MockOutputPaths:
+        def __init__(self):
+            self.lrc = "test.lrc"
+            self.ass = "test.ass"
+            self.video = "test.mp4"
+
     # Setup mock returns
-    mock_output_generator.generate_outputs.return_value = {"lrc": "test.lrc", "ass": "test.ass", "video": "test.mp4"}
+    mock_output_generator.generate_outputs.return_value = MockOutputPaths()
 
     # Setup transcription data
     basic_transcriber.results.transcription_corrected = {"test": "data"}

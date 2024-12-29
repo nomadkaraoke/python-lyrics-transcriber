@@ -3,6 +3,8 @@ from unittest.mock import Mock, patch, mock_open, call
 import os
 import subprocess
 from lyrics_transcriber.output.generator import OutputGenerator, OutputGeneratorConfig, OutputPaths
+from lyrics_transcriber.core.corrector import CorrectionResult
+from lyrics_transcriber.transcribers.base import LyricsSegment, Word
 
 
 @pytest.fixture
@@ -24,7 +26,27 @@ def generator(config, mock_logger):
 
 @pytest.fixture
 def sample_transcription_data():
-    return {"segments": [{"start": 1.0, "end": 2.0, "text": "Line 1"}, {"start": 3.0, "end": 4.0, "text": "Line 2"}]}
+    segments = [
+        LyricsSegment(
+            text="Line 1",
+            words=[
+                Word(text="Line", start_time=1.0, end_time=1.5, confidence=1.0),
+                Word(text="1", start_time=1.5, end_time=2.0, confidence=1.0),
+            ],
+            start_time=1.0,
+            end_time=2.0,
+        ),
+        LyricsSegment(
+            text="Line 2",
+            words=[
+                Word(text="Line", start_time=3.0, end_time=3.5, confidence=1.0),
+                Word(text="2", start_time=3.5, end_time=4.0, confidence=1.0),
+            ],
+            start_time=3.0,
+            end_time=4.0,
+        ),
+    ]
+    return CorrectionResult(segments=segments, text="Line 1 Line 2", confidence=1.0, corrections_made=0, source_mapping={}, metadata={})
 
 
 class TestOutputGenerator:
@@ -53,14 +75,14 @@ class TestOutputGenerator:
 
     @patch("builtins.open", new_callable=mock_open)
     def test_write_lrc_file(self, mock_file, generator, sample_transcription_data):
-        generator._write_lrc_file("test.lrc", sample_transcription_data["segments"])
+        generator._write_lrc_file("test.lrc", sample_transcription_data.segments)
 
         expected_calls = [call("[00:01.00]Line 1\n"), call("[00:03.00]Line 2\n")]
         mock_file().write.assert_has_calls(expected_calls)
 
     @patch("builtins.open", new_callable=mock_open)
     def test_write_ass_file(self, mock_file, generator, sample_transcription_data):
-        generator._write_ass_file("test.ass", sample_transcription_data["segments"])
+        generator._write_ass_file("test.ass", sample_transcription_data.segments)
 
         mock_file().write.assert_called()
         # Verify header was written

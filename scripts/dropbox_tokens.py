@@ -107,7 +107,6 @@ def get_tokens(app_key, app_secret):
             print("\nAdd these lines to your .env file:")
             print(f"WHISPER_DROPBOX_APP_KEY={app_key}")
             print(f"WHISPER_DROPBOX_APP_SECRET={app_secret}")
-            print(f"WHISPER_DROPBOX_ACCESS_TOKEN={tokens['access_token']}")
             print(f"WHISPER_DROPBOX_REFRESH_TOKEN={tokens['refresh_token']}")
 
             # Prompt user to automatically update the .env file with new tokens
@@ -124,8 +123,6 @@ def get_tokens(app_key, app_secret):
                             f.write(f"WHISPER_DROPBOX_APP_KEY={app_key}\n")
                         elif line.startswith("WHISPER_DROPBOX_APP_SECRET="):
                             f.write(f"WHISPER_DROPBOX_APP_SECRET={app_secret}\n")
-                        elif line.startswith("WHISPER_DROPBOX_ACCESS_TOKEN="):
-                            f.write(f"WHISPER_DROPBOX_ACCESS_TOKEN={tokens['access_token']}\n")
                         elif line.startswith("WHISPER_DROPBOX_REFRESH_TOKEN="):
                             f.write(f"WHISPER_DROPBOX_REFRESH_TOKEN={tokens['refresh_token']}\n")
                         else:
