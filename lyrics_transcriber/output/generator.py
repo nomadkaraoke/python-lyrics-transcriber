@@ -1,9 +1,35 @@
+from dataclasses import dataclass
 import os
 import logging
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, Tuple
 import subprocess
 from datetime import timedelta
 from .subtitles import create_styled_subtitles, LyricsScreen, LyricsLine, LyricSegment
+
+
+@dataclass
+class OutputGeneratorConfig:
+    """Configuration for output generation."""
+
+    output_dir: Optional[str] = None
+    cache_dir: str = "/tmp/lyrics-transcriber-cache/"
+    video_resolution: str = "360p"
+    video_background_image: Optional[str] = None
+    video_background_color: str = "black"
+
+    def __post_init__(self):
+        """Validate configuration after initialization."""
+        if self.video_background_image and not os.path.isfile(self.video_background_image):
+            raise FileNotFoundError(f"Video background image not found: {self.video_background_image}")
+
+
+@dataclass
+class OutputPaths:
+    """Holds paths for generated output files."""
+
+    lrc: Optional[str] = None
+    ass: Optional[str] = None
+    video: Optional[str] = None
 
 
 class OutputGenerator:
@@ -11,59 +37,31 @@ class OutputGenerator:
 
     def __init__(
         self,
+        config: Optional[OutputGeneratorConfig] = None,
         logger: Optional[logging.Logger] = None,
-        output_dir: Optional[str] = None,
-        cache_dir: str = "/tmp/lyrics-transcriber-cache/",
-        video_resolution: str = "360p",
-        video_background_image: Optional[str] = None,
-        video_background_color: str = "black",
     ):
+        self.config = config or OutputGeneratorConfig()
         self.logger = logger or logging.getLogger(__name__)
-        self.output_dir = output_dir
-        self.cache_dir = cache_dir
-
-        # Video settings
-        self.video_resolution = video_resolution
-        self.video_background_image = video_background_image
-        self.video_background_color = video_background_color
 
         # Set video resolution parameters
-        self.video_resolution_num, self.font_size, self.line_height = self._get_video_params(video_resolution)
-
-        # Validate video background if provided
-        if self.video_background_image and not os.path.isfile(self.video_background_image):
-            raise FileNotFoundError(f"Video background image not found: {self.video_background_image}")
+        self.video_resolution_num, self.font_size, self.line_height = self._get_video_params(self.config.video_resolution)
 
     def generate_outputs(
         self, transcription_data: Dict[str, Any], output_prefix: str, audio_filepath: str, render_video: bool = False
-    ) -> Dict[str, str]:
-        """
-        Generate all requested output formats.
-
-        Args:
-            transcription_data: Dictionary containing transcription segments with timing
-            output_prefix: Prefix for output filenames
-            audio_filepath: Path to the source audio file
-            render_video: Whether to generate video output
-
-        Returns:
-            Dictionary of output paths for each format
-        """
-        outputs = {}
+    ) -> OutputPaths:
+        """Generate all requested output formats."""
+        outputs = OutputPaths()
 
         try:
             # Generate LRC
-            lrc_path = self.generate_lrc(transcription_data, output_prefix)
-            outputs["lrc"] = lrc_path
+            outputs.lrc = self.generate_lrc(transcription_data, output_prefix)
 
             # Generate ASS
-            ass_path = self.generate_ass(transcription_data, output_prefix)
-            outputs["ass"] = ass_path
+            outputs.ass = self.generate_ass(transcription_data, output_prefix)
 
             # Generate video if requested
             if render_video:
-                video_path = self.generate_video(ass_path, audio_filepath, output_prefix)
-                outputs["video"] = video_path
+                outputs.video = self.generate_video(outputs.ass, audio_filepath, output_prefix)
 
         except Exception as e:
             self.logger.error(f"Error generating outputs: {str(e)}")
@@ -71,19 +69,17 @@ class OutputGenerator:
 
         return outputs
 
+    def _get_output_path(self, output_prefix: str, extension: str) -> str:
+        """Generate full output path for a file."""
+        return os.path.join(self.config.output_dir or self.config.cache_dir, f"{output_prefix}.{extension}")
+
     def generate_lrc(self, transcription_data: Dict[str, Any], output_prefix: str) -> str:
         """Generate LRC format lyrics file."""
         self.logger.info("Generating LRC format lyrics")
-
-        output_path = os.path.join(self.output_dir or self.cache_dir, f"{output_prefix}.lrc")
+        output_path = self._get_output_path(output_prefix, "lrc")
 
         try:
-            with open(output_path, "w", encoding="utf-8") as f:
-                for segment in transcription_data["segments"]:
-                    start_time = self._format_lrc_timestamp(segment["start"])
-                    line = f"[{start_time}]{segment['text']}\n"
-                    f.write(line)
-
+            self._write_lrc_file(output_path, transcription_data["segments"])
             self.logger.info(f"LRC file generated: {output_path}")
             return output_path
 
@@ -91,24 +87,21 @@ class OutputGenerator:
             self.logger.error(f"Failed to generate LRC file: {str(e)}")
             raise
 
+    def _write_lrc_file(self, output_path: str, segments: list) -> None:
+        """Write LRC file content."""
+        with open(output_path, "w", encoding="utf-8") as f:
+            for segment in segments:
+                start_time = self._format_lrc_timestamp(segment["start"])
+                line = f"[{start_time}]{segment['text']}\n"
+                f.write(line)
+
     def generate_ass(self, transcription_data: Dict[str, Any], output_prefix: str) -> str:
         """Generate ASS format subtitles file."""
         self.logger.info("Generating ASS format subtitles")
-
-        output_path = os.path.join(self.output_dir or self.cache_dir, f"{output_prefix}.ass")
+        output_path = self._get_output_path(output_prefix, "ass")
 
         try:
-            with open(output_path, "w", encoding="utf-8") as f:
-                # Write ASS header
-                f.write(self._get_ass_header())
-
-                # Write events
-                for segment in transcription_data["segments"]:
-                    start_time = self._format_ass_timestamp(segment["start"])
-                    end_time = self._format_ass_timestamp(segment["end"])
-                    line = f"Dialogue: 0,{start_time},{end_time},Default,,0,0,0,,{segment['text']}\n"
-                    f.write(line)
-
+            self._write_ass_file(output_path, transcription_data["segments"])
             self.logger.info(f"ASS file generated: {output_path}")
             return output_path
 
@@ -116,49 +109,54 @@ class OutputGenerator:
             self.logger.error(f"Failed to generate ASS file: {str(e)}")
             raise
 
+    def _write_ass_file(self, output_path: str, segments: list) -> None:
+        """Write ASS file content."""
+        with open(output_path, "w", encoding="utf-8") as f:
+            f.write(self._get_ass_header())
+            for segment in segments:
+                start_time = self._format_ass_timestamp(segment["start"])
+                end_time = self._format_ass_timestamp(segment["end"])
+                line = f"Dialogue: 0,{start_time},{end_time},Default,,0,0,0,,{segment['text']}\n"
+                f.write(line)
+
     def generate_video(self, ass_path: str, audio_path: str, output_prefix: str) -> str:
         """Generate MP4 video with lyrics overlay."""
         self.logger.info("Generating video with lyrics overlay")
-
-        output_path = os.path.join(self.output_dir or self.cache_dir, f"{output_prefix}.mp4")
-        width, height = self.video_resolution_num
+        output_path = self._get_output_path(output_prefix, "mp4")
 
         try:
-            # Prepare FFmpeg command
-            cmd = [
-                "ffmpeg",
-                "-y",
-                "-f",
-                "lavfi",
-                "-i",
-                f"color=c={self.video_background_color}:s={width}x{height}",
-                "-i",
-                audio_path,
-                "-vf",
-                f"ass={ass_path}",
-                "-c:v",
-                "libx264",
-                "-c:a",
-                "aac",
-                "-shortest",
-                output_path,
-            ]
-
-            # If background image provided, use it instead of solid color
-            if self.video_background_image:
-                cmd[3:6] = ["-i", self.video_background_image]
-
-            self.logger.debug(f"Running FFmpeg command: {' '.join(cmd)}")
-            subprocess.run(cmd, check=True)
-
+            cmd = self._build_ffmpeg_command(ass_path, audio_path, output_path)
+            self._run_ffmpeg_command(cmd)
             self.logger.info(f"Video generated: {output_path}")
             return output_path
 
-        except subprocess.CalledProcessError as e:
-            self.logger.error(f"FFmpeg error: {str(e)}")
-            raise
         except Exception as e:
             self.logger.error(f"Failed to generate video: {str(e)}")
+            raise
+
+    def _build_ffmpeg_command(self, ass_path: str, audio_path: str, output_path: str) -> list:
+        """Build FFmpeg command for video generation."""
+        width, height = self.video_resolution_num
+        cmd = ["ffmpeg", "-y"]
+
+        # Input source (background)
+        if self.config.video_background_image:
+            cmd.extend(["-i", self.config.video_background_image])
+        else:
+            cmd.extend(["-f", "lavfi", "-i", f"color=c={self.config.video_background_color}:s={width}x{height}"])
+
+        # Add audio and subtitle inputs
+        cmd.extend(["-i", audio_path, "-vf", f"ass={ass_path}", "-c:v", "libx264", "-c:a", "aac", "-shortest", output_path])
+
+        return cmd
+
+    def _run_ffmpeg_command(self, cmd: list) -> None:
+        """Execute FFmpeg command."""
+        self.logger.debug(f"Running FFmpeg command: {' '.join(cmd)}")
+        try:
+            subprocess.run(cmd, check=True)
+        except subprocess.CalledProcessError as e:
+            self.logger.error(f"FFmpeg error: {str(e)}")
             raise
 
     def _get_video_params(self, resolution: str) -> tuple:

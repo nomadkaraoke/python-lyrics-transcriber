@@ -6,7 +6,7 @@ from ..transcribers.base import BaseTranscriber
 from ..transcribers.audioshake import AudioShakeTranscriber
 from ..transcribers.whisper import WhisperTranscriber
 from .fetcher import LyricsFetcher, LyricsFetcherConfig
-from ..output.generator import OutputGenerator
+from ..output.generator import OutputGenerator, OutputGeneratorConfig
 from .corrector import LyricsCorrector, TranscriptionData, CorrectionResult
 
 
@@ -150,14 +150,18 @@ class LyricsTranscriber:
 
     def _initialize_output_generator(self) -> OutputGenerator:
         """Initialize output generation service."""
-        return OutputGenerator(
-            logger=self.logger,
-            output_dir=self.output_config.output_dir,
-            cache_dir=self.output_config.cache_dir,
-            video_resolution=self.output_config.video_resolution,
-            video_background_image=self.output_config.video_background_image,
-            video_background_color=self.output_config.video_background_color,
+
+        # Convert OutputConfig to OutputGeneratorConfig
+        generator_config = OutputGeneratorConfig(
+            output_dir=self.output_config.output_dir if self.output_config else None,
+            cache_dir=self.output_config.cache_dir if self.output_config else "/tmp/lyrics-transcriber-cache/",
+            video_resolution=self.output_config.video_resolution if self.output_config else "360p",
+            video_background_image=self.output_config.video_background_image if self.output_config else None,
+            video_background_color=self.output_config.video_background_color if self.output_config else "black",
         )
+
+        # Initialize output generator
+        return OutputGenerator(config=generator_config, logger=self.logger)
 
     def process(self) -> TranscriptionResult:
         """
