@@ -98,6 +98,8 @@ class DiffBasedCorrector(CorrectionStrategy):
 
         Uses Python's difflib for fuzzy string matching to find the best
         alignment between transcribed text and reference lyrics.
+
+        Returns both matching and non-matching word pairs.
         """
         # Split into words and convert to lowercase for matching
         source_words = source_text.lower().split()
@@ -106,11 +108,28 @@ class DiffBasedCorrector(CorrectionStrategy):
         # Use SequenceMatcher to find matching blocks
         matcher = difflib.SequenceMatcher(None, source_words, target_words)
 
-        # Create alignment pairs
+        # Create alignment pairs for both matching and non-matching sections
         alignments = []
-        for a, b, size in matcher.get_matching_blocks():
-            for i in range(size):
-                alignments.append((source_words[a + i], target_words[b + i]))
+        i = j = 0
+
+        for block in matcher.get_matching_blocks():
+            # Add non-matching pairs before this block
+            while i < block.a and j < block.b:
+                alignments.append((source_words[i], target_words[j]))
+                i += 1
+                j += 1
+
+            # Add matching pairs from this block
+            for _ in range(block.size):
+                alignments.append((source_words[i], target_words[j]))
+                i += 1
+                j += 1
+
+        # Add any remaining non-matching pairs
+        while i < len(source_words) and j < len(target_words):
+            alignments.append((source_words[i], target_words[j]))
+            i += 1
+            j += 1
 
         return alignments
 

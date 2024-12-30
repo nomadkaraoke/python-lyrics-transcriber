@@ -73,12 +73,9 @@ class TestOutputGenerator:
     def test_get_output_path_fallback_to_cache(self, mock_logger):
         """Test output path fallback to cache directory."""
         # Create config with both directories set
-        config = OutputGeneratorConfig(
-            output_dir="/test/output",
-            cache_dir="/test/cache"
-        )
+        config = OutputGeneratorConfig(output_dir="/test/output", cache_dir="/test/cache")
         generator = OutputGenerator(config=config, logger=mock_logger)
-        
+
         # Test fallback by temporarily setting output_dir to None
         original_output_dir = generator.config.output_dir
         generator.config.output_dir = None
@@ -160,24 +157,50 @@ class TestOutputGenerator:
         mock_run.assert_called_once()
 
     def test_generate_outputs(self, generator, sample_transcription_data):
+        """Test successful generation of all output formats."""
+        # Create a sample lyrics result
+        lyrics_data = Mock()
+        lyrics_data.metadata.source = "test_provider"
+        lyrics_data.lyrics = "Sample lyrics"
+        lyrics_results = [lyrics_data]
+
         with patch.multiple(
             OutputGenerator,
+            write_plain_lyrics=Mock(return_value="test_plain.txt"),
+            write_plain_lyrics_from_correction=Mock(return_value="test_corrected.txt"),
             generate_lrc=Mock(return_value="test.lrc"),
             generate_ass=Mock(return_value="test.ass"),
             generate_video=Mock(return_value="test.mp4"),
         ):
-
-            result = generator.generate_outputs(sample_transcription_data, "test", "audio.mp3", render_video=True)
+            result = generator.generate_outputs(
+                transcription_corrected=sample_transcription_data,
+                lyrics_results=lyrics_results,
+                output_prefix="test",
+                audio_filepath="audio.mp3",
+                render_video=True,
+            )
 
             assert isinstance(result, OutputPaths)
             assert result.lrc == "test.lrc"
             assert result.ass == "test.ass"
             assert result.video == "test.mp4"
 
+            # Verify plain lyrics files were written - note the capitalized "Provider"
+            generator.write_plain_lyrics.assert_called_once_with(lyrics_data, "test (Lyrics Test_Provider)")
+            generator.write_plain_lyrics_from_correction.assert_called_once_with(sample_transcription_data, "test (Lyrics Corrected)")
+
     def test_generate_outputs_error_handling(self, generator, sample_transcription_data):
-        with patch.object(OutputGenerator, "generate_lrc", side_effect=Exception("Test error")):
+        """Test error handling during output generation."""
+        lyrics_results = []  # Empty list for simplicity
+
+        with patch.object(OutputGenerator, "write_plain_lyrics_from_correction", side_effect=Exception("Test error")):
             with pytest.raises(Exception, match="Test error"):
-                generator.generate_outputs(sample_transcription_data, "test", "audio.mp3")
+                generator.generate_outputs(
+                    transcription_corrected=sample_transcription_data,
+                    lyrics_results=lyrics_results,
+                    output_prefix="test",
+                    audio_filepath="audio.mp3",
+                )
 
     @pytest.mark.parametrize(
         "resolution,expected",
