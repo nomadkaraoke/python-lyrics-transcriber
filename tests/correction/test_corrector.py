@@ -1,6 +1,6 @@
 import pytest
 from unittest.mock import Mock
-from lyrics_transcriber.core.corrector import (
+from lyrics_transcriber.correction.corrector import (
     DiffBasedCorrector,
     LyricsCorrector,
     InternetLyrics,

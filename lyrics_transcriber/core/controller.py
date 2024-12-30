@@ -2,14 +2,14 @@ import os
 import logging
 from dataclasses import dataclass, field
 from typing import Dict, Optional, Any, List
-from ..transcribers.base_transcriber import BaseTranscriber
+from ..transcribers.base_transcriber import BaseTranscriber, TranscriptionResult
 from ..transcribers.audioshake import AudioShakeTranscriber, AudioShakeConfig
 from ..transcribers.whisper import WhisperTranscriber, WhisperConfig
 from ..lyrics.base_lyrics_provider import BaseLyricsProvider, LyricsProviderConfig, LyricsData
 from ..lyrics.genius import GeniusProvider
 from ..lyrics.spotify import SpotifyProvider
 from ..output.generator import OutputGenerator, OutputGeneratorConfig
-from .corrector import LyricsCorrector, TranscriptionData, CorrectionResult
+from ..correction.corrector import LyricsCorrector, CorrectionResult
 
 
 @dataclass
@@ -42,12 +42,12 @@ class OutputConfig:
 
 
 @dataclass
-class TranscriptionResult:
+class LyricsControllerResult:
     """Holds the results of the transcription and correction process."""
 
     # Results from different sources
     lyrics_results: List[LyricsData] = field(default_factory=list)
-    transcription_results: List[TranscriptionData] = field(default_factory=list)
+    transcription_results: List[TranscriptionResult] = field(default_factory=list)
 
     # Corrected results
     transcription_corrected: Optional[CorrectionResult] = None
@@ -115,7 +115,7 @@ class LyricsTranscriber:
         os.makedirs(self.output_config.output_dir, exist_ok=True)
 
         # Initialize results
-        self.results = TranscriptionResult()
+        self.results = LyricsControllerResult()
 
         # Initialize components (with dependency injection)
         self.transcribers = transcribers or self._initialize_transcribers()
@@ -170,6 +170,7 @@ class LyricsTranscriber:
             genius_api_token=self.lyrics_config.genius_api_token,
             spotify_cookie=self.lyrics_config.spotify_cookie,
             cache_dir=self.output_config.cache_dir,
+            audio_filepath=self.audio_filepath,
         )
 
         if provider_config.genius_api_token:
@@ -201,12 +202,12 @@ class LyricsTranscriber:
         # Initialize output generator
         return OutputGenerator(config=generator_config, logger=self.logger)
 
-    def process(self) -> TranscriptionResult:
+    def process(self) -> LyricsControllerResult:
         """
         Main processing method that orchestrates the entire workflow.
 
         Returns:
-            TranscriptionResult containing all outputs and generated files.
+            LyricsControllerResult containing all outputs and generated files.
 
         Raises:
             Exception: If a critical error occurs during processing.
@@ -265,7 +266,9 @@ class LyricsTranscriber:
                 result = transcriber_info["instance"].transcribe(self.audio_filepath)
                 if result:
                     # Add the transcriber name and priority to the result
-                    self.results.transcription_results.append({"name": name, "priority": transcriber_info["priority"], "result": result})
+                    self.results.transcription_results.append(
+                        TranscriptionResult(name=name, priority=transcriber_info["priority"], result=result)
+                    )
                     self.logger.debug(f"Transcription completed for {name}")
 
             except Exception as e:
@@ -280,13 +283,10 @@ class LyricsTranscriber:
         self.logger.info("Starting lyrics correction process")
 
         try:
-            # Set input data for correction
-            self.corrector.set_input_data(
+            # Run correction
+            corrected_data = self.corrector.run(
                 transcription_results=self.results.transcription_results, lyrics_results=self.results.lyrics_results
             )
-
-            # Run correction
-            corrected_data = self.corrector.run_corrector()
 
             # Store corrected results
             self.results.transcription_corrected = corrected_data

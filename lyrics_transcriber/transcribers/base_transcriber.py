@@ -30,6 +30,13 @@ class TranscriptionData:
         }
 
 
+@dataclass
+class TranscriptionResult:
+    name: str
+    priority: int
+    result: TranscriptionData
+
+
 class LoggerProtocol(Protocol):
     """Protocol for logger interface."""
 

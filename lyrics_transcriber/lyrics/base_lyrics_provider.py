@@ -52,6 +52,7 @@ class LyricsProviderConfig:
     genius_api_token: Optional[str] = None
     spotify_cookie: Optional[str] = None
     cache_dir: Optional[str] = None
+    audio_filepath: Optional[str] = None
 
 
 @dataclass
@@ -100,7 +101,7 @@ class BaseLyricsProvider(ABC):
     def __init__(self, config: LyricsProviderConfig, logger: Optional[logging.Logger] = None):
         self.logger = logger or logging.getLogger(__name__)
         self.cache_dir = Path(config.cache_dir) if config.cache_dir else None
-
+        self.audio_filepath = config.audio_filepath
         if self.cache_dir:
             self.cache_dir.mkdir(parents=True, exist_ok=True)
             self.logger.debug(f"Initialized {self.__class__.__name__} with cache dir: {self.cache_dir}")
@@ -110,26 +111,37 @@ class BaseLyricsProvider(ABC):
         if not self.cache_dir:
             return self._fetch_and_convert_result(artist, title)
 
-        cache_key = self._generate_cache_key(artist, title)
-        raw_cache_path = self._get_cache_path(cache_key, "raw")
+        file_hash = self._get_file_hash(self.audio_filepath)
+        raw_cache_path = self._get_cache_path(file_hash, "raw")
 
         # Try to load from cache first
         raw_data = self._load_from_cache(raw_cache_path)
         if raw_data is not None:
             self.logger.info(f"Using cached lyrics for {artist} - {title}")
-            return self._save_and_convert_result(cache_key, raw_data)
+            return self._save_and_convert_result(file_hash, raw_data)
 
         # If not in cache, fetch from source
         raw_result = self._fetch_data_from_source(artist, title)
         if raw_result:
             # Save raw API response
             self._save_to_cache(raw_cache_path, raw_result)
-            return self._save_and_convert_result(cache_key, raw_result)
+            return self._save_and_convert_result(file_hash, raw_result)
 
         return None
 
-    def _generate_cache_key(self, artist: str, title: str) -> str:
-        """Generate a unique cache key for the artist and title."""
+    def _get_file_hash(self, filepath: str) -> str:
+        """Calculate MD5 hash of a file."""
+        self.logger.debug(f"Calculating hash for file: {filepath}")
+        md5_hash = hashlib.md5()
+        with open(filepath, "rb") as f:
+            for chunk in iter(lambda: f.read(4096), b""):
+                md5_hash.update(chunk)
+        hash_result = md5_hash.hexdigest()
+        self.logger.debug(f"File hash: {hash_result}")
+        return hash_result
+
+    def _get_artist_title_hash(self, artist: str, title: str) -> str:
+        """Calculate MD5 hash of the artist and title."""
         combined = f"{artist.lower()}_{title.lower()}"
         return hashlib.md5(combined.encode()).hexdigest()
 

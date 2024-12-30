@@ -7,7 +7,7 @@ from datetime import timedelta
 
 from lyrics_transcriber.lyrics.base_lyrics_provider import LyricsData
 from .subtitles import create_styled_subtitles, LyricsScreen, LyricsLine, LyricSegment
-from ..core.corrector import CorrectionResult
+from ..correction.corrector import CorrectionResult
 
 
 @dataclass
@@ -82,6 +82,9 @@ class OutputGenerator:
                 self.write_plain_lyrics(lyrics_data, f"{output_prefix} (Lyrics {provider_name})")
 
             if transcription_corrected:
+                # Write corrected lyrics as plain text
+                self.write_plain_lyrics_from_correction(transcription_corrected, f"{output_prefix} (Lyrics Corrected)")
+
                 # Generate LRC
                 outputs.lrc = self.generate_lrc(transcription_corrected, output_prefix)
 
@@ -250,4 +253,19 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
 
         except Exception as e:
             self.logger.error(f"Failed to write plain lyrics file: {str(e)}")
+            raise
+
+    def write_plain_lyrics_from_correction(self, correction_result: CorrectionResult, output_prefix: str) -> str:
+        """Write corrected lyrics as plain text file."""
+        self.logger.info("Writing corrected lyrics file")
+        output_path = self._get_output_path(output_prefix, "txt")
+
+        try:
+            with open(output_path, "w", encoding="utf-8") as f:
+                f.write(correction_result.text)
+            self.logger.info(f"Corrected lyrics file generated: {output_path}")
+            return output_path
+
+        except Exception as e:
+            self.logger.error(f"Failed to write corrected lyrics file: {str(e)}")
             raise
