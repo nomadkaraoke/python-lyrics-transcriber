@@ -3,7 +3,7 @@ from typing import Optional, Dict, Any
 import syrics.api
 
 from lyrics_transcriber.lyrics.base_lyrics_provider import LyricsSegment, Word
-from .base_lyrics_provider import BaseLyricsProvider, LyricsProviderConfig, LyricsMetadata, LyricsResult
+from .base_lyrics_provider import BaseLyricsProvider, LyricsProviderConfig, LyricsMetadata, LyricsData
 
 
 class SpotifyProvider(BaseLyricsProvider):
@@ -40,7 +40,7 @@ class SpotifyProvider(BaseLyricsProvider):
             self.logger.error(f"Error fetching from Spotify: {str(e)}")
             return None
 
-    def _convert_result_format(self, raw_data: Dict[str, Any]) -> LyricsResult:
+    def _convert_result_format(self, raw_data: Dict[str, Any]) -> LyricsData:
         """Convert Spotify's raw API response to standardized format."""
         track_data = raw_data["track_data"]
         lyrics_data = raw_data["lyrics_data"]["lyrics"]
@@ -79,4 +79,4 @@ class SpotifyProvider(BaseLyricsProvider):
             },
         )
 
-        return LyricsResult(lyrics="\n".join(segment.text for segment in segments), segments=segments, metadata=metadata)
+        return LyricsData(lyrics="\n".join(segment.text for segment in segments), segments=segments, metadata=metadata)

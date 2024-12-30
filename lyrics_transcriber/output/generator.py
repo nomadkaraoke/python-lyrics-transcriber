@@ -1,9 +1,11 @@
 from dataclasses import dataclass
 import os
 import logging
-from typing import Dict, Any, Optional, Tuple
+from typing import Dict, Any, List, Optional, Tuple
 import subprocess
 from datetime import timedelta
+
+from lyrics_transcriber.lyrics.base_lyrics_provider import LyricsData
 from .subtitles import create_styled_subtitles, LyricsScreen, LyricsLine, LyricSegment
 from ..core.corrector import CorrectionResult
 
@@ -63,21 +65,32 @@ class OutputGenerator:
         self.video_resolution_num, self.font_size, self.line_height = self._get_video_params(self.config.video_resolution)
 
     def generate_outputs(
-        self, transcription_data: Dict[str, Any], output_prefix: str, audio_filepath: str, render_video: bool = False
+        self,
+        transcription_corrected: CorrectionResult,
+        lyrics_results: List[LyricsData],
+        output_prefix: str,
+        audio_filepath: str,
+        render_video: bool = False,
     ) -> OutputPaths:
         """Generate all requested output formats."""
         outputs = OutputPaths()
 
         try:
-            # Generate LRC
-            outputs.lrc = self.generate_lrc(transcription_data, output_prefix)
+            # Generate plain lyrics files for each provider
+            for lyrics_data in lyrics_results:
+                provider_name = lyrics_data.metadata.source.title()
+                self.write_plain_lyrics(lyrics_data, f"{output_prefix} (Lyrics {provider_name})")
 
-            # Generate ASS
-            outputs.ass = self.generate_ass(transcription_data, output_prefix)
+            if transcription_corrected:
+                # Generate LRC
+                outputs.lrc = self.generate_lrc(transcription_corrected, output_prefix)
 
-            # Generate video if requested
-            if render_video:
-                outputs.video = self.generate_video(outputs.ass, audio_filepath, output_prefix)
+                # Generate ASS
+                outputs.ass = self.generate_ass(transcription_corrected, output_prefix)
+
+                # Generate video if requested
+                if render_video:
+                    outputs.video = self.generate_video(outputs.ass, audio_filepath, output_prefix)
 
         except Exception as e:
             self.logger.error(f"Error generating outputs: {str(e)}")
@@ -223,3 +236,18 @@ Style: Default,Arial,{self.font_size},&H00FFFFFF,&H000000FF,&H00000000,&H0000000
 [Events]
 Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
 """
+
+    def write_plain_lyrics(self, lyrics_data: LyricsData, output_prefix: str) -> str:
+        """Write plain text lyrics file."""
+        self.logger.info("Writing plain lyrics file")
+        output_path = self._get_output_path(output_prefix, "txt")
+
+        try:
+            with open(output_path, "w", encoding="utf-8") as f:
+                f.write(lyrics_data.lyrics)
+            self.logger.info(f"Plain lyrics file generated: {output_path}")
+            return output_path
+
+        except Exception as e:
+            self.logger.error(f"Failed to write plain lyrics file: {str(e)}")
+            raise

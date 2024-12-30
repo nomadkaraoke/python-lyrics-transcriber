@@ -1,7 +1,7 @@
 import logging
 from typing import Optional, Dict, Any
 import lyricsgenius
-from .base_lyrics_provider import BaseLyricsProvider, LyricsMetadata, LyricsProviderConfig, LyricsResult
+from .base_lyrics_provider import BaseLyricsProvider, LyricsMetadata, LyricsProviderConfig, LyricsData
 
 
 class GeniusProvider(BaseLyricsProvider):
@@ -32,7 +32,7 @@ class GeniusProvider(BaseLyricsProvider):
             self.logger.error(f"Error fetching from Genius: {str(e)}")
         return None
 
-    def _convert_result_format(self, raw_data: Dict[str, Any]) -> LyricsResult:
+    def _convert_result_format(self, raw_data: Dict[str, Any]) -> LyricsData:
         """Convert Genius's raw API response to standardized format."""
         # Extract release date components if available
         release_date = None
@@ -67,4 +67,4 @@ class GeniusProvider(BaseLyricsProvider):
         )
 
         # Create result object
-        return LyricsResult(lyrics=raw_data.get("lyrics", ""), segments=[], metadata=metadata)  # Genius doesn't provide timestamp data
+        return LyricsData(lyrics=raw_data.get("lyrics", ""), segments=[], metadata=metadata)  # Genius doesn't provide timestamp data

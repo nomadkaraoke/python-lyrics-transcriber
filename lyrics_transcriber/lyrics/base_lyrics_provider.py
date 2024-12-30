@@ -82,7 +82,7 @@ class LyricsMetadata:
 
 
 @dataclass
-class LyricsResult:
+class LyricsData:
     """Standardized response format for all lyrics providers."""
 
     lyrics: str
@@ -105,7 +105,7 @@ class BaseLyricsProvider(ABC):
             self.cache_dir.mkdir(parents=True, exist_ok=True)
             self.logger.debug(f"Initialized {self.__class__.__name__} with cache dir: {self.cache_dir}")
 
-    def fetch_lyrics(self, artist: str, title: str) -> Optional[LyricsResult]:
+    def fetch_lyrics(self, artist: str, title: str) -> Optional[LyricsData]:
         """Fetch lyrics for a given artist and title, using cache if available."""
         if not self.cache_dir:
             return self._fetch_and_convert_result(artist, title)
@@ -159,7 +159,7 @@ class BaseLyricsProvider(ABC):
             self.logger.warning(f"Cache file {cache_path} is corrupted")
             return None
 
-    def _save_and_convert_result(self, cache_key: str, raw_data: Dict[str, Any]) -> LyricsResult:
+    def _save_and_convert_result(self, cache_key: str, raw_data: Dict[str, Any]) -> LyricsData:
         """Convert raw result to standardized format, save to cache, and return."""
         converted_cache_path = self._get_cache_path(cache_key, "converted")
         converted_result = self._convert_result_format(raw_data)
@@ -167,7 +167,7 @@ class BaseLyricsProvider(ABC):
         self._save_to_cache(converted_cache_path, converted_result.to_dict())
         return converted_result
 
-    def _fetch_and_convert_result(self, artist: str, title: str) -> Optional[LyricsResult]:
+    def _fetch_and_convert_result(self, artist: str, title: str) -> Optional[LyricsData]:
         """Fetch and convert result when caching is disabled."""
         raw_result = self._fetch_data_from_source(artist, title)
         if raw_result:
@@ -180,7 +180,7 @@ class BaseLyricsProvider(ABC):
         raise NotImplementedError("Subclasses must implement _fetch_data_from_source")
 
     @abstractmethod
-    def _convert_result_format(self, raw_data: Dict[str, Any]) -> LyricsResult:
+    def _convert_result_format(self, raw_data: Dict[str, Any]) -> LyricsData:
         """Convert raw API response to standardized format (implemented by subclasses)."""
         raise NotImplementedError("Subclasses must implement _convert_result_format")
 

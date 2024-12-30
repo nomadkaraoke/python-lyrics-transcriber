@@ -5,7 +5,7 @@ from typing import Dict, Optional, Any, List
 from ..transcribers.base_transcriber import BaseTranscriber
 from ..transcribers.audioshake import AudioShakeTranscriber, AudioShakeConfig
 from ..transcribers.whisper import WhisperTranscriber, WhisperConfig
-from ..lyrics.base_lyrics_provider import BaseLyricsProvider, LyricsProviderConfig
+from ..lyrics.base_lyrics_provider import BaseLyricsProvider, LyricsProviderConfig, LyricsData
 from ..lyrics.genius import GeniusProvider
 from ..lyrics.spotify import SpotifyProvider
 from ..output.generator import OutputGenerator, OutputGeneratorConfig
@@ -46,8 +46,8 @@ class TranscriptionResult:
     """Holds the results of the transcription and correction process."""
 
     # Results from different sources
-    lyrics_results: List[Dict[str, Any]] = field(default_factory=list)
-    transcription_results: List[Dict[str, Any]] = field(default_factory=list)
+    lyrics_results: List[LyricsData] = field(default_factory=list)
+    transcription_results: List[TranscriptionData] = field(default_factory=list)
 
     # Corrected results
     transcription_corrected: Optional[CorrectionResult] = None
@@ -294,14 +294,6 @@ class LyricsTranscriber:
 
         except Exception as e:
             self.logger.error(f"Failed to correct lyrics: {str(e)}", exc_info=True)
-            # Use highest priority transcription as fallback
-            if self.results.transcription_results:
-                highest_priority = min(r["priority"] for r in self.results.transcription_results)
-                fallback = next(r["result"] for r in self.results.transcription_results if r["priority"] == highest_priority)
-                self.results.transcription_corrected = fallback
-                self.logger.warning(f"Using highest priority transcription as fallback")
-            else:
-                self.logger.error("No transcription results available for fallback")
 
     def generate_outputs(self) -> None:
         """Generate output files."""
@@ -309,10 +301,10 @@ class LyricsTranscriber:
 
         try:
             output_files = self.output_generator.generate_outputs(
-                transcription_data=self.results.transcription_corrected,
+                transcription_corrected=self.results.transcription_corrected,
+                lyrics_results=self.results.lyrics_results,
                 output_prefix=self.output_prefix,
                 audio_filepath=self.audio_filepath,
-                render_video=self.output_config.render_video,
             )
 
             # Store output paths - access attributes directly instead of using .get()
