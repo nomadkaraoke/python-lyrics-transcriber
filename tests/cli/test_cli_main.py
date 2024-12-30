@@ -1,21 +1,42 @@
 import pytest
 from pathlib import Path
 from unittest.mock import patch, Mock
-from lyrics_transcriber.cli.main import create_arg_parser, create_configs, validate_args, setup_logging, get_config_from_env, main
+from lyrics_transcriber.cli.cli_main import (
+    create_arg_parser,
+    create_configs,
+    validate_args,
+    setup_logging,
+    get_config_from_env,
+    main,
+    parse_args,
+)
+import os
+import tempfile
 
 
 def test_create_arg_parser():
     parser = create_arg_parser()
     assert parser is not None
 
+    # Test parsing of various arguments with test cache dir
+    test_cache_dir = os.path.join(tempfile.gettempdir(), "lyrics-transcriber-test-cache")
+    args = parse_args(parser, ["test.mp3", "--cache_dir", test_cache_dir])
+    assert args.cache_dir == Path(test_cache_dir)
+
+    # Test default values (should use environment variable in tests)
+    os.environ["LYRICS_TRANSCRIBER_CACHE_DIR"] = test_cache_dir
+    args = parse_args(parser, ["test.mp3"])
+    assert args.cache_dir == Path(test_cache_dir)
+    del os.environ["LYRICS_TRANSCRIBER_CACHE_DIR"]
+
     # Test parsing of various arguments
-    args = parser.parse_args(["test.mp3", "--artist", "Test Artist", "--title", "Test Song"])
+    args = parse_args(parser, ["test.mp3", "--artist", "Test Artist", "--title", "Test Song"])
     assert args.audio_filepath == "test.mp3"
     assert args.artist == "Test Artist"
     assert args.title == "Test Song"
 
     # Test default values
-    args = parser.parse_args(["test.mp3"])
+    args = parse_args(parser, ["test.mp3"])
     assert args.log_level == "INFO"
     assert args.video_resolution == "360p"
     assert args.video_background_color == "black"
@@ -139,7 +160,7 @@ def test_create_configs():
     assert output_config.video_background_color == "blue"
 
 
-@patch("lyrics_transcriber.cli.main.LyricsTranscriber")
+@patch("lyrics_transcriber.cli.cli_main.LyricsTranscriber")
 def test_main_successful_run(mock_transcriber_class, sample_audio_file, test_logger):
     mock_transcriber = Mock()
     mock_transcriber_class.return_value = mock_transcriber
@@ -160,7 +181,7 @@ def test_main_successful_run(mock_transcriber_class, sample_audio_file, test_log
     mock_transcriber.process.assert_called_once()
 
 
-@patch("lyrics_transcriber.cli.main.LyricsTranscriber")
+@patch("lyrics_transcriber.cli.cli_main.LyricsTranscriber")
 def test_main_error_handling(mock_transcriber_class, sample_audio_file):
     mock_transcriber = Mock()
     mock_transcriber_class.return_value = mock_transcriber

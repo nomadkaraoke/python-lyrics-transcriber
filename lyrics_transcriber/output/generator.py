@@ -12,14 +12,18 @@ from ..core.corrector import CorrectionResult
 class OutputGeneratorConfig:
     """Configuration for output generation."""
 
-    output_dir: Optional[str] = None
-    cache_dir: str = "/tmp/lyrics-transcriber-cache/"
+    output_dir: str
+    cache_dir: str
     video_resolution: str = "360p"
     video_background_image: Optional[str] = None
     video_background_color: str = "black"
 
     def __post_init__(self):
         """Validate configuration after initialization."""
+        if not self.output_dir:
+            raise ValueError("output_dir must be provided")
+        if not self.cache_dir:
+            raise ValueError("cache_dir must be provided")
         if self.video_background_image and not os.path.isfile(self.video_background_image):
             raise FileNotFoundError(f"Video background image not found: {self.video_background_image}")
 
@@ -38,11 +42,22 @@ class OutputGenerator:
 
     def __init__(
         self,
-        config: Optional[OutputGeneratorConfig] = None,
+        config: OutputGeneratorConfig,
         logger: Optional[logging.Logger] = None,
     ):
-        self.config = config or OutputGeneratorConfig()
+        """
+        Initialize OutputGenerator with configuration.
+
+        Args:
+            config: OutputGeneratorConfig instance with required paths
+            logger: Optional logger instance
+        """
+        self.config = config
         self.logger = logger or logging.getLogger(__name__)
+
+        # Log the configured directories
+        self.logger.debug(f"Initialized OutputGenerator with output_dir: {self.config.output_dir}")
+        self.logger.debug(f"Using cache_dir: {self.config.cache_dir}")
 
         # Set video resolution parameters
         self.video_resolution_num, self.font_size, self.line_height = self._get_video_params(self.config.video_resolution)

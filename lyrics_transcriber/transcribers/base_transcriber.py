@@ -1,11 +1,11 @@
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, asdict
-from typing import Dict, Any, Optional, Protocol, List
+from typing import Dict, Any, Optional, Protocol, List, Union
+from pathlib import Path
 import logging
 import os
 import json
 import hashlib
-import tempfile
 
 
 @dataclass
@@ -78,10 +78,18 @@ class TranscriptionError(Exception):
 class BaseTranscriber(ABC):
     """Base class for all transcription services."""
 
-    def __init__(self, logger: Optional[LoggerProtocol] = None):
+    def __init__(self, cache_dir: Union[str, Path], logger: Optional[LoggerProtocol] = None):
+        """
+        Initialize transcriber with cache directory and logger.
+
+        Args:
+            cache_dir: Directory to store cache files. Must be provided.
+            logger: Logger instance to use. If None, creates a new logger.
+        """
+        self.cache_dir = Path(cache_dir)
         self.logger = logger or logging.getLogger(__name__)
-        self.cache_dir = os.path.join("/tmp", "lyrics-transcriber-cache")
-        os.makedirs(self.cache_dir, exist_ok=True)
+
+        self.cache_dir.mkdir(parents=True, exist_ok=True)
         self.logger.debug(f"Initialized {self.__class__.__name__} with cache dir: {self.cache_dir}")
 
     def _get_file_hash(self, filepath: str) -> str:

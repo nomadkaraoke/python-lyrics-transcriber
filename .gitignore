@@ -164,4 +164,7 @@ cython_debug/
 /input/
 *.wav
 *.flac
-
+*.lrc
+*.ass
+*.mp4
+*.json

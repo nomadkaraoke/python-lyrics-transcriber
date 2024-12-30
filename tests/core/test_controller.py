@@ -83,9 +83,7 @@ def test_transcriber_with_configs(
     mock_audioshake_class.return_value = mock_audioshake_transcriber
 
     transcriber_config = TranscriberConfig(audioshake_api_token="test_token", runpod_api_key="test_key", whisper_runpod_id="test_id")
-
     lyrics_config = LyricsConfig(genius_api_token="test_token", spotify_cookie="test_cookie")
-
     output_config = OutputConfig(output_dir="test_output", cache_dir="test_cache", render_video=True)
 
     transcriber = LyricsTranscriber(
@@ -104,10 +102,16 @@ def test_transcriber_with_configs(
     assert transcriber.lyrics_config.genius_api_token == "test_token"
     assert transcriber.output_config.render_video is True
 
-    # Verify transcribers were initialized correctly
-    mock_whisper_class.assert_called_once_with(config=WhisperConfig(runpod_api_key="test_key", endpoint_id="test_id"), logger=test_logger)
+    # Update assertions to include cache_dir
+    mock_whisper_class.assert_called_once_with(
+        cache_dir="test_cache",
+        config=WhisperConfig(runpod_api_key="test_key", endpoint_id="test_id"),
+        logger=test_logger
+    )
     mock_audioshake_class.assert_called_once_with(
-        config=AudioShakeConfig(api_token="test_token", base_url="https://groovy.audioshake.ai", output_prefix=None), logger=test_logger
+        cache_dir="test_cache",
+        config=AudioShakeConfig(api_token="test_token", base_url="https://groovy.audioshake.ai", output_prefix=None),
+        logger=test_logger
     )
 
 

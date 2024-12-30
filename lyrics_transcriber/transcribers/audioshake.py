@@ -2,9 +2,9 @@ from dataclasses import dataclass
 import requests
 import time
 import os
-import json
-from typing import Dict, Optional, Any
-from .base import BaseTranscriber, TranscriptionData, LyricsSegment, Word, TranscriptionError
+from typing import Dict, Optional, Any, Union
+from pathlib import Path
+from .base_transcriber import BaseTranscriber, TranscriptionData, LyricsSegment, Word, TranscriptionError
 
 
 @dataclass
@@ -14,6 +14,7 @@ class AudioShakeConfig:
     api_token: Optional[str] = None
     base_url: str = "https://groovy.audioshake.ai"
     output_prefix: Optional[str] = None
+    timeout_minutes: int = 10  # Added timeout configuration
 
 
 class AudioShakeAPI:
@@ -61,12 +62,28 @@ class AudioShakeAPI:
         response.raise_for_status()
         return response.json()["job"]["id"]
 
-    def get_job_result(self, job_id: str) -> Dict[str, Any]:
+    def wait_for_job_result(self, job_id: str) -> Dict[str, Any]:
         """Poll for job completion and return results."""
         self.logger.info(f"Getting job result for job {job_id}")
 
         url = f"{self.config.base_url}/job/{job_id}"
+        start_time = time.time()
+        last_status_log = start_time
+        timeout_seconds = self.config.timeout_minutes * 60
+
         while True:
+            current_time = time.time()
+            elapsed_time = current_time - start_time
+
+            # Check for timeout
+            if elapsed_time > timeout_seconds:
+                raise TranscriptionError(f"Transcription timed out after {self.config.timeout_minutes} minutes")
+
+            # Log status every minute
+            if current_time - last_status_log >= 60:
+                self.logger.info(f"Still waiting for transcription... " f"Elapsed time: {int(elapsed_time/60)} minutes")
+                last_status_log = current_time
+
             response = requests.get(url, headers=self._get_headers())
             response.raise_for_status()
             job_data = response.json()["job"]
@@ -74,7 +91,7 @@ class AudioShakeAPI:
             if job_data["status"] == "completed":
                 return job_data
             elif job_data["status"] == "failed":
-                raise Exception(f"Job failed: {job_data.get('error', 'Unknown error')}")
+                raise TranscriptionError(f"Job failed: {job_data.get('error', 'Unknown error')}")
 
             time.sleep(5)  # Wait before next poll
 
@@ -84,12 +101,13 @@ class AudioShakeTranscriber(BaseTranscriber):
 
     def __init__(
         self,
+        cache_dir: Union[str, Path],
         config: Optional[AudioShakeConfig] = None,
         logger: Optional[Any] = None,
         api_client: Optional[AudioShakeAPI] = None,
     ):
-        super().__init__(logger)
-        # Initialize configuration
+        """Initialize AudioShake transcriber."""
+        super().__init__(cache_dir=cache_dir, logger=logger)
         self.config = config or AudioShakeConfig(api_token=os.getenv("AUDIOSHAKE_API_TOKEN"))
         self.api = api_client or AudioShakeAPI(self.config, self.logger)
 
@@ -134,15 +152,15 @@ class AudioShakeTranscriber(BaseTranscriber):
         self.logger.debug(f"Entering get_transcription_result() for job ID: {job_id}")
 
         # Wait for job completion
-        job_data = self.api.get_job_result(job_id)
+        job_data = self.api.wait_for_job_result(job_id)
         self.logger.debug("Job completed. Processing results...")
 
         # Process and return in standard format
-        result = self._process_result(job_data)
+        result = self._convert_result_format(job_data)
         self.logger.debug("Results processed successfully")
         return result
 
-    def _process_result(self, job_data: Dict[str, Any]) -> TranscriptionData:
+    def _convert_result_format(self, job_data: Dict[str, Any]) -> TranscriptionData:
         """Process raw API response into standard format."""
         self.logger.debug(f"Processing result for job {job_data['id']}")
 

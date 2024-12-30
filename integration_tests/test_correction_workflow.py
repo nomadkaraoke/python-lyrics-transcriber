@@ -1,5 +1,5 @@
 import pytest
-from lyrics_transcriber.transcribers.base import TranscriptionData, LyricsSegment, Word
+from lyrics_transcriber.transcribers.base_transcriber import TranscriptionData, LyricsSegment, Word
 
 
 @pytest.fixture

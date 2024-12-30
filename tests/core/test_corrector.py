@@ -6,7 +6,7 @@ from lyrics_transcriber.core.corrector import (
     InternetLyrics,
     CorrectionResult,
 )
-from lyrics_transcriber.transcribers.base import (
+from lyrics_transcriber.transcribers.base_transcriber import (
     TranscriptionData,
     LyricsSegment,
     Word,
@@ -85,13 +85,9 @@ class TestDiffBasedCorrector:
         # Create lyrics where anchor word isn't found
         test_lyrics = [InternetLyrics(text="completely different text", source="test")]
         anchor_words = {"hello"}
-        
-        corrections = corrector._create_correction_mapping(
-            sample_transcription,
-            test_lyrics,
-            anchor_words
-        )
-        
+
+        corrections = corrector._create_correction_mapping(sample_transcription, test_lyrics, anchor_words)
+
         # Should handle the ValueError gracefully and return empty corrections
         assert isinstance(corrections, dict)
         assert len(corrections) == 0
@@ -112,17 +108,15 @@ class TestDiffBasedCorrector:
             ],
             text="hello earth",
             source="reference",
-            metadata={"language": "en"}
+            metadata={"language": "en"},
         )
-        
+
         internet_lyrics = [InternetLyrics(text="hello earth", source="test")]
-        
+
         result = corrector.correct(
-            primary_transcription=sample_transcription,
-            reference_transcription=reference,
-            internet_lyrics=internet_lyrics
+            primary_transcription=sample_transcription, reference_transcription=reference, internet_lyrics=internet_lyrics
         )
-        
+
         # Should use anchor words from both transcriptions
         assert result.metadata["anchor_words_count"] > 1
         assert result.corrections_made > 0
@@ -177,14 +171,8 @@ class TestLyricsCorrector:
         assert result.corrections_made == 0
 
     def test_set_input_data_with_whisper(self, corrector):
-        whisper_transcription = TranscriptionData(
-            segments=[],
-            text="test whisper",
-            source="whisper"
-        )
-        
-        corrector.set_input_data(
-            transcription_data_whisper=whisper_transcription
-        )
-        
+        whisper_transcription = TranscriptionData(segments=[], text="test whisper", source="whisper")
+
+        corrector.set_input_data(transcription_data_whisper=whisper_transcription)
+
         assert corrector.reference_transcription == whisper_transcription

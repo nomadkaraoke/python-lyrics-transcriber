@@ -2,7 +2,7 @@ import os
 import logging
 from dataclasses import dataclass
 from typing import Dict, Optional
-from ..transcribers.base import BaseTranscriber
+from ..transcribers.base_transcriber import BaseTranscriber
 from ..transcribers.audioshake import AudioShakeTranscriber, AudioShakeConfig
 from ..transcribers.whisper import WhisperTranscriber, WhisperConfig
 from .fetcher import LyricsFetcher, LyricsFetcherConfig
@@ -31,8 +31,8 @@ class LyricsConfig:
 class OutputConfig:
     """Configuration for output generation."""
 
-    output_dir: Optional[str] = None
-    cache_dir: str = "/tmp/lyrics-transcriber-cache/"
+    output_dir: Optional[str] = os.getcwd()
+    cache_dir: str = os.getenv("LYRICS_TRANSCRIBER_CACHE_DIR", "/tmp/lyrics-transcriber-cache/")
     render_video: bool = False
     video_resolution: str = "360p"
     video_background_image: Optional[str] = None
@@ -109,10 +109,13 @@ class LyricsTranscriber:
         self.title = title
         self.output_prefix = f"{artist} - {title}" if artist and title else os.path.splitext(os.path.basename(audio_filepath))[0]
 
+        # Add after creating necessary folders
+        self.logger.debug(f"Using cache directory: {self.output_config.cache_dir}")
+        self.logger.debug(f"Using output directory: {self.output_config.output_dir}")
+
         # Create necessary folders
         os.makedirs(self.output_config.cache_dir, exist_ok=True)
-        if self.output_config.output_dir:
-            os.makedirs(self.output_config.output_dir, exist_ok=True)
+        os.makedirs(self.output_config.output_dir, exist_ok=True)
 
         # Initialize results
         self.results = TranscriptionResult()
@@ -129,11 +132,14 @@ class LyricsTranscriber:
 
         # Add debug logging for config values
         self.logger.debug(f"Initializing transcribers with config: {self.transcriber_config}")
+        self.logger.debug(f"Using cache directory for transcribers: {self.output_config.cache_dir}")
 
         if self.transcriber_config.audioshake_api_token:
             self.logger.debug("Initializing AudioShake transcriber")
             transcribers["audioshake"] = AudioShakeTranscriber(
-                config=AudioShakeConfig(api_token=self.transcriber_config.audioshake_api_token), logger=self.logger
+                cache_dir=self.output_config.cache_dir,
+                config=AudioShakeConfig(api_token=self.transcriber_config.audioshake_api_token),
+                logger=self.logger,
             )
         else:
             self.logger.debug("Skipping AudioShake transcriber - no API token provided")
@@ -141,6 +147,7 @@ class LyricsTranscriber:
         if self.transcriber_config.runpod_api_key and self.transcriber_config.whisper_runpod_id:
             self.logger.debug("Initializing Whisper transcriber")
             transcribers["whisper"] = WhisperTranscriber(
+                cache_dir=self.output_config.cache_dir,
                 config=WhisperConfig(
                     runpod_api_key=self.transcriber_config.runpod_api_key, endpoint_id=self.transcriber_config.whisper_runpod_id
                 ),
@@ -149,7 +156,6 @@ class LyricsTranscriber:
         else:
             self.logger.debug("Skipping Whisper transcriber - missing runpod_api_key or whisper_runpod_id")
 
-        self.logger.debug(f"Initialized transcribers: {list(transcribers.keys())}")
         return transcribers
 
     def _initialize_lyrics_fetcher(self) -> LyricsFetcher:
@@ -166,11 +172,11 @@ class LyricsTranscriber:
 
         # Convert OutputConfig to OutputGeneratorConfig
         generator_config = OutputGeneratorConfig(
-            output_dir=self.output_config.output_dir if self.output_config else None,
-            cache_dir=self.output_config.cache_dir if self.output_config else "/tmp/lyrics-transcriber-cache/",
-            video_resolution=self.output_config.video_resolution if self.output_config else "360p",
-            video_background_image=self.output_config.video_background_image if self.output_config else None,
-            video_background_color=self.output_config.video_background_color if self.output_config else "black",
+            output_dir=self.output_config.output_dir,
+            cache_dir=self.output_config.cache_dir,
+            video_resolution=self.output_config.video_resolution,
+            video_background_image=self.output_config.video_background_image,
+            video_background_color=self.output_config.video_background_color,
         )
 
         # Initialize output generator

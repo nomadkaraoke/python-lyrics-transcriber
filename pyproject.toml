@@ -31,7 +31,7 @@ pytest-mock = ">=3.10"
 line-length = 140
 
 [tool.poetry.scripts]
-lyrics-transcriber = 'lyrics_transcriber.cli.main:main'
+lyrics-transcriber = 'lyrics_transcriber.cli.cli_main:main'
 
 [build-system]
 requires = ["poetry-core"]

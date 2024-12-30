@@ -3,7 +3,7 @@ import logging
 from unittest.mock import Mock, call
 from dataclasses import asdict
 import shutil
-from lyrics_transcriber.transcribers.base import (
+from lyrics_transcriber.transcribers.base_transcriber import (
     BaseTranscriber,
     TranscriptionData,
     LyricsSegment,
@@ -36,11 +36,6 @@ def mock_logger():
     return Mock(spec=LoggerProtocol)
 
 
-@pytest.fixture
-def transcriber(mock_logger):
-    return MockTranscriber(logger=mock_logger)
-
-
 class TestTranscriptionData:
     def test_data_creation(self):
         result = TranscriptionData(
@@ -68,21 +63,50 @@ class TestTranscriptionData:
 class TestBaseTranscriber:
     @pytest.fixture(autouse=True)
     def setup_teardown(self):
-        """Clean up the cache directory before and after each test."""
-        cache_dir = os.path.join(tempfile.gettempdir(), "lyrics-transcriber-cache")
-        if os.path.exists(cache_dir):
-            shutil.rmtree(cache_dir)
+        """Clean up the test cache directory before and after each test."""
+        # Use a test-specific cache directory
+        test_cache_dir = os.path.join(tempfile.gettempdir(), "lyrics-transcriber-test-cache")
+
+        # Clean up before test
+        if os.path.exists(test_cache_dir):
+            print(f"Cleaning up existing cache dir: {test_cache_dir}")  # Debug print
+            shutil.rmtree(test_cache_dir)
+
+        # Set environment variable
+        os.environ["LYRICS_TRANSCRIBER_CACHE_DIR"] = test_cache_dir
+        print(f"Set cache dir to: {test_cache_dir}")  # Debug print
+
         yield
-        if os.path.exists(cache_dir):
-            shutil.rmtree(cache_dir)
+
+        # Clean up after test
+        if os.path.exists(test_cache_dir):
+            print(f"Cleaning up cache dir after test: {test_cache_dir}")  # Debug print
+            shutil.rmtree(test_cache_dir)
+
+        # Clean up environment variable
+        del os.environ["LYRICS_TRANSCRIBER_CACHE_DIR"]
+
+    @pytest.fixture
+    def transcriber(self, mock_logger):
+        """Create a transcriber with explicit cache directory."""
+        cache_dir = os.environ["LYRICS_TRANSCRIBER_CACHE_DIR"]
+        transcriber = MockTranscriber(logger=mock_logger, cache_dir=cache_dir)
+        print(f"Created transcriber with cache dir: {transcriber.cache_dir}")  # Debug print
+        return transcriber
 
     def test_init_with_logger(self, mock_logger):
-        transcriber = MockTranscriber(logger=mock_logger)
+        """Test initialization with a logger."""
+        cache_dir = os.environ["LYRICS_TRANSCRIBER_CACHE_DIR"]
+        transcriber = MockTranscriber(cache_dir=cache_dir, logger=mock_logger)
         assert transcriber.logger == mock_logger
+        assert str(transcriber.cache_dir) == cache_dir
 
     def test_init_without_logger(self):
-        transcriber = MockTranscriber()
+        """Test initialization without a logger."""
+        cache_dir = os.environ["LYRICS_TRANSCRIBER_CACHE_DIR"]
+        transcriber = MockTranscriber(cache_dir=cache_dir)
         assert isinstance(transcriber.logger, logging.Logger)
+        assert str(transcriber.cache_dir) == cache_dir
 
     def test_validate_audio_file_exists(self, transcriber, tmp_path):
         audio_file = tmp_path / "test.mp3"
@@ -117,9 +141,19 @@ class TestBaseTranscriber:
         audio_file = tmp_path / "test.mp3"
         audio_file.write_text("test content")
 
+        # Get expected cache path before first transcription
+        file_hash = transcriber._get_file_hash(str(audio_file))
+        cache_path = transcriber._get_cache_path(file_hash)
+
+        # Verify cache doesn't exist initially
+        assert not os.path.exists(cache_path), f"Cache file already exists at {cache_path}"
+
         # First transcription should perform the actual transcription
         result1 = transcriber.transcribe(str(audio_file))
         assert result1.text == "test"
+
+        # Verify cache was created
+        assert os.path.exists(cache_path), f"Cache file was not created at {cache_path}"
 
         # Second transcription should use cache
         result2 = transcriber.transcribe(str(audio_file))

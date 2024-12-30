@@ -57,10 +57,10 @@ def create_arg_parser() -> argparse.ArgumentParser:
     # Output options
     output_group = parser.add_argument_group("Output Options")
     output_group.add_argument("--output_dir", type=Path, help="Directory where output files will be saved. Default: current directory")
+
     output_group.add_argument(
         "--cache_dir",
         type=Path,
-        default=Path("/tmp/lyrics-transcriber-cache/"),
         help="Directory to cache downloaded/generated files. Default: /tmp/lyrics-transcriber-cache/",
     )
 
@@ -78,6 +78,18 @@ def create_arg_parser() -> argparse.ArgumentParser:
     )
 
     return parser
+
+
+def parse_args(parser: argparse.ArgumentParser, args_list: list[str] | None = None) -> argparse.Namespace:
+    """Parse and process command line arguments."""
+    # Use provided args_list for testing, otherwise use sys.argv
+    args = parser.parse_args(args_list)
+
+    # Set default cache_dir if not provided
+    if not hasattr(args, "cache_dir") or args.cache_dir is None:
+        args.cache_dir = Path(os.getenv("LYRICS_TRANSCRIBER_CACHE_DIR", "/tmp/lyrics-transcriber-cache/"))
+
+    return args
 
 
 def get_config_from_env() -> Dict[str, str]:
@@ -121,7 +133,7 @@ def create_configs(args: argparse.Namespace, env_config: Dict[str, str]) -> tupl
     )
 
     output_config = OutputConfig(
-        output_dir=str(args.output_dir) if args.output_dir else None,
+        output_dir=str(args.output_dir) if args.output_dir else os.getcwd(),
         cache_dir=str(args.cache_dir),
         render_video=args.render_video,
         video_resolution=args.video_resolution,
@@ -151,7 +163,7 @@ def validate_args(args: argparse.Namespace, parser: argparse.ArgumentParser, log
 def main() -> None:
     """Main entry point for the CLI."""
     parser = create_arg_parser()
-    args = parser.parse_args()
+    args = parse_args(parser)
 
     # Set up logging first
     logger = setup_logging(args.log_level)

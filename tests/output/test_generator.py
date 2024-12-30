@@ -4,7 +4,7 @@ import os
 import subprocess
 from lyrics_transcriber.output.generator import OutputGenerator, OutputGeneratorConfig, OutputPaths
 from lyrics_transcriber.core.corrector import CorrectionResult
-from lyrics_transcriber.transcribers.base import LyricsSegment, Word
+from lyrics_transcriber.transcribers.base_transcriber import LyricsSegment, Word
 
 
 @pytest.fixture
@@ -51,7 +51,9 @@ def sample_transcription_data():
 
 class TestOutputGenerator:
     def test_init_with_defaults(self):
-        generator = OutputGenerator()
+        """Test initialization with default values."""
+        config = OutputGeneratorConfig(output_dir="/test/output", cache_dir="/test/cache")
+        generator = OutputGenerator(config=config)
         assert generator.config is not None
         assert generator.logger is not None
         assert generator.video_resolution_num == (640, 360)
@@ -59,8 +61,9 @@ class TestOutputGenerator:
         assert generator.line_height == 50
 
     def test_init_with_invalid_resolution(self):
-        config = OutputGeneratorConfig(video_resolution="invalid")
+        """Test initialization with invalid video resolution."""
         with pytest.raises(ValueError, match="Invalid video_resolution value"):
+            config = OutputGeneratorConfig(output_dir="/test/output", cache_dir="/test/cache", video_resolution="invalid")
             OutputGenerator(config=config)
 
     def test_get_output_path(self, generator):
@@ -68,10 +71,23 @@ class TestOutputGenerator:
         assert path == "/test/output/test.lrc"
 
     def test_get_output_path_fallback_to_cache(self, mock_logger):
-        config = OutputGeneratorConfig(cache_dir="/test/cache")
+        """Test output path fallback to cache directory."""
+        # Create config with both directories set
+        config = OutputGeneratorConfig(
+            output_dir="/test/output",
+            cache_dir="/test/cache"
+        )
         generator = OutputGenerator(config=config, logger=mock_logger)
-        path = generator._get_output_path("test", "lrc")
-        assert path == "/test/cache/test.lrc"
+        
+        # Test fallback by temporarily setting output_dir to None
+        original_output_dir = generator.config.output_dir
+        generator.config.output_dir = None
+        try:
+            path = generator._get_output_path("test", "lrc")
+            assert path == "/test/cache/test.lrc"
+        finally:
+            # Restore the original output_dir
+            generator.config.output_dir = original_output_dir
 
     @patch("builtins.open", new_callable=mock_open)
     def test_write_lrc_file(self, mock_file, generator, sample_transcription_data):
@@ -178,7 +194,7 @@ class TestOutputGenerator:
     def test_init_with_nonexistent_background_image(self):
         """Test initialization with non-existent background image."""
         with pytest.raises(FileNotFoundError, match="Video background image not found"):
-            OutputGeneratorConfig(video_background_image="/nonexistent/image.jpg")
+            OutputGeneratorConfig(output_dir="/test/output", cache_dir="/test/cache", video_background_image="/nonexistent/image.jpg")
 
     @patch("builtins.open")
     def test_generate_lrc_file_error(self, mock_open, generator, sample_transcription_data):

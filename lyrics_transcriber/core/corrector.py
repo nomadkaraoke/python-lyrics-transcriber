@@ -2,7 +2,7 @@ from dataclasses import dataclass
 from typing import Any, Dict, List, Optional, Protocol, Tuple, Set
 import logging
 import difflib
-from ..transcribers.base import TranscriptionData, LyricsSegment, Word
+from ..transcribers.base_transcriber import TranscriptionData, LyricsSegment, Word
 
 
 @dataclass
