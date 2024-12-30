@@ -272,18 +272,19 @@ class TestWhisperTranscriber:
         transcriber.storage.create_or_get_shared_link.assert_called_once()
 
     def test_perform_transcription_success(self, transcriber):
-        # Create method mocks for the methods we want to control
+        test_word = Word(text="test", start_time=0.0, end_time=1.0, confidence=0.9)
         transcriber.start_transcription = Mock(return_value="job123")
         transcriber.get_transcription_result = Mock(
             return_value=TranscriptionData(
                 segments=[
                     LyricsSegment(
                         text="test",
-                        words=[Word(text="test", start_time=0.0, end_time=1.0, confidence=0.9)],
+                        words=[test_word],
                         start_time=0.0,
                         end_time=1.0,
                     )
                 ],
+                words=[test_word],
                 text="test",
                 source="Whisper",
                 metadata={"language": "en", "model": "medium", "job_id": "job123"},
@@ -295,6 +296,7 @@ class TestWhisperTranscriber:
         assert isinstance(result, TranscriptionData)
         assert result.text == "test"
         assert len(result.segments) == 1
+        assert len(result.words) == 1
         transcriber.start_transcription.assert_called_once_with("test.wav")
         transcriber.get_transcription_result.assert_called_once_with("job123")
 

@@ -33,12 +33,18 @@ class MockTranscriber(BaseTranscriber):
     def _convert_result_format(self, raw_result: dict) -> TranscriptionData:
         """Convert raw API result to TranscriptionData format."""
         segments = []
+        words = []  # Collect all words
         for seg in raw_result["segments"]:
-            words = [Word(**w) for w in seg["words"]]
-            segments.append(LyricsSegment(text=seg["text"], words=words, start_time=seg["start_time"], end_time=seg["end_time"]))
+            seg_words = [Word(**w) for w in seg["words"]]
+            words.extend(seg_words)  # Add segment words to main words list
+            segments.append(LyricsSegment(text=seg["text"], words=seg_words, start_time=seg["start_time"], end_time=seg["end_time"]))
 
         return TranscriptionData(
-            segments=segments, text=raw_result["text"], source=raw_result["source"], metadata=raw_result.get("metadata", {})
+            segments=segments,
+            words=words,  # Add words parameter
+            text=raw_result["text"],
+            source=raw_result["source"],
+            metadata=raw_result.get("metadata", {}),
         )
 
     def get_name(self) -> str:
@@ -52,8 +58,10 @@ def mock_logger():
 
 class TestTranscriptionData:
     def test_data_creation(self):
+        test_word = Word(text="test", start_time=0.0, end_time=1.0)
         result = TranscriptionData(
-            segments=[LyricsSegment(text="test", words=[Word(text="test", start_time=0.0, end_time=1.0)], start_time=0.0, end_time=1.0)],
+            segments=[LyricsSegment(text="test", words=[test_word], start_time=0.0, end_time=1.0)],
+            words=[test_word],  # Add words parameter
             text="test",
             source="test",
             metadata={"language": "en"},
@@ -62,14 +70,22 @@ class TestTranscriptionData:
         assert result.text == "test"
         assert len(result.segments) == 1
         assert result.segments[0].text == "test"
+        assert len(result.words) == 1  # Add words assertion
         assert result.source == "test"
         assert result.metadata == {"language": "en"}
 
     def test_data_optional_fields(self):
-        result = TranscriptionData(segments=[], text="", source="test", metadata={})
+        result = TranscriptionData(
+            segments=[],
+            words=[],  # Add empty words list
+            text="",
+            source="test",
+            metadata={},
+        )
 
         assert result.text == ""
         assert len(result.segments) == 0
+        assert len(result.words) == 0  # Add words assertion
         assert result.source == "test"
         assert result.metadata == {}
 

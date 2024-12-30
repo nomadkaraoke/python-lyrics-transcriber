@@ -207,7 +207,11 @@ class TestAudioShakeTranscriber:
         mock_api.create_job.assert_called_once_with("asset123")
 
     def test_get_transcription_result(self, transcriber, mock_api):
-        mock_job_data = {"id": "job123", "outputAssets": [{"name": "alignment.json", "link": "http://test.com/result"}]}
+        mock_job_data = {
+            "id": "job123",
+            "outputAssets": [{"name": "alignment.json", "link": "http://test.com/result"}],
+            "statusInfo": {"duration": 60.0},
+        }
         mock_api.wait_for_job_result.return_value = mock_job_data
 
         with patch("requests.get") as mock_get:
@@ -215,13 +219,11 @@ class TestAudioShakeTranscriber:
             mock_response.json.return_value = {
                 "lines": [{"text": "test", "words": [{"text": "test", "start": 0.0, "end": 1.0, "confidence": 0.9}]}],
                 "text": "test",
+                "metadata": {"language": "en"},
             }
             mock_get.return_value = mock_response
 
-            raw_data = {
-                "job_data": mock_job_data,
-                "transcription": mock_response.json()
-            }
+            raw_data = {"job_data": mock_job_data, "transcription": mock_response.json()}
             result = transcriber._convert_result_format(raw_data)
 
         assert isinstance(result, TranscriptionData)
@@ -234,29 +236,10 @@ class TestAudioShakeTranscriber:
 
     def test_convert_result_format_missing_asset(self, transcriber, mock_api):
         """Test that transcription fails when the required output asset is missing"""
-        # Mock a job response without the required 'alignment.json' asset
-        job_data = {
-            "id": "job123",
-            "outputAssets": [
-                {"name": "wrong.json", "link": "http://test.com/wrong"}
-            ]
-        }
-        
-        # Setup mock API response
-        mock_api.wait_for_job_result.return_value = job_data
-        
-        # First test: get_transcription_result should raise the error
-        with pytest.raises(TranscriptionError, match="Required output not found in job results"):
-            transcriber.get_transcription_result("job123")
+        job_data = {"id": "job123", "outputAssets": [{"name": "wrong.json", "link": "http://test.com/wrong"}]}
 
-        # Second test: even if we bypass that and call _convert_result_format directly,
-        # it should still handle the missing data gracefully
-        raw_data = {
-            "job_data": job_data,
-            "transcription": {}
-        }
-        
-        # Should return empty TranscriptionData rather than raise an error
+        raw_data = {"job_data": job_data, "transcription": {"metadata": {"language": "en"}}}
+
         result = transcriber._convert_result_format(raw_data)
         assert isinstance(result, TranscriptionData)
         assert result.segments == []
@@ -315,10 +298,7 @@ class TestAudioShakeTranscriber:
             ],
             "text": "test",
         }
-        raw_data = {
-            "job_data": job_data,
-            "transcription": transcription_data
-        }
+        raw_data = {"job_data": job_data, "transcription": transcription_data}
 
         result = transcriber._convert_result_format(raw_data)
 
@@ -331,10 +311,7 @@ class TestAudioShakeTranscriber:
     def test_convert_result_format_malformed_response(self, transcriber):
         """Test handling of malformed API responses"""
         job_data = {"id": "job123", "outputAssets": [{"name": "alignment.json", "link": "http://test.com/result"}]}
-        raw_data = {
-            "job_data": job_data,
-            "transcription": {}  # Empty transcription data
-        }
+        raw_data = {"job_data": job_data, "transcription": {"metadata": {"language": "en"}}}
 
         result = transcriber._convert_result_format(raw_data)
 

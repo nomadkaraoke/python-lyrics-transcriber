@@ -170,23 +170,25 @@ class AudioShakeTranscriber(BaseTranscriber):
         return raw_data
 
     def _convert_result_format(self, raw_data: Dict[str, Any]) -> TranscriptionData:
-        """Process raw API response into standard format."""
+        """Process raw Audioshake API response into standard format."""
         self.logger.debug(f"Processing result for job {raw_data['job_data']['id']}")
 
         transcription_data = raw_data["transcription"]
         job_data = raw_data["job_data"]
 
         segments = []
+        all_words = []  # Collect all words across segments
+
         for line in transcription_data.get("lines", []):
             words = [
                 Word(
                     text=word["text"],
                     start_time=word.get("start", 0.0),
                     end_time=word.get("end", 0.0),
-                    confidence=word.get("confidence", 1.0),
                 )
                 for word in line.get("words", [])
             ]
+            all_words.extend(words)  # Add words to flat list
 
             segments.append(
                 LyricsSegment(
@@ -198,10 +200,15 @@ class AudioShakeTranscriber(BaseTranscriber):
             )
 
         return TranscriptionData(
-            segments=segments,
             text=transcription_data.get("text", ""),
+            words=all_words,
+            segments=segments,
             source=self.get_name(),
-            metadata={"language": "en", "job_id": job_data["id"]},
+            metadata={
+                "language": transcription_data.get("metadata", {}).get("language"),
+                "job_id": job_data["id"],
+                "duration": job_data.get("statusInfo", {}).get("duration"),
+            },
         )
 
     def get_output_filename(self, suffix: str) -> str:

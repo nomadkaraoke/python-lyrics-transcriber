@@ -256,30 +256,40 @@ class WhisperTranscriber(BaseTranscriber):
         return raw_data
 
     def _convert_result_format(self, raw_data: Dict[str, Any]) -> TranscriptionData:
-        """Convert API response to standard format."""
+        """Convert Whisper API response to standard format."""
         self._validate_response(raw_data)
 
         job_id = raw_data.get("job_id")
+        all_words = []
 
+        # First collect all words from word_timestamps
+        word_list = [
+            Word(
+                text=word["word"].strip(),
+                start_time=word["start"],
+                end_time=word["end"],
+                confidence=word.get("probability"),  # Only set if provided
+            )
+            for word in raw_data.get("word_timestamps", [])
+        ]
+        all_words.extend(word_list)
+
+        # Then create segments, using the words that fall within each segment's time range
         segments = []
         for seg in raw_data["segments"]:
-            words = [
-                Word(
-                    text=word["word"].strip(),
-                    start_time=word["start"],
-                    end_time=word["end"],
-                    confidence=word.get("probability", 1.0),
-                )
-                for word in raw_data.get("word_timestamps", [])
-                if seg["start"] <= word["start"] < seg["end"]
-            ]
-            segments.append(LyricsSegment(text=seg["text"].strip(), words=words, start_time=seg["start"], end_time=seg["end"]))
+            segment_words = [word for word in word_list if seg["start"] <= word.start_time < seg["end"]]
+            segments.append(LyricsSegment(text=seg["text"].strip(), words=segment_words, start_time=seg["start"], end_time=seg["end"]))
 
         return TranscriptionData(
             segments=segments,
+            words=all_words,
             text=raw_data["transcription"],
             source=self.get_name(),
-            metadata={"language": raw_data.get("detected_language", "en"), "model": "medium", "job_id": job_id},
+            metadata={
+                "language": raw_data.get("detected_language", "en"),
+                "model": raw_data.get("model"),
+                "job_id": job_id,
+            },
         )
 
     def _upload_and_get_link(self, filepath: str, dropbox_path: str) -> str:

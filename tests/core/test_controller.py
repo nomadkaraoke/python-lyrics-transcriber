@@ -11,6 +11,8 @@ from lyrics_transcriber.core.controller import (
 import logging
 from dataclasses import dataclass
 from typing import Optional
+from lyrics_transcriber.lyrics.genius import GeniusProvider
+from lyrics_transcriber.lyrics.spotify import SpotifyProvider
 
 
 @dataclass
@@ -18,11 +20,6 @@ class MockOutputPaths:
     lrc: Optional[str] = None
     ass: Optional[str] = None
     video: Optional[str] = None
-
-
-@pytest.fixture
-def mock_lyrics_fetcher():
-    return Mock()
 
 
 @pytest.fixture
@@ -46,13 +43,24 @@ def mock_audioshake_transcriber():
 
 
 @pytest.fixture
-def basic_transcriber(sample_audio_file, test_logger, mock_lyrics_fetcher, mock_corrector, mock_output_generator):
+def mock_genius_provider():
+    return Mock()
+
+
+@pytest.fixture
+def mock_spotify_provider():
+    return Mock()
+
+
+@pytest.fixture
+def basic_transcriber(sample_audio_file, test_logger, mock_genius_provider, mock_spotify_provider, mock_corrector, mock_output_generator):
+    lyrics_providers = {"genius": mock_genius_provider, "spotify": mock_spotify_provider}
     return LyricsTranscriber(
         audio_filepath=sample_audio_file,
         artist="Test Artist",
         title="Test Song",
         logger=test_logger,
-        lyrics_fetcher=mock_lyrics_fetcher,
+        lyrics_providers=lyrics_providers,
         corrector=mock_corrector,
         output_generator=mock_output_generator,
     )
@@ -72,7 +80,6 @@ def test_transcriber_with_configs(
     mock_audioshake_class,
     sample_audio_file,
     test_logger,
-    mock_lyrics_fetcher,
     mock_corrector,
     mock_output_generator,
     mock_whisper_transcriber,
@@ -92,7 +99,6 @@ def test_transcriber_with_configs(
         lyrics_config=lyrics_config,
         output_config=output_config,
         logger=test_logger,
-        lyrics_fetcher=mock_lyrics_fetcher,
         corrector=mock_corrector,
         output_generator=mock_output_generator,
     )
@@ -104,43 +110,39 @@ def test_transcriber_with_configs(
 
     # Update assertions to include cache_dir
     mock_whisper_class.assert_called_once_with(
-        cache_dir="test_cache",
-        config=WhisperConfig(runpod_api_key="test_key", endpoint_id="test_id"),
-        logger=test_logger
+        cache_dir="test_cache", config=WhisperConfig(runpod_api_key="test_key", endpoint_id="test_id"), logger=test_logger
     )
     mock_audioshake_class.assert_called_once_with(
         cache_dir="test_cache",
         config=AudioShakeConfig(api_token="test_token", base_url="https://groovy.audioshake.ai", output_prefix=None),
-        logger=test_logger
+        logger=test_logger,
     )
 
 
-def test_process_with_artist_and_title(basic_transcriber, mock_lyrics_fetcher):
+def test_process_with_artist_and_title(basic_transcriber, mock_genius_provider):
     # Setup mock returns
-    mock_lyrics_fetcher.fetch_lyrics.return_value = {
-        "lyrics": "Test lyrics",
-        "source": "test",
-        "genius_lyrics": "Test genius lyrics",
-        "spotify_lyrics": "Test spotify lyrics",
-        "spotify_lyrics_data": {"test": "data"},
-    }
+    mock_genius_provider.fetch_lyrics.return_value = "Test lyrics"
 
     # Run process
     result = basic_transcriber.process()
 
     # Verify lyrics fetching was called
-    mock_lyrics_fetcher.fetch_lyrics.assert_called_once_with("Test Artist", "Test Song")
+    mock_genius_provider.fetch_lyrics.assert_called_once_with("Test Artist", "Test Song")
 
     # Verify results
     assert result.lyrics_text == "Test lyrics"
-    assert result.lyrics_source == "test"
+    assert result.lyrics_source == "genius"
+    assert result.lyrics_genius == "Test lyrics"
 
 
-def test_process_without_artist_and_title(sample_audio_file, test_logger, mock_lyrics_fetcher, mock_corrector, mock_output_generator):
+def test_process_without_artist_and_title(
+    sample_audio_file, test_logger, mock_genius_provider, mock_spotify_provider, mock_corrector, mock_output_generator
+):
+    lyrics_providers = {"genius": mock_genius_provider, "spotify": mock_spotify_provider}
     transcriber = LyricsTranscriber(
         audio_filepath=sample_audio_file,
         logger=test_logger,
-        lyrics_fetcher=mock_lyrics_fetcher,
+        lyrics_providers=lyrics_providers,
         corrector=mock_corrector,
         output_generator=mock_output_generator,
     )
@@ -148,7 +150,8 @@ def test_process_without_artist_and_title(sample_audio_file, test_logger, mock_l
     result = transcriber.process()
 
     # Verify lyrics fetching was not called
-    mock_lyrics_fetcher.fetch_lyrics.assert_not_called()
+    mock_genius_provider.fetch_lyrics.assert_not_called()
+    mock_spotify_provider.fetch_lyrics.assert_not_called()
 
 
 def test_generate_outputs(basic_transcriber, mock_output_generator):
@@ -228,9 +231,10 @@ def test_process_with_failed_output_generation(basic_transcriber, mock_output_ge
         basic_transcriber.process()
 
 
-def test_fetch_lyrics_with_failed_fetcher(basic_transcriber, mock_lyrics_fetcher):
-    """Test lyrics fetching when the fetcher fails"""
-    mock_lyrics_fetcher.fetch_lyrics.side_effect = Exception("Failed to fetch lyrics")
+def test_fetch_lyrics_with_failed_fetcher(basic_transcriber, mock_genius_provider, mock_spotify_provider):
+    """Test lyrics fetching when the providers fail"""
+    mock_genius_provider.fetch_lyrics.side_effect = Exception("Failed to fetch lyrics")
+    mock_spotify_provider.fetch_lyrics.side_effect = Exception("Failed to fetch lyrics")
 
     # Should not raise exception
     basic_transcriber.fetch_lyrics()
@@ -243,15 +247,10 @@ def test_fetch_lyrics_with_failed_fetcher(basic_transcriber, mock_lyrics_fetcher
     assert basic_transcriber.results.spotify_lyrics_data is None
 
 
-def test_fetch_lyrics_with_empty_result(basic_transcriber, mock_lyrics_fetcher):
+def test_fetch_lyrics_with_empty_result(basic_transcriber, mock_genius_provider, mock_spotify_provider):
     """Test lyrics fetching when no lyrics are found"""
-    mock_lyrics_fetcher.fetch_lyrics.return_value = {
-        "lyrics": None,
-        "source": None,
-        "genius_lyrics": None,
-        "spotify_lyrics": None,
-        "spotify_lyrics_data": None,
-    }
+    mock_genius_provider.fetch_lyrics.return_value = None
+    mock_spotify_provider.fetch_lyrics.return_value = None
 
     basic_transcriber.fetch_lyrics()
 
@@ -302,16 +301,10 @@ def test_transcribe_with_successful_whisper(basic_transcriber, mock_whisper_tran
     assert basic_transcriber.results.transcription_primary == {"test": "whisper_data"}
 
 
-def test_process_full_successful_workflow(basic_transcriber, mock_lyrics_fetcher, mock_corrector, mock_whisper_transcriber):
+def test_process_full_successful_workflow(basic_transcriber, mock_genius_provider, mock_corrector, mock_whisper_transcriber):
     """Test a complete successful workflow"""
     # Setup mocks
-    mock_lyrics_fetcher.fetch_lyrics.return_value = {
-        "lyrics": "Test lyrics",
-        "source": "test",
-        "genius_lyrics": "Test genius lyrics",
-        "spotify_lyrics": "Test spotify lyrics",
-        "spotify_lyrics_data": {"test": "data"},
-    }
+    mock_genius_provider.fetch_lyrics.return_value = "Test lyrics"
     basic_transcriber.transcribers = {"whisper": mock_whisper_transcriber}
     mock_whisper_transcriber.transcribe.return_value = {"test": "whisper_data"}
     mock_corrector.run_corrector.return_value = {"test": "corrected_data"}
@@ -321,5 +314,58 @@ def test_process_full_successful_workflow(basic_transcriber, mock_lyrics_fetcher
 
     # Verify complete workflow
     assert result.lyrics_text == "Test lyrics"
+    assert result.lyrics_source == "genius"
+    assert result.lyrics_genius == "Test lyrics"
     assert result.transcription_whisper == {"test": "whisper_data"}
     assert result.transcription_corrected == {"test": "corrected_data"}
+
+
+def test_fetch_lyrics_success(basic_transcriber, mock_genius_provider, mock_spotify_provider):
+    """Test successful lyrics fetching from primary provider"""
+    mock_genius_provider.fetch_lyrics.return_value = "Test lyrics"
+
+    basic_transcriber.fetch_lyrics()
+
+    # Verify lyrics fetching was called
+    mock_genius_provider.fetch_lyrics.assert_called_once_with("Test Artist", "Test Song")
+    mock_spotify_provider.fetch_lyrics.assert_not_called()
+
+    # Verify results
+    assert basic_transcriber.results.lyrics_text == "Test lyrics"
+    assert basic_transcriber.results.lyrics_source == "genius"
+    assert basic_transcriber.results.lyrics_genius == "Test lyrics"
+
+
+def test_fetch_lyrics_fallback(basic_transcriber, mock_genius_provider, mock_spotify_provider):
+    """Test fallback to secondary provider when primary fails"""
+    mock_genius_provider.fetch_lyrics.return_value = None
+    mock_spotify_provider.fetch_lyrics.return_value = "Spotify lyrics"
+
+    basic_transcriber.fetch_lyrics()
+
+    # Verify both providers were tried in order
+    mock_genius_provider.fetch_lyrics.assert_called_once_with("Test Artist", "Test Song")
+    mock_spotify_provider.fetch_lyrics.assert_called_once_with("Test Artist", "Test Song")
+
+    # Verify results use fallback provider
+    assert basic_transcriber.results.lyrics_text == "Spotify lyrics"
+    assert basic_transcriber.results.lyrics_source == "spotify"
+    assert basic_transcriber.results.lyrics_spotify == "Spotify lyrics"
+
+
+def test_fetch_lyrics_all_fail(basic_transcriber, mock_genius_provider, mock_spotify_provider):
+    """Test handling when all providers fail"""
+    mock_genius_provider.fetch_lyrics.return_value = None
+    mock_spotify_provider.fetch_lyrics.return_value = None
+
+    basic_transcriber.fetch_lyrics()
+
+    # Verify all providers were tried
+    mock_genius_provider.fetch_lyrics.assert_called_once()
+    mock_spotify_provider.fetch_lyrics.assert_called_once()
+
+    # Verify results remain None
+    assert basic_transcriber.results.lyrics_text is None
+    assert basic_transcriber.results.lyrics_source is None
+    assert basic_transcriber.results.lyrics_genius is None
+    assert basic_transcriber.results.lyrics_spotify is None

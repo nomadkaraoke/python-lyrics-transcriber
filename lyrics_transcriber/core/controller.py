@@ -5,7 +5,9 @@ from typing import Dict, Optional
 from ..transcribers.base_transcriber import BaseTranscriber
 from ..transcribers.audioshake import AudioShakeTranscriber, AudioShakeConfig
 from ..transcribers.whisper import WhisperTranscriber, WhisperConfig
-from .fetcher import LyricsFetcher, LyricsFetcherConfig
+from ..lyrics.base_lyrics_provider import BaseLyricsProvider, LyricsProviderConfig
+from ..lyrics.genius import GeniusProvider
+from ..lyrics.spotify import SpotifyProvider
 from ..output.generator import OutputGenerator, OutputGeneratorConfig
 from .corrector import LyricsCorrector, TranscriptionData, CorrectionResult
 
@@ -79,7 +81,8 @@ class LyricsTranscriber:
         transcriber_config: Optional[TranscriberConfig] = None,
         lyrics_config: Optional[LyricsConfig] = None,
         output_config: Optional[OutputConfig] = None,
-        lyrics_fetcher: Optional[LyricsFetcher] = None,
+        transcribers: Optional[Dict[str, BaseTranscriber]] = None,
+        lyrics_providers: Optional[Dict[str, BaseLyricsProvider]] = None,
         corrector: Optional[LyricsCorrector] = None,
         output_generator: Optional[OutputGenerator] = None,
         logger: Optional[logging.Logger] = None,
@@ -121,8 +124,8 @@ class LyricsTranscriber:
         self.results = TranscriptionResult()
 
         # Initialize components (with dependency injection)
-        self.transcribers = self._initialize_transcribers()
-        self.lyrics_fetcher = lyrics_fetcher or self._initialize_lyrics_fetcher()
+        self.transcribers = transcribers or self._initialize_transcribers()
+        self.lyrics_providers = lyrics_providers or self._initialize_lyrics_providers()
         self.corrector = corrector or LyricsCorrector(logger=self.logger)
         self.output_generator = output_generator or self._initialize_output_generator()
 
@@ -158,14 +161,23 @@ class LyricsTranscriber:
 
         return transcribers
 
-    def _initialize_lyrics_fetcher(self) -> LyricsFetcher:
-        """Initialize lyrics fetching service."""
-        return LyricsFetcher(
-            config=LyricsFetcherConfig(
-                genius_api_token=self.lyrics_config.genius_api_token, spotify_cookie=self.lyrics_config.spotify_cookie
-            ),
-            logger=self.logger,
-        )
+    def _initialize_lyrics_providers(self) -> Dict[str, BaseLyricsProvider]:
+        """Initialize available lyrics providers."""
+        providers = {}
+
+        if self.lyrics_config.genius_api_token:
+            self.logger.debug("Initializing Genius lyrics provider")
+            providers["genius"] = GeniusProvider(api_token=self.lyrics_config.genius_api_token, logger=self.logger)
+        else:
+            self.logger.debug("Skipping Genius provider - no API token provided")
+
+        if self.lyrics_config.spotify_cookie:
+            self.logger.debug("Initializing Spotify lyrics provider")
+            providers["spotify"] = SpotifyProvider(cookie=self.lyrics_config.spotify_cookie, logger=self.logger)
+        else:
+            self.logger.debug("Skipping Spotify provider - no cookie provided")
+
+        return providers
 
     def _initialize_output_generator(self) -> OutputGenerator:
         """Initialize output generation service."""
@@ -216,23 +228,32 @@ class LyricsTranscriber:
             raise
 
     def fetch_lyrics(self) -> None:
-        """Fetch lyrics from online sources."""
+        """Fetch lyrics from available providers."""
         self.logger.info(f"Fetching lyrics for {self.artist} - {self.title}")
 
         try:
-            lyrics_result = self.lyrics_fetcher.fetch_lyrics(self.artist, self.title)
+            for name, provider in self.lyrics_providers.items():
+                try:
+                    lyrics = provider.fetch_lyrics(self.artist, self.title)
+                    if lyrics:
+                        # Update results
+                        self.results.lyrics_text = lyrics
+                        self.results.lyrics_source = name
 
-            # Update results
-            self.results.lyrics_text = lyrics_result["lyrics"]
-            self.results.lyrics_source = lyrics_result["source"]
-            self.results.lyrics_genius = lyrics_result["genius_lyrics"]
-            self.results.lyrics_spotify = lyrics_result["spotify_lyrics"]
-            self.results.spotify_lyrics_data = lyrics_result.get("spotify_lyrics_data")
+                        # Store provider-specific results
+                        if name == "genius":
+                            self.results.lyrics_genius = lyrics
+                        elif name == "spotify":
+                            self.results.lyrics_spotify = lyrics
 
-            if lyrics_result["lyrics"]:
-                self.logger.info(f"Successfully fetched lyrics from {lyrics_result['source']}")
-            else:
-                self.logger.warning("No lyrics found from any source")
+                        self.logger.info(f"Successfully fetched lyrics from {name}")
+                        return  # Exit after first successful fetch
+
+                except Exception as e:
+                    self.logger.error(f"Failed to fetch lyrics from {name}: {str(e)}")
+                    continue
+
+            self.logger.warning("No lyrics found from any source")
 
         except Exception as e:
             self.logger.error(f"Failed to fetch lyrics: {str(e)}")

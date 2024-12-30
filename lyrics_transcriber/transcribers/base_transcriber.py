@@ -15,11 +15,15 @@ class Word:
     text: str
     start_time: float
     end_time: float
-    confidence: float = 1.0
+    confidence: Optional[float] = None
 
     def to_dict(self) -> Dict[str, Any]:
         """Convert Word to dictionary for JSON serialization."""
-        return asdict(self)
+        d = asdict(self)
+        # Remove confidence from output if it's None
+        if d["confidence"] is None:
+            del d["confidence"]
+        return d
 
 
 @dataclass
@@ -46,6 +50,7 @@ class TranscriptionData:
     """Structured container for transcription results."""
 
     segments: List[LyricsSegment]
+    words: List[Word]
     text: str
     source: str  # e.g., "whisper", "audioshake"
     metadata: Optional[Dict[str, Any]] = None
@@ -54,6 +59,7 @@ class TranscriptionData:
         """Convert TranscriptionData to dictionary for JSON serialization."""
         return {
             "segments": [segment.to_dict() for segment in self.segments],
+            "words": [word.to_dict() for word in self.words],
             "text": self.text,
             "source": self.source,
             "metadata": self.metadata,
@@ -113,7 +119,7 @@ class BaseTranscriber(ABC):
         """Save raw API response data to cache."""
         self.logger.debug(f"Saving raw API response to cache: {cache_path}")
         with open(cache_path, "w") as f:
-            json.dump(raw_data, f)
+            json.dump(raw_data, f, indent=2)
         self.logger.debug("Cache save completed")
 
     def _load_from_cache(self, cache_path: str) -> Optional[Dict[str, Any]]:
