@@ -1,7 +1,7 @@
 import os
 import logging
-from dataclasses import dataclass
-from typing import Dict, Optional
+from dataclasses import dataclass, field
+from typing import Dict, Optional, Any, List
 from ..transcribers.base_transcriber import BaseTranscriber
 from ..transcribers.audioshake import AudioShakeTranscriber, AudioShakeConfig
 from ..transcribers.whisper import WhisperTranscriber, WhisperConfig
@@ -45,17 +45,11 @@ class OutputConfig:
 class TranscriptionResult:
     """Holds the results of the transcription and correction process."""
 
-    # Lyrics from internet sources
-    lyrics_text: Optional[str] = None
-    lyrics_source: Optional[str] = None
-    lyrics_genius: Optional[str] = None
-    lyrics_spotify: Optional[str] = None
-    spotify_lyrics_data: Optional[Dict] = None
+    # Results from different sources
+    lyrics_results: List[Dict[str, Any]] = field(default_factory=list)
+    transcription_results: List[Dict[str, Any]] = field(default_factory=list)
 
-    # Transcription results
-    transcription_whisper: Optional[TranscriptionData] = None
-    transcription_audioshake: Optional[TranscriptionData] = None
-    transcription_primary: Optional[TranscriptionData] = None
+    # Corrected results
     transcription_corrected: Optional[CorrectionResult] = None
 
     # Output files
@@ -139,23 +133,29 @@ class LyricsTranscriber:
 
         if self.transcriber_config.audioshake_api_token:
             self.logger.debug("Initializing AudioShake transcriber")
-            transcribers["audioshake"] = AudioShakeTranscriber(
-                cache_dir=self.output_config.cache_dir,
-                config=AudioShakeConfig(api_token=self.transcriber_config.audioshake_api_token),
-                logger=self.logger,
-            )
+            transcribers["audioshake"] = {
+                "instance": AudioShakeTranscriber(
+                    cache_dir=self.output_config.cache_dir,
+                    config=AudioShakeConfig(api_token=self.transcriber_config.audioshake_api_token),
+                    logger=self.logger,
+                ),
+                "priority": 1,  # AudioShake has highest priority
+            }
         else:
             self.logger.debug("Skipping AudioShake transcriber - no API token provided")
 
         if self.transcriber_config.runpod_api_key and self.transcriber_config.whisper_runpod_id:
             self.logger.debug("Initializing Whisper transcriber")
-            transcribers["whisper"] = WhisperTranscriber(
-                cache_dir=self.output_config.cache_dir,
-                config=WhisperConfig(
-                    runpod_api_key=self.transcriber_config.runpod_api_key, endpoint_id=self.transcriber_config.whisper_runpod_id
+            transcribers["whisper"] = {
+                "instance": WhisperTranscriber(
+                    cache_dir=self.output_config.cache_dir,
+                    config=WhisperConfig(
+                        runpod_api_key=self.transcriber_config.runpod_api_key, endpoint_id=self.transcriber_config.whisper_runpod_id
+                    ),
+                    logger=self.logger,
                 ),
-                logger=self.logger,
-            )
+                "priority": 2,  # Whisper has lower priority
+            }
         else:
             self.logger.debug("Skipping Whisper transcriber - missing runpod_api_key or whisper_runpod_id")
 
@@ -165,15 +165,22 @@ class LyricsTranscriber:
         """Initialize available lyrics providers."""
         providers = {}
 
-        if self.lyrics_config.genius_api_token:
+        # Create provider config with all necessary parameters
+        provider_config = LyricsProviderConfig(
+            genius_api_token=self.lyrics_config.genius_api_token,
+            spotify_cookie=self.lyrics_config.spotify_cookie,
+            cache_dir=self.output_config.cache_dir,
+        )
+
+        if provider_config.genius_api_token:
             self.logger.debug("Initializing Genius lyrics provider")
-            providers["genius"] = GeniusProvider(api_token=self.lyrics_config.genius_api_token, logger=self.logger)
+            providers["genius"] = GeniusProvider(config=provider_config, logger=self.logger)
         else:
             self.logger.debug("Skipping Genius provider - no API token provided")
 
-        if self.lyrics_config.spotify_cookie:
+        if provider_config.spotify_cookie:
             self.logger.debug("Initializing Spotify lyrics provider")
-            providers["spotify"] = SpotifyProvider(cookie=self.lyrics_config.spotify_cookie, logger=self.logger)
+            providers["spotify"] = SpotifyProvider(config=provider_config, logger=self.logger)
         else:
             self.logger.debug("Skipping Spotify provider - no cookie provided")
 
@@ -213,12 +220,10 @@ class LyricsTranscriber:
             self.transcribe()
 
             # Step 3: Process and correct lyrics
-            if self.results.transcription_primary:
-                self.correct_lyrics()
+            self.correct_lyrics()
 
             # Step 4: Generate outputs
-            if self.results.transcription_corrected:
-                self.generate_outputs()
+            self.generate_outputs()
 
             self.logger.info("Processing completed successfully")
             return self.results
@@ -234,26 +239,17 @@ class LyricsTranscriber:
         try:
             for name, provider in self.lyrics_providers.items():
                 try:
-                    lyrics = provider.fetch_lyrics(self.artist, self.title)
-                    if lyrics:
-                        # Update results
-                        self.results.lyrics_text = lyrics
-                        self.results.lyrics_source = name
-
-                        # Store provider-specific results
-                        if name == "genius":
-                            self.results.lyrics_genius = lyrics
-                        elif name == "spotify":
-                            self.results.lyrics_spotify = lyrics
-
+                    result = provider.fetch_lyrics(self.artist, self.title)
+                    if result:
+                        self.results.lyrics_results.append(result)
                         self.logger.info(f"Successfully fetched lyrics from {name}")
-                        return  # Exit after first successful fetch
 
                 except Exception as e:
                     self.logger.error(f"Failed to fetch lyrics from {name}: {str(e)}")
                     continue
 
-            self.logger.warning("No lyrics found from any source")
+            if not self.results.lyrics_results:
+                self.logger.warning("No lyrics found from any source")
 
         except Exception as e:
             self.logger.error(f"Failed to fetch lyrics: {str(e)}")
@@ -263,26 +259,21 @@ class LyricsTranscriber:
         """Run transcription using all available transcribers."""
         self.logger.info(f"Starting transcription with providers: {list(self.transcribers.keys())}")
 
-        for name, transcriber in self.transcribers.items():
+        for name, transcriber_info in self.transcribers.items():
             self.logger.info(f"Running transcription with {name}")
             try:
-                result = transcriber.transcribe(self.audio_filepath)
-                self.logger.debug(f"Transcription completed for {name}")
-
-                # Store result based on transcriber type
-                if name == "whisper":
-                    self.results.transcription_whisper = result
-                elif name == "audioshake":
-                    self.results.transcription_audioshake = result
-
-                # Use first successful transcription as primary
-                if not self.results.transcription_primary:
-                    self.results.transcription_primary = result
-                    self.logger.debug(f"Set {name} transcription as primary")
+                result = transcriber_info["instance"].transcribe(self.audio_filepath)
+                if result:
+                    # Add the transcriber name and priority to the result
+                    self.results.transcription_results.append({"name": name, "priority": transcriber_info["priority"], "result": result})
+                    self.logger.debug(f"Transcription completed for {name}")
 
             except Exception as e:
                 self.logger.error(f"Transcription failed for {name}: {str(e)}", exc_info=True)
                 continue
+
+        if not self.results.transcription_results:
+            self.logger.warning("No successful transcriptions from any provider")
 
     def correct_lyrics(self) -> None:
         """Run lyrics correction using transcription and internet lyrics."""
@@ -291,26 +282,26 @@ class LyricsTranscriber:
         try:
             # Set input data for correction
             self.corrector.set_input_data(
-                transcription_data_whisper=self.results.transcription_whisper,
-                transcription_data_audioshake=self.results.transcription_audioshake,
-                spotify_lyrics_data_dict=self.results.spotify_lyrics_data,
-                spotify_lyrics_text=self.results.lyrics_spotify,
-                genius_lyrics_text=self.results.lyrics_genius,
+                transcription_results=self.results.transcription_results, lyrics_results=self.results.lyrics_results
             )
 
             # Run correction
             corrected_data = self.corrector.run_corrector()
-            # self.logger.debug(f"Correction result: {corrected_data}")
 
             # Store corrected results
             self.results.transcription_corrected = corrected_data
             self.logger.info("Lyrics correction completed")
 
         except Exception as e:
-            self.logger.error(f"Failed to correct lyrics: {str(e)}", exc_info=True)  # Added exc_info for stack trace
-            # Use uncorrected transcription as fallback
-            self.results.transcription_corrected = self.results.transcription_primary
-            self.logger.warning("Using uncorrected transcription as fallback")
+            self.logger.error(f"Failed to correct lyrics: {str(e)}", exc_info=True)
+            # Use highest priority transcription as fallback
+            if self.results.transcription_results:
+                highest_priority = min(r["priority"] for r in self.results.transcription_results)
+                fallback = next(r["result"] for r in self.results.transcription_results if r["priority"] == highest_priority)
+                self.results.transcription_corrected = fallback
+                self.logger.warning(f"Using highest priority transcription as fallback")
+            else:
+                self.logger.error("No transcription results available for fallback")
 
     def generate_outputs(self) -> None:
         """Generate output files."""

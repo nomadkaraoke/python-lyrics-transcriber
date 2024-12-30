@@ -4,7 +4,7 @@ import os
 import subprocess
 from lyrics_transcriber.output.generator import OutputGenerator, OutputGeneratorConfig, OutputPaths
 from lyrics_transcriber.core.corrector import CorrectionResult
-from lyrics_transcriber.transcribers.base_transcriber import LyricsSegment, Word
+from lyrics_transcriber.lyrics.base_lyrics_provider import LyricsSegment, Word, Word
 
 
 @pytest.fixture

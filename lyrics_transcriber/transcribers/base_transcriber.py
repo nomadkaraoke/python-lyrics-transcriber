@@ -1,48 +1,12 @@
 from abc import ABC, abstractmethod
-from dataclasses import dataclass, asdict
+from dataclasses import dataclass
 from typing import Dict, Any, Optional, Protocol, List, Union
 from pathlib import Path
 import logging
 import os
 import json
 import hashlib
-
-
-@dataclass
-class Word:
-    """Represents a single word with its timing and confidence information."""
-
-    text: str
-    start_time: float
-    end_time: float
-    confidence: Optional[float] = None
-
-    def to_dict(self) -> Dict[str, Any]:
-        """Convert Word to dictionary for JSON serialization."""
-        d = asdict(self)
-        # Remove confidence from output if it's None
-        if d["confidence"] is None:
-            del d["confidence"]
-        return d
-
-
-@dataclass
-class LyricsSegment:
-    """Represents a segment/line of lyrics with timing information."""
-
-    text: str
-    words: List[Word]
-    start_time: float
-    end_time: float
-
-    def to_dict(self) -> Dict[str, Any]:
-        """Convert LyricsSegment to dictionary for JSON serialization."""
-        return {
-            "text": self.text,
-            "words": [word.to_dict() for word in self.words],
-            "start_time": self.start_time,
-            "end_time": self.end_time,
-        }
+from lyrics_transcriber.lyrics.base_lyrics_provider import LyricsSegment, Word
 
 
 @dataclass
@@ -117,7 +81,7 @@ class BaseTranscriber(ABC):
 
     def _save_to_cache(self, cache_path: str, raw_data: Dict[str, Any]) -> None:
         """Save raw API response data to cache."""
-        self.logger.debug(f"Saving raw API response to cache: {cache_path}")
+        self.logger.debug(f"Saving JSON to cache: {cache_path}")
         with open(cache_path, "w") as f:
             json.dump(raw_data, f, indent=2)
         self.logger.debug("Cache save completed")

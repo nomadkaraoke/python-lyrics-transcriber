@@ -204,11 +204,7 @@ class WhisperTranscriber(BaseTranscriber):
         )
 
         # Log the actual config values being used
-        self.logger.debug("Creating DropboxHandler with config values:")
-        self.logger.debug(f"app_key present: {bool(config.app_key)}")
-        self.logger.debug(f"app_secret present: {bool(config.app_secret)}")
-        self.logger.debug(f"refresh_token present: {bool(config.refresh_token)}")
-
+        self.logger.debug("Initializing DropboxHandler with config")
         return DropboxHandler(config=config)
 
     def get_name(self) -> str:
