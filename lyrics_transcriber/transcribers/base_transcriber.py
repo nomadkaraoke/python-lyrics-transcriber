@@ -103,40 +103,40 @@ class BaseTranscriber(ABC):
         self.logger.debug(f"File hash: {hash_result}")
         return hash_result
 
-    def _get_cache_path(self, file_hash: str) -> str:
+    def _get_cache_path(self, file_hash: str, suffix: str) -> str:
         """Get the cache file path for a given file hash."""
-        cache_path = os.path.join(self.cache_dir, f"{self.get_name().lower()}_{file_hash}.json")
+        cache_path = os.path.join(self.cache_dir, f"{self.get_name().lower()}_{file_hash}_{suffix}.json")
         self.logger.debug(f"Cache path: {cache_path}")
         return cache_path
 
-    def _save_to_cache(self, cache_path: str, data: TranscriptionData) -> None:
-        """Save transcription data to cache."""
-        self.logger.debug(f"Saving transcription to cache: {cache_path}")
+    def _save_to_cache(self, cache_path: str, raw_data: Dict[str, Any]) -> None:
+        """Save raw API response data to cache."""
+        self.logger.debug(f"Saving raw API response to cache: {cache_path}")
         with open(cache_path, "w") as f:
-            json.dump(data.to_dict(), f)
+            json.dump(raw_data, f)
         self.logger.debug("Cache save completed")
 
-    def _load_from_cache(self, cache_path: str) -> Optional[TranscriptionData]:
-        """Load transcription data from cache if it exists."""
+    def _load_from_cache(self, cache_path: str) -> Optional[Dict[str, Any]]:
+        """Load raw API response data from cache if it exists."""
         self.logger.debug(f"Attempting to load from cache: {cache_path}")
         try:
             with open(cache_path, "r") as f:
                 data = json.load(f)
-                self.logger.debug("Cache file loaded, reconstructing TranscriptionData")
-                # Reconstruct Word objects
-                segments = []
-                for seg in data["segments"]:
-                    words = [Word(**w) for w in seg["words"]]
-                    segments.append(LyricsSegment(text=seg["text"], words=words, start_time=seg["start_time"], end_time=seg["end_time"]))
-                result = TranscriptionData(segments=segments, text=data["text"], source=data["source"], metadata=data.get("metadata"))
-                self.logger.debug("Cache data successfully reconstructed")
-                return result
+                self.logger.debug("Raw API response loaded from cache")
+                return data
         except FileNotFoundError:
             self.logger.debug("Cache file not found")
             return None
         except json.JSONDecodeError:
             self.logger.warning(f"Cache file {cache_path} is corrupted")
             return None
+
+    def _save_and_convert_result(self, file_hash: str, raw_result: Dict[str, Any]) -> TranscriptionData:
+        """Convert raw result to TranscriptionData, save to cache, and return."""
+        converted_cache_path = self._get_cache_path(file_hash, "converted")
+        converted_result = self._convert_result_format(raw_result)
+        self._save_to_cache(converted_cache_path, converted_result.to_dict())
+        return converted_result
 
     def transcribe(self, audio_filepath: str) -> TranscriptionData:
         """
@@ -156,21 +156,22 @@ class BaseTranscriber(ABC):
 
             # Check cache first
             file_hash = self._get_file_hash(audio_filepath)
-            cache_path = self._get_cache_path(file_hash)
+            raw_cache_path = self._get_cache_path(file_hash, "raw")
 
-            cached_data = self._load_from_cache(cache_path)
-            if cached_data:
-                self.logger.info(f"Using cached transcription for {audio_filepath}")
-                return cached_data
+            raw_data = self._load_from_cache(raw_cache_path)
+            if raw_data:
+                self.logger.info(f"Using cached raw data for {audio_filepath}")
+                return self._save_and_convert_result(file_hash, raw_data)
 
             # If not in cache, perform transcription
             self.logger.info(f"No cache found, transcribing {audio_filepath}")
-            result = self._perform_transcription(audio_filepath)
+            raw_result = self._perform_transcription(audio_filepath)
             self.logger.debug("Transcription completed")
 
-            # Save to cache
-            self._save_to_cache(cache_path, result)
-            return result
+            # Save raw result to cache
+            self._save_to_cache(raw_cache_path, raw_result)
+
+            return self._save_and_convert_result(file_hash, raw_result)
 
         except Exception as e:
             self.logger.error(f"Error during transcription: {str(e)}")
@@ -201,3 +202,8 @@ class BaseTranscriber(ABC):
             self.logger.error(f"Audio file not found: {audio_filepath}")
             raise FileNotFoundError(f"Audio file not found: {audio_filepath}")
         self.logger.debug("Audio file validation successful")
+
+    @abstractmethod
+    def _convert_result_format(self, raw_data: Dict[str, Any]) -> TranscriptionData:
+        """Convert raw API response to TranscriptionData format."""
+        pass  # pragma: no cover

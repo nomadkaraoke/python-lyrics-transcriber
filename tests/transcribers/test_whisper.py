@@ -342,7 +342,7 @@ class TestWhisperTranscriber:
         }
         transcriber.runpod.wait_for_job_result.return_value = raw_data
 
-        result = transcriber.get_transcription_result("job123")
+        result = transcriber._convert_result_format(transcriber.get_transcription_result("job123"))
 
         assert isinstance(result, TranscriptionData)
         assert result.text == "test"

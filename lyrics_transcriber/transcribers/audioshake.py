@@ -147,36 +147,37 @@ class AudioShakeTranscriber(BaseTranscriber):
 
         return job_id
 
-    def get_transcription_result(self, job_id: str) -> TranscriptionData:
-        """Gets the results for a previously started job."""
+    def get_transcription_result(self, job_id: str) -> Dict[str, Any]:
+        """Gets the raw results for a previously started job."""
         self.logger.debug(f"Entering get_transcription_result() for job ID: {job_id}")
 
         # Wait for job completion
         job_data = self.api.wait_for_job_result(job_id)
-        self.logger.debug("Job completed. Processing results...")
-
-        # Process and return in standard format
-        result = self._convert_result_format(job_data)
-        self.logger.debug("Results processed successfully")
-        return result
-
-    def _convert_result_format(self, job_data: Dict[str, Any]) -> TranscriptionData:
-        """Process raw API response into standard format."""
-        self.logger.debug(f"Processing result for job {job_data['id']}")
+        self.logger.debug("Job completed. Getting results...")
 
         output_asset = next((asset for asset in job_data.get("outputAssets", []) if asset["name"] == "alignment.json"), None)
-
         if not output_asset:
             raise TranscriptionError("Required output not found in job results")
 
         # Fetch transcription data
         response = requests.get(output_asset["link"])
         response.raise_for_status()
-        raw_data = response.json()
 
-        # Convert to standard format
+        # Return combined raw data
+        raw_data = {"job_data": job_data, "transcription": response.json()}
+
+        self.logger.debug("Raw results retrieved successfully")
+        return raw_data
+
+    def _convert_result_format(self, raw_data: Dict[str, Any]) -> TranscriptionData:
+        """Process raw API response into standard format."""
+        self.logger.debug(f"Processing result for job {raw_data['job_data']['id']}")
+
+        transcription_data = raw_data["transcription"]
+        job_data = raw_data["job_data"]
+
         segments = []
-        for line in raw_data.get("lines", []):
+        for line in transcription_data.get("lines", []):
             words = [
                 Word(
                     text=word["text"],
@@ -198,9 +199,9 @@ class AudioShakeTranscriber(BaseTranscriber):
 
         return TranscriptionData(
             segments=segments,
-            text=raw_data.get("text", ""),
+            text=transcription_data.get("text", ""),
             source=self.get_name(),
-            metadata={"language": "en", "job_id": job_data["id"]},  # AudioShake currently only supports English
+            metadata={"language": "en", "job_id": job_data["id"]},
         )
 
     def get_output_filename(self, suffix: str) -> str:

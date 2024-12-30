@@ -19,12 +19,26 @@ import os
 class MockTranscriber(BaseTranscriber):
     """Mock implementation of BaseTranscriber for testing."""
 
-    def _perform_transcription(self, audio_filepath: str) -> TranscriptionData:
+    def _perform_transcription(self, audio_filepath: str) -> dict:
+        # Now returns raw dictionary instead of TranscriptionData
+        return {
+            "segments": [
+                {"text": "test", "words": [{"text": "test", "start_time": 0.0, "end_time": 1.0}], "start_time": 0.0, "end_time": 1.0}
+            ],
+            "text": "test",
+            "source": self.get_name(),
+            "metadata": {"language": "en"},
+        }
+
+    def _convert_result_format(self, raw_result: dict) -> TranscriptionData:
+        """Convert raw API result to TranscriptionData format."""
+        segments = []
+        for seg in raw_result["segments"]:
+            words = [Word(**w) for w in seg["words"]]
+            segments.append(LyricsSegment(text=seg["text"], words=words, start_time=seg["start_time"], end_time=seg["end_time"]))
+
         return TranscriptionData(
-            segments=[LyricsSegment(text="test", words=[Word(text="test", start_time=0.0, end_time=1.0)], start_time=0.0, end_time=1.0)],
-            text="test",
-            source=self.get_name(),
-            metadata={"language": "en"},
+            segments=segments, text=raw_result["text"], source=raw_result["source"], metadata=raw_result.get("metadata", {})
         )
 
     def get_name(self) -> str:
@@ -143,17 +157,17 @@ class TestBaseTranscriber:
 
         # Get expected cache path before first transcription
         file_hash = transcriber._get_file_hash(str(audio_file))
-        cache_path = transcriber._get_cache_path(file_hash)
+        raw_cache_path = transcriber._get_cache_path(file_hash, "raw")
 
         # Verify cache doesn't exist initially
-        assert not os.path.exists(cache_path), f"Cache file already exists at {cache_path}"
+        assert not os.path.exists(raw_cache_path), f"Cache file already exists at {raw_cache_path}"
 
         # First transcription should perform the actual transcription
         result1 = transcriber.transcribe(str(audio_file))
         assert result1.text == "test"
 
         # Verify cache was created
-        assert os.path.exists(cache_path), f"Cache file was not created at {cache_path}"
+        assert os.path.exists(raw_cache_path), f"Cache file was not created at {raw_cache_path}"
 
         # Second transcription should use cache
         result2 = transcriber.transcribe(str(audio_file))
@@ -161,7 +175,7 @@ class TestBaseTranscriber:
 
         # Verify logger messages
         transcriber.logger.info.assert_has_calls(
-            [call(f"No cache found, transcribing {audio_file}"), call(f"Using cached transcription for {audio_file}")]
+            [call(f"No cache found, transcribing {audio_file}"), call(f"Using cached raw data for {audio_file}")]
         )
 
     def test_cache_file_structure(self, transcriber, tmp_path):
@@ -173,10 +187,10 @@ class TestBaseTranscriber:
 
         # Verify cache file exists and has correct structure
         file_hash = transcriber._get_file_hash(str(audio_file))
-        cache_path = transcriber._get_cache_path(file_hash)
-        assert os.path.exists(cache_path)
+        raw_cache_path = transcriber._get_cache_path(file_hash, "raw")
+        assert os.path.exists(raw_cache_path)
 
-        with open(cache_path, "r") as f:
+        with open(raw_cache_path, "r") as f:
             cached_data = json.load(f)
             assert "text" in cached_data
             assert "segments" in cached_data
@@ -188,9 +202,9 @@ class TestBaseTranscriber:
 
         # Create invalid cache file
         file_hash = transcriber._get_file_hash(str(audio_file))
-        cache_path = transcriber._get_cache_path(file_hash)
-        os.makedirs(os.path.dirname(cache_path), exist_ok=True)
-        with open(cache_path, "w") as f:
+        raw_cache_path = transcriber._get_cache_path(file_hash, "raw")
+        os.makedirs(os.path.dirname(raw_cache_path), exist_ok=True)
+        with open(raw_cache_path, "w") as f:
             f.write("invalid json")
 
         # Should perform transcription despite invalid cache

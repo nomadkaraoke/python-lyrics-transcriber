@@ -246,14 +246,20 @@ class WhisperTranscriber(BaseTranscriber):
         url = self._upload_and_get_link(temp_flac_filepath, dropbox_path)
         return url, temp_flac_filepath
 
-    def get_transcription_result(self, job_id: str) -> TranscriptionData:
-        """Poll for whisper job completion and return processed results."""
+    def get_transcription_result(self, job_id: str) -> Dict[str, Any]:
+        """Poll for whisper job completion and return raw results."""
         raw_data = self.runpod.wait_for_job_result(job_id)
-        return self._convert_result_format(raw_data, job_id)
 
-    def _convert_result_format(self, raw_data: Dict[str, Any], job_id: str) -> TranscriptionData:
+        # Add job_id to raw data for later use
+        raw_data["job_id"] = job_id
+
+        return raw_data
+
+    def _convert_result_format(self, raw_data: Dict[str, Any]) -> TranscriptionData:
         """Convert API response to standard format."""
         self._validate_response(raw_data)
+
+        job_id = raw_data.get("job_id")
 
         segments = []
         for seg in raw_data["segments"]:

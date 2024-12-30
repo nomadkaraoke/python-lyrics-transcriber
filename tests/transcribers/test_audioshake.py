@@ -218,7 +218,11 @@ class TestAudioShakeTranscriber:
             }
             mock_get.return_value = mock_response
 
-            result = transcriber._convert_result_format(mock_job_data)
+            raw_data = {
+                "job_data": mock_job_data,
+                "transcription": mock_response.json()
+            }
+            result = transcriber._convert_result_format(raw_data)
 
         assert isinstance(result, TranscriptionData)
         assert result.text == "test"
@@ -228,11 +232,38 @@ class TestAudioShakeTranscriber:
         assert result.metadata["language"] == "en"
         assert result.metadata["job_id"] == "job123"
 
-    def test_convert_result_format_missing_asset(self, transcriber):
-        job_data = {"id": "job123", "outputAssets": [{"name": "wrong.json"}]}
+    def test_convert_result_format_missing_asset(self, transcriber, mock_api):
+        """Test that transcription fails when the required output asset is missing"""
+        # Mock a job response without the required 'alignment.json' asset
+        job_data = {
+            "id": "job123",
+            "outputAssets": [
+                {"name": "wrong.json", "link": "http://test.com/wrong"}
+            ]
+        }
+        
+        # Setup mock API response
+        mock_api.wait_for_job_result.return_value = job_data
+        
+        # First test: get_transcription_result should raise the error
+        with pytest.raises(TranscriptionError, match="Required output not found in job results"):
+            transcriber.get_transcription_result("job123")
 
-        with pytest.raises(Exception, match="Required output not found in job results"):
-            transcriber._convert_result_format(job_data)
+        # Second test: even if we bypass that and call _convert_result_format directly,
+        # it should still handle the missing data gracefully
+        raw_data = {
+            "job_data": job_data,
+            "transcription": {}
+        }
+        
+        # Should return empty TranscriptionData rather than raise an error
+        result = transcriber._convert_result_format(raw_data)
+        assert isinstance(result, TranscriptionData)
+        assert result.segments == []
+        assert result.text == ""
+        assert result.source == "AudioShake"
+        assert result.metadata["language"] == "en"
+        assert result.metadata["job_id"] == "job123"
 
     def test_transcribe_full_flow(self, transcriber, mock_api, tmp_path):
         # Clear the cache directory first
@@ -277,19 +308,19 @@ class TestAudioShakeTranscriber:
     def test_convert_result_format_empty_segments(self, transcriber):
         """Test processing result with empty segment data"""
         job_data = {"id": "job123", "outputAssets": [{"name": "alignment.json", "link": "http://test.com/result"}]}
+        transcription_data = {
+            "lines": [
+                {"text": "", "words": []},  # Empty words
+                {"text": "test", "words": [{"text": "test", "start": 0.0, "end": 1.0}]},  # Complete
+            ],
+            "text": "test",
+        }
+        raw_data = {
+            "job_data": job_data,
+            "transcription": transcription_data
+        }
 
-        with patch("requests.get") as mock_get:
-            mock_response = Mock()
-            mock_response.json.return_value = {
-                "lines": [
-                    {"text": "", "words": []},  # Empty words
-                    {"text": "test", "words": [{"text": "test", "start": 0.0, "end": 1.0}]},  # Complete
-                ],
-                "text": "test",
-            }
-            mock_get.return_value = mock_response
-
-            result = transcriber._convert_result_format(job_data)
+        result = transcriber._convert_result_format(raw_data)
 
         assert isinstance(result, TranscriptionData)
         assert len(result.segments) == 2
@@ -300,14 +331,12 @@ class TestAudioShakeTranscriber:
     def test_convert_result_format_malformed_response(self, transcriber):
         """Test handling of malformed API responses"""
         job_data = {"id": "job123", "outputAssets": [{"name": "alignment.json", "link": "http://test.com/result"}]}
+        raw_data = {
+            "job_data": job_data,
+            "transcription": {}  # Empty transcription data
+        }
 
-        with patch("requests.get") as mock_get:
-            mock_response = Mock()
-            # Missing both lines and text fields
-            mock_response.json.return_value = {}
-            mock_get.return_value = mock_response
-
-            result = transcriber._convert_result_format(job_data)
+        result = transcriber._convert_result_format(raw_data)
 
         assert isinstance(result, TranscriptionData)
         assert result.segments == []
