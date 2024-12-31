@@ -248,3 +248,93 @@ class TestOutputGenerator:
             generator.generate_video("sub.ass", "audio.mp3", "test")
 
         generator.logger.error.assert_called_with("Failed to generate video: Command '['ffmpeg']' returned non-zero exit status 1.")
+
+    @patch("builtins.open")
+    def test_write_plain_lyrics_error(self, mock_open, generator):
+        """Test error handling in plain lyrics file writing."""
+        # Setup
+        mock_open.side_effect = IOError("Permission denied")
+        lyrics_data = Mock()
+        lyrics_data.lyrics = "Test lyrics"
+
+        # Execute and verify
+        with pytest.raises(IOError, match="Permission denied"):
+            generator.write_plain_lyrics(lyrics_data, "test")
+
+        generator.logger.error.assert_called_with("Failed to write plain lyrics file: Permission denied")
+
+    @patch("builtins.open")
+    def test_write_plain_lyrics_success(self, mock_open, generator):
+        """Test successful plain lyrics file writing."""
+        # Setup
+        mock_file = mock_open.return_value.__enter__.return_value
+        lyrics_data = Mock()
+        lyrics_data.lyrics = "Test lyrics"
+
+        # Execute
+        result = generator.write_plain_lyrics(lyrics_data, "test")
+
+        # Verify
+        assert result == "/test/output/test.txt"
+        mock_file.write.assert_called_once_with("Test lyrics")
+        generator.logger.info.assert_has_calls(
+            [call("Writing plain lyrics file"), call("Plain lyrics file generated: /test/output/test.txt")]
+        )
+
+    @patch("builtins.open")
+    def test_write_plain_lyrics_from_correction_error(self, mock_open, generator):
+        """Test error handling in corrected lyrics file writing."""
+        # Setup
+        mock_open.side_effect = IOError("Permission denied")
+        correction_result = Mock()
+        correction_result.text = "Test corrected lyrics"
+
+        # Execute and verify
+        with pytest.raises(IOError, match="Permission denied"):
+            generator.write_plain_lyrics_from_correction(correction_result, "test")
+
+        generator.logger.error.assert_called_with("Failed to write corrected lyrics file: Permission denied")
+
+    @patch("builtins.open")
+    def test_write_plain_lyrics_from_correction_success(self, mock_open, generator):
+        """Test successful corrected lyrics file writing."""
+        # Setup
+        mock_file = mock_open.return_value.__enter__.return_value
+        correction_result = Mock()
+        correction_result.text = "Test corrected lyrics"
+
+        # Execute
+        result = generator.write_plain_lyrics_from_correction(correction_result, "test")
+
+        # Verify
+        assert result == "/test/output/test.txt"
+        mock_file.write.assert_called_once_with("Test corrected lyrics")
+        generator.logger.info.assert_has_calls(
+            [call("Writing corrected lyrics file"), call("Corrected lyrics file generated: /test/output/test.txt")]
+        )
+
+
+class TestOutputGeneratorConfig:
+    def test_valid_config(self):
+        """Test valid configuration."""
+        config = OutputGeneratorConfig(output_dir="/test/output", cache_dir="/test/cache")
+        assert config.output_dir == "/test/output"
+        assert config.cache_dir == "/test/cache"
+        assert config.video_resolution == "360p"
+        assert config.video_background_color == "black"
+        assert config.video_background_image is None
+
+    def test_missing_output_dir(self):
+        """Test configuration with missing output directory."""
+        with pytest.raises(ValueError, match="output_dir must be provided"):
+            OutputGeneratorConfig(output_dir="", cache_dir="/test/cache")
+
+    def test_missing_cache_dir(self):
+        """Test configuration with missing cache directory."""
+        with pytest.raises(ValueError, match="cache_dir must be provided"):
+            OutputGeneratorConfig(output_dir="/test/output", cache_dir="")
+
+    def test_invalid_background_image(self):
+        """Test configuration with non-existent background image."""
+        with pytest.raises(FileNotFoundError, match="Video background image not found"):
+            OutputGeneratorConfig(output_dir="/test/output", cache_dir="/test/cache", video_background_image="/nonexistent/image.jpg")

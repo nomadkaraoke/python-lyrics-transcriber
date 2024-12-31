@@ -2,7 +2,7 @@ import pytest
 import os
 import requests
 import tempfile
-from unittest.mock import Mock, patch, call
+from unittest.mock import Mock, patch, call, mock_open
 from lyrics_transcriber.transcribers.whisper import (
     WhisperConfig,
     RunPodWhisperAPI,
@@ -57,9 +57,11 @@ class TestWhisperConfig:
 
 class TestRunPodWhisperAPI:
     @pytest.fixture
-    def api(self, config, mock_logger):
-        api = RunPodWhisperAPI(config, mock_logger)
-        api.cancel_job = Mock()
+    def api(self):
+        """Create a RunPodWhisperAPI instance with mocked dependencies."""
+        config = WhisperConfig(runpod_api_key="test_key", endpoint_id="test_endpoint")
+        logger = Mock()
+        api = RunPodWhisperAPI(config=config, logger=logger)
         return api
 
     def test_init_without_required_config(self, mock_logger):
@@ -152,27 +154,99 @@ class TestRunPodWhisperAPI:
     @patch("requests.post")
     def test_cancel_job(self, mock_post, api):
         """Test job cancellation"""
-        # Restore original cancel_job method
-        del api.cancel_job
-
         mock_response = Mock()
+        mock_response.raise_for_status.return_value = None
         mock_post.return_value = mock_response
 
         api.cancel_job("job123")
 
-        mock_post.assert_called_once()
+        # Verify the API call
+        expected_url = f"https://api.runpod.ai/v2/{api.config.endpoint_id}/cancel/job123"
+        expected_headers = {"Authorization": f"Bearer {api.config.runpod_api_key}"}
+        mock_post.assert_called_once_with(expected_url, headers=expected_headers)
 
     @patch("requests.post")
     def test_cancel_job_error(self, mock_post, api):
-        """Test job cancellation error handling"""
-        # Restore original cancel_job method
-        del api.cancel_job
-
+        """Test error handling in cancel_job"""
+        # Configure the mock to raise an exception
         mock_post.side_effect = requests.RequestException("API Error")
 
-        api.cancel_job("job123")  # Should not raise exception
+        # Should not raise exception
+        api.cancel_job("job123")
 
-        api.logger.warning.assert_called_once()
+        # Verify the warning was logged
+        api.logger.warning.assert_called_once_with("Failed to cancel job job123: API Error")
+
+    @patch("requests.post")
+    def test_cancel_job_success(self, mock_post, api):
+        """Test successful job cancellation"""
+        mock_response = Mock()
+        mock_response.raise_for_status.return_value = None
+        mock_post.return_value = mock_response
+
+        api.cancel_job("job123")
+
+        # Verify no warnings were logged
+        api.logger.warning.assert_not_called()
+
+    @patch("requests.get")
+    @patch("time.sleep", return_value=None)
+    def test_wait_for_job_result_periodic_logging(self, mock_sleep, mock_get, api):
+        """Test periodic status logging during job polling"""
+        # Set up mock responses
+        mock_responses = [
+            Mock(json=lambda: {"status": "IN_PROGRESS"}),
+            Mock(json=lambda: {"status": "IN_PROGRESS"}),
+            Mock(json=lambda: {"status": "COMPLETED", "output": {"result": "test"}}),
+        ]
+        mock_get.side_effect = mock_responses
+
+        # Mock time to trigger periodic logging
+        with patch("time.time") as mock_time:
+            mock_time.side_effect = [0, 30, 61, 90]  # First log at 61 seconds
+            result = api.wait_for_job_result("job123")
+
+        assert result == {"result": "test"}
+        # Verify periodic logging occurred
+        api.logger.info.assert_has_calls(
+            [call("Getting job result for job job123"), call("Still waiting for transcription... Elapsed time: 1 minutes")]
+        )
+
+    @patch("requests.get")
+    @patch("time.sleep", return_value=None)
+    @patch("time.time")
+    def test_wait_for_job_result_timeout(self, mock_time, mock_sleep, mock_get, api):
+        """Test job result timeout"""
+        # Set up time to trigger timeout
+        mock_time.side_effect = [0, 601]  # Start at 0, then jump past timeout
+        api.config.timeout_minutes = 10
+
+        # Set up status response
+        mock_response = Mock()
+        mock_response.json.return_value = {"status": "IN_PROGRESS"}
+        mock_get.return_value = mock_response
+
+        with pytest.raises(TranscriptionError, match="Transcription timed out after 10 minutes"):
+            api.wait_for_job_result("job123")
+
+    @patch("requests.get")
+    @patch("time.sleep", return_value=None)
+    def test_wait_for_job_result_failure(self, mock_sleep, mock_get, api):
+        """Test handling of failed job"""
+        mock_response = Mock()
+        mock_response.json.return_value = {"status": "FAILED", "error": "Test error message"}
+        mock_get.return_value = mock_response
+
+        with pytest.raises(TranscriptionError, match="Transcription failed: Test error message"):
+            api.wait_for_job_result("job123")
+
+    @patch("requests.get")
+    def test_get_job_status_error(self, mock_get, api):
+        """Test error handling in get_job_status"""
+        mock_get.side_effect = requests.RequestException("API Error")
+
+        with pytest.raises(requests.RequestException):
+            api.get_job_status("job123")
 
 
 class TestAudioProcessor:
@@ -248,17 +322,16 @@ class TestWhisperTranscriber:
     def test_get_name(self, transcriber):
         assert transcriber.get_name() == "Whisper"
 
-    def test_upload_and_get_link_new_file(self, transcriber, tmp_path):
-        test_file = tmp_path / "test.flac"
-        test_file.write_text("test content")
-
-        # Mock the storage methods
+    @patch("builtins.open", new_callable=mock_open, read_data="test data")
+    def test_upload_and_get_link_new_file(self, mock_file, transcriber):
+        """Test uploading a new file and getting its link"""
         transcriber.storage.file_exists.return_value = False
-        transcriber.storage.create_or_get_shared_link.return_value = "https://test.com/audio.mp3"
+        transcriber.storage.create_or_get_shared_link.return_value = "https://test.com/audio.flac"
 
-        url = transcriber._upload_and_get_link(str(test_file), "/test/path.flac")
+        result = transcriber._upload_and_get_link("test.flac", "/test/path.flac")
 
-        assert url == "https://test.com/audio.mp3"
+        assert result == "https://test.com/audio.flac"
+        mock_file.assert_called_once_with("test.flac", "rb")
         transcriber.storage.upload_with_retry.assert_called_once()
         transcriber.storage.create_or_get_shared_link.assert_called_once_with("/test/path.flac")
 
@@ -418,3 +491,94 @@ class TestWhisperTranscriber:
         assert isinstance(result, TranscriptionData)
         assert result.text == "test"
         assert len(result.segments) == 1
+
+    def test_initialize_storage_without_config(self, transcriber, mock_logger):
+        """Test storage initialization without environment variables"""
+        with patch.dict(os.environ, clear=True):
+            with patch("lyrics_transcriber.storage.dropbox.DropboxHandler") as mock_handler:
+                # Configure the mock to return itself when instantiated
+                mock_instance = Mock()
+                mock_handler.return_value = mock_instance
+
+                storage = transcriber._initialize_storage()
+
+                assert storage == mock_instance
+                mock_handler.assert_called_once()
+
+    @patch("requests.post")
+    def test_transcribe_api_error(self, mock_post, transcriber, tmp_path):
+        """Test transcription with API error"""
+        # Create test file
+        test_file = tmp_path / "test.wav"
+        test_file.write_text("test content")
+
+        # Mock audio processor methods
+        transcriber.audio_processor.get_file_md5.return_value = "test_hash"
+        transcriber.audio_processor.convert_to_flac.return_value = str(tmp_path / "test.flac")
+
+        # Create the test FLAC file
+        test_flac = tmp_path / "test.flac"
+        test_flac.write_text("test flac content")
+
+        # Mock storage methods
+        transcriber.storage.file_exists.return_value = False
+        transcriber.storage.create_or_get_shared_link.return_value = "https://test.com/audio.flac"
+
+        # Mock RunPod API error
+        transcriber.runpod.submit_job.side_effect = requests.RequestException("API Error")
+
+        with pytest.raises(TranscriptionError, match="Failed to submit job: API Error"):
+            transcriber.transcribe(str(test_file))
+
+    def test_transcribe_invalid_response(self, transcriber, tmp_path):
+        """Test transcription with invalid API response"""
+        # Create test file
+        test_file = tmp_path / "test.wav"
+        test_file.write_text("test content")
+
+        # Mock audio processor methods
+        transcriber.audio_processor.get_file_md5.return_value = "test_hash"
+        transcriber.audio_processor.convert_to_flac.return_value = str(tmp_path / "test.flac")
+
+        # Create the test FLAC file
+        test_flac = tmp_path / "test.flac"
+        test_flac.write_text("test flac content")
+
+        # Mock storage methods
+        transcriber.storage.file_exists.return_value = False
+        transcriber.storage.create_or_get_shared_link.return_value = "https://test.com/audio.flac"
+
+        # Mock RunPod responses
+        transcriber.runpod.submit_job.return_value = "job123"
+        transcriber.runpod.wait_for_job_result.return_value = {"invalid": "response"}
+
+        # Mock the result to be a proper dictionary
+        mock_result = {"invalid": "response"}
+        transcriber.runpod.wait_for_job_result.return_value = mock_result
+
+        with pytest.raises(TranscriptionError, match="Response missing required 'segments' field"):
+            transcriber.transcribe(str(test_file))
+
+    @patch("os.remove")
+    def test_cleanup_temporary_files_error(self, mock_remove, transcriber, tmp_path):
+        """Test error handling during file cleanup"""
+        test_file = tmp_path / "test.flac"
+        test_file.write_text("test content")
+
+        # Simulate permission error during removal
+        mock_remove.side_effect = OSError("Permission denied")
+
+        transcriber._cleanup_temporary_files(str(test_file))
+
+        # Verify warning was logged
+        transcriber.logger.warning.assert_called_once_with(f"Failed to clean up temporary file {str(test_file)}: Permission denied")
+
+    def test_validate_response_missing_fields(self, transcriber):
+        """Test validation of responses missing required fields"""
+        # Test missing segments
+        with pytest.raises(TranscriptionError, match="Response missing required 'segments' field"):
+            transcriber._validate_response({"transcription": "test"})
+
+        # Test missing transcription
+        with pytest.raises(TranscriptionError, match="Response missing required 'transcription' field"):
+            transcriber._validate_response({"segments": []})

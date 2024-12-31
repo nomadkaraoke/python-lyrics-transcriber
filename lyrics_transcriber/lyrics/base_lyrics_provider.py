@@ -189,12 +189,12 @@ class BaseLyricsProvider(ABC):
     @abstractmethod
     def _fetch_data_from_source(self, artist: str, title: str) -> Optional[Dict[str, Any]]:
         """Fetch raw data from the source (implemented by subclasses)."""
-        raise NotImplementedError("Subclasses must implement _fetch_data_from_source")
+        raise NotImplementedError("Subclasses must implement _fetch_data_from_source")  # pragma: no cover
 
     @abstractmethod
     def _convert_result_format(self, raw_data: Dict[str, Any]) -> LyricsData:
         """Convert raw API response to standardized format (implemented by subclasses)."""
-        raise NotImplementedError("Subclasses must implement _convert_result_format")
+        raise NotImplementedError("Subclasses must implement _convert_result_format")  # pragma: no cover
 
     def get_name(self) -> str:
         """Return the name of this lyrics provider."""

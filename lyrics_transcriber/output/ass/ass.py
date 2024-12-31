@@ -1,423 +1,26 @@
 #!/usr/bin/env python
 import os, re, sys, functools, collections
+from lyrics_transcriber.output.ass.event import Event
+from lyrics_transcriber.output.ass.style import Style
+from lyrics_transcriber.output.ass.formatters import Formatters
+from lyrics_transcriber.output.ass.constants import (
+    ALIGN_BOTTOM_LEFT,
+    ALIGN_BOTTOM_CENTER,
+    ALIGN_BOTTOM_RIGHT,
+    ALIGN_MIDDLE_LEFT,
+    ALIGN_MIDDLE_CENTER,
+    ALIGN_MIDDLE_RIGHT,
+    ALIGN_TOP_LEFT,
+    ALIGN_TOP_CENTER,
+    ALIGN_TOP_RIGHT,
+    LEGACY_ALIGNMENT_TO_REGULAR,
+)
 
 version_info = (1, 0, 4)
 
 
 # Advanced SubStation Alpha read/write/modification class
 class ASS:
-    class Formatters:
-        __re_color_format = re.compile(r"([a-fA-F0-9]{1,8})", re.U)
-        __re_tag_number = re.compile(
-            r"^\s*([\+\-]?(?:[0-9]+(?:\.[0-9]*)?|\.[0-9]+))", re.U
-        )
-
-        @classmethod
-        def same(cls, val, *args):
-            return val
-
-        @classmethod
-        def color_to_str(cls, val, *args):
-            return "&H{0:02X}{1:02X}{2:02X}{3:02X}".format(
-                255 - val[3], val[2], val[1], val[0]
-            )
-
-        @classmethod
-        def str_to_color(cls, val, *args):
-            match = cls.__re_color_format.search(val)
-            if match:
-                hex_val = "{0:>08s}".format(match.group(1))
-                return (
-                    int(hex_val[6:8], 16),  # Red
-                    int(hex_val[4:6], 16),  # Green
-                    int(hex_val[2:4], 16),  # Blue
-                    255 - int(hex_val[0:2], 16),  # Alpha
-                )
-            else:
-                return (255, 255, 255, 255)
-
-        @classmethod
-        def n1bool_to_str(cls, val, *args):
-            if val:
-                return "-1"
-            return "0"
-
-        @classmethod
-        def str_to_n1bool(cls, val, *args):
-            try:
-                val = int(val, 10)
-            except ValueError:
-                return False
-            return val != 0
-
-        @classmethod
-        def integer_to_str(cls, val, *args):
-            return str(int(val))
-
-        @classmethod
-        def str_to_integer(cls, val, *args):
-            try:
-                return int(val, 10)
-            except ValueError:
-                return 0
-
-        @classmethod
-        def number_to_str(cls, val, *args):
-            if int(val) == val:
-                return str(int(val))
-                # No decimal
-            return str(val)
-
-        @classmethod
-        def str_to_number(cls, val, *args):
-            try:
-                return float(val)
-            except ValueError:
-                return 0.0
-
-        @classmethod
-        def timecode_to_str_generic(
-            cls,
-            timecode,
-            decimal_length=2,
-            seconds_length=2,
-            minutes_length=2,
-            hours_length=1,
-        ):
-            if decimal_length > 0:
-                total_length = seconds_length + decimal_length + 1
-            else:
-                total_length = seconds_length
-
-            tc_parts = [
-                "{{0:0{0:d}d}}".format(hours_length).format(int(timecode // 3600)),
-                "{{0:0{0:d}d}}".format(minutes_length).format(
-                    int((timecode // 60) % 60)
-                ),
-                "{{0:0{0:d}.{1:d}f}}".format(total_length, decimal_length).format(
-                    timecode % 60
-                ),
-            ]
-            return ":".join(tc_parts)
-
-        @classmethod
-        def timecode_to_str(cls, val, *args):
-            return cls.timecode_to_str_generic(val, 2)
-
-        @classmethod
-        def str_to_timecode(cls, val, *args):
-            time = 0.0
-            mult = 1
-
-            for t in reversed(val.split(":")):
-                time += float(t) * mult
-                mult *= 60
-
-            return time
-
-        @classmethod
-        def style_to_str(cls, val, *args):
-            if val is None:
-                return ""
-            return val.Name
-
-        @classmethod
-        def str_to_style(cls, val, style_map, style_constructor, *args):
-            if val in style_map:
-                return style_map[val]
-
-            # Create fake
-            style = style_constructor()
-            style.fake = True
-            style.Name = val
-
-            # Add to map (will not be included in global style list, but allows for duplicate "fake" styles to reference the same object)
-            style_map[style.Name] = style
-
-            # Return the new style
-            return style
-
-        @classmethod
-        def tag_argument_to_number(cls, arg, default_value=None):
-            match = cls.__re_tag_number.match(arg)
-            if match is None:
-                return default_value
-            return float(match.group(1))
-
-    class Style:
-        aliases = {}
-        formatters = None
-        order = [
-            "Name",
-            "Fontname",
-            "Fontsize",
-            "PrimaryColour",
-            "SecondaryColour",
-            "OutlineColour",
-            "BackColour",
-            "Bold",
-            "Italic",
-            "Underline",
-            "StrikeOut",
-            "ScaleX",
-            "ScaleY",
-            "Spacing",
-            "Angle",
-            "BorderStyle",
-            "Outline",
-            "Shadow",
-            "Alignment",
-            "MarginL",
-            "MarginR",
-            "MarginV",
-            "Encoding",
-        ]
-
-        # Constructor
-        def __init__(self):
-            self.type = None
-            self.fake = False
-
-            self.Name = ""
-            self.Fontname = ""
-            self.Fontsize = 1.0
-            self.PrimaryColour = (255, 255, 255, 255)
-            self.SecondaryColour = (255, 255, 255, 255)
-            self.OutlineColour = (255, 255, 255, 255)
-            self.BackColour = (255, 255, 255, 255)
-            self.Bold = False
-            self.Italic = False
-            self.Underline = False
-            self.StrikeOut = False
-            self.ScaleX = 100
-            self.ScaleY = 100
-            self.Spacing = 0
-            self.Angle = 0.0
-            self.BorderStyle = 1
-            self.Outline = 0
-            self.Shadow = 0
-            self.Alignment = ASS.ALIGN_BOTTOM_CENTER
-            self.MarginL = 0
-            self.MarginR = 0
-            self.MarginV = 0
-            self.Encoding = 0
-
-        def set(self, attribute_name, value, *args):
-            if hasattr(self, attribute_name):
-                if not attribute_name[0].isupper():
-                    return
-            elif attribute_name in self.aliases:
-                attribute_name = self.aliases[attribute_name]
-            else:
-                return
-
-            setattr(
-                self, attribute_name, self.formatters[attribute_name][0](value, *args)
-            )
-
-        def get(self, attribute_name, *args):
-            if hasattr(self, attribute_name):
-                if not attribute_name[0].isupper():
-                    return None
-            elif attribute_name in self.aliases:
-                attribute_name = self.aliases[attribute_name]
-            else:
-                return None
-
-            return self.formatters[attribute_name][1](
-                getattr(self, attribute_name), *args
-            )
-
-        def copy(self, other=None):
-            if other is None:
-                other = self.__class__()
-                obj1 = other
-                obj2 = self
-            else:
-                obj1 = self
-                obj2 = other
-
-            obj1.type = obj2.type
-
-            obj1.Name = obj2.Name
-            obj1.Fontname = obj2.Fontname
-            obj1.Fontsize = obj2.Fontsize
-            obj1.PrimaryColour = obj2.PrimaryColour
-            obj1.SecondaryColour = obj2.SecondaryColour
-            obj1.OutlineColour = obj2.OutlineColour
-            obj1.BackColour = obj2.BackColour
-            obj1.Bold = obj2.Bold
-            obj1.Italic = obj2.Italic
-            obj1.Underline = obj2.Underline
-            obj1.StrikeOut = obj2.StrikeOut
-            obj1.ScaleX = obj2.ScaleX
-            obj1.ScaleY = obj2.ScaleY
-            obj1.Spacing = obj2.Spacing
-            obj1.Angle = obj2.Angle
-            obj1.BorderStyle = obj2.BorderStyle
-            obj1.Outline = obj2.Outline
-            obj1.Shadow = obj2.Shadow
-            obj1.Alignment = obj2.Alignment
-            obj1.MarginL = obj2.MarginL
-            obj1.MarginR = obj2.MarginR
-            obj1.MarginV = obj2.MarginV
-            obj1.Encoding = obj2.Encoding
-
-            return obj1
-
-        def equals(self, other, names_can_differ=False):
-            return (
-                self.type == other.type
-                and not self.fake
-                and not other.fake
-                and not other.fake
-                and (names_can_differ or self.Name == other.Name)
-                and self.Fontname == other.Fontname
-                and self.Fontsize == other.Fontsize
-                and self.PrimaryColour == other.PrimaryColour
-                and self.SecondaryColour == other.SecondaryColour
-                and self.OutlineColour == other.OutlineColour
-                and self.BackColour == other.BackColour
-                and self.Bold == other.Bold
-                and self.Italic == other.Italic
-                and self.Underline == other.Underline
-                and self.StrikeOut == other.StrikeOut
-                and self.ScaleX == other.ScaleX
-                and self.ScaleY == other.ScaleY
-                and self.Spacing == other.Spacing
-                and self.Angle == other.Angle
-                and self.BorderStyle == other.BorderStyle
-                and self.Outline == other.Outline
-                and self.Shadow == other.Shadow
-                and self.Alignment == other.Alignment
-                and self.MarginL == other.MarginL
-                and self.MarginR == other.MarginR
-                and self.MarginV == other.MarginV
-                and self.Encoding == other.Encoding
-            )
-
-    Style.formatters = {
-        "Name": (Formatters.same, Formatters.same),
-        "Fontname": (Formatters.same, Formatters.same),
-        "Fontsize": (Formatters.str_to_number, Formatters.number_to_str),
-        "PrimaryColour": (Formatters.str_to_color, Formatters.color_to_str),
-        "SecondaryColour": (Formatters.str_to_color, Formatters.color_to_str),
-        "OutlineColour": (Formatters.str_to_color, Formatters.color_to_str),
-        "BackColour": (Formatters.str_to_color, Formatters.color_to_str),
-        "Bold": (Formatters.str_to_n1bool, Formatters.n1bool_to_str),
-        "Italic": (Formatters.str_to_n1bool, Formatters.n1bool_to_str),
-        "Underline": (Formatters.str_to_n1bool, Formatters.n1bool_to_str),
-        "StrikeOut": (Formatters.str_to_n1bool, Formatters.n1bool_to_str),
-        "ScaleX": (Formatters.str_to_integer, Formatters.integer_to_str),
-        "ScaleY": (Formatters.str_to_integer, Formatters.integer_to_str),
-        "Spacing": (Formatters.str_to_integer, Formatters.integer_to_str),
-        "Angle": (Formatters.str_to_number, Formatters.number_to_str),
-        "BorderStyle": (Formatters.str_to_integer, Formatters.integer_to_str),
-        "Outline": (Formatters.str_to_integer, Formatters.integer_to_str),
-        "Shadow": (Formatters.str_to_integer, Formatters.integer_to_str),
-        "Alignment": (Formatters.str_to_integer, Formatters.integer_to_str),
-        "MarginL": (Formatters.str_to_integer, Formatters.integer_to_str),
-        "MarginR": (Formatters.str_to_integer, Formatters.integer_to_str),
-        "MarginV": (Formatters.str_to_integer, Formatters.integer_to_str),
-        "Encoding": (Formatters.str_to_integer, Formatters.integer_to_str),
-    }
-
-    class Event:
-        aliases = {}
-        formatters = None
-        order = [
-            "Layer",
-            "Start",
-            "End",
-            "Style",
-            "Name",
-            "MarginL",
-            "MarginR",
-            "MarginV",
-            "Effect",
-            "Text",
-        ]
-
-        # Constructor
-        def __init__(self):
-            self.type = None
-
-            self.Layer = 0
-            self.Start = 0.0
-            self.End = 0.0
-            self.Style = None
-            self.Name = ""
-            self.MarginL = 0
-            self.MarginR = 0
-            self.MarginV = 0
-            self.Effect = ""
-            self.Text = ""
-
-        def set(self, attribute_name, value, *args):
-            if hasattr(self, attribute_name) and attribute_name[0].isupper():
-                setattr(
-                    self,
-                    attribute_name,
-                    self.formatters[attribute_name][0](value, *args),
-                )
-
-        def get(self, attribute_name, *args):
-            if hasattr(self, attribute_name) and attribute_name[0].isupper():
-                return self.formatters[attribute_name][1](
-                    getattr(self, attribute_name), *args
-                )
-            return None
-
-        def copy(self, other=None):
-            if other is None:
-                other = self.__class__()
-                obj1 = other
-                obj2 = self
-            else:
-                obj1 = self
-                obj2 = other
-
-            obj1.type = obj2.type
-
-            obj1.Layer = obj2.Layer
-            obj1.Start = obj2.Start
-            obj1.End = obj2.End
-            obj1.Style = obj2.Style
-            obj1.Name = obj2.Name
-            obj1.MarginL = obj2.MarginL
-            obj1.MarginR = obj2.MarginR
-            obj1.MarginV = obj2.MarginV
-            obj1.Effect = obj2.Effect
-            obj1.Text = obj2.Text
-
-            return obj1
-
-        def equals(self, other):
-            return (
-                self.type == other.type
-                and self.Layer == other.Layer
-                and self.Start == other.Start
-                and self.End == other.End
-                and self.Style is other.Style
-                and self.Name == other.Name
-                and self.MarginL == other.MarginL
-                and self.MarginR == other.MarginR
-                and self.MarginV == other.MarginV
-                and self.Effect == other.Effect
-                and self.Text == other.Text
-            )
-
-        def same_style(self, other):
-            return (
-                self.type == other.type
-                and self.Layer == other.Layer
-                and self.Style is other.Style
-                and self.Name == other.Name
-                and self.MarginL == other.MarginL
-                and self.MarginR == other.MarginR
-                and self.MarginV == other.MarginV
-                and self.Effect == other.Effect
-            )
 
     Event.formatters = {
         "Layer": (Formatters.str_to_integer, Formatters.integer_to_str),
@@ -437,16 +40,6 @@ class ASS:
         def __init__(self, key, value):
             self.key = key
             self.value = value
-
-    ALIGN_BOTTOM_LEFT = 1
-    ALIGN_BOTTOM_CENTER = 2
-    ALIGN_BOTTOM_RIGHT = 3
-    ALIGN_MIDDLE_LEFT = 4
-    ALIGN_MIDDLE_CENTER = 5
-    ALIGN_MIDDLE_RIGHT = 6
-    ALIGN_TOP_LEFT = 7
-    ALIGN_TOP_CENTER = 8
-    ALIGN_TOP_RIGHT = 9
 
     __re_ass_read_section_label = re.compile(r"^(?:\[(.+)\])$", re.U)
     __re_ass_read_key_value = re.compile(r"^([^:]+):\s?(.+)$", re.U)
@@ -525,17 +118,6 @@ class ASS:
     __re_draw_command_split = re.compile(r"\s+")
     __re_draw_commands_ord_min = ord("a")
     __re_draw_commands_ord_max = ord("z")
-    __legacy_alignment_to_regular = {
-        "1": ALIGN_BOTTOM_LEFT,
-        "2": ALIGN_BOTTOM_CENTER,
-        "3": ALIGN_BOTTOM_RIGHT,
-        "5": ALIGN_TOP_LEFT,
-        "6": ALIGN_TOP_CENTER,
-        "7": ALIGN_TOP_RIGHT,
-        "9": ALIGN_MIDDLE_LEFT,
-        "10": ALIGN_MIDDLE_CENTER,
-        "11": ALIGN_MIDDLE_RIGHT,
-    }
 
     @classmethod
     def __split_line(cls, line, split_time, naive):
@@ -561,7 +143,7 @@ class ASS:
         return (before, after)
 
     @classmethod
-    def __split_line3(cls, line, split_time, naive):
+    def __split_line3(cls, line, split_time, naive=False):
         if split_time < line.Start or split_time > line.End:
             return None
             # Nothing to split
@@ -628,9 +210,7 @@ class ASS:
         state = {
             "animations": 0,
         }
-        cls.parse_text(
-            text, modify_tag=lambda t: cls.__line_has_animations_modify_tag(state, t)
-        )
+        cls.parse_text(text, modify_tag=lambda t: cls.__line_has_animations_modify_tag(state, t))
         return state["animations"] > 0
 
     @classmethod
@@ -710,13 +290,9 @@ class ASS:
             line = self.events[i]
             if filter_types is None or line.type in filter_types:
                 if full_inclusion:
-                    perform = (start is None or line.Start >= start) and (
-                        end is None or line.End <= end
-                    )
+                    perform = (start is None or line.Start >= start) and (end is None or line.End <= end)
                 else:
-                    perform = (start is None or line.End > start) and (
-                        end is None or line.Start < end
-                    )
+                    perform = (start is None or line.End > start) and (end is None or line.Start < end)
 
                 if perform ^ inverse:
                     # action should return None if the line should be removed, else it should return an Event object (likely the same one that was input)
@@ -791,7 +367,7 @@ class ASS:
 
         s = s.decode("utf-8")
         # Decode using UTF-8
-        s = s.replace(u"\ufeff", "")
+        s = s.replace("\ufeff", "")
         # Replace any BOM
 
         # Target region
@@ -861,9 +437,7 @@ class ASS:
                         instance.type = match.group(1)
 
                         for i in range(len(values)):
-                            instance.set(
-                                target_format[i], values[i], *target_class_set_args
-                            )
+                            instance.set(target_format[i], values[i], *target_class_set_args)
 
                         target_list.append(instance)
                         if target_map is not None:
@@ -875,7 +449,7 @@ class ASS:
     def write(self, filename, comments=None):
         # Generate source
         source = [
-            u"[Script Info]\n",
+            "[Script Info]\n",
         ]
 
         # Comments
@@ -883,49 +457,45 @@ class ASS:
             # Default comment
             source.extend(
                 [
-                    u"; Script generated by {0:s}\n".format(
-                        self.__re_filename_format[0].sub(
-                            self.__re_filename_format[1], os.path.split(__file__)[1]
-                        )
+                    "; Script generated by {0:s}\n".format(
+                        self.__re_filename_format[0].sub(self.__re_filename_format[1], os.path.split(__file__)[1])
                     ),
                 ]
             )
         else:
             # Custom comments
-            source.extend([u"; {0:s}".format(c) for c in comments])
+            source.extend(["; {0:s}".format(c) for c in comments])
 
         # Script info
         for entry in self.script_info_ordered:
             if entry.key in self.script_info:
-                source.append(u"{0:s}: {1:s}\n".format(entry.key, entry.value))
+                source.append("{0:s}: {1:s}\n".format(entry.key, entry.value))
 
-        source.append(u"\n")
+        source.append("\n")
 
         # Styles
-        source.append(u"[V4+ Styles]\n")
-        source.append(u"Format: {0:s}\n".format(", ".join(self.styles_format)))
+        source.append("[V4+ Styles]\n")
+        source.append("Format: {0:s}\n".format(", ".join(self.styles_format)))
         for style in self.styles:
             style_list = []
             for key in self.styles_format:
                 style_list.append(style.get(key))
-            source.append(u"{0:s}: {1:s}\n".format(style.type, u",".join(style_list)))
-        source.append(u"\n")
+            source.append("{0:s}: {1:s}\n".format(style.type, ",".join(style_list)))
+        source.append("\n")
 
         # Events
-        source.append(u"[Events]\n")
-        source.append(u"Format: {0:s}\n".format(u", ".join(self.events_format)))
+        source.append("[Events]\n")
+        source.append("Format: {0:s}\n".format(", ".join(self.events_format)))
         for event in self.events:
             if event.Start >= 0 and event.End >= 0:
                 event_list = []
                 for key in self.events_format:
                     event_list.append(event.get(key))
-                source.append(
-                    u"{0:s}: {1:s}\n".format(event.type, u",".join(event_list))
-                )
+                source.append("{0:s}: {1:s}\n".format(event.type, ",".join(event_list)))
 
         # Write file
         f = open(filename, "wb")
-        s = f.write((u"".join(source)).encode("utf-8"))
+        s = f.write(("".join(source)).encode("utf-8"))
         f.close()
 
         # Done
@@ -951,11 +521,7 @@ class ASS:
         sorted_events = []
         for i in range(len(self.events)):
             event = self.events[i]
-            if (
-                event.type == "Dialogue"
-                and event.Start < event.End
-                and event.Start >= 0
-            ):
+            if event.type == "Dialogue" and event.Start < event.End and event.Start >= 0:
                 meta_event = self.__WriteSRTMetaEvent(event, i)
                 meta_event.format_text(self, newlines)
                 if len(meta_event.text) > 0:
@@ -1017,18 +583,11 @@ class ASS:
                 block_end = event_data.event.End
                 for i in range(1, event_count):
                     event_data = sorted_events[i]
-                    if (
-                        event_data.start < block_start + self.__same_time_max_delta
-                    ):  # will set even if same
+                    if event_data.start < block_start + self.__same_time_max_delta:  # will set even if same
                         block_start = event_data.start
-                        if (
-                            event_data.event.End
-                            <= block_end - self.__same_time_max_delta
-                        ):  # will set only if lower
+                        if event_data.event.End <= block_end - self.__same_time_max_delta:  # will set only if lower
                             block_end = event_data.event.End
-                    elif (
-                        event_data.start <= block_end - self.__same_time_max_delta
-                    ):  # will set only if lower
+                    elif event_data.start <= block_end - self.__same_time_max_delta:  # will set only if lower
                         block_end = event_data.start
                     assert block_start < block_end
                     # should never happen
@@ -1047,10 +606,7 @@ class ASS:
                             stack_lines_ordered.append(event_data)
                         else:
                             stack_lines_unordered.append(event_data)
-                        if (
-                            event_data.event.End
-                            <= block_end + self.__same_time_max_delta
-                        ):
+                        if event_data.event.End <= block_end + self.__same_time_max_delta:
                             # Remove
                             sorted_events.pop(i)
                             event_count -= 1
@@ -1080,9 +636,7 @@ class ASS:
                     # Sort by vertical position; this is convenient for multiple lines appearing simultaneously; there are still cases ordering may be messed up
                     stack_lines_unordered = sorted(
                         stack_lines_unordered,
-                        key=functools.cmp_to_key(
-                            lambda e1, e2: self.__write_srt_sort_lines_compare(e1, e2)
-                        ),
+                        key=functools.cmp_to_key(lambda e1, e2: self.__write_srt_sort_lines_compare(e1, e2)),
                     )
                 stack_lines.extend(stack_lines_unordered)
                 for i in range(len(stack_lines)):
@@ -1114,22 +668,18 @@ class ASS:
         for i in range(len(lines)):
             line_start, line_end, line_text = lines[i]
 
-            source.append(u"{0:d}\n".format(i + 1))
+            source.append("{0:d}\n".format(i + 1))
             source.append(
-                u"{0:s} --> {1:s}\n".format(
-                    self.Formatters.timecode_to_str_generic(
-                        line_start, 3, 2, 2, 2
-                    ).replace(".", ","),
-                    self.Formatters.timecode_to_str_generic(
-                        line_end, 3, 2, 2, 2
-                    ).replace(".", ","),
+                "{0:s} --> {1:s}\n".format(
+                    Formatters.timecode_to_str_generic(line_start, 3, 2, 2, 2).replace(".", ","),
+                    Formatters.timecode_to_str_generic(line_end, 3, 2, 2, 2).replace(".", ","),
                 )
             )
-            source.append(u"{0:s}\n\n".format(line_text))
+            source.append("{0:s}\n\n".format(line_text))
 
         # Write file
         f = open(filename, "wb")
-        s = f.write((u"".join(source)).encode("utf-8"))
+        s = f.write(("".join(source)).encode("utf-8"))
         f.close()
 
         # Done
@@ -1188,30 +738,22 @@ class ASS:
             self.text = None
 
         def equals(self, other):
-            return (
-                self.text == other.text
-                and self.start == other.start
-                and self.event.End == other.event.End
-            )
+            return self.text == other.text and self.start == other.start and self.event.End == other.event.End
 
         def format_text(self, parent, newlines):
             self.text = parent.parse_text(
                 self.event.Text,
-                modify_text=(
-                    lambda t: self.__write_srt_format_text(parent, newlines, t)
-                ),
+                modify_text=(lambda t: self.__write_srt_format_text(parent, newlines, t)),
                 modify_tag_block=(lambda b: ""),
                 modify_geometry=(lambda g: ""),
             )
 
         def __write_srt_format_text(self, parent, newlines, text):
-            return parent.replace_special(
-                text, (lambda c: self.__write_srt_format_text_space(newlines, c)), 1, 1
-            )
+            return parent.replace_special(text, (lambda c: self.__write_srt_format_text_space(newlines, c)), 1, 1)
 
         def __write_srt_format_text_space(self, newlines, character):
             if character == "h":
-                return u"\u00A0"
+                return "\u00A0"
             if newlines:
                 return "\n"
             return " "
@@ -1259,38 +801,36 @@ class ASS:
         if state[0] is None:
             tag_name = tag[0]
             if tag_name == "a":
-                state[0] = cls.__legacy_align_to_regular(
-                    cls.Formatters.str_to_number(tag[1])
-                )
+                state[0] = cls.__legacy_align_to_regular(Formatters.str_to_number(tag[1]))
             elif tag_name == "an":
-                state[0] = cls.Formatters.str_to_number(tag[1])
+                state[0] = Formatters.str_to_number(tag[1])
 
         # Done
         return [tag]
 
     @classmethod
     def get_xy_alignment(cls, align):
-        if align >= cls.ALIGN_TOP_LEFT and align <= cls.ALIGN_TOP_RIGHT:
+        if align >= ALIGN_TOP_LEFT and align <= ALIGN_TOP_RIGHT:
             align_y = -1
-            if align == cls.ALIGN_TOP_LEFT:
+            if align == ALIGN_TOP_LEFT:
                 align_x = -1
-            elif align == cls.ALIGN_TOP_RIGHT:
+            elif align == ALIGN_TOP_RIGHT:
                 align_x = 1
             else:
                 align_x = 0
-        elif align >= cls.ALIGN_MIDDLE_LEFT and align <= cls.ALIGN_MIDDLE_RIGHT:
+        elif align >= ALIGN_MIDDLE_LEFT and align <= ALIGN_MIDDLE_RIGHT:
             align_y = 0
-            if align == cls.ALIGN_MIDDLE_LEFT:
+            if align == ALIGN_MIDDLE_LEFT:
                 align_x = -1
-            elif align == cls.ALIGN_MIDDLE_RIGHT:
+            elif align == ALIGN_MIDDLE_RIGHT:
                 align_x = 1
             else:
                 align_x = 0
-        else:  # if (align >= cls.ALIGN_BOTTOM_LEFT and align <= cls.ALIGN_BOTTOM_RIGHT):
+        else:  # if (align >= ALIGN_BOTTOM_LEFT and align <= ALIGN_BOTTOM_RIGHT):
             align_y = 1
-            if align == cls.ALIGN_BOTTOM_LEFT:
+            if align == ALIGN_BOTTOM_LEFT:
                 align_x = -1
-            elif align == cls.ALIGN_BOTTOM_RIGHT:
+            elif align == ALIGN_BOTTOM_RIGHT:
                 align_x = 1
             else:
                 align_x = 0
@@ -1336,25 +876,25 @@ class ASS:
         modify_geometry=None,
     ):
         """
-			modify_tag:
-				inputs:
-					tag_args - an array of the form:
-					[ tag_name , tag_arg1 , tag_arg2 , ... ]
-					where all tag_arg#'s are optional
-				return:
-					must return an array containing only "tag_args" and strings
-					- "tag_args" are auto-converted into strings
-					- strings are treated as comments, or pre-formatted tags
+        modify_tag:
+                inputs:
+                        tag_args - an array of the form:
+                        [ tag_name , tag_arg1 , tag_arg2 , ... ]
+                        where all tag_arg#'s are optional
+                return:
+                        must return an array containing only "tag_args" and strings
+                        - "tag_args" are auto-converted into strings
+                        - strings are treated as comments, or pre-formatted tags
 
-			<everything else>:
-				inputs:
-					the relevant string
-				return:
-					the relevant string, modified
+        <everything else>:
+                inputs:
+                        the relevant string
+                return:
+                        the relevant string, modified
 
-			Note:
-				if modify_special is None, then "\\h", "\\n", and "\\N" will be treated part of text sections (i.e. they are not separated)
-		"""
+        Note:
+                if modify_special is None, then "\\h", "\\n", and "\\N" will be treated part of text sections (i.e. they are not separated)
+        """
         text_new = []
 
         if modify_special is None:
@@ -1387,9 +927,7 @@ class ASS:
                 tag_new = [match.group(1)]
 
                 # Parse individual tags
-                tag_text, next_geometry_scale = cls.parse_tags(
-                    match.group(2), modify_tag, modify_comment, next_geometry_scale
-                )
+                tag_text, next_geometry_scale = cls.parse_tags(match.group(2), modify_tag, modify_comment, next_geometry_scale)
                 tag_text = match.group(1) + tag_text + match.group(3)
 
                 if modify_tag_block is not None:
@@ -1416,26 +954,24 @@ class ASS:
         return "".join(text_new)
 
     @classmethod
-    def parse_tags(
-        cls, text, modify_tag=None, modify_comment=None, next_geometry_scale=0
-    ):
+    def parse_tags(cls, text, modify_tag=None, modify_comment=None, next_geometry_scale=0):
         """
-			modify_tag:
-				inputs:
-					tag_args - an array of the form:
-					[ tag_name , tag_arg1 , tag_arg2 , ... ]
-					where all tag_arg#'s are optional
-				return:
-					must return an array containing only "tag_args" and strings
-					- "tag_args" are auto-converted into strings
-					- strings are treated as comments, or pre-formatted tags
+        modify_tag:
+                inputs:
+                        tag_args - an array of the form:
+                        [ tag_name , tag_arg1 , tag_arg2 , ... ]
+                        where all tag_arg#'s are optional
+                return:
+                        must return an array containing only "tag_args" and strings
+                        - "tag_args" are auto-converted into strings
+                        - strings are treated as comments, or pre-formatted tags
 
-			<everything else>:
-				inputs:
-					the relevant string
-				return:
-					the relevant string, modified
-		"""
+        <everything else>:
+                inputs:
+                        the relevant string
+                return:
+                        the relevant string, modified
+        """
         text_new = []
         pos = 0
         for match in cls.__re_tag.finditer(text):
@@ -1481,9 +1017,7 @@ class ASS:
             for tag_args in tag_args_array:
                 if tag_args[0] == "p":
                     # Drawing command
-                    next_geometry_scale = cls.Formatters.tag_argument_to_number(
-                        tag_args[1], 0
-                    )
+                    next_geometry_scale = Formatters.tag_argument_to_number(tag_args[1], 0)
 
             text_new.append(tt)
 
@@ -1502,28 +1036,18 @@ class ASS:
 
     # Other parsing
     @classmethod
-    def replace_special(
-        cls, text, space=" ", min_whitespace_length=1, max_whitespace_length=1
-    ):
+    def replace_special(cls, text, space=" ", min_whitespace_length=1, max_whitespace_length=1):
         return cls.__re_remove_special.sub(
-            (
-                lambda m: cls.__replace_special_replacer(
-                    m, space, min_whitespace_length, max_whitespace_length
-                )
-            ),
+            (lambda m: cls.__replace_special_replacer(m, space, min_whitespace_length, max_whitespace_length)),
             text,
         )
 
     @classmethod
-    def __replace_special_replacer(
-        cls, match, space, min_whitespace_length, max_whitespace_length
-    ):
+    def __replace_special_replacer(cls, match, space, min_whitespace_length, max_whitespace_length):
         ws = match.group(1) + match.group(3)
         ws_len = len(ws)
 
-        if ws_len < min_whitespace_length or (
-            ws_len > max_whitespace_length and max_whitespace_length >= 0
-        ):
+        if ws_len < min_whitespace_length or (ws_len > max_whitespace_length and max_whitespace_length >= 0):
             if hasattr(space, "__call__"):
                 return space(match.group(2))
             return space
@@ -1713,17 +1237,13 @@ class ASS:
         # Done
         return self
 
-    def tidy_styles(
-        self, **kwargs
-    ):  # Generate unique names, remove duplicates, and remove unused
+    def tidy_styles(self, **kwargs):  # Generate unique names, remove duplicates, and remove unused
         # Parse kwargs
         sort = self.__kwarg_default(kwargs, "sort", False)
         # if True, events are sorted by name
         join = self.__kwarg_default(kwargs, "join", False)
         # if True, duplicates are joined into a single style
-        join_if_names_differ = self.__kwarg_default(
-            kwargs, "join_if_names_differ", False
-        )
+        join_if_names_differ = self.__kwarg_default(kwargs, "join_if_names_differ", False)
         # if True, styles are joined even if their names are different
         rename = self.__kwarg_default(kwargs, "rename", False)
         # if True, styles with identical names are renamed
@@ -1838,9 +1358,7 @@ class ASS:
         # (x,y) new total resolution
         geometry_scale = self.__kwarg_default(kwargs, "geometry_scale", None)
         # (x,y) factors by which to scale geometry
-        geometry_scale_origin = self.__kwarg_default(
-            kwargs, "geometry_scale_origin", (0.0, 0.0)
-        )
+        geometry_scale_origin = self.__kwarg_default(kwargs, "geometry_scale_origin", (0.0, 0.0))
         # (x,y) geometry scaling origin
         geometry_offset = self.__kwarg_default(kwargs, "geometry_offset", (0.0, 0.0))
         # (x,y) geometry shifting offset
@@ -1973,23 +1491,13 @@ class ASS:
         line,
     ):
         # Modify
-        line.Start = (
-            (line.Start - time_scale_origin) * time_scale
-            + time_scale_origin
-            + time_offset
-        )
-        line.End = (
-            (line.End - time_scale_origin) * time_scale
-            + time_scale_origin
-            + time_offset
-        )
+        line.Start = (line.Start - time_scale_origin) * time_scale + time_scale_origin + time_offset
+        line.End = (line.End - time_scale_origin) * time_scale + time_scale_origin + time_offset
 
         # Modify timed tags
         line.Text = self.parse_text(
             line.Text,
-            modify_tag=(
-                lambda tag: self.__shiftscale_action_time_modify_tag(time_scale, tag)
-            ),
+            modify_tag=(lambda tag: self.__shiftscale_action_time_modify_tag(time_scale, tag)),
         )
 
         # Clip
@@ -2017,23 +1525,23 @@ class ASS:
         tag_name = tag[0]
         if tag_name in ["k", "K", "kf", "ko"]:
             tag = list(tag)
-            tag[1] = str(int(self.Formatters.str_to_number(tag[1]) * time_scale))
+            tag[1] = str(int(Formatters.str_to_number(tag[1]) * time_scale))
         elif tag_name == "move":
             if len(tag) == 7:
                 tag = list(tag)
-                tag[5] = str(int(self.Formatters.str_to_number(tag[5]) * time_scale))
-                tag[6] = str(int(self.Formatters.str_to_number(tag[6]) * time_scale))
+                tag[5] = str(int(Formatters.str_to_number(tag[5]) * time_scale))
+                tag[6] = str(int(Formatters.str_to_number(tag[6]) * time_scale))
         elif tag_name == "fade":
             tag = list(tag)
-            tag[4] = str(int(self.Formatters.str_to_number(tag[4]) * time_scale))
-            tag[5] = str(int(self.Formatters.str_to_number(tag[5]) * time_scale))
-            tag[6] = str(int(self.Formatters.str_to_number(tag[6]) * time_scale))
-            tag[7] = str(int(self.Formatters.str_to_number(tag[7]) * time_scale))
+            tag[4] = str(int(Formatters.str_to_number(tag[4]) * time_scale))
+            tag[5] = str(int(Formatters.str_to_number(tag[5]) * time_scale))
+            tag[6] = str(int(Formatters.str_to_number(tag[6]) * time_scale))
+            tag[7] = str(int(Formatters.str_to_number(tag[7]) * time_scale))
         elif tag_name == "t":
             if len(tag) >= 4:
                 tag = list(tag)
-                tag[1] = str(int(self.Formatters.str_to_number(tag[1]) * time_scale))
-                tag[2] = str(int(self.Formatters.str_to_number(tag[2]) * time_scale))
+                tag[1] = str(int(Formatters.str_to_number(tag[1]) * time_scale))
+                tag[2] = str(int(Formatters.str_to_number(tag[2]) * time_scale))
 
         return [tag]
 
@@ -2055,14 +1563,10 @@ class ASS:
         line.Text = self.parse_text(
             line.Text,
             modify_tag=(
-                lambda tag: self.__shiftscale_action_geometry_modify_tag(
-                    state, geometry_scale, geometry_scale_origin, geometry_offset, tag
-                )
+                lambda tag: self.__shiftscale_action_geometry_modify_tag(state, geometry_scale, geometry_scale_origin, geometry_offset, tag)
             ),
             modify_geometry=(
-                lambda geo: self.__shiftscale_action_geometry_modify_geometry(
-                    geometry_scale, geometry_scale_origin, geometry_offset, geo
-                )
+                lambda geo: self.__shiftscale_action_geometry_modify_geometry(geometry_scale, geometry_scale_origin, geometry_offset, geo)
             ),
         )
 
@@ -2090,44 +1594,34 @@ class ASS:
         # Done
         return line
 
-    def __shiftscale_action_geometry_modify_tag(
-        self, state, geometry_scale, geometry_scale_origin, geometry_offset, tag
-    ):
+    def __shiftscale_action_geometry_modify_tag(self, state, geometry_scale, geometry_scale_origin, geometry_offset, tag):
         tag_name = tag[0]
         if tag_name in ["bord", "shad", "be", "blur", "fs"]:
             scale = (geometry_scale[0] + geometry_scale[1]) / 2.0
             tag = [
                 tag_name,
-                self.Formatters.number_to_str(
-                    self.Formatters.str_to_number(tag[1]) * scale
-                ),
+                Formatters.number_to_str(Formatters.str_to_number(tag[1]) * scale),
             ]
         elif tag_name in ["xbord", "xshad", "fsp"]:
             tag = [
                 tag_name,
-                self.Formatters.number_to_str(
-                    self.Formatters.str_to_number(tag[1]) * geometry_scale[0]
-                ),
+                Formatters.number_to_str(Formatters.str_to_number(tag[1]) * geometry_scale[0]),
             ]
         elif tag_name in ["ybord", "yshad"]:
             tag = [
                 tag_name,
-                self.Formatters.number_to_str(
-                    self.Formatters.str_to_number(tag[1]) * geometry_scale[1]
-                ),
+                Formatters.number_to_str(Formatters.str_to_number(tag[1]) * geometry_scale[1]),
             ]
         elif tag_name in ["pos", "org"]:
             tag = [
                 tag_name,
-                self.Formatters.number_to_str(
-                    (self.Formatters.str_to_number(tag[1]) - geometry_scale_origin[0])
-                    * geometry_scale[0]
+                Formatters.number_to_str(
+                    (Formatters.str_to_number(tag[1]) - geometry_scale_origin[0]) * geometry_scale[0]
                     + geometry_scale_origin[0]
                     + geometry_offset[0]
                 ),
-                self.Formatters.number_to_str(
-                    (self.Formatters.str_to_number(tag[2]) - geometry_scale_origin[1])
-                    * geometry_scale[1]
+                Formatters.number_to_str(
+                    (Formatters.str_to_number(tag[2]) - geometry_scale_origin[1]) * geometry_scale[1]
                     + geometry_scale_origin[1]
                     + geometry_offset[1]
                 ),
@@ -2138,34 +1632,24 @@ class ASS:
                 tag = list(tag)
                 for i in range(1, len(tag)):
                     xy = (i + 1) % 2
-                    val = self.Formatters.str_to_number(tag[i])
-                    val = (
-                        (val - geometry_scale_origin[xy]) * geometry_scale[xy]
-                        + geometry_scale_origin[xy]
-                        + geometry_offset[xy]
-                    )
-                    tag[i] = self.Formatters.number_to_str(val)
+                    val = Formatters.str_to_number(tag[i])
+                    val = (val - geometry_scale_origin[xy]) * geometry_scale[xy] + geometry_scale_origin[xy] + geometry_offset[xy]
+                    tag[i] = Formatters.number_to_str(val)
             else:
                 # Draw command
                 tag = list(tag)
-                tag[-1] = self.__shiftscale_action_geometry_modify_geometry(
-                    geometry_scale, geometry_scale_origin, geometry_offset, tag[-1]
-                )
+                tag[-1] = self.__shiftscale_action_geometry_modify_geometry(geometry_scale, geometry_scale_origin, geometry_offset, tag[-1])
         elif tag_name == "move":
             tag = list(tag)
             for i in range(1, len(tag)):
                 xy = (i + 1) % 2
-                val = self.Formatters.str_to_number(tag[i])
-                val = (
-                    (val - geometry_scale_origin[xy]) * geometry_scale[xy]
-                    + geometry_scale_origin[xy]
-                    + geometry_offset[xy]
-                )
-                tag[i] = self.Formatters.number_to_str(val)
+                val = Formatters.str_to_number(tag[i])
+                val = (val - geometry_scale_origin[xy]) * geometry_scale[xy] + geometry_scale_origin[xy] + geometry_offset[xy]
+                tag[i] = Formatters.number_to_str(val)
         elif tag_name == "pbo":
             tag = [
                 tag_name,
-                str(int(self.Formatters.str_to_number(tag[1]) * geometry_scale[1])),
+                str(int(Formatters.str_to_number(tag[1]) * geometry_scale[1])),
             ]
         elif tag_name == "t":
             # Parse more tags
@@ -2183,11 +1667,9 @@ class ASS:
             )
         elif tag_name in ["a", "an"]:
             if tag_name == "a":
-                align = self.__legacy_align_to_regular(
-                    self.Formatters.str_to_number(tag[1])
-                )
+                align = self.__legacy_align_to_regular(Formatters.str_to_number(tag[1]))
             else:  # if (tag_name == "an"):
-                align = self.Formatters.str_to_number(tag[1])
+                align = Formatters.str_to_number(tag[1])
 
             # State update
             if state is not None and state["align"] is None:
@@ -2197,30 +1679,21 @@ class ASS:
 
         return [tag]
 
-    def __shiftscale_action_geometry_modify_geometry(
-        self, geometry_scale, geometry_scale_origin, geometry_offset, geo
-    ):
+    def __shiftscale_action_geometry_modify_geometry(self, geometry_scale, geometry_scale_origin, geometry_offset, geo):
         points = self.__re_draw_command_split.split(geo.strip())
         xy = 0
         for i in range(len(points)):
             coord = points[i]
             if len(coord) == 1:
                 coord_ord = ord(coord)
-                if (
-                    coord_ord >= self.__re_draw_commands_ord_min
-                    and coord_ord <= self.__re_draw_commands_ord_max
-                ):
+                if coord_ord >= self.__re_draw_commands_ord_min and coord_ord <= self.__re_draw_commands_ord_max:
                     # New command
                     xy = 0
                     continue
 
             # Value
-            val = self.Formatters.str_to_number(coord)
-            val = (
-                (val - geometry_scale_origin[xy]) * geometry_scale[xy]
-                + geometry_scale_origin[xy]
-                + geometry_offset[xy]
-            )
+            val = Formatters.str_to_number(coord)
+            val = (val - geometry_scale_origin[xy]) * geometry_scale[xy] + geometry_scale_origin[xy] + geometry_offset[xy]
             points[i] = str(int(val))
 
             # Next
@@ -2240,10 +1713,8 @@ class ASS:
         return (
             geometry_offset[0],
             geometry_offset[1],
-            (resolution_new[0] - resolution_old[0]) * geometry_scale[0]
-            + geometry_offset[0],
-            (resolution_new[1] - resolution_old[1]) * geometry_scale[1]
-            + geometry_offset[1],
+            (resolution_new[0] - resolution_old[0]) * geometry_scale[0] + geometry_offset[0],
+            (resolution_new[1] - resolution_old[1]) * geometry_scale[1] + geometry_offset[1],
         )
 
     def __shiftscale_action_get_new_margins(
@@ -2268,17 +1739,13 @@ class ASS:
         if margin_left != 0:
             margin_left = margin_left * geometry_scale[0] + bounds[0]
         if margin_right != 0:
-            margin_right = resolution_new[0] - (
-                bounds[2] - margin_right * geometry_scale[0]
-            )
+            margin_right = resolution_new[0] - (bounds[2] - margin_right * geometry_scale[0])
         if margin_vertical != 0:
             align_xy = self.get_xy_alignment(align)
             if align_xy[1] < 0:  # Top
                 margin_vertical = margin_vertical * geometry_scale[1] + bounds[1]
             elif align_xy[1] > 0:  # Bottom
-                margin_vertical = resolution_new[1] - (
-                    bounds[3] - margin_vertical * geometry_scale[1]
-                )
+                margin_vertical = resolution_new[1] - (bounds[3] - margin_vertical * geometry_scale[1])
             else:  # if (align_xy[1] == 0): # Middle
                 margin_vertical = margin_vertical * geometry_scale[1]
 
@@ -2394,9 +1861,7 @@ class ASS:
         length -= end - start
         # account for the self.extract call
         for line in self.events:
-            if (
-                filter_types is None or line.type in filter_types
-            ) and line.Start >= end:
+            if (filter_types is None or line.type in filter_types) and line.Start >= end:
                 line.Start += length
                 line.End += length
 
@@ -2404,9 +1869,7 @@ class ASS:
         time_offset = 0.0
         while count >= 1:
             # Merge
-            self.merge(
-                other=temp, remove=False, filter_types=None, time_shift=time_offset
-            )
+            self.merge(other=temp, remove=False, filter_types=None, time_shift=time_offset)
 
             # Shift for next
             time_offset += length_single
@@ -2415,9 +1878,7 @@ class ASS:
             # Cut
             temp.extract(start=start, end=start + length_single * count, inverse=True)
             # Add
-            self.merge(
-                other=temp, remove=True, filter_types=None, time_shift=time_offset
-            )
+            self.merge(other=temp, remove=True, filter_types=None, time_shift=time_offset)
 
         # Done
         return self
@@ -2625,4 +2086,3 @@ class ASS:
         )
 
         return line
-

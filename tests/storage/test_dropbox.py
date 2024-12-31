@@ -49,6 +49,11 @@ class TestDropboxHandler:
             client=mock_client,
         )
 
+    @pytest.fixture
+    def mock_sleep(self):
+        with patch("time.sleep") as mock:
+            yield mock
+
     def test_init_with_env_vars(self):
         """Test initialization with environment variables."""
         with patch.dict(
@@ -75,7 +80,7 @@ class TestDropboxHandler:
 
         handler.client.files_upload.assert_called_once_with(file_content, "/test/path", mode=WriteMode.overwrite)
 
-    def test_upload_with_retry_failure_then_success(self, handler):
+    def test_upload_with_retry_failure_then_success(self, mock_sleep, handler):
         """Test file upload with initial failure then success."""
         file_content = b"test content"
         file = BytesIO(file_content)
@@ -101,7 +106,11 @@ class TestDropboxHandler:
             ]
         )
 
-    def test_upload_with_retry_all_attempts_fail(self, handler):
+        # Verify sleep was called once with correct delay
+        mock_sleep.assert_called_once_with(1)
+
+    @patch("time.sleep")
+    def test_upload_with_retry_all_attempts_fail(self, mock_sleep, handler):
         """Test file upload with all attempts failing."""
         file = BytesIO(b"test content")
         mock_error = ApiError(
@@ -122,6 +131,14 @@ class TestDropboxHandler:
                 call(b"test content", "/test/path", mode=WriteMode.overwrite),
                 call(b"test content", "/test/path", mode=WriteMode.overwrite),
                 call(b"test content", "/test/path", mode=WriteMode.overwrite),
+            ]
+        )
+
+        # Verify sleep was called with increasing delays
+        mock_sleep.assert_has_calls(
+            [
+                call(1),  # First retry
+                call(2),  # Second retry
             ]
         )
 
@@ -174,7 +191,7 @@ class TestDropboxHandler:
         # Verify
         handler.client.files_upload.assert_called_once_with(b"test content", "/test/path", mode=WriteMode.overwrite)
 
-    def test_upload_string_with_retry_failure_then_success(self, handler):
+    def test_upload_string_with_retry_failure_then_success(self, mock_sleep, handler):
         """Test string upload with retry."""
         # Setup
         mock_error = ApiError(
@@ -199,9 +216,12 @@ class TestDropboxHandler:
             ]
         )
 
-    def test_upload_string_with_retry_all_failures(self, handler):
+        # Verify sleep was called once with correct delay
+        mock_sleep.assert_called_once_with(1)
+
+    @patch("time.sleep")
+    def test_upload_string_with_retry_all_failures(self, mock_sleep, handler):
         """Test string upload with all retries failing."""
-        # Setup
         mock_error = ApiError(
             error={"error": "test_error"}, user_message_text="Test error", user_message_locale="en", request_id="test_request_id"
         )
@@ -209,7 +229,6 @@ class TestDropboxHandler:
         # Make all attempts fail
         handler.client.files_upload.side_effect = mock_error
 
-        # Execute and verify
         with pytest.raises(ApiError):
             handler.upload_string_with_retry("test content", "/test/path", max_retries=3)
 
@@ -221,6 +240,13 @@ class TestDropboxHandler:
                 call(b"test content", "/test/path", mode=WriteMode.overwrite),
                 call(b"test content", "/test/path", mode=WriteMode.overwrite),
                 call(b"test content", "/test/path", mode=WriteMode.overwrite),
+            ]
+        )
+        # Verify sleep was called with increasing delays
+        mock_sleep.assert_has_calls(
+            [
+                call(1),  # First retry
+                call(2),  # Second retry
             ]
         )
 

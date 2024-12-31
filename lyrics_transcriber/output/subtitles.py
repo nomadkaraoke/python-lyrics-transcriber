@@ -7,7 +7,10 @@ from pathlib import Path
 from enum import IntEnum
 import logging
 
-from . import ass
+from lyrics_transcriber.output.ass.ass import ASS
+from lyrics_transcriber.output.ass.event import Event
+from lyrics_transcriber.output.ass.style import Style
+from lyrics_transcriber.output.ass.constants import ALIGN_TOP_CENTER
 
 
 """
@@ -86,8 +89,8 @@ class LyricsLine:
     def __str__(self):
         return "".join([f"{{{s.text}}}" for s in self.segments])
 
-    def as_ass_event(self, screen_start: timedelta, screen_end: timedelta, style: ass.ASS.Style, y_position: int):
-        e = ass.ASS.Event()
+    def as_ass_event(self, screen_start: timedelta, screen_end: timedelta, style: Style, y_position: int):
+        e = Event()
         e.type = "Dialogue"
         e.Layer = 0
         e.Style = style
@@ -164,7 +167,7 @@ class LyricsScreen:
 
         return int(line_y)
 
-    def as_ass_events(self, style: ass.ASS.Style) -> List[ass.ASS.Event]:
+    def as_ass_events(self, style: Style) -> List[Event]:
         events = []
         for i, line in enumerate(self.lines):
             y_position = self.get_line_y(i)
@@ -237,8 +240,8 @@ def create_styled_subtitles(
     lyric_screens: List[LyricsScreen],
     resolution,
     fontsize,
-) -> ass.ASS:
-    a = ass.ASS()
+) -> ASS:
+    a = ASS()
     a.set_resolution(resolution)
 
     a.styles_format = [
@@ -267,7 +270,7 @@ def create_styled_subtitles(
         "Encoding",  #
     ]
 
-    style = ass.ASS.Style()
+    style = Style()
     style.type = "Style"
     style.Name = "Nomad"
     style.Fontname = "Avenir Next Bold"
@@ -290,7 +293,7 @@ def create_styled_subtitles(
     style.BorderStyle = 1
     style.Outline = 1
     style.Shadow = 0
-    style.Alignment = ass.ASS.ALIGN_TOP_CENTER
+    style.Alignment = ALIGN_TOP_CENTER
     style.MarginL = 0
     style.MarginR = 0
     style.MarginV = 0

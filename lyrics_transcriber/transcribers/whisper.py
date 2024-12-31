@@ -313,8 +313,6 @@ class WhisperTranscriber(BaseTranscriber):
 
     def _validate_response(self, raw_data: Dict[str, Any]) -> None:
         """Validate the response contains required fields."""
-        if not isinstance(raw_data, dict):
-            raise TranscriptionError(f"Invalid response format: {raw_data}")
         if "segments" not in raw_data:
             raise TranscriptionError("Response missing required 'segments' field")
         if "transcription" not in raw_data:

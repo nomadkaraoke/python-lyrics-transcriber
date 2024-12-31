@@ -227,3 +227,20 @@ class TestBaseTranscriber:
         result = transcriber.transcribe(str(audio_file))
         assert result.text == "test"
         transcriber.logger.info.assert_any_call(f"No cache found, transcribing {audio_file}")
+
+    def test_transcribe_error_handling(self, transcriber, tmp_path):
+        """Test that exceptions during transcription are properly logged and re-raised."""
+        audio_file = tmp_path / "test.mp3"
+        audio_file.touch()
+
+        # Mock _perform_transcription to raise an exception
+        def raise_error(*args):
+            raise ValueError("Test error")
+
+        transcriber._perform_transcription = raise_error
+
+        # Verify that the exception is logged and re-raised
+        with pytest.raises(ValueError, match="Test error"):
+            transcriber.transcribe(str(audio_file))
+
+        transcriber.logger.error.assert_called_once_with("Error during transcription: Test error")

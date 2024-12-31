@@ -1,5 +1,5 @@
 import pytest
-from unittest.mock import Mock, patch
+from unittest.mock import Mock, PropertyMock, patch
 from lyrics_transcriber.core.controller import (
     LyricsTranscriber,
     TranscriberConfig,
@@ -12,6 +12,7 @@ from lyrics_transcriber.core.controller import (
 import logging
 from dataclasses import dataclass
 from typing import Optional
+from lyrics_transcriber.lyrics.base_lyrics_provider import LyricsProviderConfig
 from lyrics_transcriber.lyrics.genius import GeniusProvider
 from lyrics_transcriber.lyrics.spotify import SpotifyProvider
 
@@ -366,6 +367,112 @@ def test_fetch_lyrics_all_fail(basic_transcriber, mock_genius_provider, mock_spo
     # Verify all providers were tried
     mock_genius_provider.fetch_lyrics.assert_called_once_with("Test Artist", "Test Song")
     mock_spotify_provider.fetch_lyrics.assert_called_once_with("Test Artist", "Test Song")
+
+    # Verify no results were stored
+    assert len(basic_transcriber.results.lyrics_results) == 0
+
+
+def test_initialize_transcribers_with_audioshake_only(sample_audio_file):
+    """Test transcriber initialization with only AudioShake config"""
+    transcriber_config = TranscriberConfig(audioshake_api_token="test_token")
+    transcriber = LyricsTranscriber(audio_filepath=sample_audio_file, transcriber_config=transcriber_config)
+
+    transcribers = transcriber.transcribers
+    assert len(transcribers) == 1
+    assert "audioshake" in transcribers
+    assert "whisper" not in transcribers
+
+
+def test_initialize_transcribers_with_whisper_only(sample_audio_file):
+    """Test transcriber initialization with only Whisper config"""
+    transcriber_config = TranscriberConfig(runpod_api_key="test_key", whisper_runpod_id="test_id")
+    transcriber = LyricsTranscriber(audio_filepath=sample_audio_file, transcriber_config=transcriber_config)
+
+    transcribers = transcriber.transcribers
+    assert len(transcribers) == 1
+    assert "whisper" in transcribers
+    assert "audioshake" not in transcribers
+
+
+def test_generate_outputs_with_error(basic_transcriber, mock_output_generator):
+    """Test output generation when an error occurs"""
+    mock_output_generator.generate_outputs.side_effect = Exception("Failed to generate outputs")
+
+    with pytest.raises(Exception) as exc_info:
+        basic_transcriber.generate_outputs()
+
+    assert str(exc_info.value) == "Failed to generate outputs"
+    assert basic_transcriber.results.lrc_filepath is None
+    assert basic_transcriber.results.ass_filepath is None
+    assert basic_transcriber.results.video_filepath is None
+
+
+def test_initialize_lyrics_providers_with_genius_only(sample_audio_file):
+    """Test lyrics provider initialization with only Genius config"""
+    lyrics_config = LyricsConfig(genius_api_token="test_token")
+    transcriber = LyricsTranscriber(audio_filepath=sample_audio_file, lyrics_config=lyrics_config)
+
+    providers = transcriber.lyrics_providers
+    assert len(providers) == 1
+    assert "genius" in providers
+    assert isinstance(providers["genius"], GeniusProvider)
+    assert "spotify" not in providers
+
+
+@patch("lyrics_transcriber.core.controller.SpotifyProvider")
+@patch("syrics.api.Spotify")
+def test_initialize_lyrics_providers_with_spotify_only(mock_spotify_api_class, mock_spotify_provider_class, sample_audio_file):
+    """Test lyrics provider initialization with only Spotify config"""
+    # Setup mock SpotifyProvider instance
+    mock_spotify_provider = Mock()
+    mock_spotify_provider_class.return_value = mock_spotify_provider
+
+    # Setup mock Spotify API instance
+    mock_spotify_api = Mock()
+    mock_spotify_api_class.return_value = mock_spotify_api
+
+    lyrics_config = LyricsConfig(spotify_cookie="test_cookie")
+    transcriber = LyricsTranscriber(audio_filepath=sample_audio_file, lyrics_config=lyrics_config)
+
+    providers = transcriber.lyrics_providers
+    assert len(providers) == 1
+    assert "spotify" in providers
+    assert providers["spotify"] == mock_spotify_provider
+    assert "genius" not in providers
+
+    # Verify SpotifyProvider was initialized with correct arguments
+    mock_spotify_provider_class.assert_called_once()
+    call_kwargs = mock_spotify_provider_class.call_args.kwargs
+    assert isinstance(call_kwargs["config"], LyricsProviderConfig)
+    assert call_kwargs["config"].spotify_cookie == lyrics_config.spotify_cookie
+    assert call_kwargs["config"].genius_api_token == lyrics_config.genius_api_token
+    assert call_kwargs["config"].cache_dir == "/tmp/lyrics-transcriber-cache/"
+    assert call_kwargs["config"].audio_filepath == sample_audio_file
+    assert call_kwargs["logger"] is not None
+
+
+def test_fetch_lyrics_with_provider_error(basic_transcriber, mock_genius_provider, mock_spotify_provider):
+    """Test fetch_lyrics error handling when providers raise exceptions"""
+    # Make both providers raise exceptions
+    mock_genius_provider.fetch_lyrics.side_effect = Exception("Genius error")
+    mock_spotify_provider.fetch_lyrics.side_effect = Exception("Spotify error")
+
+    # Should not raise exception
+    basic_transcriber.fetch_lyrics()
+
+    # Verify error was handled gracefully
+    assert len(basic_transcriber.results.lyrics_results) == 0
+    mock_genius_provider.fetch_lyrics.assert_called_once()
+    mock_spotify_provider.fetch_lyrics.assert_called_once()
+
+
+def test_fetch_lyrics_with_outer_exception(basic_transcriber, mock_genius_provider, mock_spotify_provider):
+    """Test fetch_lyrics when an outer exception occurs"""
+    # Make the lyrics_providers attribute raise an exception when accessed
+    basic_transcriber.lyrics_providers = None  # This will cause an attribute error when iterating
+
+    # Should not raise exception
+    basic_transcriber.fetch_lyrics()
 
     # Verify no results were stored
     assert len(basic_transcriber.results.lyrics_results) == 0

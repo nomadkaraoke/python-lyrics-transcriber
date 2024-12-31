@@ -165,6 +165,27 @@ class TestAudioShakeAPI:
         # Verify periodic status logging
         api.logger.info.assert_any_call("Still waiting for transcription... Elapsed time: 1 minutes")
 
+    @patch("requests.post")
+    @patch("builtins.open", mock_open(read_data="test data"))
+    def test_upload_file_failure(self, mock_post, api):
+        """Test upload file with API error"""
+        mock_post.side_effect = requests.RequestException("Network error")
+
+        with pytest.raises(requests.RequestException):
+            api.upload_file("test.mp3")
+
+        api.logger.info.assert_called_with("Uploading test.mp3 to AudioShake")
+
+    @patch("requests.post")
+    def test_create_job_failure(self, mock_post, api):
+        """Test create job with API error"""
+        mock_post.side_effect = requests.RequestException("Network error")
+
+        with pytest.raises(requests.RequestException):
+            api.create_job("asset123")
+
+        api.logger.info.assert_called_with("Creating job for asset asset123")
+
 
 class TestAudioShakeTranscriber:
     @pytest.fixture
@@ -368,3 +389,74 @@ class TestAudioShakeTranscriber:
             for file in os.listdir(cache_dir):
                 os.remove(os.path.join(cache_dir, file))
         yield
+
+    def test_perform_transcription_error(self, transcriber, mock_api):
+        """Test _perform_transcription with API error"""
+        mock_api.upload_file.side_effect = Exception("API Error")
+
+        with pytest.raises(Exception, match="API Error"):
+            transcriber._perform_transcription("test.mp3")
+
+        transcriber.logger.error.assert_called()  # Verify error logging
+
+    def test_get_transcription_result_error(self, transcriber, mock_api):
+        """Test get_transcription_result with missing output asset"""
+        mock_api.wait_for_job_result.return_value = {
+            "id": "job123",
+            "outputAssets": [{"name": "wrong.json", "link": "http://test.com/wrong"}],
+        }
+
+        with pytest.raises(TranscriptionError, match="Required output not found"):
+            transcriber.get_transcription_result("job123")
+
+    @patch("requests.get")
+    def test_get_transcription_result_network_error(self, mock_get, transcriber, mock_api):
+        """Test get_transcription_result with network error"""
+        mock_api.wait_for_job_result.return_value = {
+            "id": "job123",
+            "outputAssets": [{"name": "alignment.json", "link": "http://test.com/result"}],
+        }
+        mock_get.side_effect = requests.RequestException("Network error")
+
+        with pytest.raises(requests.RequestException):
+            transcriber.get_transcription_result("job123")
+
+    def test_convert_result_format_with_empty_data(self, transcriber):
+        """Test _convert_result_format with minimal data"""
+        raw_data = {
+            "job_data": {"id": "job123", "statusInfo": {}},
+            "transcription": {},
+        }
+
+        result = transcriber._convert_result_format(raw_data)
+        assert isinstance(result, TranscriptionData)
+        assert result.text == ""
+        assert result.segments == []
+        assert result.words == []
+        assert result.metadata["job_id"] == "job123"
+        assert result.metadata["duration"] is None
+
+    def test_perform_transcription_debug_logging(self, transcriber, mock_api, caplog):
+        """Test debug logging in _perform_transcription"""
+        mock_api.upload_file.return_value = "asset123"
+        mock_api.create_job.return_value = "job123"
+        mock_api.wait_for_job_result.return_value = {
+            "id": "job123",
+            "outputAssets": [{"name": "alignment.json", "link": "http://test.com/result"}],
+        }
+
+        with patch("requests.get") as mock_get:
+            mock_get.return_value = Mock(
+                json=lambda: {
+                    "lines": [],
+                    "text": "",
+                    "metadata": {"language": "en"},
+                }
+            )
+            transcriber.logger.debug = Mock()  # Mock debug logger
+            transcriber._perform_transcription("test.mp3")
+
+        # Verify debug logging calls
+        transcriber.logger.debug.assert_any_call("Entering _perform_transcription() for test.mp3")
+        transcriber.logger.debug.assert_any_call("Calling start_transcription()")
+        transcriber.logger.debug.assert_any_call("Got job_id: job123")

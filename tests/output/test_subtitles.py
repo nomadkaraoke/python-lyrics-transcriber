@@ -10,7 +10,9 @@ from lyrics_transcriber.output.subtitles import (
     create_styled_subtitles,
     LyricsObjectJSONEncoder,
 )
-from lyrics_transcriber.output import ass
+from lyrics_transcriber.output.ass.ass import ASS
+from lyrics_transcriber.output.ass.style import Style
+from lyrics_transcriber.output.ass.constants import ALIGN_TOP_CENTER
 import json
 import logging
 
@@ -151,7 +153,7 @@ def test_lyrics_line_ass_event():
         ]
     )
 
-    style = ass.ASS.Style()
+    style = Style()
     style.Name = "Default"
 
     event = line.as_ass_event(screen_start=timedelta(seconds=0), screen_end=timedelta(seconds=3), style=style, y_position=100)
@@ -217,13 +219,13 @@ def test_create_styled_subtitles():
 
     subtitles = create_styled_subtitles(lyric_screens=[screen], resolution=(1920, 1080), fontsize=48)
 
-    assert isinstance(subtitles, ass.ASS)
+    assert isinstance(subtitles, ASS)
     assert len(subtitles.styles) == 1
     assert len(subtitles.events) > 0
 
     style = subtitles.styles[0]
     assert style.Fontsize == 48
-    assert style.Alignment == ass.ASS.ALIGN_TOP_CENTER
+    assert style.Alignment == ALIGN_TOP_CENTER
 
 
 def test_lyrics_screen_str_representation():
@@ -277,7 +279,7 @@ def test_lyrics_line_blank_segments():
     line = LyricsLine(segments)
 
     # Create ASS event with blank segment handling
-    style = ass.ASS.Style()
+    style = Style()
     style.Name = "Default"
     event = line.as_ass_event(screen_start=timedelta(seconds=0), screen_end=timedelta(seconds=4), style=style, y_position=100)
 
