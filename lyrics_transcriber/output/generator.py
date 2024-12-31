@@ -134,12 +134,14 @@ class OutputGenerator:
             raise
 
     def _write_lrc_file(self, output_path: str, segments: list) -> None:
-        """Write LRC file content."""
+        """Write LRC file content with word-level timestamps."""
         with open(output_path, "w", encoding="utf-8") as f:
             for segment in segments:
-                start_time = self._format_lrc_timestamp(segment.start_time)
-                line = f"[{start_time}]{segment.text}\n"
-                f.write(line)
+                # Write each word with its own timestamp on a new line
+                for word in segment.words:
+                    start_time = self._format_lrc_timestamp(word.start_time)
+                    f.write(f"[{start_time}]{word.text}\n")
+                f.write("\n")  # Add extra newline after each segment
 
     def generate_ass(self, transcription_data: CorrectionResult, output_prefix: str) -> str:
         """Generate ASS format subtitles file."""
