@@ -79,4 +79,4 @@ class SpotifyProvider(BaseLyricsProvider):
             },
         )
 
-        return LyricsData(lyrics="\n".join(segment.text for segment in segments), segments=segments, metadata=metadata)
+        return LyricsData(source="spotify", lyrics="\n".join(segment.text for segment in segments), segments=segments, metadata=metadata)

@@ -67,4 +67,4 @@ class GeniusProvider(BaseLyricsProvider):
         )
 
         # Create result object
-        return LyricsData(lyrics=raw_data.get("lyrics", ""), segments=[], metadata=metadata)  # Genius doesn't provide timestamp data
+        return LyricsData(source="genius", lyrics=raw_data.get("lyrics", ""), segments=[], metadata=metadata)  # Genius doesn't provide timestamp data

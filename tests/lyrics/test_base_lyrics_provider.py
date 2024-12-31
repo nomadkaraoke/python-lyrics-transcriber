@@ -21,7 +21,10 @@ class MockLyricsProvider(BaseLyricsProvider):
 
     def _convert_result_format(self, raw_data):
         return LyricsData(
-            lyrics="Test lyrics", segments=[], metadata=LyricsMetadata(source="test", track_name="Test Track", artist_names="Test Artist")
+            source="test",
+            lyrics="Test lyrics",
+            segments=[],
+            metadata=LyricsMetadata(source="test", track_name="Test Track", artist_names="Test Artist"),
         )
 
 

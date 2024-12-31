@@ -4,6 +4,7 @@ import logging
 from typing import Dict, Any, List, Optional, Tuple
 import subprocess
 from datetime import timedelta
+import json
 
 from lyrics_transcriber.lyrics.base_lyrics_provider import LyricsData
 from .subtitles import create_styled_subtitles, LyricsScreen, LyricsLine, LyricSegment
@@ -37,6 +38,11 @@ class OutputPaths:
     lrc: Optional[str] = None
     ass: Optional[str] = None
     video: Optional[str] = None
+    original_txt: Optional[str] = None
+    original_segments: Optional[str] = None
+    corrected_segments: Optional[str] = None
+    corrections: Optional[str] = None
+    corrected_txt: Optional[str] = None
 
 
 class OutputGenerator:
@@ -82,8 +88,16 @@ class OutputGenerator:
                 self.write_plain_lyrics(lyrics_data, f"{output_prefix} (Lyrics {provider_name})")
 
             if transcription_corrected:
+                # Write original (uncorrected) transcription
+                outputs.original_txt = self.write_original_transcription(transcription_corrected, output_prefix)
+                outputs.original_segments = self.write_original_segments(transcription_corrected, output_prefix)
+                outputs.corrected_segments = self.write_corrected_segments(transcription_corrected, output_prefix)
+                outputs.corrections = self.write_corrections_data(transcription_corrected, output_prefix)
+
                 # Write corrected lyrics as plain text
-                self.write_plain_lyrics_from_correction(transcription_corrected, f"{output_prefix} (Lyrics Corrected)")
+                outputs.corrected_txt = self.write_plain_lyrics_from_correction(
+                    transcription_corrected, f"{output_prefix} (Lyrics Corrected)"
+                )
 
                 # Generate LRC
                 outputs.lrc = self.generate_lrc(transcription_corrected, output_prefix)
@@ -108,10 +122,10 @@ class OutputGenerator:
     def generate_lrc(self, transcription_data: CorrectionResult, output_prefix: str) -> str:
         """Generate LRC format lyrics file."""
         self.logger.info("Generating LRC format lyrics")
-        output_path = self._get_output_path(output_prefix, "lrc")
+        output_path = self._get_output_path(f"{output_prefix} (Lyrics Corrected)", "lrc")
 
         try:
-            self._write_lrc_file(output_path, transcription_data.segments)
+            self._write_lrc_file(output_path, transcription_data.corrected_segments)
             self.logger.info(f"LRC file generated: {output_path}")
             return output_path
 
@@ -130,10 +144,10 @@ class OutputGenerator:
     def generate_ass(self, transcription_data: CorrectionResult, output_prefix: str) -> str:
         """Generate ASS format subtitles file."""
         self.logger.info("Generating ASS format subtitles")
-        output_path = self._get_output_path(output_prefix, "ass")
+        output_path = self._get_output_path(f"{output_prefix} (Lyrics Corrected)", "ass")
 
         try:
-            self._write_ass_file(output_path, transcription_data.segments)
+            self._write_ass_file(output_path, transcription_data.corrected_segments)
             self.logger.info(f"ASS file generated: {output_path}")
             return output_path
 
@@ -262,10 +276,76 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
 
         try:
             with open(output_path, "w", encoding="utf-8") as f:
-                f.write(correction_result.text)
+                f.write(correction_result.corrected_text)
             self.logger.info(f"Corrected lyrics file generated: {output_path}")
             return output_path
 
         except Exception as e:
             self.logger.error(f"Failed to write corrected lyrics file: {str(e)}")
+            raise
+
+    def write_original_transcription(self, correction_result: CorrectionResult, output_prefix: str) -> str:
+        """Write original (uncorrected) transcription as plain text."""
+        self.logger.info("Writing original transcription file")
+        output_path = self._get_output_path(f"{output_prefix} (Lyrics Uncorrected)", "txt")
+
+        try:
+            with open(output_path, "w", encoding="utf-8") as f:
+                f.write(correction_result.original_text)
+            self.logger.info(f"Original transcription file generated: {output_path}")
+            return output_path
+        except Exception as e:
+            self.logger.error(f"Failed to write original transcription file: {str(e)}")
+            raise
+
+    def write_original_segments(self, correction_result: CorrectionResult, output_prefix: str) -> str:
+        """Write original segments to JSON file."""
+        self.logger.info("Writing original segments JSON")
+        output_path = self._get_output_path(f"{output_prefix} (Lyrics Uncorrected Segments)", "json")
+
+        try:
+            segments_data = [
+                {"start_time": segment.start_time, "end_time": segment.end_time, "text": segment.text}
+                for segment in correction_result.original_segments
+            ]
+
+            with open(output_path, "w", encoding="utf-8") as f:
+                json.dump(segments_data, f, indent=2, ensure_ascii=False)
+            self.logger.info(f"Original segments JSON generated: {output_path}")
+            return output_path
+        except Exception as e:
+            self.logger.error(f"Failed to write original segments JSON: {str(e)}")
+            raise
+
+    def write_corrections_data(self, correction_result: CorrectionResult, output_prefix: str) -> str:
+        """Write corrections data to JSON file."""
+        self.logger.info("Writing corrections data JSON")
+        output_path = self._get_output_path(f"{output_prefix} (Lyrics Corrections)", "json")
+
+        try:
+            with open(output_path, "w", encoding="utf-8") as f:
+                json.dump(correction_result.to_dict(), f, indent=2, ensure_ascii=False)
+            self.logger.info(f"Corrections data JSON generated: {output_path}")
+            return output_path
+        except Exception as e:
+            self.logger.error(f"Failed to write corrections data JSON: {str(e)}")
+            raise
+
+    def write_corrected_segments(self, correction_result: CorrectionResult, output_prefix: str) -> str:
+        """Write corrected segments to JSON file."""
+        self.logger.info("Writing corrected segments JSON")
+        output_path = self._get_output_path(f"{output_prefix} (Lyrics Corrected Segments)", "json")
+
+        try:
+            segments_data = [
+                {"start_time": segment.start_time, "end_time": segment.end_time, "text": segment.text}
+                for segment in correction_result.corrected_segments
+            ]
+
+            with open(output_path, "w", encoding="utf-8") as f:
+                json.dump(segments_data, f, indent=2, ensure_ascii=False)
+            self.logger.info(f"Corrected segments JSON generated: {output_path}")
+            return output_path
+        except Exception as e:
+            self.logger.error(f"Failed to write corrected segments JSON: {str(e)}")
             raise

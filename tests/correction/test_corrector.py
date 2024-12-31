@@ -59,6 +59,7 @@ def sample_lyrics():
 
     return [
         LyricsData(
+            source="test",
             lyrics="hello world test lyrics",
             segments=[segment],  # Add the segment with words
             metadata=LyricsMetadata(source="genius", track_name="test track", artist_names="test artist"),

@@ -42,11 +42,15 @@ class LyricsCorrector:
         except Exception as e:
             self.logger.error(f"Correction failed: {str(e)}", exc_info=True)
             # Return uncorrected transcription as fallback
+            primary_transcription = transcription_results[0].result
             return CorrectionResult(
-                segments=transcription_results[0].result.segments,
-                text=transcription_results[0].result.text,
-                confidence=1.0,
+                original_segments=primary_transcription.segments,
+                original_text=primary_transcription.text,
+                corrected_segments=primary_transcription.segments,
+                corrected_text=primary_transcription.text,
+                corrections=[],
                 corrections_made=0,
-                source_mapping={},
-                metadata=transcription_results[0].result.metadata or {},
+                confidence=1.0,
+                anchor_words=set(),
+                metadata=primary_transcription.metadata or {},
             )

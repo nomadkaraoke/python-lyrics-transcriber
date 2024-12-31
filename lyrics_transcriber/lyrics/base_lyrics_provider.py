@@ -89,10 +89,16 @@ class LyricsData:
     lyrics: str
     segments: List[LyricsSegment]
     metadata: LyricsMetadata
+    source: str  # e.g., "genius", "spotify", etc.
 
     def to_dict(self) -> Dict[str, Any]:
         """Convert result to dictionary for JSON serialization."""
-        return {"lyrics": self.lyrics, "segments": [segment.to_dict() for segment in self.segments], "metadata": self.metadata.to_dict()}
+        return {
+            "lyrics": self.lyrics,
+            "segments": [segment.to_dict() for segment in self.segments],
+            "metadata": self.metadata.to_dict(),
+            "source": self.source
+        }
 
 
 class BaseLyricsProvider(ABC):
