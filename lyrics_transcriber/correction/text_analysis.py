@@ -3,6 +3,7 @@ from enum import Enum
 from typing import List
 import spacy
 from spacy.tokens import Doc
+import logging
 
 
 class PhraseType(Enum):
@@ -31,11 +32,19 @@ class PhraseScore:
 class PhraseAnalyzer:
     """Language-agnostic phrase analyzer using spaCy"""
 
-    def __init__(self, language_code: str = "en_core_web_sm"):
-        """Initialize with specific language model"""
+    def __init__(self, logger: logging.Logger, language_code: str = "en_core_web_sm"):
+        """Initialize with specific language model and logger
+
+        Args:
+            logger: Logger instance to use for this analyzer
+            language_code: spaCy language model to use
+        """
+        self.logger = logger
+        self.logger.info(f"Initializing PhraseAnalyzer with language model: {language_code}")
         try:
             self.nlp = spacy.load(language_code)
         except OSError:
+            self.logger.error(f"Failed to load language model: {language_code}")
             raise OSError(
                 f"Language model '{language_code}' not found. " f"Please install it with: python -m spacy download {language_code}"
             )
@@ -50,6 +59,8 @@ class PhraseAnalyzer:
         Returns:
             PhraseScore with phrase_type, natural_break_score, and length_score
         """
+        self.logger.info(f"Scoring phrase with context length {len(context)}: {' '.join(words)}")
+
         phrase = " ".join(words)
         phrase_doc = self.nlp(phrase)
         context_doc = self.nlp(context)
@@ -102,6 +113,7 @@ class PhraseAnalyzer:
         Returns:
             PhraseType: COMPLETE, PARTIAL, or CROSS_BOUNDARY
         """
+        # self.logger.debug(f"Determining phrase type for: {doc.text}")
 
         # First check if it's a complete clause
         if self.is_complete_clause(doc):
@@ -138,6 +150,7 @@ class PhraseAnalyzer:
         "world How" -> 0.0 (crosses sentence boundary)
         "I wake up" -> 0.85 (strong alignment with verb phrase)
         """
+        # self.logger.debug(f"Calculating break score for: {phrase_doc.text}")
         phrase_text = phrase_doc.text
         phrase_start = context_doc.text.find(phrase_text)
 
@@ -181,6 +194,7 @@ class PhraseAnalyzer:
         "the cat sleeps" -> 2 units (noun chunk + verb) -> 1.0
         "the big cat sleeps soundly on the mat" -> 4 units (noun chunk + verb + adverb + prep phrase) -> 0.6
         """
+        # self.logger.debug(f"Calculating length score for: {doc.text}")
         # Count meaningful linguistic units
         units = 0
 
@@ -219,6 +233,7 @@ class PhraseAnalyzer:
         - Sometimes marks pronoun as ROOT
         - Verb can be marked as flat/aux
         """
+        # self.logger.debug(f"Checking if complete clause: {doc.text}")
         # Standard subject-verb pattern (English/French)
         standard_pattern = any(token.dep_ in {"nsubj", "nsubjpass"} for token in doc) and any(
             token.dep_ == "ROOT" and token.pos_ == "VERB" for token in doc
@@ -242,6 +257,7 @@ class PhraseAnalyzer:
         - "the big cat" (determiner + adjective + noun)
         - "my heart" (possessive + noun)
         """
+        self.logger.debug(f"Checking if valid noun phrase: {doc.text}")
         chunks = list(doc.noun_chunks)
         if not chunks:
             return False
@@ -265,6 +281,7 @@ class PhraseAnalyzer:
         2. Only use valid verb phrase dependencies
         3. Have correct word order (verb before modifiers)
         """
+        self.logger.debug(f"Checking if valid verb phrase: {doc.text}")
         VALID_DEPS = {
             "ROOT",  # Main verb
             "advmod",  # Adverbial modifier
@@ -297,6 +314,7 @@ class PhraseAnalyzer:
         - "dans la maison" (French: "in the house")
         - "en la casa" (Spanish: "in the house")
         """
+        self.logger.debug(f"Checking if valid prep phrase: {doc.text}")
         starts_with_prep = doc[0].pos_ == "ADP"
         has_content = len(doc) > 1
         has_valid_structure = any(t.dep_ == "pobj" for t in doc) or (  # English style
@@ -318,6 +336,7 @@ class PhraseAnalyzer:
         - First word must modify second word
         - Second word must be the root
         """
+        self.logger.debug(f"Checking if valid adverb phrase: {doc.text}")
         # Check basic structure
         if len(doc) != 2:  # Only handle two-word phrases for now
             return False
@@ -346,6 +365,7 @@ class PhraseAnalyzer:
 
     def calculate_line_break_score(self, phrase_start: int, phrase_end: int, context_text: str) -> float:
         """Calculate score based on line break alignment."""
+        self.logger.debug(f"Calculating line break score for phrase at positions {phrase_start}:{phrase_end}")
         lines = context_text.split("\n")
         for line in lines:
             line_start = context_text.find(line)
@@ -379,6 +399,7 @@ class PhraseAnalyzer:
 
     def calculate_sentence_break_score(self, phrase_doc: Doc, phrase_start: int, phrase_end: int, context_doc: Doc) -> float:
         """Calculate score based on sentence boundary alignment."""
+        self.logger.debug(f"Calculating sentence break score for: {phrase_doc.text}")
         for sent in context_doc.sents:
             sent_start = sent.start_char
             sent_end = sent.end_char

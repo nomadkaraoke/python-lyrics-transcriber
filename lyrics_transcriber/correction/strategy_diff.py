@@ -7,7 +7,7 @@ import string
 from ..transcribers.base_transcriber import TranscriptionData, LyricsSegment, Word, TranscriptionResult
 from ..lyrics.base_lyrics_provider import LyricsData
 from .base_strategy import CorrectionResult, CorrectionStrategy, WordCorrection
-from .anchor_sequence import AnchorSequenceFinder, AnchorSequence
+from .anchor_sequence import AnchorSequenceFinder, AnchorSequence, ScoredAnchor
 
 
 @dataclass
@@ -91,7 +91,7 @@ class DiffBasedCorrector(CorrectionStrategy):
         return leading_space + prefix + new_word.strip() + suffix + trailing_space
 
     def _align_texts(
-        self, source_text: str, target_text: str, anchor_sequences: List[AnchorSequence]
+        self, source_text: str, target_text: str, anchor_sequences: List[ScoredAnchor]
     ) -> Tuple[List[Tuple[str, str]], List[str], List[str]]:
         """Align two texts using anchor sequences as guides."""
         self.logger.debug(f"\nStarting alignment between texts:")
@@ -109,9 +109,9 @@ class DiffBasedCorrector(CorrectionStrategy):
         prev_s = prev_t = 0
 
         # Process each section between anchor sequences
-        for anchor in anchor_sequences:
-            s_idx = anchor.transcription_position
-            t_idx = anchor.reference_positions.get(target_text, -1)
+        for scored_anchor in anchor_sequences:
+            s_idx = scored_anchor.transcription_position
+            t_idx = scored_anchor.reference_positions.get(target_text, -1)
 
             if t_idx == -1:
                 continue  # Skip if sequence not found in this target text
@@ -129,14 +129,14 @@ class DiffBasedCorrector(CorrectionStrategy):
                     alignments.append((s_word, t_word))
 
             # Add the anchor sequence words
-            for i in range(anchor.length):
+            for i in range(scored_anchor.anchor.length):
                 s_word = source_words_orig[s_idx + i]
                 t_word = target_words_orig[t_idx + i]
                 alignments.append((s_word, t_word))
                 matched_sequences.append(s_word)
 
-            prev_s = s_idx + anchor.length
-            prev_t = t_idx + anchor.length
+            prev_s = s_idx + scored_anchor.anchor.length
+            prev_t = t_idx + scored_anchor.anchor.length
 
         # Handle remaining words
         s_remaining = source_words_orig[prev_s:]

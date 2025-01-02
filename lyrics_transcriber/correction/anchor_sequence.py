@@ -44,6 +44,31 @@ class ScoredAnchor:
     phrase_score: PhraseScore
 
     @property
+    def words(self) -> List[str]:
+        """Get the words from the underlying anchor."""
+        return self.anchor.words
+
+    @property
+    def text(self) -> str:
+        """Get the text from the underlying anchor."""
+        return self.anchor.text
+
+    @property
+    def confidence(self) -> float:
+        """Get the confidence from the underlying anchor."""
+        return self.anchor.confidence
+
+    @property
+    def transcription_position(self) -> int:
+        """Get the transcription position from the underlying anchor."""
+        return self.anchor.transcription_position
+
+    @property
+    def reference_positions(self) -> Dict[str, int]:
+        """Get the reference positions from the underlying anchor."""
+        return self.anchor.reference_positions
+
+    @property
     def total_score(self) -> float:
         """Combine confidence, phrase quality, and length"""
         # Length bonus: (length - 1) * 0.1 gives 0.1 per extra word
@@ -53,6 +78,19 @@ class ScoredAnchor:
         # Combine scores
         return base_score + length_bonus
 
+    def to_dict(self) -> Dict[str, Any]:
+        """Convert the scored anchor to a JSON-serializable dictionary."""
+        return {
+            **self.anchor.to_dict(),  # Include all AnchorSequence fields
+            "phrase_score": {
+                "phrase_type": self.phrase_score.phrase_type.value,
+                "natural_break_score": self.phrase_score.natural_break_score,
+                "length_score": self.phrase_score.length_score,
+                "total_score": self.phrase_score.total_score,
+            },
+            "total_score": self.total_score,
+        }
+
 
 class AnchorSequenceFinder:
     """Identifies and manages anchor sequences between transcribed and reference lyrics."""
@@ -61,7 +99,7 @@ class AnchorSequenceFinder:
         self.min_sequence_length = min_sequence_length
         self.min_sources = min_sources
         self.logger = logger or logging.getLogger(__name__)
-        self.phrase_analyzer = PhraseAnalyzer()
+        self.phrase_analyzer = PhraseAnalyzer(logger=self.logger)
         self.used_positions = {}  # Initialize empty dict for used positions
 
     def _clean_text(self, text: str) -> str:
@@ -77,6 +115,7 @@ class AnchorSequenceFinder:
             - Multiple spaces/whitespace collapsed to single space
             - Leading/trailing whitespace removed
         """
+        self.logger.debug(f"_clean_text called with text length: {len(text)}")
         # Convert to lowercase
         text = text.lower()
 
@@ -90,10 +129,12 @@ class AnchorSequenceFinder:
 
     def _find_ngrams(self, words: List[str], n: int) -> List[Tuple[List[str], int]]:
         """Generate n-grams with their starting positions."""
+        self.logger.debug(f"_find_ngrams called with {len(words)} words, n={n}")
         return [(words[i : i + n], i) for i in range(len(words) - n + 1)]
 
     def _find_matching_sources(self, ngram: List[str], references: Dict[str, List[str]], n: int) -> Dict[str, int]:
         """Find which sources contain the given n-gram and at what positions."""
+        self.logger.debug(f"_find_matching_sources called for ngram: '{' '.join(ngram)}'")
         matches = {}
         all_positions = {source: [] for source in references}
 
@@ -123,12 +164,14 @@ class AnchorSequenceFinder:
         Returns:
             Dict mapping source IDs to unused positions
         """
+        self.logger.debug(f"_filter_used_positions called with {len(matches)} matches")
         return {source: pos for source, pos in matches.items() if pos not in self.used_positions.get(source, set())}
 
     def _create_anchor(
         self, ngram: List[str], trans_pos: int, matching_sources: Dict[str, int], total_sources: int
     ) -> Optional[AnchorSequence]:
         """Create an anchor sequence if it meets the minimum sources requirement."""
+        self.logger.debug(f"_create_anchor called for ngram: '{' '.join(ngram)}' at position {trans_pos}")
         if len(matching_sources) >= self.min_sources:
             confidence = len(matching_sources) / total_sources
             anchor = AnchorSequence(
@@ -138,8 +181,12 @@ class AnchorSequenceFinder:
             return anchor
         return None
 
-    def find_anchors(self, transcribed: str, references: Dict[str, str]) -> List[AnchorSequence]:
-        """Find anchor sequences that appear in both transcription and references."""
+    def find_anchors(self, transcribed: str, references: Dict[str, str]) -> List[ScoredAnchor]:
+        """Find anchor sequences that appear in both transcription and references.
+
+        Returns:
+            List of ScoredAnchor objects containing both the anchor sequences and their quality scores.
+        """
         # Clean and split texts
         trans_words = self._clean_text(transcribed).split()
         ref_texts_clean = {source: self._clean_text(text).split() for source, text in references.items()}
@@ -179,11 +226,13 @@ class AnchorSequenceFinder:
                         found_new_match = True
                         break  # Start over to try finding more matches
 
-        # Use existing method to remove overlapping sequences
-        return self._remove_overlapping_sequences(candidate_anchors, transcribed)
+        self.logger.info(f"Found {len(candidate_anchors)} candidate anchors")
+        filtered_anchors = self._remove_overlapping_sequences(candidate_anchors, transcribed)
+        return filtered_anchors  # Now returns ScoredAnchor objects directly
 
     def _score_sequence(self, words: List[str], context: str) -> PhraseScore:
         """Score a sequence based on its phrase quality"""
+        self.logger.debug(f"_score_sequence called for: '{' '.join(words)}'")
         return self.phrase_analyzer.score_phrase(words, context)
 
     def _score_anchor(self, anchor: AnchorSequence, context: str) -> ScoredAnchor:
@@ -203,6 +252,7 @@ class AnchorSequenceFinder:
             phrase_score = self.phrase_analyzer.score_phrase(anchor.words, context)
             phrase_score.natural_break_score = 0.0  # Penalize for crossing line break
 
+        self.logger.debug(f"_score_anchor called for sequence: '{anchor.text}'")
         return ScoredAnchor(anchor=anchor, phrase_score=phrase_score)
 
     def _get_sequence_priority(self, scored_anchor: ScoredAnchor) -> Tuple[float, float, float, int, int]:
@@ -217,6 +267,7 @@ class AnchorSequenceFinder:
 
         Position bonus: Add 1.0 to total score for sequences at position 0
         """
+        self.logger.debug(f"_get_sequence_priority called for anchor: '{scored_anchor.anchor.text}'")
         position_bonus = 1.0 if scored_anchor.anchor.transcription_position == 0 else 0.0
         return (
             len(scored_anchor.anchor.reference_positions),  # More sources is better
@@ -245,15 +296,20 @@ class AnchorSequenceFinder:
         shared_sources = set(seq1.reference_positions.keys()) & set(seq2.reference_positions.keys())
         ref_overlap = any(seq1.reference_positions[source] == seq2.reference_positions[source] for source in shared_sources)
 
+        self.logger.debug(f"Checking overlap between '{seq1.text}' and '{seq2.text}'")
         return trans_overlap or ref_overlap
 
-    def _remove_overlapping_sequences(self, anchors: List[AnchorSequence], context: str) -> List[AnchorSequence]:
+    def _remove_overlapping_sequences(self, anchors: List[AnchorSequence], context: str) -> List[ScoredAnchor]:
         """Remove overlapping sequences using phrase analysis.
 
         Args:
             anchors: List of anchor sequences to filter
             context: The original transcribed text for phrase analysis
+
+        Returns:
+            List of non-overlapping ScoredAnchor objects
         """
+        self.logger.info(f"Removing overlapping sequences from {len(anchors)} anchors")
         if not anchors:
             return []
 
@@ -276,5 +332,5 @@ class AnchorSequenceFinder:
             if not overlaps:
                 filtered_scored.append(scored_anchor)
 
-        # Return just the anchor sequences
-        return [scored.anchor for scored in filtered_scored]
+        self.logger.info(f"Filtered down to {len(filtered_scored)} non-overlapping anchors")
+        return filtered_scored  # Now return ScoredAnchor objects directly
