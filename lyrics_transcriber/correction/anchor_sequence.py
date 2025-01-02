@@ -1,6 +1,7 @@
 from dataclasses import dataclass, asdict
 from typing import Any, Dict, List, Optional, Protocol, Tuple, Set
 import logging
+import re
 
 
 @dataclass
@@ -41,10 +42,19 @@ class AnchorSequenceFinder:
         self.min_sequence_length = min_sequence_length
         self.min_sources = min_sources
         self.logger = logger or logging.getLogger(__name__)
+        # Track used positions to prevent duplicate matches
+        self.used_positions: Dict[str, Set[int]] = {}
 
     def _clean_text(self, text: str) -> str:
-        """Standardize text for comparison."""
-        return " ".join(text.lower().split())
+        """Standardize text for comparison by:
+        1. Converting to lowercase
+        2. Removing punctuation
+        3. Normalizing whitespace
+        """
+        # Remove punctuation and convert to lowercase
+        text = re.sub(r"[^\w\s]", "", text.lower())
+        # Normalize whitespace
+        return " ".join(text.split())
 
     def _find_ngrams(self, words: List[str], n: int) -> List[Tuple[List[str], int]]:
         """Generate n-grams with their starting positions."""
@@ -53,11 +63,22 @@ class AnchorSequenceFinder:
     def _find_matching_sources(self, ngram: List[str], ref_texts_clean: Dict[str, List[str]], n: int) -> Dict[str, int]:
         """Find matching positions of an n-gram in reference texts."""
         matching_sources: Dict[str, int] = {}
+
         for source, ref_words in ref_texts_clean.items():
+            # Find all positions where this n-gram appears in the reference text
+            matching_positions = []
             for ref_pos in range(len(ref_words) - n + 1):
-                if ngram == ref_words[ref_pos : ref_pos + n]:
-                    matching_sources[source] = ref_pos
+                current_words = ref_words[ref_pos : ref_pos + n]
+                if ngram == current_words:
+                    matching_positions.append(ref_pos)
+
+            # If we found matches and at least one hasn't been used before, use the first unused position
+            for pos in matching_positions:
+                if pos not in self.used_positions[source]:
+                    matching_sources[source] = pos
+                    self.used_positions[source].add(pos)
                     break
+
         return matching_sources
 
     def _create_anchor(
@@ -77,51 +98,64 @@ class AnchorSequenceFinder:
         """Find anchor sequences that appear in both transcribed and reference texts."""
         self.logger.debug("Starting anchor sequence search")
 
+        # Reset used positions for new search
+        self.used_positions = {source: set() for source in reference_texts.keys()}
+
         # Clean and split texts
         trans_words = self._clean_text(transcribed_text).split()
         ref_texts_clean = {source: self._clean_text(text).split() for source, text in reference_texts.items()}
 
-        anchors: List[AnchorSequence] = []
+        all_anchors: List[AnchorSequence] = []
         max_length = min(len(trans_words), min(len(words) for words in ref_texts_clean.values()))
 
-        # Try different sequence lengths, starting with longest
-        for n in range(max_length, self.min_sequence_length - 1, -1):
+        # Try each possible sequence length
+        for n in range(self.min_sequence_length, max_length + 1):
             self.logger.debug(f"Searching for {n}-word sequences")
+
+            # Reset used positions for each sequence length
+            self.used_positions = {source: set() for source in reference_texts.keys()}
 
             # Generate n-grams from transcribed text
             trans_ngrams = self._find_ngrams(trans_words, n)
 
             for ngram, trans_pos in trans_ngrams:
                 matching_sources = self._find_matching_sources(ngram, ref_texts_clean, n)
-                anchor = self._create_anchor(ngram, trans_pos, matching_sources, len(reference_texts))
-                if anchor:
-                    anchors.append(anchor)
+                if len(matching_sources) >= self.min_sources:
+                    confidence = len(matching_sources) / len(reference_texts)
+                    anchor = AnchorSequence(
+                        words=ngram, transcription_position=trans_pos, reference_positions=matching_sources, confidence=confidence
+                    )
+                    all_anchors.append(anchor)
 
-        # Sort anchors by position
-        anchors.sort(key=lambda x: x.transcription_position)
-        return self._remove_overlapping_sequences(anchors)
+        # Sort by position and confidence
+        all_anchors.sort(key=lambda x: (x.transcription_position, -x.confidence, -x.length))
+        return self._remove_overlapping_sequences(all_anchors)
 
     def _remove_overlapping_sequences(self, anchors: List[AnchorSequence]) -> List[AnchorSequence]:
-        """Remove overlapping sequences, preferring longer/higher confidence ones."""
+        """Remove overlapping sequences, preferring those with higher confidence and optimal length."""
         if not anchors:
             return []
 
-        filtered = [anchors[0]]
+        # Sort by confidence first, then by length (but not too aggressively), then by position
+        def score_anchor(anchor: AnchorSequence) -> Tuple[float, float, int]:
+            # Prefer sequences of 3-4 words, penalize very long sequences
+            length_score = 1.0 if 3 <= anchor.length <= 4 else (0.9 if anchor.length <= 6 else 0.8)
+            return (anchor.confidence, length_score, -anchor.transcription_position)
 
-        for anchor in anchors[1:]:
-            prev = filtered[-1]
-            prev_end = prev.transcription_position + prev.length
-
-            # If this anchor doesn't overlap with the previous one, keep it
-            if anchor.transcription_position >= prev_end:
+        filtered = []
+        for anchor in sorted(anchors, key=score_anchor, reverse=True):
+            # Check if this anchor overlaps with any existing filtered anchor
+            overlaps = False
+            for existing in filtered:
+                if (
+                    anchor.transcription_position < existing.transcription_position + existing.length
+                    and existing.transcription_position < anchor.transcription_position + anchor.length
+                ):
+                    overlaps = True
+                    break
+            if not overlaps:
                 filtered.append(anchor)
-                continue
 
-            # If they overlap, keep the better one
-            score_prev = prev.length * prev.confidence
-            score_curr = anchor.length * anchor.confidence
-
-            if score_curr > score_prev:
-                filtered[-1] = anchor
-
+        # Sort by position for consistent output
+        filtered.sort(key=lambda x: x.transcription_position)
         return filtered
