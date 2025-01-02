@@ -7,6 +7,7 @@ import string
 from ..transcribers.base_transcriber import TranscriptionData, LyricsSegment, Word, TranscriptionResult
 from ..lyrics.base_lyrics_provider import LyricsData
 from .base_strategy import CorrectionResult, CorrectionStrategy, WordCorrection
+from .anchor_sequence import AnchorSequenceFinder, AnchorSequence
 
 
 @dataclass
@@ -39,9 +40,15 @@ class CorrectionEntry:
 class DiffBasedCorrector(CorrectionStrategy):
     """Implements word-diff based correction strategy using anchor words."""
 
-    def __init__(self, logger: Optional[logging.Logger] = None, min_source_agreement: float = 0.5):
+    def __init__(
+        self,
+        logger: Optional[logging.Logger] = None,
+        min_source_agreement: float = 0.5,
+        anchor_finder: Optional[AnchorSequenceFinder] = None,
+    ):
         self.logger = logger or logging.getLogger(__name__)
         self.min_source_agreement = min_source_agreement
+        self.anchor_finder = anchor_finder or AnchorSequenceFinder(logger=self.logger)
         self.corrections: Dict[str, CorrectionEntry] = {}
 
     def _clean_word(self, word: str) -> str:
@@ -83,71 +90,10 @@ class DiffBasedCorrector(CorrectionStrategy):
         # Apply original formatting to new word
         return leading_space + prefix + new_word.strip() + suffix + trailing_space
 
-    def _find_anchor_words(self, segments: List[LyricsSegment]) -> Set[str]:
-        """Identify potential anchor words from transcribed segments."""
-        self.logger.debug("Starting anchor word identification")
-
-        stop_words = {
-            "a",
-            "an",
-            "and",
-            "are",
-            "as",
-            "at",
-            "be",
-            "by",
-            "for",
-            "from",
-            "has",
-            "he",
-            "in",
-            "is",
-            "it",
-            "its",
-            "of",
-            "on",
-            "that",
-            "the",
-            "to",
-            "was",
-            "were",
-            "will",
-            "with",
-        }
-        self.logger.debug(f"Using {len(stop_words)} stop words for filtering")
-
-        anchors = set()
-        word_positions = {}  # Track words and their relative positions
-
-        for segment_idx, segment in enumerate(segments):
-            self.logger.debug(f"Processing segment {segment_idx}: '{segment.text}'")
-
-            for i, word in enumerate(segment.words):
-                word_lower = self._clean_word(word.text)
-
-                if len(word_lower) <= 2:
-                    continue
-                if word_lower in stop_words:
-                    continue
-
-                if word_lower not in word_positions:
-                    word_positions[word_lower] = []
-                word_positions[word_lower].append(i)
-
-                if len(word_positions[word_lower]) >= 2:
-                    self.logger.debug(f"Adding repeated word as anchor: '{word_lower}'")
-                    anchors.add(word_lower)
-                elif len(word_lower) >= 4:
-                    self.logger.debug(f"Adding long word as anchor: '{word_lower}'")
-                    anchors.add(word_lower)
-
-        self.logger.debug(f"Final anchor words: {sorted(anchors)}")
-        return anchors
-
     def _align_texts(
-        self, source_text: str, target_text: str, anchor_words: Set[str]
+        self, source_text: str, target_text: str, anchor_sequences: List[AnchorSequence]
     ) -> Tuple[List[Tuple[str, str]], List[str], List[str]]:
-        """Align two texts using difflib with anchor word guidance."""
+        """Align two texts using anchor sequences as guides."""
         self.logger.debug(f"\nStarting alignment between texts:")
         self.logger.debug(f"Source text: {source_text}")
         self.logger.debug(f"Target text: {target_text}")
@@ -156,29 +102,20 @@ class DiffBasedCorrector(CorrectionStrategy):
         source_words_orig = source_text.split()
         target_words_orig = target_text.split()
 
-        # Clean words for comparison
-        source_words_clean = [self._clean_word(w) for w in source_words_orig]
-        target_words_clean = [self._clean_word(w) for w in target_words_orig]
-
-        # Create anchor positions using cleaned words
-        source_anchors = {word: i for i, word in enumerate(source_words_clean) if self._clean_word(word) in anchor_words}
-        target_anchors = {word: i for i, word in enumerate(target_words_clean) if self._clean_word(word) in anchor_words}
-
-        self.logger.debug(f"Anchor positions in source: {source_anchors}")
-        self.logger.debug(f"Anchor positions in target: {target_anchors}")
-
-        common_anchors = set(source_anchors.keys()) & set(target_anchors.keys())
-        self.logger.debug(f"Common anchors found: {common_anchors}")
-
-        alignment_points = [(source_anchors[w], target_anchors[w]) for w in common_anchors]
-        alignment_points.sort()
-
         alignments = []
-        matched_anchors = []
+        matched_sequences = []
+        unmatched_words = []
+
         prev_s = prev_t = 0
 
-        # Process each section between anchor points
-        for s_idx, t_idx in alignment_points:
+        # Process each section between anchor sequences
+        for anchor in anchor_sequences:
+            s_idx = anchor.transcription_position
+            t_idx = anchor.reference_positions.get(target_text, -1)
+
+            if t_idx == -1:
+                continue  # Skip if sequence not found in this target text
+
             # Align words between previous anchor and this one
             s_section = source_words_orig[prev_s:s_idx]
             t_section = target_words_orig[prev_t:t_idx]
@@ -191,13 +128,15 @@ class DiffBasedCorrector(CorrectionStrategy):
                 if s_word is not None and t_word is not None:
                     alignments.append((s_word, t_word))
 
-            # Add the anchor word
-            anchor_word = source_words_orig[s_idx]
-            alignments.append((anchor_word, target_words_orig[t_idx]))
-            matched_anchors.append(self._clean_word(anchor_word))
+            # Add the anchor sequence words
+            for i in range(anchor.length):
+                s_word = source_words_orig[s_idx + i]
+                t_word = target_words_orig[t_idx + i]
+                alignments.append((s_word, t_word))
+                matched_sequences.append(s_word)
 
-            prev_s = s_idx + 1
-            prev_t = t_idx + 1
+            prev_s = s_idx + anchor.length
+            prev_t = t_idx + anchor.length
 
         # Handle remaining words
         s_remaining = source_words_orig[prev_s:]
@@ -208,25 +147,20 @@ class DiffBasedCorrector(CorrectionStrategy):
             t_word = t_remaining[i] if i < len(t_remaining) else None
             if s_word is not None and t_word is not None:
                 alignments.append((s_word, t_word))
+            elif s_word is not None:
+                unmatched_words.append(s_word)
 
-        # Track unmatched anchor words
-        unmatched_anchors = [w for w in anchor_words if w not in matched_anchors]
+        return alignments, matched_sequences, unmatched_words
 
-        return alignments, matched_anchors, unmatched_anchors
-
-    def _create_correction_mapping(self, primary_text: str, lyrics_results: Dict[str, str], anchor_words: Set[str]) -> None:
-        """Create correction mapping from multiple lyrics sources."""
+    def _create_correction_mapping(self, primary_text: str, lyrics_results: Dict[str, str], anchor_sequences: List[AnchorSequence]) -> None:
+        """Create correction mapping from multiple lyrics sources using anchor sequences."""
         self.logger.debug("\nStarting correction mapping creation")
 
-        # Split while preserving original spacing
-        primary_words = primary_text.split(" ")
-
         for source, lyrics in lyrics_results.items():
-            target_words = lyrics.split(" ")
             self.logger.debug(f"\nProcessing lyrics from source: {source}")
 
             # Get alignments for this source
-            alignments, matched_anchors, unmatched_anchors = self._align_texts(primary_text, lyrics, anchor_words)
+            alignments, matched_sequences, unmatched_words = self._align_texts(primary_text, lyrics, anchor_sequences)
 
             # Process aligned words
             for source_word_orig, target_word_orig in alignments:
@@ -253,7 +187,6 @@ class DiffBasedCorrector(CorrectionStrategy):
                     target_word = self._clean_word(target_word_orig)
 
                     if source_word != target_word:
-                        self.logger.debug(f"Processing unmatched pair: '{source_word_orig}' -> '{target_word_orig}'")
                         if source_word not in self.corrections:
                             self.corrections[source_word] = CorrectionEntry()
                             self.corrections[source_word].original_form = source_word_orig
@@ -289,22 +222,23 @@ class DiffBasedCorrector(CorrectionStrategy):
         transcription_results: List[TranscriptionResult],
         lyrics_results: List[LyricsData],
     ) -> CorrectionResult:
-        """Apply diff-based correction algorithm with detailed output."""
+        """Apply diff-based correction algorithm using anchor sequences."""
         self.logger.info("Starting diff-based correction")
 
         # Sort transcription results by priority
         sorted_results = sorted(transcription_results, key=lambda x: x.priority)
         primary_transcription = sorted_results[0].result
 
-        # Find anchor words
-        anchor_words = self._find_anchor_words(primary_transcription.segments)
-        self.logger.debug(f"Found {len(anchor_words)} anchor words: {anchor_words}")
+        # Get transcribed text and reference texts
+        transcribed_text = " ".join(w.text for segment in primary_transcription.segments for w in segment.words)
+        reference_texts = {lyrics.source: lyrics.lyrics for lyrics in lyrics_results}
+
+        # Find anchor sequences
+        anchor_sequences = self.anchor_finder.find_anchors(transcribed_text, reference_texts)
 
         # Create correction mapping
         self._create_correction_mapping(
-            " ".join(w.text for segment in primary_transcription.segments for w in segment.words),
-            {lyrics.source: lyrics.lyrics.lower() for lyrics in lyrics_results},
-            anchor_words,
+            transcribed_text, {lyrics.source: lyrics.lyrics.lower() for lyrics in lyrics_results}, anchor_sequences
         )
 
         # Select corrections that meet confidence thresholds
@@ -376,25 +310,24 @@ class DiffBasedCorrector(CorrectionStrategy):
             corrected_segments.append(corrected_segment)
 
         # Join segments with newlines, maintaining original spacing
-        corrected_text = "\n\n".join(segment.text for segment in corrected_segments) + "\n"
-        original_text = "\n\n".join(segment.text for segment in primary_transcription.segments) + "\n"
-
+        corrected_text = "\n".join(segment.text for segment in corrected_segments) + "\n"
         # Calculate correction ratio
         total_words = sum(len(segment.words) for segment in corrected_segments)
         correction_ratio = 1 - (corrections_made / total_words if total_words > 0 else 0)
 
         return CorrectionResult(
             original_segments=primary_transcription.segments,
-            original_text=original_text,
             corrected_segments=corrected_segments,
             corrected_text=corrected_text,
             corrections=corrections,
             corrections_made=corrections_made,
             confidence=correction_ratio,
-            anchor_words=list(anchor_words),
+            transcribed_text=transcribed_text,
+            reference_texts=reference_texts,
+            anchor_sequences=anchor_sequences,
             metadata={
                 "correction_strategy": "diff_based",
-                "anchor_words_count": len(anchor_words),
+                "anchor_sequences_count": len(anchor_sequences),
                 "total_words": total_words,
                 "correction_ratio": correction_ratio,
                 "primary_source": sorted_results[0].name,

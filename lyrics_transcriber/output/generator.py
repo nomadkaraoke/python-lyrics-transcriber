@@ -293,7 +293,7 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
 
         try:
             with open(output_path, "w", encoding="utf-8") as f:
-                f.write(correction_result.original_text)
+                f.write(correction_result.transcribed_text)
             self.logger.info(f"Original transcription file generated: {output_path}")
             return output_path
         except Exception as e:

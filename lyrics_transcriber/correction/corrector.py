@@ -45,12 +45,11 @@ class LyricsCorrector:
             primary_transcription = transcription_results[0].result
             return CorrectionResult(
                 original_segments=primary_transcription.segments,
-                original_text=primary_transcription.text,
                 corrected_segments=primary_transcription.segments,
                 corrected_text=primary_transcription.text,
                 corrections=[],
                 corrections_made=0,
                 confidence=1.0,
-                anchor_words=set(),
+                anchor_sequences=[],
                 metadata=primary_transcription.metadata or {},
             )
