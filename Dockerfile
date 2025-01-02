@@ -21,9 +21,8 @@ COPY pyproject.toml poetry.lock ./
 RUN poetry config virtualenvs.create false \
     && poetry install --only main --no-interaction --no-ansi
 
-# Create the Whisper model cache folder and download the models
-RUN mkdir -p /root/.cache/whisper && \
-    python -c "import whisper; whisper.load_model('medium')"
+# Download the spacy model for english
+RUN python -m spacy download en_core_web_sm
 
 # Copy the rest of the application code
 COPY README.md ./

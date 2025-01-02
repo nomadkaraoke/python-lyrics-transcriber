@@ -20,6 +20,7 @@ karaoke-lyrics-processor = ">=0.4"
 dropbox = ">=12"
 python-dotenv = ">=1"
 pydub = ">=0.25"
+spacy = "^3.8.3"
 
 [tool.poetry.group.dev.dependencies]
 black = ">=23"

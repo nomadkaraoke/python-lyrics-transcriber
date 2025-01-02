@@ -2,6 +2,7 @@ from dataclasses import dataclass, asdict
 from typing import Any, Dict, List, Optional, Protocol, Tuple, Set
 import logging
 import re
+from .text_analysis import PhraseAnalyzer, PhraseScore
 
 
 @dataclass
@@ -35,6 +36,19 @@ class AnchorSequence:
         }
 
 
+@dataclass
+class ScoredAnchor:
+    """An anchor sequence with its quality score"""
+
+    anchor: AnchorSequence
+    phrase_score: PhraseScore
+
+    @property
+    def total_score(self) -> float:
+        """Combine confidence and phrase quality"""
+        return self.anchor.confidence * 0.6 + self.phrase_score.total_score * 0.4
+
+
 class AnchorSequenceFinder:
     """Identifies and manages anchor sequences between transcribed and reference lyrics."""
 
@@ -42,8 +56,7 @@ class AnchorSequenceFinder:
         self.min_sequence_length = min_sequence_length
         self.min_sources = min_sources
         self.logger = logger or logging.getLogger(__name__)
-        # Track used positions to prevent duplicate matches
-        self.used_positions: Dict[str, Set[int]] = {}
+        self.phrase_analyzer = PhraseAnalyzer()
 
     def _clean_text(self, text: str) -> str:
         """Standardize text for comparison by:
@@ -131,31 +144,36 @@ class AnchorSequenceFinder:
         all_anchors.sort(key=lambda x: (x.transcription_position, -x.confidence, -x.length))
         return self._remove_overlapping_sequences(all_anchors)
 
-    def _remove_overlapping_sequences(self, anchors: List[AnchorSequence]) -> List[AnchorSequence]:
-        """Remove overlapping sequences, preferring those with higher confidence and optimal length."""
+    def _score_sequence(self, words: List[str], context: str) -> PhraseScore:
+        """Score a sequence based on its phrase quality"""
+        return self.phrase_analyzer.score_phrase(words, context)
+
+    def _remove_overlapping_sequences(self, anchors: List[AnchorSequence], context: str) -> List[AnchorSequence]:
+        """Remove overlapping sequences using phrase analysis"""
         if not anchors:
             return []
 
-        # Sort by confidence first, then by length (but not too aggressively), then by position
-        def score_anchor(anchor: AnchorSequence) -> Tuple[float, float, int]:
-            # Prefer sequences of 3-4 words, penalize very long sequences
-            length_score = 1.0 if 3 <= anchor.length <= 4 else (0.9 if anchor.length <= 6 else 0.8)
-            return (anchor.confidence, length_score, -anchor.transcription_position)
+        # Score all anchors
+        scored_anchors = [ScoredAnchor(anchor=anchor, phrase_score=self._score_sequence(anchor.words, context)) for anchor in anchors]
 
+        # Sort by total score (combining confidence and phrase quality)
+        scored_anchors.sort(key=lambda x: (-x.total_score, x.anchor.transcription_position))
+
+        # Filter overlapping sequences
         filtered = []
-        for anchor in sorted(anchors, key=score_anchor, reverse=True):
-            # Check if this anchor overlaps with any existing filtered anchor
+        for scored_anchor in scored_anchors:
             overlaps = False
             for existing in filtered:
-                if (
-                    anchor.transcription_position < existing.transcription_position + existing.length
-                    and existing.transcription_position < anchor.transcription_position + anchor.length
-                ):
+                if self._sequences_overlap(scored_anchor.anchor, existing):
                     overlaps = True
                     break
             if not overlaps:
-                filtered.append(anchor)
+                filtered.append(scored_anchor.anchor)
 
-        # Sort by position for consistent output
-        filtered.sort(key=lambda x: x.transcription_position)
         return filtered
+
+    def _sequences_overlap(self, a: AnchorSequence, b: AnchorSequence) -> bool:
+        """Check if two sequences overlap"""
+        a_end = a.transcription_position + a.length
+        b_end = b.transcription_position + b.length
+        return a.transcription_position < b_end and b.transcription_position < a_end
