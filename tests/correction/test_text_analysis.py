@@ -369,3 +369,49 @@ def test_calculate_sentence_break_score(analyzer):
     phrase_doc = analyzer.nlp(phrase)
     score = analyzer.calculate_sentence_break_score(phrase_doc, context.find(phrase), context.find(phrase) + len(phrase), context_doc)
     assert score >= 0.7
+
+
+def test_line_break_scoring_with_overlapping_phrases():
+    """Test scoring of overlapping phrases with line breaks"""
+    analyzer = PhraseAnalyzer()
+    context = "my heart will go on\nand on forever more"
+
+    # Test individual phrases
+    phrases = [
+        "my heart",            # Valid noun phrase
+        "will go on",          # Valid verb phrase
+        "go on and",           # Crosses line break
+        "my heart will go on"  # Complete sentence
+    ]
+
+    print("\nTesting phrases in context:", context)
+    for phrase in phrases:
+        doc = analyzer.nlp(phrase)
+        phrase_type = analyzer._determine_phrase_type(doc)
+        break_score = analyzer._calculate_break_score(doc, analyzer.nlp(context))
+        length_score = analyzer._calculate_length_score(doc)
+        total_score = analyzer.score_phrase(phrase.split(), context)
+
+        print(f"\nPhrase: '{phrase}'")
+        print(f"Phrase type: {phrase_type}")
+        print(f"Break score: {break_score}")
+        print(f"Length score: {length_score}")
+        print(f"Total score: {total_score.total_score}")
+        
+        print("Token Analysis:")
+        for token in doc:
+            print(f"  {token.text:12} pos={token.pos_:6} dep={token.dep_:10} head={token.head.text}")
+            print(f"    morph={token.morph}")
+            print(f"    is_sent_start={token.is_sent_start}")
+            print(f"    like_num={token.like_num}")
+            print(f"    tag_={token.tag_}")
+
+        # Assertions for key phrases
+        if phrase == "my heart":
+            assert break_score > 0.5  # Should have decent break score
+            assert phrase_type == PhraseType.PARTIAL  # Valid noun phrase
+        elif phrase == "go on and":
+            assert break_score == 0.0  # Should be penalized for crossing break
+        elif phrase == "my heart will go on":
+            assert break_score >= 0.8  # Should have high break score
+            assert phrase_type == PhraseType.COMPLETE  # Complete clause

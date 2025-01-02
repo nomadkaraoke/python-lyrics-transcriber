@@ -33,6 +33,7 @@ line-length = 140
 
 [tool.poetry.scripts]
 lyrics-transcriber = 'lyrics_transcriber.cli.cli_main:main'
+test-cov = "pytest --cov=lyrics_transcriber --cov-report=term-missing"
 
 [build-system]
 requires = ["poetry-core"]
@@ -41,7 +42,6 @@ build-backend = "poetry.core.masonry.api"
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 python_files = ["test_*.py"]
-addopts = "-v --cov=lyrics_transcriber --cov-report=term-missing"
 filterwarnings = [
     "ignore:'audioop' is deprecated:DeprecationWarning"
 ]
