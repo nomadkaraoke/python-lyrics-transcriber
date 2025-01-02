@@ -226,3 +226,146 @@ def test_spanish_phrases():
             print(f"  {token.text:12} pos={token.pos_:6} dep={token.dep_:10} head={token.head.text}")
         print(f"Result: {result}, Expected: {expected_type}")
         assert result == expected_type
+
+
+def test_is_complete_clause(analyzer):
+    """Test detection of complete clauses across languages"""
+    complete_clauses = ["I love you", "the cat sleeps", "she runs fast", "they have arrived"]
+    for phrase in complete_clauses:
+        doc = analyzer.nlp(phrase)
+        assert analyzer.is_complete_clause(doc)
+
+    incomplete_clauses = ["the big", "running", "in the house", "very quickly"]
+    for phrase in incomplete_clauses:
+        doc = analyzer.nlp(phrase)
+        assert not analyzer.is_complete_clause(doc)
+
+
+def test_is_valid_noun_phrase(analyzer):
+    """Test detection of valid noun phrases"""
+    valid_noun_phrases = ["the cat", "the big cat", "my heart", "a beautiful morning"]
+    for phrase in valid_noun_phrases:
+        doc = analyzer.nlp(phrase)
+        assert analyzer.is_valid_noun_phrase(doc)
+
+    invalid_noun_phrases = [
+        "cat the",  # wrong order
+        "running fast",  # verb phrase
+        "in the house",  # prep phrase
+        "very quickly",  # adverb phrase
+    ]
+    for phrase in invalid_noun_phrases:
+        doc = analyzer.nlp(phrase)
+        assert not analyzer.is_valid_noun_phrase(doc)
+
+
+def test_is_valid_verb_phrase(analyzer):
+    """Test detection of valid verb phrases"""
+    valid_verb_phrases = ["running fast", "sleep soundly", "jump up", "sing loudly"]
+    for phrase in valid_verb_phrases:
+        doc = analyzer.nlp(phrase)
+        assert analyzer.is_valid_verb_phrase(doc)
+
+    invalid_verb_phrases = [
+        "the cat",  # noun phrase
+        "in the house",  # prep phrase
+        "very quickly",  # adverb phrase
+        "fast running",  # wrong order
+    ]
+    for phrase in invalid_verb_phrases:
+        doc = analyzer.nlp(phrase)
+        assert not analyzer.is_valid_verb_phrase(doc)
+
+
+def test_is_valid_prep_phrase(analyzer):
+    """Test detection of valid prepositional phrases"""
+    valid_prep_phrases = ["in my heart", "on the table", "with great power", "under the bridge"]
+    for phrase in valid_prep_phrases:
+        doc = analyzer.nlp(phrase)
+        assert analyzer.is_valid_prep_phrase(doc)
+
+    invalid_prep_phrases = [
+        "the cat",  # noun phrase
+        "running fast",  # verb phrase
+        "very quickly",  # adverb phrase
+        "my in heart",  # wrong order
+    ]
+    for phrase in invalid_prep_phrases:
+        doc = analyzer.nlp(phrase)
+        assert not analyzer.is_valid_prep_phrase(doc)
+
+
+def test_is_valid_adverb_phrase(analyzer):
+    """Test detection of valid adverbial phrases"""
+    valid_adverb_phrases = [
+        "very quickly",  # Standard adverb phrase
+        "quite slowly",  # Standard adverb phrase
+        "extremely well",  # Standard adverb phrase
+        "rather nicely",  # Standard adverb phrase
+        "quickly very",  # SpaCy considers this valid due to its syntactic structure
+    ]
+    for phrase in valid_adverb_phrases:
+        doc = analyzer.nlp(phrase)
+        print(f"\nAnalyzing valid adverb phrase: '{phrase}'")
+        print("Token Analysis:")
+        for token in doc:
+            print(f"  {token.text:12} pos={token.pos_:6} dep={token.dep_:10} head={token.head.text}")
+            print(f"    morph={token.morph}")
+            print(f"    is_sent_start={token.is_sent_start}")
+            print(f"    like_num={token.like_num}")
+            print(f"    tag_={token.tag_}")
+        assert analyzer.is_valid_adverb_phrase(doc)
+
+    invalid_adverb_phrases = ["the cat", "running fast", "in the house"]  # noun phrase  # verb phrase  # prep phrase
+    for phrase in invalid_adverb_phrases:
+        doc = analyzer.nlp(phrase)
+        print(f"\nAnalyzing invalid adverb phrase: '{phrase}'")
+        print("Token Analysis:")
+        for token in doc:
+            print(f"  {token.text:12} pos={token.pos_:6} dep={token.dep_:10} head={token.head.text}")
+            print(f"    morph={token.morph}")
+            print(f"    is_sent_start={token.is_sent_start}")
+            print(f"    like_num={token.like_num}")
+            print(f"    tag_={token.tag_}")
+        assert not analyzer.is_valid_adverb_phrase(doc)
+
+
+def test_calculate_line_break_score(analyzer):
+    """Test line break score calculation"""
+    context = "first line\nsecond line\nthird line"
+
+    # Perfect match
+    assert analyzer.calculate_line_break_score(0, 10, context) == 1.0  # "first line"
+
+    # Strong alignment
+    assert analyzer.calculate_line_break_score(0, 7, context) == 0.9  # "first l"
+
+    # Crosses boundary
+    assert analyzer.calculate_line_break_score(8, 15, context) == 0.0  # "ne\nsecon"
+
+    # Partial match
+    assert analyzer.calculate_line_break_score(6, 9, context) == 0.5  # "ine"
+
+
+def test_calculate_sentence_break_score(analyzer):
+    """Test sentence break score calculation"""
+    context = "Hello world. How are you? I am fine."
+    context_doc = analyzer.nlp(context)
+
+    # Perfect match with sentence
+    phrase = "Hello world"
+    phrase_doc = analyzer.nlp(phrase)
+    score = analyzer.calculate_sentence_break_score(phrase_doc, context.find(phrase), context.find(phrase) + len(phrase), context_doc)
+    assert score >= 0.8
+
+    # Cross boundary
+    phrase = "world. How"
+    phrase_doc = analyzer.nlp(phrase)
+    score = analyzer.calculate_sentence_break_score(phrase_doc, context.find(phrase), context.find(phrase) + len(phrase), context_doc)
+    assert score == 0.0
+
+    # Strong alignment with verb
+    phrase = "I am"
+    phrase_doc = analyzer.nlp(phrase)
+    score = analyzer.calculate_sentence_break_score(phrase_doc, context.find(phrase), context.find(phrase) + len(phrase), context_doc)
+    assert score >= 0.7

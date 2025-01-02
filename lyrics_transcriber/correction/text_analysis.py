@@ -103,169 +103,20 @@ class PhraseAnalyzer:
             PhraseType: COMPLETE, PARTIAL, or CROSS_BOUNDARY
         """
 
-        def is_complete_clause():
-            """Check if the text forms a complete clause.
-
-            Different languages mark subject-verb relationships differently:
-            English/French:
-            - Subject has nsubj/nsubjpass dependency
-            - Verb is ROOT
-
-            Spanish:
-            - Sometimes marks pronoun as ROOT
-            - Verb can be marked as flat/aux
-            """
-            # Standard subject-verb pattern (English/French)
-            standard_pattern = any(token.dep_ in {"nsubj", "nsubjpass"} for token in doc) and any(
-                token.dep_ == "ROOT" and token.pos_ == "VERB" for token in doc
-            )
-
-            # Spanish pronoun-verb pattern
-            spanish_pattern = (
-                len(doc) == 2  # Two-word phrase
-                and doc[0].pos_ == "PRON"  # First word is pronoun
-                and doc[1].pos_ in {"VERB", "AUX", "ADJ"}  # Second word is verb-like
-                and doc[1].dep_ in {"flat", "aux"}  # Common Spanish dependencies
-            )
-
-            return standard_pattern or spanish_pattern
-
-        def is_valid_noun_phrase():
-            """Check if the text is a valid noun phrase like "the big cat".
-
-            Valid noun phrases:
-            - "the cat" (determiner + noun)
-            - "the big cat" (determiner + adjective + noun)
-            - "my heart" (possessive + noun)
-
-            Invalid noun phrases:
-            - "the war waterloo" (looks like a compound but semantically invalid)
-            - "cat the big" (wrong word order)
-            """
-            chunks = list(doc.noun_chunks)
-            if not chunks:
-                return False
-
-            # The noun phrase should be the entire text
-            chunk = chunks[0]
-            if not (chunk.start == 0 and chunk.end == len(doc)):
-                return False
-
-            # Check for valid noun phrase structure:
-            # 1. Should have at most one main noun (ROOT)
-            # 2. Compounds should be common English compounds (we can't verify this easily,
-            #    so we'll be conservative and reject most compounds)
-            root_nouns = [t for t in doc if t.dep_ == "ROOT" and t.pos_ in {"NOUN", "PROPN"}]
-            compounds = [t for t in doc if t.dep_ == "compound"]
-
-            if len(root_nouns) != 1 or len(compounds) > 0:
-                return False
-
-            return True
-
-        def is_valid_verb_phrase():
-            """Check if the text is a valid verb phrase like "running fast".
-
-            A verb phrase must:
-            1. Contain a verb
-            2. Only use valid verb phrase dependencies:
-               - ROOT: The main verb ("running" in "running fast")
-               - advmod: Adverbial modifier ("fast" in "running fast")
-               - dobj: Direct object ("ball" in "throw ball")
-               - prt: Particle ("up" in "wake up")
-               - prep: Preposition ("in" in "believe in")
-               - pobj: Object of preposition ("box" in "think inside box")
-               - compound:prt: Phrasal verb particle ("up" in "pick up")
-            """
-            # Must have at least one verb
-            has_verb = any(token.pos_ == "VERB" for token in doc)
-
-            # Define valid dependency types for verb phrases
-            VALID_DEPS = {
-                "ROOT",  # Main verb
-                "advmod",  # Adverbial modifier
-                "dobj",  # Direct object
-                "prt",  # Verb particle
-                "prep",  # Preposition
-                "pobj",  # Object of preposition
-                "compound:prt",  # Phrasal verb particle
-            }
-
-            # All words must have valid dependency relationships
-            has_valid_deps = all(token.dep_ in VALID_DEPS for token in doc)
-
-            return has_verb and has_valid_deps
-
-        def is_valid_prep_phrase():
-            """Check if the text is a valid prepositional phrase like "in my heart".
-            A prepositional phrase must:
-            - Start with a preposition
-            - Have at least one more word
-            - Include an object of the preposition
-
-            Examples:
-            - "in my heart" (English)
-            - "dans la maison" (French: "in the house")
-            - "en la casa" (Spanish: "in the house")
-
-            Note: Different languages use different dependency labels:
-            - English: prep + pobj
-            - French: case + ROOT
-            - Spanish: case + ROOT
-            """
-            # Check if it starts with a preposition
-            starts_with_prep = doc[0].pos_ == "ADP"
-
-            # Check if there's content after the preposition
-            has_content = len(doc) > 1
-
-            # Check for valid structure (either English style or French/Spanish style)
-            has_valid_structure = any(t.dep_ == "pobj" for t in doc) or (  # English style
-                doc[0].dep_ == "case" and any(t.dep_ == "ROOT" for t in doc)
-            )  # French/Spanish style
-
-            return starts_with_prep and has_content and has_valid_structure
-
-        def is_valid_adverb_phrase():
-            """Check if the text is a valid adverbial phrase like "très rapidement".
-            An adverb phrase must:
-            - Have an adverb as the root OR an adjective modified by an adverb
-            - Only contain adverbs/adjectives and their modifiers
-
-            Examples:
-            - "très rapidement" (French: "very quickly")
-            - "muy rápido" (Spanish: "very fast")
-            - "very quickly" (English)
-
-            Note: Different languages mark adverbial phrases differently:
-            - French: ADV + ADV
-            - Spanish: ADV + ADJ
-            - English: ADV + ADV/ADJ
-            """
-            # Check for adverb as root (French style)
-            has_adverb_root = any(token.pos_ == "ADV" and token.dep_ == "ROOT" for token in doc)
-
-            # Check for adjective as root with adverb modifier (Spanish style)
-            has_adj_root_with_adv = any(token.pos_ == "ADJ" and token.dep_ == "ROOT" for token in doc) and any(
-                token.pos_ == "ADV" and token.dep_ == "advmod" for token in doc
-            )
-
-            # All words must be valid modifiers
-            has_valid_deps = all(token.dep_ in {"ROOT", "advmod", "fixed", "goeswith"} and token.pos_ in {"ADV", "ADJ"} for token in doc)
-
-            return (has_adverb_root or has_adj_root_with_adv) and has_valid_deps
-
         # First check if it's a complete clause
-        if is_complete_clause():
+        if self.is_complete_clause(doc):
             return PhraseType.COMPLETE
 
         # Check if it's a valid partial phrase
-        if is_valid_noun_phrase() or is_valid_verb_phrase() or is_valid_prep_phrase() or is_valid_adverb_phrase():
+        if (
+            self.is_valid_noun_phrase(doc)
+            or self.is_valid_verb_phrase(doc)
+            or self.is_valid_prep_phrase(doc)
+            or self.is_valid_adverb_phrase(doc)
+        ):
             # Additional check: if the phrase crosses sentence boundaries,
             # it should be CROSS_BOUNDARY even if it's grammatically valid
-            text = doc.text
-            context = doc.text  # The full text containing this phrase
-            if "." in text:  # Simple check for sentence boundary within phrase
+            if "." in doc.text:  # Simple check for sentence boundary within phrase
                 return PhraseType.CROSS_BOUNDARY
             return PhraseType.PARTIAL
 
@@ -296,60 +147,18 @@ class PhraseAnalyzer:
         phrase_end = phrase_start + len(phrase_text)
         context_text = context_doc.text
 
-        # Check for line breaks
-        lines = context_text.split("\n")
-        for line in lines:
-            line_start = context_text.find(line)
-            line_end = line_start + len(line)
+        # Check line breaks first
+        line_score = self.calculate_line_break_score(phrase_start, phrase_end, context_text)
+        if line_score in {0.0, 1.0}:  # Perfect match or crossing boundary
+            return line_score
 
-            # Perfect match with a full line
-            if phrase_start == line_start and phrase_end == line_end:
-                return 1.0
+        # Then check sentence boundaries
+        sentence_score = self.calculate_sentence_break_score(phrase_doc, phrase_start, phrase_end, context_doc)
+        if sentence_score in {0.0, 1.0}:  # Perfect match or crossing boundary
+            return sentence_score
 
-            # Strong alignment with most of a line
-            if (phrase_start == line_start and phrase_end > line_start + len(line) * 0.7) or (
-                phrase_end == line_end and phrase_start < line_end - len(line) * 0.7
-            ):
-                return 0.9
-
-            # Crosses line boundary
-            if any(phrase_start < context_text.find("\n", i) < phrase_end for i in range(len(context_text)) if "\n" in context_text[i:]):
-                return 0.0
-
-        # Check for sentence boundaries
-        for sent in context_doc.sents:
-            sent_start = sent.start_char
-            sent_end = sent.end_char
-
-            # Perfect match with a full sentence
-            if phrase_start == sent_start and phrase_end == sent_end:
-                return 1.0
-
-            # Strong alignment with most of a sentence
-            if phrase_start >= sent_start and phrase_end <= sent_end:
-                # Check if it's a verb phrase
-                has_verb = any(token.pos_ == "VERB" for token in phrase_doc)
-                has_subject = any(token.dep_ in {"nsubj", "nsubjpass"} for token in phrase_doc)
-
-                # Phrase is contained within sentence
-                phrase_len = phrase_end - phrase_start
-                sent_len = sent_end - sent_start
-                coverage = phrase_len / sent_len
-
-                if has_verb and has_subject:  # Subject-verb combinations get highest scores
-                    return 0.85
-                elif has_verb and coverage > 0.3:  # Other verb phrases
-                    return 0.8
-                elif coverage > 0.5:  # Other phrases need more coverage
-                    return 0.8
-                return 0.7
-
-            # Crosses sentence boundary
-            if any(phrase_start < s.start_char < phrase_end for s in context_doc.sents):
-                return 0.0
-
-        # Partial match (aligns with start or end)
-        return 0.5
+        # Return the higher of the two scores
+        return max(line_score, sentence_score)
 
     def _calculate_length_score(self, doc: Doc) -> float:
         """Calculate score based on phrase length and complexity.
@@ -384,7 +193,7 @@ class PhraseAnalyzer:
         # Count adverbial modifiers
         units += len([token for token in doc if token.dep_ == "advmod"])
 
-        # Count prepositional phrases (each preposition usually introduces a new phrase)
+        # Count prepositional phrases
         units += len([token for token in doc if token.dep_ == "prep"])
 
         # Score based on complexity
@@ -397,3 +206,206 @@ class PhraseAnalyzer:
         elif units == 3:
             return 0.8  # Slightly complex
         return 0.6  # Too complex
+
+    def is_complete_clause(self, doc: Doc) -> bool:
+        """Check if the text forms a complete clause.
+
+        Different languages mark subject-verb relationships differently:
+        English/French:
+        - Subject has nsubj/nsubjpass dependency
+        - Verb is ROOT
+
+        Spanish:
+        - Sometimes marks pronoun as ROOT
+        - Verb can be marked as flat/aux
+        """
+        # Standard subject-verb pattern (English/French)
+        standard_pattern = any(token.dep_ in {"nsubj", "nsubjpass"} for token in doc) and any(
+            token.dep_ == "ROOT" and token.pos_ == "VERB" for token in doc
+        )
+
+        # Spanish pronoun-verb pattern
+        spanish_pattern = (
+            len(doc) == 2  # Two-word phrase
+            and doc[0].pos_ == "PRON"  # First word is pronoun
+            and doc[1].pos_ in {"VERB", "AUX", "ADJ"}  # Second word is verb-like
+            and doc[1].dep_ in {"flat", "aux"}  # Common Spanish dependencies
+        )
+
+        return standard_pattern or spanish_pattern
+
+    def is_valid_noun_phrase(self, doc: Doc) -> bool:
+        """Check if the text is a valid noun phrase like "the big cat".
+
+        Valid noun phrases:
+        - "the cat" (determiner + noun)
+        - "the big cat" (determiner + adjective + noun)
+        - "my heart" (possessive + noun)
+        """
+        chunks = list(doc.noun_chunks)
+        if not chunks:
+            return False
+
+        # The noun phrase should be the entire text
+        chunk = chunks[0]
+        if not (chunk.start == 0 and chunk.end == len(doc)):
+            return False
+
+        # Check for valid noun phrase structure
+        root_nouns = [t for t in doc if t.dep_ == "ROOT" and t.pos_ in {"NOUN", "PROPN"}]
+        compounds = [t for t in doc if t.dep_ == "compound"]
+
+        return len(root_nouns) == 1 and len(compounds) == 0
+
+    def is_valid_verb_phrase(self, doc: Doc) -> bool:
+        """Check if the text is a valid verb phrase like "running fast".
+
+        A verb phrase must:
+        1. Contain a verb as the first content word
+        2. Only use valid verb phrase dependencies
+        3. Have correct word order (verb before modifiers)
+        """
+        VALID_DEPS = {
+            "ROOT",  # Main verb
+            "advmod",  # Adverbial modifier
+            "dobj",  # Direct object
+            "prt",  # Verb particle
+            "prep",  # Preposition
+            "pobj",  # Object of preposition
+            "compound:prt",  # Phrasal verb particle
+        }
+
+        # Find all verbs
+        verbs = [token for token in doc if token.pos_ == "VERB"]
+        if not verbs:
+            return False
+
+        # Check if first content word is a verb
+        content_words = [token for token in doc if token.pos_ not in {"DET", "PUNCT"}]
+        if not content_words or content_words[0].pos_ != "VERB":
+            return False
+
+        # Check dependencies
+        has_valid_deps = all(token.dep_ in VALID_DEPS for token in doc)
+        return has_valid_deps
+
+    def is_valid_prep_phrase(self, doc: Doc) -> bool:
+        """Check if the text is a valid prepositional phrase.
+
+        Examples:
+        - "in my heart" (English)
+        - "dans la maison" (French: "in the house")
+        - "en la casa" (Spanish: "in the house")
+        """
+        starts_with_prep = doc[0].pos_ == "ADP"
+        has_content = len(doc) > 1
+        has_valid_structure = any(t.dep_ == "pobj" for t in doc) or (  # English style
+            doc[0].dep_ == "case" and any(t.dep_ == "ROOT" for t in doc)
+        )  # French/Spanish style
+
+        return starts_with_prep and has_content and has_valid_structure
+
+    def is_valid_adverb_phrase(self, doc: Doc) -> bool:
+        """Check if the text is a valid adverbial phrase.
+
+        Examples:
+        - "très rapidement" (French: "very quickly")
+        - "muy rápido" (Spanish: "very fast")
+        - "very quickly" (English)
+
+        Valid patterns:
+        - ADV + ADV/ADJ (modifier + main adverb/adjective)
+        - First word must modify second word
+        - Second word must be the root
+        """
+        # Check basic structure
+        if len(doc) != 2:  # Only handle two-word phrases for now
+            return False
+
+        # Check parts of speech
+        has_valid_pos = all(token.pos_ in {"ADV", "ADJ"} for token in doc)
+        if not has_valid_pos:
+            return False
+
+        first_word = doc[0]
+        second_word = doc[1]
+
+        # The first word must be a modifier
+        if first_word.dep_ != "advmod":
+            return False
+
+        # The second word must be the root
+        if second_word.dep_ != "ROOT":
+            return False
+
+        # Check that the first word modifies the second
+        if first_word.head != second_word:
+            return False
+
+        return True
+
+    def calculate_line_break_score(self, phrase_start: int, phrase_end: int, context_text: str) -> float:
+        """Calculate score based on line break alignment."""
+        lines = context_text.split("\n")
+        for line in lines:
+            line_start = context_text.find(line)
+            line_end = line_start + len(line)
+
+            # Perfect match with a full line
+            if phrase_start == line_start and phrase_end == line_end:
+                return 1.0
+
+            # Strong alignment with start of line
+            if phrase_start == line_start:
+                coverage = (phrase_end - phrase_start) / len(line)
+                if coverage >= 0.7:
+                    return 0.9
+                elif coverage >= 0.3:
+                    return 0.8
+
+            # Strong alignment with end of line
+            if phrase_end == line_end:
+                coverage = (phrase_end - phrase_start) / len(line)
+                if coverage >= 0.7:
+                    return 0.9
+                elif coverage >= 0.3:
+                    return 0.8
+
+            # Crosses line boundary
+            if any(phrase_start < context_text.find("\n", i) < phrase_end for i in range(len(context_text)) if "\n" in context_text[i:]):
+                return 0.0
+
+        return 0.5
+
+    def calculate_sentence_break_score(self, phrase_doc: Doc, phrase_start: int, phrase_end: int, context_doc: Doc) -> float:
+        """Calculate score based on sentence boundary alignment."""
+        for sent in context_doc.sents:
+            sent_start = sent.start_char
+            sent_end = sent.end_char
+
+            # Perfect match with a full sentence
+            if phrase_start == sent_start and phrase_end == sent_end:
+                return 1.0
+
+            # Strong alignment with most of a sentence
+            if phrase_start >= sent_start and phrase_end <= sent_end:
+                has_verb = any(token.pos_ == "VERB" for token in phrase_doc)
+                has_subject = any(token.dep_ in {"nsubj", "nsubjpass"} for token in phrase_doc)
+
+                phrase_len = phrase_end - phrase_start
+                sent_len = sent_end - sent_start
+                coverage = phrase_len / sent_len
+
+                if has_verb and has_subject:
+                    return 0.85
+                elif has_verb and coverage > 0.3:
+                    return 0.8
+                elif coverage > 0.5:
+                    return 0.8
+                return 0.7
+
+            # Crosses sentence boundary
+            if any(phrase_start < s.start_char < phrase_end for s in context_doc.sents):
+                return 0.0
+
+        return 0.5
