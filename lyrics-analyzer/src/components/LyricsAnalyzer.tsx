@@ -1,12 +1,16 @@
-import { useState } from 'react'
-import { Box, Grid, Paper, Typography } from '@mui/material'
+import { useState, useCallback } from 'react'
+import { Box, Grid, Paper, Typography, Button } from '@mui/material'
+import UploadFileIcon from '@mui/icons-material/UploadFile'
 import { LyricsData } from '../types'
 import TranscriptionView from './TranscriptionView'
 import ReferenceView from './ReferenceView'
 import DetailsModal from './DetailsModal'
+import { COLORS } from './constants'
 
 interface LyricsAnalyzerProps {
     data: LyricsData
+    onFileLoad: () => void
+    onShowMetadata: () => void
 }
 
 export type ModalContent = {
@@ -22,14 +26,27 @@ export type ModalContent = {
     }
 }
 
-export const COLORS = {
-    anchor: '#e3f2fd', // Pale blue
-    corrected: '#e8f5e9', // Pale green
-    uncorrectedGap: '#fff3e0', // Pale orange
-} as const
+export type FlashType = 'anchor' | 'corrected' | 'uncorrected' | null
 
-export default function LyricsAnalyzer({ data }: LyricsAnalyzerProps) {
+export default function LyricsAnalyzer({ data, onFileLoad, onShowMetadata }: LyricsAnalyzerProps) {
     const [modalContent, setModalContent] = useState<ModalContent | null>(null)
+    const [flashingType, setFlashingType] = useState<FlashType>(null)
+
+    const handleFlash = useCallback((type: FlashType) => {
+        // Clear any existing flash animation
+        setFlashingType(null)
+
+        // Force a new render cycle before starting the animation
+        requestAnimationFrame(() => {
+            requestAnimationFrame(() => {
+                setFlashingType(type)
+                // Reset after animation completes
+                setTimeout(() => {
+                    setFlashingType(null)
+                }, 1200) // Adjusted to match new animation duration (0.4s × 3)
+            })
+        })
+    }, [])
 
     const handleCloseModal = () => {
         setModalContent(null)
@@ -37,14 +54,34 @@ export default function LyricsAnalyzer({ data }: LyricsAnalyzerProps) {
 
     return (
         <Box>
-            <Typography variant="h4" gutterBottom>
-                Lyrics Analysis
-            </Typography>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+                <Typography variant="h4">
+                    Lyrics Analysis
+                </Typography>
+                <Button
+                    variant="outlined"
+                    startIcon={<UploadFileIcon />}
+                    onClick={onFileLoad}
+                >
+                    Load File
+                </Button>
+            </Box>
 
             <Box sx={{ mb: 3 }}>
                 <Grid container spacing={2}>
-                    <Grid item xs={4}>
-                        <Paper sx={{ p: 2 }}>
+                    <Grid item xs={3}>
+                        <Paper
+                            sx={{
+                                p: 2,
+                                cursor: 'pointer',
+                                '&:hover': {
+                                    bgcolor: 'action.hover'
+                                }
+                            }}
+                            onClick={() => {
+                                handleFlash('anchor')
+                            }}
+                        >
                             <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
                                 <Box
                                     sx={{
@@ -63,12 +100,21 @@ export default function LyricsAnalyzer({ data }: LyricsAnalyzerProps) {
                                 {data.metadata.anchor_sequences_count}
                             </Typography>
                             <Typography variant="caption" color="text.secondary">
-                                Matched sections between transcription and reference
+                                Click to highlight matched sections
                             </Typography>
                         </Paper>
                     </Grid>
-                    <Grid item xs={4}>
-                        <Paper sx={{ p: 2 }}>
+                    <Grid item xs={3}>
+                        <Paper
+                            sx={{
+                                p: 2,
+                                cursor: 'pointer',
+                                '&:hover': {
+                                    bgcolor: 'action.hover'
+                                }
+                            }}
+                            onClick={() => handleFlash('corrected')}
+                        >
                             <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
                                 <Box
                                     sx={{
@@ -91,8 +137,17 @@ export default function LyricsAnalyzer({ data }: LyricsAnalyzerProps) {
                             </Typography>
                         </Paper>
                     </Grid>
-                    <Grid item xs={4}>
-                        <Paper sx={{ p: 2 }}>
+                    <Grid item xs={3}>
+                        <Paper
+                            sx={{
+                                p: 2,
+                                cursor: 'pointer',
+                                '&:hover': {
+                                    bgcolor: 'action.hover'
+                                }
+                            }}
+                            onClick={() => handleFlash('uncorrected')}
+                        >
                             <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
                                 <Box
                                     sx={{
@@ -115,6 +170,30 @@ export default function LyricsAnalyzer({ data }: LyricsAnalyzerProps) {
                             </Typography>
                         </Paper>
                     </Grid>
+                    <Grid item xs={3}>
+                        <Paper
+                            sx={{
+                                p: 2,
+                                cursor: 'pointer',
+                                '&:hover': {
+                                    bgcolor: 'action.hover'
+                                }
+                            }}
+                            onClick={onShowMetadata}
+                        >
+                            <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                                <Typography variant="subtitle2" color="text.secondary">
+                                    Confidence Score
+                                </Typography>
+                            </Box>
+                            <Typography variant="h6">
+                                {(data.confidence * 100).toFixed(1)}%
+                            </Typography>
+                            <Typography variant="caption" color="text.secondary">
+                                Click for correction metadata
+                            </Typography>
+                        </Paper>
+                    </Grid>
                 </Grid>
             </Box>
 
@@ -123,13 +202,16 @@ export default function LyricsAnalyzer({ data }: LyricsAnalyzerProps) {
                     <TranscriptionView
                         data={data}
                         onElementClick={setModalContent}
+                        flashingType={flashingType}
                     />
                 </Grid>
                 <Grid item xs={6}>
                     <ReferenceView
                         referenceTexts={data.reference_texts}
                         anchors={data.anchor_sequences}
+                        gaps={data.gap_sequences}
                         onElementClick={setModalContent}
+                        flashingType={flashingType}
                     />
                 </Grid>
             </Grid>

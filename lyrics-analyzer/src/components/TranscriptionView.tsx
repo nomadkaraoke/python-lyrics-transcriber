@@ -1,16 +1,19 @@
 import { Paper, Typography } from '@mui/material'
 import { LyricsData } from '../types'
-import { ModalContent } from './LyricsAnalyzer'
-import { COLORS } from './LyricsAnalyzer'
+import { FlashType, ModalContent } from './LyricsAnalyzer'
+import { COLORS } from './constants'
+import { HighlightedWord } from './styles'
 
 interface TranscriptionViewProps {
     data: LyricsData
     onElementClick: (content: ModalContent) => void
+    flashingType: FlashType
 }
 
-export default function TranscriptionView({ data, onElementClick }: TranscriptionViewProps) {
+export default function TranscriptionView({ data, onElementClick, flashingType }: TranscriptionViewProps) {
+    console.log('TranscriptionView rendered with flashingType:', flashingType)
+
     const renderHighlightedText = () => {
-        // First collapse multiple newlines into single ones, then split into words
         const normalizedText = data.corrected_text.replace(/\n\n+/g, '\n')
         const words = normalizedText.split(/(\s+)/)
         let currentIndex = 0
@@ -20,14 +23,12 @@ export default function TranscriptionView({ data, onElementClick }: Transcriptio
                 return word
             }
 
-            // Find anchor that contains this word position
             const anchor = data.anchor_sequences.find(a => {
                 const start = a.transcription_position
                 const end = start + a.length
                 return currentIndex >= start && currentIndex < end
             })
 
-            // Find gap that contains this word position
             const gap = data.gap_sequences.find(g => {
                 const start = g.transcription_position
                 const end = start + g.length
@@ -36,9 +37,16 @@ export default function TranscriptionView({ data, onElementClick }: Transcriptio
 
             const hasCorrections = gap ? gap.corrections.length > 0 : false
 
+            const shouldFlash = Boolean(
+                (flashingType === 'anchor' && anchor) ||
+                (flashingType === 'corrected' && hasCorrections) ||
+                (flashingType === 'uncorrected' && gap && !hasCorrections)
+            )
+
             const wordElement = (
-                <span
-                    key={index}
+                <HighlightedWord
+                    key={`${word}-${index}-${shouldFlash}`}
+                    shouldFlash={shouldFlash}
                     style={{
                         backgroundColor: anchor
                             ? COLORS.anchor
@@ -50,8 +58,6 @@ export default function TranscriptionView({ data, onElementClick }: Transcriptio
                         padding: anchor || gap ? '2px 4px' : '0',
                         borderRadius: '3px',
                         cursor: anchor || gap ? 'pointer' : 'default',
-                        display: 'inline-block',
-                        marginRight: '0.25em',
                     }}
                     onClick={() => {
                         if (anchor) {
@@ -75,7 +81,7 @@ export default function TranscriptionView({ data, onElementClick }: Transcriptio
                     }}
                 >
                     {word}
-                </span>
+                </HighlightedWord>
             )
 
             currentIndex++
@@ -86,7 +92,7 @@ export default function TranscriptionView({ data, onElementClick }: Transcriptio
     return (
         <Paper sx={{ p: 2 }}>
             <Typography variant="h6" gutterBottom>
-                Transcription Text (Corrected)
+                Corrected Transcription
             </Typography>
             <Typography
                 component="pre"
