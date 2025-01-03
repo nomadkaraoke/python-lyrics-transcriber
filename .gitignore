@@ -167,4 +167,3 @@ cython_debug/
 *.lrc
 *.ass
 *.mp4
-*.json
