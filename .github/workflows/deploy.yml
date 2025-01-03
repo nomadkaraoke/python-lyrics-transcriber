@@ -27,6 +27,13 @@ jobs:
           cache: "npm"
           cache-dependency-path: lyrics-analyzer/package-lock.json
 
+      - name: Clean npm cache and modules
+        working-directory: lyrics-analyzer
+        run: |
+          rm -rf node_modules
+          rm -f package-lock.json
+          npm cache clean --force
+
       - name: Install dependencies
         working-directory: lyrics-analyzer
         run: npm install
