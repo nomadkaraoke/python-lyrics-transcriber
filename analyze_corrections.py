@@ -15,64 +15,69 @@ def load_lyrics_json(file_path: str) -> Dict:
 
 def create_html_visualization(data: Dict) -> str:
     """Create an HTML visualization with transcribed text, anchor sequences, and reference text."""
-    
+
     # Get the data
-    text = data['transcribed_text']
-    anchors = sorted(data['anchor_sequences'], key=lambda x: x['transcription_position'])
-    reference_texts = data['reference_texts']
-    
-    # Split text into words while preserving whitespace and newlines
+    text = data["transcribed_text"]
+    anchors = sorted(data["anchor_sequences"], key=lambda x: x["transcription_position"])
+    reference_texts = data["reference_texts"]
+
     def split_preserve_whitespace(text):
         parts = []
         current_word = []
         current_whitespace = []
-        
+
         for char in text:
             if char.isspace():
                 if current_word:
-                    parts.append(('word', ''.join(current_word)))
+                    parts.append(("word", "".join(current_word)))
                     current_word = []
                 current_whitespace.append(char)
             else:
                 if current_whitespace:
-                    parts.append(('space', ''.join(current_whitespace)))
+                    parts.append(("space", "".join(current_whitespace)))
                     current_whitespace = []
                 current_word.append(char)
-                
+
         if current_word:
-            parts.append(('word', ''.join(current_word)))
+            parts.append(("word", "".join(current_word)))
         if current_whitespace:
-            parts.append(('space', ''.join(current_whitespace)))
-            
+            parts.append(("space", "".join(current_whitespace)))
+
         return parts
 
     # Process text into words and spaces
     text_parts = split_preserve_whitespace(text)
-    
+
     # Create highlighted text
     word_index = 0
     highlighted_parts = []
     active_anchors = []
-    
+
     for part_type, part_text in text_parts:
-        if part_type == 'word':
+        if part_type == "word":
             # Check if this word starts any new anchor sequences
-            new_anchors = [a for a in anchors if a['transcription_position'] == word_index]
+            new_anchors = [a for a in anchors if a["transcription_position"] == word_index]
             for anchor in new_anchors:
-                active_anchors.append((anchor, word_index + len(anchor['words'])))
-            
+                active_anchors.append((anchor, word_index + len(anchor["words"])))
+
             # Remove completed anchor sequences
             active_anchors = [(a, end) for a, end in active_anchors if word_index < end]
-            
+
             if active_anchors:
-                highlighted_parts.append(f'<span class="anchor" title="Confidence: {active_anchors[0][0]["confidence"]:.2%}">{part_text}</span>')
+                anchor = active_anchors[0][0]
+                # Determine color based on which sources contain this anchor
+                sources = set(anchor["reference_positions"].keys())
+                color_class = "both-sources" if len(sources) > 1 else "spotify-only" if "spotify" in sources else "genius-only"
+                highlighted_parts.append(
+                    f'<span class="anchor {color_class}" ' f'title="Confidence: {anchor["confidence"]:.2%}">{part_text}</span>'
+                )
             else:
                 highlighted_parts.append(part_text)
-                
+
             word_index += 1
         else:
             highlighted_parts.append(part_text)
-    
+
     html_content = f"""
     <!DOCTYPE html>
     <html>
@@ -82,8 +87,8 @@ def create_html_visualization(data: Dict) -> str:
             body {{ 
                 font-family: Arial, sans-serif;
                 max-width: 1400px;
-                margin: 40px auto;
-                padding: 20px;
+                margin: 0 auto;
+                padding: 10px;
                 line-height: 1.6;
             }}
             .metadata {{
@@ -108,25 +113,43 @@ def create_html_visualization(data: Dict) -> str:
                 line-height: 1.5;
             }}
             .anchor {{
-                background-color: #90EE90;
                 border-radius: 3px;
                 padding: 2px 5px;
+            }}
+            .both-sources {{
+                background-color: #90EE90;
+            }}
+            .spotify-only {{
+                background-color: #ADD8E6;
+            }}
+            .genius-only {{
+                background-color: #FFB6C1;
             }}
             .header {{
                 display: flex;
                 justify-content: space-between;
                 align-items: center;
             }}
-            .source-selector select {{
-                padding: 5px;
+            .source-toggle {{
+                padding: 5px 10px;
                 font-size: 14px;
+                cursor: pointer;
+                border-radius: 3px;
+                border: 1px solid #ccc;
+                background: #fff;
+            }}
+            .source-toggle:hover {{
+                background: #f0f0f0;
             }}
         </style>
         <script>
-            function updateReferenceText() {{
-                const source = document.getElementById('source-select').value;
+            let currentSource = 'genius';
+            function toggleSource() {{
+                currentSource = currentSource === 'genius' ? 'spotify' : 'genius';
+                const button = document.getElementById('source-toggle');
+                button.textContent = currentSource.charAt(0).toUpperCase() + currentSource.slice(1);
                 const texts = {json.dumps(reference_texts)};
-                document.getElementById('reference-text').textContent = texts[source];
+                document.getElementById('reference-text').textContent = texts[currentSource];
             }}
         </script>
     </head>
@@ -149,23 +172,15 @@ def create_html_visualization(data: Dict) -> str:
             <div class="column">
                 <div class="header">
                     <h2>Reference Text</h2>
-                    <div class="source-selector">
-                        <select id="source-select" onchange="updateReferenceText()">
-                            {''.join(f'<option value="{source}">{source.title()}</option>' for source in reference_texts.keys())}
-                        </select>
-                    </div>
+                    <button id="source-toggle" class="source-toggle" onclick="toggleSource()">Genius</button>
                 </div>
-                <pre id="reference-text">{next(iter(reference_texts.values()))}</pre>
+                <pre id="reference-text">{reference_texts['genius']}</pre>
             </div>
         </div>
-        <script>
-            // Initialize reference text
-            updateReferenceText();
-        </script>
     </body>
     </html>
     """
-    
+
     return html_content
 
 
