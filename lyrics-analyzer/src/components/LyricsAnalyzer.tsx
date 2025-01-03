@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react'
-import { Box, Grid, Paper, Typography, Button } from '@mui/material'
+import { Box, Grid, Paper, Typography, Button, useTheme, useMediaQuery } from '@mui/material'
 import UploadFileIcon from '@mui/icons-material/UploadFile'
 import { LyricsData } from '../types'
 import TranscriptionView from './TranscriptionView'
@@ -31,6 +31,8 @@ export type FlashType = 'anchor' | 'corrected' | 'uncorrected' | null
 export default function LyricsAnalyzer({ data, onFileLoad, onShowMetadata }: LyricsAnalyzerProps) {
     const [modalContent, setModalContent] = useState<ModalContent | null>(null)
     const [flashingType, setFlashingType] = useState<FlashType>(null)
+    const theme = useTheme()
+    const isMobile = useMediaQuery(theme.breakpoints.down('md'))
 
     const handleFlash = useCallback((type: FlashType) => {
         // Clear any existing flash animation
@@ -54,14 +56,22 @@ export default function LyricsAnalyzer({ data, onFileLoad, onShowMetadata }: Lyr
 
     return (
         <Box>
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-                <Typography variant="h4">
+            <Box sx={{ 
+                display: 'flex', 
+                flexDirection: isMobile ? 'column' : 'row',
+                gap: 2,
+                justifyContent: 'space-between', 
+                alignItems: isMobile ? 'stretch' : 'center',
+                mb: 3 
+            }}>
+                <Typography variant="h4" sx={{ fontSize: isMobile ? '1.75rem' : '2.125rem' }}>
                     Lyrics Analysis
                 </Typography>
                 <Button
                     variant="outlined"
                     startIcon={<UploadFileIcon />}
                     onClick={onFileLoad}
+                    fullWidth={isMobile}
                 >
                     Load File
                 </Button>
@@ -69,7 +79,7 @@ export default function LyricsAnalyzer({ data, onFileLoad, onShowMetadata }: Lyr
 
             <Box sx={{ mb: 3 }}>
                 <Grid container spacing={2}>
-                    <Grid item xs={3}>
+                    <Grid item xs={12} sm={6} md={3}>
                         <Paper
                             sx={{
                                 p: 2,
@@ -78,9 +88,7 @@ export default function LyricsAnalyzer({ data, onFileLoad, onShowMetadata }: Lyr
                                     bgcolor: 'action.hover'
                                 }
                             }}
-                            onClick={() => {
-                                handleFlash('anchor')
-                            }}
+                            onClick={() => handleFlash('anchor')}
                         >
                             <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
                                 <Box
@@ -104,7 +112,7 @@ export default function LyricsAnalyzer({ data, onFileLoad, onShowMetadata }: Lyr
                             </Typography>
                         </Paper>
                     </Grid>
-                    <Grid item xs={3}>
+                    <Grid item xs={12} sm={6} md={3}>
                         <Paper
                             sx={{
                                 p: 2,
@@ -137,7 +145,7 @@ export default function LyricsAnalyzer({ data, onFileLoad, onShowMetadata }: Lyr
                             </Typography>
                         </Paper>
                     </Grid>
-                    <Grid item xs={3}>
+                    <Grid item xs={12} sm={6} md={3}>
                         <Paper
                             sx={{
                                 p: 2,
@@ -170,7 +178,7 @@ export default function LyricsAnalyzer({ data, onFileLoad, onShowMetadata }: Lyr
                             </Typography>
                         </Paper>
                     </Grid>
-                    <Grid item xs={3}>
+                    <Grid item xs={12} sm={6} md={3}>
                         <Paper
                             sx={{
                                 p: 2,
@@ -197,15 +205,15 @@ export default function LyricsAnalyzer({ data, onFileLoad, onShowMetadata }: Lyr
                 </Grid>
             </Box>
 
-            <Grid container spacing={2}>
-                <Grid item xs={6}>
+            <Grid container spacing={2} direction={isMobile ? 'column' : 'row'}>
+                <Grid item xs={12} md={6}>
                     <TranscriptionView
                         data={data}
                         onElementClick={setModalContent}
                         flashingType={flashingType}
                     />
                 </Grid>
-                <Grid item xs={6}>
+                <Grid item xs={12} md={6}>
                     <ReferenceView
                         referenceTexts={data.reference_texts}
                         anchors={data.anchor_sequences}
@@ -216,11 +224,12 @@ export default function LyricsAnalyzer({ data, onFileLoad, onShowMetadata }: Lyr
                 </Grid>
             </Grid>
 
-            <DetailsModal
-                open={modalContent !== null}
-                content={modalContent}
-                onClose={handleCloseModal}
-            />
+            {modalContent && (
+                <DetailsModal
+                    content={modalContent}
+                    onClose={() => setModalContent(null)}
+                />
+            )}
         </Box>
     )
 } 
