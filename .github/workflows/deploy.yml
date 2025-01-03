@@ -16,15 +16,12 @@ jobs:
   build:
     runs-on: ubuntu-latest
 
-    defaults:
-      run:
-        working-directory: lyrics-analyzer
-
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
       - name: Debug directory structure
+        working-directory: lyrics-analyzer
         run: |
           echo "Current directory: $PWD"
           echo "Directory contents:"
@@ -42,9 +39,11 @@ jobs:
           node-version: "20"
 
       - name: Install dependencies
+        working-directory: lyrics-analyzer
         run: npm install
 
       - name: Build
+        working-directory: lyrics-analyzer
         run: npm run build
 
       - name: Setup Pages
