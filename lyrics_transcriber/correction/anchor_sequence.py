@@ -1,6 +1,8 @@
-from dataclasses import dataclass, asdict
+from dataclasses import dataclass, asdict, field
 from typing import Any, Dict, List, Optional, Protocol, Tuple, Set
 import logging
+
+from .models import WordCorrection
 from .text_analysis import PhraseAnalyzer, PhraseScore
 from .text_utils import clean_text
 from tqdm import tqdm
@@ -98,10 +100,11 @@ class GapSequence:
     """Represents a sequence of words between anchor sequences in transcribed lyrics."""
 
     words: List[str]
-    transcription_position: int  # Starting position in transcribed text
-    preceding_anchor: Optional[AnchorSequence]  # The anchor before this gap (None if at start)
-    following_anchor: Optional[AnchorSequence]  # The anchor after this gap (None if at end)
-    reference_words: Dict[str, List[str]]  # Source -> words between anchors in reference
+    transcription_position: int
+    preceding_anchor: Optional[AnchorSequence]
+    following_anchor: Optional[AnchorSequence]
+    reference_words: Dict[str, List[str]]
+    corrections: List[WordCorrection] = field(default_factory=list)  # Initialize empty list safely
 
     @property
     def text(self) -> str:
@@ -113,6 +116,11 @@ class GapSequence:
         """Get the number of words in the sequence."""
         return len(self.words)
 
+    @property
+    def was_corrected(self) -> bool:
+        """Check if this gap has any corrections."""
+        return len(self.corrections) > 0
+
     def to_dict(self) -> Dict[str, Any]:
         """Convert the gap sequence to a JSON-serializable dictionary."""
         return {
@@ -122,7 +130,8 @@ class GapSequence:
             "transcription_position": self.transcription_position,
             "preceding_anchor": self.preceding_anchor.to_dict() if self.preceding_anchor else None,
             "following_anchor": self.following_anchor.to_dict() if self.following_anchor else None,
-            "reference_words": self.reference_words
+            "reference_words": self.reference_words,
+            "corrections": [c.to_dict() for c in self.corrections],
         }
 
 

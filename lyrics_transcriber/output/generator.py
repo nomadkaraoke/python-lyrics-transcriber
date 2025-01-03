@@ -90,8 +90,6 @@ class OutputGenerator:
             if transcription_corrected:
                 # Write original (uncorrected) transcription
                 outputs.original_txt = self.write_original_transcription(transcription_corrected, output_prefix)
-                outputs.original_segments = self.write_original_segments(transcription_corrected, output_prefix)
-                outputs.corrected_segments = self.write_corrected_segments(transcription_corrected, output_prefix)
                 outputs.corrections = self.write_corrections_data(transcription_corrected, output_prefix)
 
                 # Write corrected lyrics as plain text
@@ -300,25 +298,6 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
             self.logger.error(f"Failed to write original transcription file: {str(e)}")
             raise
 
-    def write_original_segments(self, correction_result: CorrectionResult, output_prefix: str) -> str:
-        """Write original segments to JSON file."""
-        self.logger.info("Writing original segments JSON")
-        output_path = self._get_output_path(f"{output_prefix} (Lyrics Uncorrected Segments)", "json")
-
-        try:
-            segments_data = [
-                {"start_time": segment.start_time, "end_time": segment.end_time, "text": segment.text}
-                for segment in correction_result.original_segments
-            ]
-
-            with open(output_path, "w", encoding="utf-8") as f:
-                json.dump(segments_data, f, indent=2, ensure_ascii=False)
-            self.logger.info(f"Original segments JSON generated: {output_path}")
-            return output_path
-        except Exception as e:
-            self.logger.error(f"Failed to write original segments JSON: {str(e)}")
-            raise
-
     def write_corrections_data(self, correction_result: CorrectionResult, output_prefix: str) -> str:
         """Write corrections data to JSON file."""
         self.logger.info("Writing corrections data JSON")
@@ -331,23 +310,4 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
             return output_path
         except Exception as e:
             self.logger.error(f"Failed to write corrections data JSON: {str(e)}")
-            raise
-
-    def write_corrected_segments(self, correction_result: CorrectionResult, output_prefix: str) -> str:
-        """Write corrected segments to JSON file."""
-        self.logger.info("Writing corrected segments JSON")
-        output_path = self._get_output_path(f"{output_prefix} (Lyrics Corrected Segments)", "json")
-
-        try:
-            segments_data = [
-                {"start_time": segment.start_time, "end_time": segment.end_time, "text": segment.text}
-                for segment in correction_result.corrected_segments
-            ]
-
-            with open(output_path, "w", encoding="utf-8") as f:
-                json.dump(segments_data, f, indent=2, ensure_ascii=False)
-            self.logger.info(f"Corrected segments JSON generated: {output_path}")
-            return output_path
-        except Exception as e:
-            self.logger.error(f"Failed to write corrected segments JSON: {str(e)}")
             raise

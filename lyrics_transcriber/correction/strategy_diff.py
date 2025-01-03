@@ -84,7 +84,7 @@ class DiffBasedCorrector(CorrectionStrategy):
             corrected_words = []
 
             for word in segment.words:
-                # Check if current word is part of a gap sequence
+                # Find current gap if any
                 gap = next(
                     (g for g in gap_sequences if g.transcription_position <= current_word_idx < g.transcription_position + g.length), None
                 )
@@ -110,18 +110,19 @@ class DiffBasedCorrector(CorrectionStrategy):
                             )
                             corrected_words.append(corrected_word)
 
-                            corrections.append(
-                                WordCorrection(
-                                    original_word=word.text,
-                                    corrected_word=corrected_text,
-                                    segment_index=current_segment_idx,
-                                    word_index=current_word_idx,
-                                    confidence=1.0,
-                                    source=", ".join(gap.reference_words.keys()),
-                                    reason="All reference sources agree on correction",
-                                    alternatives={},
-                                )
+                            correction = WordCorrection(
+                                original_word=word.text,
+                                corrected_word=corrected_text,
+                                segment_index=current_segment_idx,
+                                word_index=current_word_idx,
+                                confidence=1.0,
+                                source=", ".join(gap.reference_words.keys()),
+                                reason="All reference sources agree on correction",
+                                alternatives={},
                             )
+
+                            corrections.append(correction)
+                            gap.corrections.append(correction)  # Add correction to gap
                             corrections_made += 1
                             current_word_idx += 1
                             continue

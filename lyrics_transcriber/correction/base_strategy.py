@@ -4,23 +4,7 @@ from typing import Any, Dict, List, Optional, Protocol, Tuple, Set
 from lyrics_transcriber.correction.anchor_sequence import AnchorSequence, GapSequence
 from lyrics_transcriber.lyrics.base_lyrics_provider import LyricsData
 from ..transcribers.base_transcriber import LyricsSegment, TranscriptionResult
-
-
-@dataclass
-class WordCorrection:
-    """Details about a single word correction."""
-
-    original_word: str
-    corrected_word: str
-    segment_index: int
-    word_index: int
-    source: str  # e.g., "spotify", "genius"
-    confidence: Optional[float]
-    reason: str  # e.g., "matched_in_3_sources", "high_confidence_match"
-    alternatives: Dict[str, int]  # Other possible corrections and their occurrence counts
-
-    def to_dict(self) -> Dict[str, Any]:
-        return asdict(self)
+from .models import WordCorrection
 
 
 @dataclass
