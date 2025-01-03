@@ -50,10 +50,6 @@ export default function LyricsAnalyzer({ data, onFileLoad, onShowMetadata }: Lyr
         })
     }, [])
 
-    const handleCloseModal = () => {
-        setModalContent(null)
-    }
-
     return (
         <Box>
             <Box sx={{ 
@@ -228,6 +224,7 @@ export default function LyricsAnalyzer({ data, onFileLoad, onShowMetadata }: Lyr
                 <DetailsModal
                     content={modalContent}
                     onClose={() => setModalContent(null)}
+                    open={Boolean(modalContent)}
                 />
             )}
         </Box>

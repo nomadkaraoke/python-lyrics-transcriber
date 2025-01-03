@@ -21,6 +21,8 @@ export interface Correction {
     confidence: number
     reason: string
     alternatives: Record<string, number>
+    reference_positions?: Record<string, number>
+    length: number
 }
 
 export interface GapSequence {
