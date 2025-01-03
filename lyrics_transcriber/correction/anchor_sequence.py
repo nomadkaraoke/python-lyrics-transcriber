@@ -225,7 +225,7 @@ class AnchorSequenceFinder:
         # Let phrase_analyzer handle all scoring including line breaks
         phrase_score = self.phrase_analyzer.score_phrase(anchor.words, context)
 
-        self.logger.debug(f"_score_anchor called for sequence: '{anchor.text}'")
+        # self.logger.debug(f"_score_anchor called for sequence: '{anchor.text}'")
         return ScoredAnchor(anchor=anchor, phrase_score=phrase_score)
 
     def _get_sequence_priority(self, scored_anchor: ScoredAnchor) -> Tuple[float, float, float, int, int]:

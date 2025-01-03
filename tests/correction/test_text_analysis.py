@@ -1,6 +1,7 @@
 import pytest
 import logging
 from lyrics_transcriber.correction.text_analysis import PhraseAnalyzer, PhraseType
+from lyrics_transcriber.correction.text_utils import clean_text
 
 
 @pytest.fixture
@@ -376,10 +377,8 @@ def test_calculate_sentence_break_score(analyzer):
     assert score >= 0.7
 
 
-def test_line_break_scoring_with_overlapping_phrases():
+def test_line_break_scoring_with_overlapping_phrases(analyzer):
     """Test scoring of overlapping phrases with line breaks"""
-    logger = logging.getLogger("test_line_breaks")
-    analyzer = PhraseAnalyzer(logger)
     context = "my heart will go on\nand on forever more"
 
     # Test individual phrases
@@ -421,3 +420,110 @@ def test_line_break_scoring_with_overlapping_phrases():
         elif phrase == "my heart will go on":
             assert break_score >= 0.8  # Should have high break score
             assert phrase_type == PhraseType.COMPLETE  # Complete clause
+
+
+def test_line_break_score_with_empty_lines(analyzer):
+    """Test that line break scoring handles empty lines correctly."""
+    # fmt: off
+    test_cases = [
+        # Empty line at start - after cleaning, 'hello' is just at the start of a single line
+        (
+            "\nhello world",
+            "hello",
+            0.5,  # Default score since cleaning removes empty lines
+            "Should handle empty first line"
+        ),
+        # Empty line in middle - after cleaning, becomes one continuous line
+        (
+            "hello world\n\ngoodbye world",
+            "goodbye",
+            0.5,  # Default score since cleaning normalizes whitespace
+            "Should handle empty middle line"
+        ),
+        # Multiple empty lines - phrase crosses line boundary
+        (
+            "hello\n\n\nworld",
+            "world",
+            0.0,  # Zero score since it crosses line boundary in original text
+            "Should handle multiple empty lines"
+        ),
+        # Only empty lines before phrase - crosses empty line boundaries
+        (
+            "\n\n\nhello",
+            "hello",
+            0.0,  # Zero score since it crosses empty line boundaries
+            "Should handle only empty lines before phrase"
+        ),
+        # Empty line at end - strong alignment with end of line
+        (
+            "hello world\n",
+            "world",
+            0.8,  # Strong alignment with end of non-empty line
+            "Should handle empty line at end"
+        ),
+    ]
+    # fmt: on
+
+    for context, phrase, expected_score, message in test_cases:
+        # Clean both texts
+        clean_context = clean_text(context)
+        clean_phrase = clean_text(phrase)
+
+        # Find phrase position in cleaned context
+        phrase_start = clean_context.find(clean_phrase)
+        phrase_end = phrase_start + len(clean_phrase)
+
+        # Calculate score
+        score = analyzer.calculate_line_break_score(phrase_start, phrase_end, context)
+
+        # Debug output
+        print(f"\nTest case: {message}")
+        print(f"Context: '{context}'")
+        print(f"Phrase: '{phrase}'")
+        print(f"Clean context: '{clean_context}'")
+        print(f"Clean phrase: '{clean_phrase}'")
+        print(f"Phrase position: {phrase_start}:{phrase_end}")
+        print(f"Score: {score}")
+
+        assert score == expected_score, f"Failed: {message}"
+
+
+def test_line_break_score_edge_cases(analyzer):
+    """Test edge cases for line break scoring."""
+    test_cases = [
+        # Empty context
+        ("", "hello", 0.5, "Should handle empty context"),  # Default score when no match found
+        # Empty phrase
+        ("hello world", "", 0.5, "Should handle empty phrase"),  # Default score for empty phrase
+        # All empty lines
+        ("\n\n\n", "hello", 0.5, "Should handle context with only empty lines"),  # Default score when no non-empty lines
+        # Single character lines
+        ("a\nb\nc", "b", 1.0, "Should handle single character lines"),  # Perfect match for single character
+    ]
+
+    for context, phrase, expected_score, message in test_cases:
+        # Clean both texts
+        clean_context = clean_text(context)
+        clean_phrase = clean_text(phrase)
+
+        # Find phrase position in cleaned context
+        phrase_start = clean_context.find(clean_phrase)
+        if phrase_start >= 0:  # Only calculate end if phrase is found
+            phrase_end = phrase_start + len(clean_phrase)
+        else:
+            phrase_start = 0
+            phrase_end = 0
+
+        # Calculate score
+        score = analyzer.calculate_line_break_score(phrase_start, phrase_end, context)
+
+        # Debug output
+        print(f"\nTest case: {message}")
+        print(f"Context: '{context}'")
+        print(f"Phrase: '{phrase}'")
+        print(f"Clean context: '{clean_context}'")
+        print(f"Clean phrase: '{clean_phrase}'")
+        print(f"Phrase position: {phrase_start}:{phrase_end}")
+        print(f"Score: {score}")
+
+        assert score == expected_score, f"Failed: {message}"

@@ -60,7 +60,7 @@ class PhraseAnalyzer:
         Returns:
             PhraseScore with phrase_type, natural_break_score, and length_score
         """
-        self.logger.info(f"Scoring phrase with context length {len(context)}: {' '.join(words)}")
+        # self.logger.info(f"Scoring phrase with context length {len(context)}: {' '.join(words)}")
 
         phrase = " ".join(words)
         phrase_doc = self.nlp(phrase)
@@ -372,10 +372,16 @@ class PhraseAnalyzer:
         cleaned_lines = [clean_text(line) for line in context_text.split("\n")]
         cleaned_context = "\n".join(cleaned_lines)
 
+        # Track current position in cleaned context
+        current_pos = 0
+
         # Recalculate positions using cleaned text
-        lines = cleaned_context.split("\n")
-        for line in lines:
-            line_start = cleaned_context.find(line)
+        for line in cleaned_lines:
+            if not line:  # Skip empty lines
+                current_pos += 1  # Account for newline
+                continue
+
+            line_start = current_pos
             line_end = line_start + len(line)
 
             # Perfect match with a full line
@@ -398,13 +404,14 @@ class PhraseAnalyzer:
                 elif coverage >= 0.3:
                     return 0.8
 
-            # Crosses line boundary
-            if any(
-                phrase_start < cleaned_context.find("\n", i) < phrase_end
-                for i in range(len(cleaned_context))
-                if "\n" in cleaned_context[i:]
-            ):
-                return 0.0
+            # Update position for next line
+            current_pos = line_end + 1  # +1 for newline
+
+        # Check if phrase crosses any line boundary
+        if any(
+            phrase_start < cleaned_context.find("\n", i) < phrase_end for i in range(len(cleaned_context)) if "\n" in cleaned_context[i:]
+        ):
+            return 0.0
 
         return 0.5
 
