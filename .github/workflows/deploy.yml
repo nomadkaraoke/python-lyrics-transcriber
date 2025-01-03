@@ -4,8 +4,7 @@ on:
   push:
     branches:
       - main
-    paths:
-      - "lyrics-analyzer/**"
+
   workflow_dispatch:
 
 permissions:
@@ -25,13 +24,25 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Debug directory structure
+        run: |
+          echo "Current directory: $PWD"
+          echo "Directory contents:"
+          ls -la
+          echo "Parent directory contents:"
+          ls -la ..
+          echo "Package.json contents:"
+          cat package.json
+          echo "Looking for package-lock.json:"
+          find .. -name package-lock.json
+
       - name: Set up Node.js
         uses: actions/setup-node@v3
         with:
           node-version: "20"
 
       - name: Install dependencies
-        run: npm ci
+        run: npm install
 
       - name: Build
         run: npm run build
