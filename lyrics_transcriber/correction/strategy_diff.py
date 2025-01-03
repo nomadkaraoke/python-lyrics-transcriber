@@ -230,7 +230,7 @@ class DiffBasedCorrector(CorrectionStrategy):
         primary_transcription = sorted_results[0].result
 
         # Get transcribed text and reference texts
-        transcribed_text = " ".join(w.text for segment in primary_transcription.segments for w in segment.words)
+        transcribed_text = "".join(" ".join(w.text for w in segment.words) for segment in primary_transcription.segments)
         reference_texts = {lyrics.source: lyrics.lyrics for lyrics in lyrics_results}
 
         # Find anchor sequences

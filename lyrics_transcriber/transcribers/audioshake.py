@@ -182,7 +182,7 @@ class AudioShakeTranscriber(BaseTranscriber):
         for line in transcription_data.get("lines", []):
             words = [
                 Word(
-                    text=word["text"],
+                    text=word["text"].strip(" "),
                     start_time=word.get("start", 0.0),
                     end_time=word.get("end", 0.0),
                 )

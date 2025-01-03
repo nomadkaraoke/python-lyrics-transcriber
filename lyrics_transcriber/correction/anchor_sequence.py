@@ -1,8 +1,8 @@
 from dataclasses import dataclass, asdict
 from typing import Any, Dict, List, Optional, Protocol, Tuple, Set
 import logging
-import re
 from .text_analysis import PhraseAnalyzer, PhraseScore
+from .text_utils import clean_text
 
 
 @dataclass
@@ -103,38 +103,18 @@ class AnchorSequenceFinder:
         self.used_positions = {}  # Initialize empty dict for used positions
 
     def _clean_text(self, text: str) -> str:
-        """Clean text by removing punctuation and normalizing whitespace.
-
-        Args:
-            text: Text to clean
-
-        Returns:
-            Cleaned text with:
-            - All text converted to lowercase
-            - All punctuation removed
-            - Multiple spaces/whitespace collapsed to single space
-            - Leading/trailing whitespace removed
-        """
+        """Clean text by removing punctuation and normalizing whitespace."""
         self.logger.debug(f"_clean_text called with text length: {len(text)}")
-        # Convert to lowercase
-        text = text.lower()
-
-        # Remove punctuation
-        text = re.sub(r"[^\w\s]", "", text)
-
-        # Normalize whitespace (collapse multiple spaces, remove leading/trailing)
-        text = " ".join(text.split())
-
-        return text
+        return clean_text(text)
 
     def _find_ngrams(self, words: List[str], n: int) -> List[Tuple[List[str], int]]:
         """Generate n-grams with their starting positions."""
-        self.logger.debug(f"_find_ngrams called with {len(words)} words, n={n}")
+        # self.logger.debug(f"_find_ngrams called with {len(words)} words, n={n}")
         return [(words[i : i + n], i) for i in range(len(words) - n + 1)]
 
     def _find_matching_sources(self, ngram: List[str], references: Dict[str, List[str]], n: int) -> Dict[str, int]:
         """Find which sources contain the given n-gram and at what positions."""
-        self.logger.debug(f"_find_matching_sources called for ngram: '{' '.join(ngram)}'")
+        # self.logger.debug(f"_find_matching_sources called for ngram: '{' '.join(ngram)}'")
         matches = {}
         all_positions = {source: [] for source in references}
 
@@ -242,15 +222,8 @@ class AnchorSequenceFinder:
             anchor: The anchor sequence to score
             context: The original transcribed text
         """
-        # Check if sequence crosses a line break
-        sequence_text = " ".join(anchor.words)
-        if sequence_text in context.replace("\n", " "):
-            # Sequence appears as-is in the text (doesn't cross line breaks)
-            phrase_score = self.phrase_analyzer.score_phrase(anchor.words, context)
-        else:
-            # Sequence crosses line breaks - penalize heavily
-            phrase_score = self.phrase_analyzer.score_phrase(anchor.words, context)
-            phrase_score.natural_break_score = 0.0  # Penalize for crossing line break
+        # Let phrase_analyzer handle all scoring including line breaks
+        phrase_score = self.phrase_analyzer.score_phrase(anchor.words, context)
 
         self.logger.debug(f"_score_anchor called for sequence: '{anchor.text}'")
         return ScoredAnchor(anchor=anchor, phrase_score=phrase_score)
@@ -267,7 +240,7 @@ class AnchorSequenceFinder:
 
         Position bonus: Add 1.0 to total score for sequences at position 0
         """
-        self.logger.debug(f"_get_sequence_priority called for anchor: '{scored_anchor.anchor.text}'")
+        # self.logger.debug(f"_get_sequence_priority called for anchor: '{scored_anchor.anchor.text}'")
         position_bonus = 1.0 if scored_anchor.anchor.transcription_position == 0 else 0.0
         return (
             len(scored_anchor.anchor.reference_positions),  # More sources is better
@@ -296,7 +269,7 @@ class AnchorSequenceFinder:
         shared_sources = set(seq1.reference_positions.keys()) & set(seq2.reference_positions.keys())
         ref_overlap = any(seq1.reference_positions[source] == seq2.reference_positions[source] for source in shared_sources)
 
-        self.logger.debug(f"Checking overlap between '{seq1.text}' and '{seq2.text}'")
+        # self.logger.debug(f"Checking overlap between '{seq1.text}' and '{seq2.text}'")
         return trans_overlap or ref_overlap
 
     def _remove_overlapping_sequences(self, anchors: List[AnchorSequence], context: str) -> List[ScoredAnchor]:

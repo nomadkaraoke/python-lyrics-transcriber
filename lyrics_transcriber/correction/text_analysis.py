@@ -4,6 +4,7 @@ from typing import List
 import spacy
 from spacy.tokens import Doc
 import logging
+from .text_utils import clean_text
 
 
 class PhraseType(Enum):
@@ -150,18 +151,20 @@ class PhraseAnalyzer:
         "world How" -> 0.0 (crosses sentence boundary)
         "I wake up" -> 0.85 (strong alignment with verb phrase)
         """
-        # self.logger.debug(f"Calculating break score for: {phrase_doc.text}")
-        phrase_text = phrase_doc.text
-        phrase_start = context_doc.text.find(phrase_text)
+        # Clean both texts while preserving structure
+        phrase_text = clean_text(phrase_doc.text)
+        context_text = clean_text(context_doc.text)
+
+        # Find position in cleaned text
+        phrase_start = context_text.find(phrase_text)
 
         if phrase_start == -1:
             return 0.0
 
         phrase_end = phrase_start + len(phrase_text)
-        context_text = context_doc.text
 
         # Check line breaks first
-        line_score = self.calculate_line_break_score(phrase_start, phrase_end, context_text)
+        line_score = self.calculate_line_break_score(phrase_start, phrase_end, context_doc.text)
         if line_score in {0.0, 1.0}:  # Perfect match or crossing boundary
             return line_score
 
@@ -257,7 +260,7 @@ class PhraseAnalyzer:
         - "the big cat" (determiner + adjective + noun)
         - "my heart" (possessive + noun)
         """
-        self.logger.debug(f"Checking if valid noun phrase: {doc.text}")
+        # self.logger.debug(f"Checking if valid noun phrase: {doc.text}")
         chunks = list(doc.noun_chunks)
         if not chunks:
             return False
@@ -281,7 +284,7 @@ class PhraseAnalyzer:
         2. Only use valid verb phrase dependencies
         3. Have correct word order (verb before modifiers)
         """
-        self.logger.debug(f"Checking if valid verb phrase: {doc.text}")
+        # self.logger.debug(f"Checking if valid verb phrase: {doc.text}")
         VALID_DEPS = {
             "ROOT",  # Main verb
             "advmod",  # Adverbial modifier
@@ -314,7 +317,7 @@ class PhraseAnalyzer:
         - "dans la maison" (French: "in the house")
         - "en la casa" (Spanish: "in the house")
         """
-        self.logger.debug(f"Checking if valid prep phrase: {doc.text}")
+        # self.logger.debug(f"Checking if valid prep phrase: {doc.text}")
         starts_with_prep = doc[0].pos_ == "ADP"
         has_content = len(doc) > 1
         has_valid_structure = any(t.dep_ == "pobj" for t in doc) or (  # English style
@@ -336,7 +339,7 @@ class PhraseAnalyzer:
         - First word must modify second word
         - Second word must be the root
         """
-        self.logger.debug(f"Checking if valid adverb phrase: {doc.text}")
+        # self.logger.debug(f"Checking if valid adverb phrase: {doc.text}")
         # Check basic structure
         if len(doc) != 2:  # Only handle two-word phrases for now
             return False
@@ -365,10 +368,14 @@ class PhraseAnalyzer:
 
     def calculate_line_break_score(self, phrase_start: int, phrase_end: int, context_text: str) -> float:
         """Calculate score based on line break alignment."""
-        self.logger.debug(f"Calculating line break score for phrase at positions {phrase_start}:{phrase_end}")
-        lines = context_text.split("\n")
+        # Clean the context text while preserving line breaks
+        cleaned_lines = [clean_text(line) for line in context_text.split("\n")]
+        cleaned_context = "\n".join(cleaned_lines)
+
+        # Recalculate positions using cleaned text
+        lines = cleaned_context.split("\n")
         for line in lines:
-            line_start = context_text.find(line)
+            line_start = cleaned_context.find(line)
             line_end = line_start + len(line)
 
             # Perfect match with a full line
@@ -392,7 +399,11 @@ class PhraseAnalyzer:
                     return 0.8
 
             # Crosses line boundary
-            if any(phrase_start < context_text.find("\n", i) < phrase_end for i in range(len(context_text)) if "\n" in context_text[i:]):
+            if any(
+                phrase_start < cleaned_context.find("\n", i) < phrase_end
+                for i in range(len(cleaned_context))
+                if "\n" in cleaned_context[i:]
+            ):
                 return 0.0
 
         return 0.5

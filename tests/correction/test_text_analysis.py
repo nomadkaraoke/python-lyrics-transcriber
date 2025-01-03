@@ -1,10 +1,12 @@
 import pytest
+import logging
 from lyrics_transcriber.correction.text_analysis import PhraseAnalyzer, PhraseType
 
 
 @pytest.fixture
 def analyzer():
-    return PhraseAnalyzer()
+    logger = logging.getLogger("test_analyzer")
+    return PhraseAnalyzer(logger)
 
 
 def test_phrase_type_detection(analyzer):
@@ -159,8 +161,9 @@ def test_integration(analyzer):
 
 def test_error_handling():
     """Test error handling for missing language models"""
+    logger = logging.getLogger("test_error")
     with pytest.raises(OSError) as exc_info:
-        PhraseAnalyzer("nonexistent_model")
+        PhraseAnalyzer(logger, "nonexistent_model")
     assert "not found" in str(exc_info.value)
 
 
@@ -169,7 +172,8 @@ def test_french_phrases():
     # Skip if language models aren't installed
     pytest.importorskip("spacy")
     try:
-        fr_analyzer = PhraseAnalyzer("fr_core_news_sm")
+        logger = logging.getLogger("test_french")
+        fr_analyzer = PhraseAnalyzer(logger, "fr_core_news_sm")
     except OSError:
         pytest.skip("French language model not installed")
 
@@ -201,7 +205,8 @@ def test_spanish_phrases():
     # Skip if language models aren't installed
     pytest.importorskip("spacy")
     try:
-        es_analyzer = PhraseAnalyzer("es_core_news_sm")
+        logger = logging.getLogger("test_spanish")
+        es_analyzer = PhraseAnalyzer(logger, "es_core_news_sm")
     except OSError:
         pytest.skip("Spanish language model not installed")
 
@@ -373,15 +378,16 @@ def test_calculate_sentence_break_score(analyzer):
 
 def test_line_break_scoring_with_overlapping_phrases():
     """Test scoring of overlapping phrases with line breaks"""
-    analyzer = PhraseAnalyzer()
+    logger = logging.getLogger("test_line_breaks")
+    analyzer = PhraseAnalyzer(logger)
     context = "my heart will go on\nand on forever more"
 
     # Test individual phrases
     phrases = [
-        "my heart",            # Valid noun phrase
-        "will go on",          # Valid verb phrase
-        "go on and",           # Crosses line break
-        "my heart will go on"  # Complete sentence
+        "my heart",  # Valid noun phrase
+        "will go on",  # Valid verb phrase
+        "go on and",  # Crosses line break
+        "my heart will go on",  # Complete sentence
     ]
 
     print("\nTesting phrases in context:", context)
@@ -397,7 +403,7 @@ def test_line_break_scoring_with_overlapping_phrases():
         print(f"Break score: {break_score}")
         print(f"Length score: {length_score}")
         print(f"Total score: {total_score.total_score}")
-        
+
         print("Token Analysis:")
         for token in doc:
             print(f"  {token.text:12} pos={token.pos_:6} dep={token.dep_:10} head={token.head.text}")

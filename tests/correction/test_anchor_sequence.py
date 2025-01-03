@@ -22,11 +22,6 @@ def test_anchor_sequence_properties():
     }
 
 
-def test_clean_text(finder):
-    assert finder._clean_text("Hello  World") == "hello world"
-    assert finder._clean_text("  Multiple   Spaces  ") == "multiple spaces"
-
-
 def test_find_ngrams(finder):
     words = ["a", "b", "c", "d"]
     assert finder._find_ngrams(words, 2) == [(["a", "b"], 0), (["b", "c"], 1), (["c", "d"], 2)]
@@ -520,3 +515,462 @@ def test_get_sequence_priority(finder):
     print(f"Priority: {priority2}")
 
     assert priority1 > priority2  # First sequence should have higher priority
+
+
+def test_viet_nam_lyrics_scenario():
+    """Test based on the Minutemen - Viet Nam lyrics pattern"""
+    transcribed = "Let's say I got a number\nThat number's fifty thousand\nThat's ten percent of five hundred thousand\nOh, here we are\nIn French Indochina"
+    references = {
+        "genius": "Let's say I got a number\nThat number's fifty thousand\nThat's ten percent of five hundred thousand\nOh, here we are in French Indochina",
+        "spotify": "Let's say I got a number\nThat number's fifty-thousand\nThat's ten percent of five-hundred-thousand\nOh, here we are in French Indochina",
+    }
+    finder = AnchorSequenceFinder(min_sequence_length=3, min_sources=1)
+
+    # Debug: Print cleaned texts
+    print("\nCleaned texts:")
+    trans_words = finder._clean_text(transcribed).split()
+    ref_texts_clean = {source: finder._clean_text(text).split() for source, text in references.items()}
+    print(f"Transcribed: {trans_words}")
+    for source, words in ref_texts_clean.items():
+        print(f"{source}: {words}")
+
+    # Debug: Try specific phrases we expect to find
+    expected_phrases = [
+        ["lets", "say", "i", "got", "a", "number"],
+        ["that", "numbers", "fifty", "thousand"],
+        ["thats", "ten", "percent", "of", "five", "hundred", "thousand"],
+        ["oh", "here", "we", "are"],
+        ["in", "french", "indochina"],
+    ]
+
+    print("\nTesting expected phrases:")
+    for phrase in expected_phrases:
+        print(f"\nPhrase: '{' '.join(phrase)}'")
+        # Check if phrase exists in references
+        matches = finder._find_matching_sources(phrase, ref_texts_clean, len(phrase))
+        print(f"Matches found: {matches}")
+
+        if matches:
+            # Score the phrase
+            anchor = AnchorSequence(phrase, 0, matches, len(matches) / len(references))
+            scored = finder._score_anchor(anchor, transcribed)
+            print(f"Break score: {scored.phrase_score.natural_break_score}")
+            print(f"Total score: {scored.phrase_score.total_score}")
+            print(f"Phrase type: {scored.phrase_score.phrase_type}")
+            print(f"Priority: {finder._get_sequence_priority(scored)}")
+
+    # Get actual anchors
+    anchors = finder.find_anchors(transcribed, references)
+
+    # Debug: Print found anchors
+    print("\nFound anchors:")
+    found_texts = set()  # Use a set to store found texts
+    for anchor in anchors:
+        found_texts.add(anchor.text)  # Add each anchor text to the set
+        scored = finder._score_anchor(anchor, transcribed)
+        print(f"\nText: '{anchor.text}'")
+        print(f"Position: {anchor.transcription_position}")
+        print(f"Confidence: {anchor.confidence}")
+        print(f"Break score: {scored.phrase_score.natural_break_score}")
+        print(f"Total score: {scored.phrase_score.total_score}")
+        print(f"Phrase type: {scored.phrase_score.phrase_type}")
+        print(f"Priority: {finder._get_sequence_priority(scored)}")
+
+    # Test specific expectations
+    expected_texts = {
+        "lets say i got a number",
+        "that numbers fifty thousand",
+        "thats ten percent of five hundred thousand",
+        "oh here we are",
+        "in french indochina",
+    }
+
+    # Check for missing expected phrases
+    missing_phrases = expected_texts - found_texts
+    assert not missing_phrases, f"Expected phrases not found: {missing_phrases}"
+
+
+def test_viet_nam_first_line():
+    """Specific test for the first line of Viet Nam lyrics"""
+    transcribed = "Let's say I got a number"
+    references = {"genius": "Let's say I got a number", "spotify": "Let's say I got a number"}
+    finder = AnchorSequenceFinder(min_sequence_length=3, min_sources=1)
+
+    # Debug: Print cleaned texts
+    print("\nCleaned texts:")
+    trans_words = finder._clean_text(transcribed).split()
+    ref_texts_clean = {source: finder._clean_text(text).split() for source, text in references.items()}
+    print(f"Transcribed: {trans_words}")
+    for source, words in ref_texts_clean.items():
+        print(f"{source}: {words}")
+
+    # Debug: Test the full line first
+    full_line = trans_words
+    matches = finder._find_matching_sources(full_line, ref_texts_clean, len(full_line))
+    print(f"\nTesting full line '{' '.join(full_line)}':")
+    print(f"Matches: {matches}")
+
+    if matches:
+        anchor = AnchorSequence(full_line, 0, matches, len(matches) / len(references))
+        scored = finder._score_anchor(anchor, transcribed)
+        print(f"Break score: {scored.phrase_score.natural_break_score}")
+        print(f"Total score: {scored.phrase_score.total_score}")
+        print(f"Phrase type: {scored.phrase_score.phrase_type}")
+        print(f"Priority: {finder._get_sequence_priority(scored)}")
+
+        # Debug the break score calculation
+        print("\nBreak score calculation details:")
+        phrase_start = transcribed.find(anchor.text)
+        phrase_end = phrase_start + len(anchor.text)
+        print(f"Phrase start: {phrase_start}")
+        print(f"Phrase end: {phrase_end}")
+        print(f"Text length: {len(transcribed)}")
+        print(f"Is full line? {phrase_start == 0 and phrase_end == len(transcribed)}")
+
+    # Get anchors
+    anchors = finder.find_anchors(transcribed, references)
+
+    # Debug: Print found anchors with detailed scoring
+    print("\nFound anchors:")
+    for anchor in anchors:
+        scored = finder._score_anchor(anchor, transcribed)
+        print(f"\nText: '{anchor.text}'")
+        print(f"Position: {anchor.transcription_position}")
+        print(f"Confidence: {anchor.confidence}")
+        print(f"Break score: {scored.phrase_score.natural_break_score}")
+        print(f"Total score: {scored.phrase_score.total_score}")
+        print(f"Phrase type: {scored.phrase_score.phrase_type}")
+        print(f"Priority: {finder._get_sequence_priority(scored)}")
+
+        # Debug the break score calculation for each anchor
+        phrase_start = transcribed.find(anchor.text)
+        phrase_end = phrase_start + len(anchor.text)
+        print(f"Phrase start: {phrase_start}")
+        print(f"Phrase end: {phrase_end}")
+        print(f"Is full line? {phrase_start == 0 and phrase_end == len(transcribed)}")
+
+    # Should find the complete line
+    assert len(anchors) == 1, f"Expected 1 anchor but found {len(anchors)}: {[a.text for a in anchors]}"
+    assert anchors[0].text == "lets say i got a number"
+    assert anchors[0].confidence == 1.0
+
+
+def test_hyphenated_words():
+    """Test that hyphenated words are handled correctly"""
+    transcribed = "fifty-thousand five-hundred-thousand"
+    references = {"source1": "fifty-thousand five-hundred-thousand", "source2": "fifty thousand five hundred thousand"}
+    finder = AnchorSequenceFinder(min_sequence_length=2, min_sources=1)
+
+    # Debug: Print cleaned texts
+    print("\nCleaned texts:")
+    trans_words = finder._clean_text(transcribed).split()
+    ref_texts_clean = {source: finder._clean_text(text).split() for source, text in references.items()}
+    print(f"Transcribed: {trans_words}")
+    for source, words in ref_texts_clean.items():
+        print(f"{source}: {words}")
+
+    anchors = finder.find_anchors(transcribed, references)
+
+    # Should find the complete phrase despite different hyphenation
+    found_texts = {anchor.text for anchor in anchors}
+    assert "fifty thousand five hundred thousand" in found_texts
+
+
+def test_complete_line_matching():
+    """Test that complete lines are preferred over partial matches when they exist in all sources."""
+    transcribed = "hello world test phrase"
+    references = {"source1": "hello world test phrase", "source2": "hello world test phrase"}
+    finder = AnchorSequenceFinder(min_sequence_length=2, min_sources=1)
+
+    # Debug: Print cleaned texts
+    print("\nCleaned texts:")
+    trans_words = finder._clean_text(transcribed).split()
+    ref_texts_clean = {source: finder._clean_text(text).split() for source, text in references.items()}
+    print(f"Transcribed: {trans_words}")
+    for source, words in ref_texts_clean.items():
+        print(f"{source}: {words}")
+
+    # Debug: Test the full line first
+    full_line = trans_words
+    matches = finder._find_matching_sources(full_line, ref_texts_clean, len(full_line))
+    print(f"\nTesting full line '{' '.join(full_line)}':")
+    print(f"Matches: {matches}")
+
+    if matches:
+        anchor = AnchorSequence(full_line, 0, matches, len(matches) / len(references))
+        scored = finder._score_anchor(anchor, transcribed)
+        print(f"Break score: {scored.phrase_score.natural_break_score}")
+        print(f"Total score: {scored.phrase_score.total_score}")
+        print(f"Phrase type: {scored.phrase_score.phrase_type}")
+        print(f"Priority: {finder._get_sequence_priority(scored)}")
+
+    # Get anchors
+    anchors = finder.find_anchors(transcribed, references)
+
+    # Debug: Print found anchors
+    print("\nFound anchors:")
+    for anchor in anchors:
+        scored = finder._score_anchor(anchor, transcribed)
+        print(f"\nText: '{anchor.text}'")
+        print(f"Position: {anchor.transcription_position}")
+        print(f"Confidence: {anchor.confidence}")
+        print(f"Break score: {scored.phrase_score.natural_break_score}")
+        print(f"Total score: {scored.phrase_score.total_score}")
+        print(f"Phrase type: {scored.phrase_score.phrase_type}")
+        print(f"Priority: {finder._get_sequence_priority(scored)}")
+
+    # Should find the complete line
+    assert len(anchors) == 1, f"Expected 1 anchor but found {len(anchors)}: {[a.text for a in anchors]}"
+    assert anchors[0].text == "hello world test phrase"
+    assert anchors[0].confidence == 1.0
+
+    # Also test with a slightly different reference to ensure it still works
+    references_with_diff = {
+        "source1": "hello world test phrase",
+        "source2": "hello world test phrase yeah",  # Longer but contains the complete line
+    }
+    anchors = finder.find_anchors(transcribed, references_with_diff)
+    assert len(anchors) == 1
+    assert anchors[0].text == "hello world test phrase"
+
+
+def test_complete_line_matching_with_apostrophe():
+    """Test that complete lines with apostrophes are handled correctly."""
+    transcribed = "let's say I got a number"  # Note the apostrophe
+    references = {"source1": "let's say I got a number", "source2": "let's say I got a number"}
+    finder = AnchorSequenceFinder(min_sequence_length=2, min_sources=1)
+
+    # Debug: Print cleaned texts and raw texts
+    print("\nRaw texts:")
+    print(f"Transcribed: {transcribed}")
+    for source, text in references.items():
+        print(f"{source}: {text}")
+
+    print("\nCleaned texts:")
+    trans_words = finder._clean_text(transcribed).split()
+    ref_texts_clean = {source: finder._clean_text(text).split() for source, text in references.items()}
+    print(f"Transcribed: {trans_words}")
+    for source, words in ref_texts_clean.items():
+        print(f"{source}: {words}")
+
+    # Debug: Test the full line first
+    full_line = trans_words
+    matches = finder._find_matching_sources(full_line, ref_texts_clean, len(full_line))
+    print(f"\nTesting full line '{' '.join(full_line)}':")
+    print(f"Matches: {matches}")
+
+    if matches:
+        anchor = AnchorSequence(full_line, 0, matches, len(matches) / len(references))
+        scored = finder._score_anchor(anchor, transcribed)
+        print(f"Break score: {scored.phrase_score.natural_break_score}")
+        print(f"Total score: {scored.phrase_score.total_score}")
+        print(f"Phrase type: {scored.phrase_score.phrase_type}")
+        print(f"Priority: {finder._get_sequence_priority(scored)}")
+
+    # Get anchors
+    anchors = finder.find_anchors(transcribed, references)
+
+    # Debug: Print found anchors
+    print("\nFound anchors:")
+    for anchor in anchors:
+        scored = finder._score_anchor(anchor, transcribed)
+        print(f"\nText: '{anchor.text}'")
+        print(f"Position: {anchor.transcription_position}")
+        print(f"Confidence: {anchor.confidence}")
+        print(f"Break score: {scored.phrase_score.natural_break_score}")
+        print(f"Total score: {scored.phrase_score.total_score}")
+        print(f"Phrase type: {scored.phrase_score.phrase_type}")
+        print(f"Priority: {finder._get_sequence_priority(scored)}")
+
+    # Should find the complete line
+    assert len(anchors) == 1, f"Expected 1 anchor but found {len(anchors)}: {[a.text for a in anchors]}"
+    assert anchors[0].text == "lets say i got a number"
+    assert anchors[0].confidence == 1.0
+
+
+def test_complete_line_matching_simple():
+    """Test complete line matching with a simpler case to isolate the issue."""
+    # Use same word count as "let's say I got a number" but simpler words
+    transcribed = "one two three four five six"
+    references = {"source1": "one two three four five six", "source2": "one two three four five six"}
+    finder = AnchorSequenceFinder(min_sequence_length=2, min_sources=1)
+
+    # Debug: Print cleaned texts
+    print("\nCleaned texts:")
+    trans_words = finder._clean_text(transcribed).split()
+    ref_texts_clean = {source: finder._clean_text(text).split() for source, text in references.items()}
+    print(f"Transcribed: {trans_words}")
+    for source, words in ref_texts_clean.items():
+        print(f"{source}: {words}")
+
+    # Debug: Test the full line first
+    full_line = trans_words
+    matches = finder._find_matching_sources(full_line, ref_texts_clean, len(full_line))
+    print(f"\nTesting full line '{' '.join(full_line)}':")
+    print(f"Matches: {matches}")
+
+    if matches:
+        anchor = AnchorSequence(full_line, 0, matches, len(matches) / len(references))
+        scored = finder._score_anchor(anchor, transcribed)
+        print(f"Break score: {scored.phrase_score.natural_break_score}")
+        print(f"Total score: {scored.phrase_score.total_score}")
+        print(f"Phrase type: {scored.phrase_score.phrase_type}")
+        print(f"Priority: {finder._get_sequence_priority(scored)}")
+
+    # Get anchors
+    anchors = finder.find_anchors(transcribed, references)
+
+    # Debug: Print found anchors
+    print("\nFound anchors:")
+    for anchor in anchors:
+        scored = finder._score_anchor(anchor, transcribed)
+        print(f"\nText: '{anchor.text}'")
+        print(f"Position: {anchor.transcription_position}")
+        print(f"Confidence: {anchor.confidence}")
+        print(f"Break score: {scored.phrase_score.natural_break_score}")
+        print(f"Total score: {scored.phrase_score.total_score}")
+        print(f"Phrase type: {scored.phrase_score.phrase_type}")
+        print(f"Priority: {finder._get_sequence_priority(scored)}")
+
+    # Should find the complete line
+    assert len(anchors) == 1, f"Expected 1 anchor but found {len(anchors)}: {[a.text for a in anchors]}"
+    assert anchors[0].text == "one two three four five six"
+    assert anchors[0].confidence == 1.0
+
+
+def test_break_score_calculation():
+    """Test break score calculation with various line formats."""
+    finder = AnchorSequenceFinder(min_sequence_length=2, min_sources=1)
+
+    test_cases = [
+        # Simple case (known working)
+        ("one two three", "one two three", ["one", "two", "three"]),
+        # With apostrophe (problematic case)
+        ("let's say test", "let's say test", ["lets", "say", "test"]),
+        # Mixed case (to test case sensitivity)
+        ("Hello World Test", "Hello World Test", ["hello", "world", "test"]),
+        # With extra spaces (to test space normalization)
+        ("hello   world   test", "hello   world   test", ["hello", "world", "test"]),
+    ]
+
+    print("\nBreak score calculation tests:")
+    for original, context, words in test_cases:
+        print(f"\nOriginal text: '{original}'")
+        print(f"Context text: '{context}'")
+        print(f"Cleaned words: {words}")
+
+        # Create anchor and get score
+        anchor = AnchorSequence(words, 0, {"source1": 0}, 1.0)
+        scored = finder._score_anchor(anchor, context)
+
+        print(f"Break score: {scored.phrase_score.natural_break_score}")
+        print(f"Total score: {scored.phrase_score.total_score}")
+        print(f"Phrase type: {scored.phrase_score.phrase_type}")
+
+        # For debugging position calculation
+        clean_context = finder._clean_text(context)
+        clean_text = " ".join(words)
+        print(f"Clean context: '{clean_context}'")
+        print(f"Clean text: '{clean_text}'")
+        print(f"Text position in context: {clean_context.find(clean_text)}")
+
+
+def test_break_score_with_text_cleaning():
+    """Test that break score calculation works correctly with cleaned text."""
+    finder = AnchorSequenceFinder(min_sequence_length=2, min_sources=1)
+
+    test_cases = [
+        # Control case - no cleaning needed
+        ("one two", "one two", ["one", "two"]),
+        # Test cases where cleaning is needed
+        ("Let's go", "Let's go", ["lets", "go"]),
+        ("Hello World", "Hello World", ["hello", "world"]),
+        # Test case with identical cleaned text but different original
+        ("let's go", "Let's go", ["lets", "go"]),
+        ("HELLO world", "Hello World", ["hello", "world"]),
+    ]
+
+    print("\nBreak score tests with text cleaning:")
+    for original, context, words in test_cases:
+        print(f"\nOriginal text: '{original}'")
+        print(f"Context text: '{context}'")
+        print(f"Cleaned words: {words}")
+
+        # Create anchor and get score
+        anchor = AnchorSequence(words, 0, {"source1": 0}, 1.0)
+        scored = finder._score_anchor(anchor, context)
+
+        # Debug the text cleaning and position calculation
+        clean_context = finder._clean_text(context)
+        clean_text = " ".join(words)
+        print(f"Clean context: '{clean_context}'")
+        print(f"Clean text: '{clean_text}'")
+        print(f"Text position in context: {clean_context.find(clean_text)}")
+        print(f"Break score: {scored.phrase_score.natural_break_score}")
+        print(f"Total score: {scored.phrase_score.total_score}")
+        print(f"Phrase type: {scored.phrase_score.phrase_type}")
+
+        # These should all be equivalent after cleaning
+        assert clean_context == clean_text, f"Cleaned context '{clean_context}' doesn't match cleaned text '{clean_text}'"
+
+
+def test_break_score_uses_cleaned_text():
+    """Test that break score calculation uses cleaned text rather than original text."""
+    finder = AnchorSequenceFinder(min_sequence_length=2, min_sources=1)
+
+    test_cases = [
+        # Base case - no cleaning needed
+        (
+            "one two three",  # original
+            ["one", "two", "three"],  # words
+            1.0,  # expected break score
+            "Simple text should get full break score",
+        ),
+        # Case with apostrophe
+        (
+            "Let's go now",  # original
+            ["lets", "go", "now"],  # words
+            1.0,  # expected break score
+            "Cleaned text should get full break score despite apostrophe",
+        ),
+        # Case with capitalization
+        (
+            "Hello World Test",  # original
+            ["hello", "world", "test"],  # words
+            1.0,  # expected break score
+            "Cleaned text should get full break score despite capitalization",
+        ),
+        # Case with extra spaces
+        (
+            "hello   world   test",  # original
+            ["hello", "world", "test"],  # words
+            1.0,  # expected break score
+            "Cleaned text should get full break score despite extra spaces",
+        ),
+    ]
+
+    print("\nBreak score calculation with cleaned text:")
+    for original, words, expected_score, message in test_cases:
+        print(f"\nOriginal text: '{original}'")
+        print(f"Cleaned words: {words}")
+
+        # Create anchor and get score
+        anchor = AnchorSequence(words, 0, {"source1": 0}, 1.0)
+        scored = finder._score_anchor(anchor, original)
+
+        # Debug output
+        clean_context = finder._clean_text(original)
+        clean_text = " ".join(words)
+        print(f"Clean context: '{clean_context}'")
+        print(f"Clean text: '{clean_text}'")
+        print(f"Text position in context: {clean_context.find(clean_text)}")
+        print(f"Break score: {scored.phrase_score.natural_break_score}")
+        print(f"Expected score: {expected_score}")
+
+        # Assert that break score is calculated using cleaned text
+        assert (
+            scored.phrase_score.natural_break_score == expected_score
+        ), f"Failed: {message} (got {scored.phrase_score.natural_break_score}, expected {expected_score})"
+
+        # Verify that cleaned versions match
+        assert clean_context == clean_text, f"Cleaned context '{clean_context}' doesn't match cleaned text '{clean_text}'"
