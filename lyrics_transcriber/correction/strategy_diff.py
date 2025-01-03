@@ -94,10 +94,6 @@ class DiffBasedCorrector(CorrectionStrategy):
         self, source_text: str, target_text: str, anchor_sequences: List[ScoredAnchor]
     ) -> Tuple[List[Tuple[str, str]], List[str], List[str]]:
         """Align two texts using anchor sequences as guides."""
-        self.logger.debug(f"\nStarting alignment between texts:")
-        self.logger.debug(f"Source text: {source_text}")
-        self.logger.debug(f"Target text: {target_text}")
-
         # Split into words, preserving original form for output
         source_words_orig = source_text.split()
         target_words_orig = target_text.split()

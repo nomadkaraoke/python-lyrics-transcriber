@@ -105,7 +105,7 @@ class AnchorSequenceFinder:
 
     def _clean_text(self, text: str) -> str:
         """Clean text by removing punctuation and normalizing whitespace."""
-        self.logger.debug(f"_clean_text called with text length: {len(text)}")
+        # self.logger.debug(f"_clean_text called with text length: {len(text)}")
         return clean_text(text)
 
     def _find_ngrams(self, words: List[str], n: int) -> List[Tuple[List[str], int]]:
@@ -168,6 +168,9 @@ class AnchorSequenceFinder:
         Returns:
             List of ScoredAnchor objects containing both the anchor sequences and their quality scores.
         """
+        self.logger.info(f"Finding anchor sequences for transcription with length {len(transcribed)}")
+
+        self.logger.info(f"Cleaning and splitting texts")
         # Clean and split texts
         trans_words = self._clean_text(transcribed).split()
         ref_texts_clean = {source: self._clean_text(text).split() for source, text in references.items()}
@@ -175,8 +178,8 @@ class AnchorSequenceFinder:
         candidate_anchors = []
         max_length = min(len(trans_words), min(len(words) for words in ref_texts_clean.values()))
 
-        # Try each possible sequence length, starting with longest
-        for n in range(max_length, self.min_sequence_length - 1, -1):
+        self.logger.info(f"Checking sequence lengths")
+        for n in tqdm(range(max_length, self.min_sequence_length - 1, -1), desc="Checking sequence lengths"):
             # Reset used positions for each n-gram length
             self.used_positions = {source: set() for source in references.keys()}
             used_trans_positions = set()
@@ -278,13 +281,17 @@ class AnchorSequenceFinder:
         if not anchors:
             return []
 
-        # Score all anchors
-        scored_anchors = [self._score_anchor(anchor, context) for anchor in anchors]
+        self.logger.info(f"Scoring {len(anchors)} anchors")
+
+        # Score all anchors with progress bar
+        scored_anchors = [self._score_anchor(anchor, context) for anchor in tqdm(anchors, desc="Scoring anchors")]
         scored_anchors.sort(key=self._get_sequence_priority, reverse=True)
 
+        self.logger.info(f"Filtering {len(scored_anchors)} overlapping sequences")
+
         filtered_scored = []
-        # Add tqdm progress bar
-        for scored_anchor in tqdm(scored_anchors, desc="Filtering overlapping sequences"):
+        # Filter with progress bar
+        for scored_anchor in tqdm(scored_anchors, desc="Filtering overlaps"):
             overlaps = False
             for existing in filtered_scored:
                 if self._sequences_overlap(scored_anchor.anchor, existing.anchor):
