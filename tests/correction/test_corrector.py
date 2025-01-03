@@ -89,6 +89,7 @@ class TestLyricsCorrector:
             transcribed_text="hello world test lyrics",
             reference_texts={"test": "hello world test lyrics"},
             anchor_sequences=[],
+            gap_sequences=[],
             metadata={"correction_strategy": "diff_based", "primary_source": "test"}
         )
 

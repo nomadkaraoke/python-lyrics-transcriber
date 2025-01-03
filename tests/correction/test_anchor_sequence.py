@@ -974,3 +974,144 @@ def test_break_score_uses_cleaned_text():
 
         # Verify that cleaned versions match
         assert clean_context == clean_text, f"Cleaned context '{clean_context}' doesn't match cleaned text '{clean_text}'"
+
+
+def test_get_reference_words(finder):
+    """Test extracting reference words between positions"""
+    ref_words = ["hello", "world", "test", "phrase"]
+
+    # Test with both positions specified
+    assert finder._get_reference_words("source1", ref_words, 1, 3) == ["world", "test"]
+
+    # Test with start position only
+    assert finder._get_reference_words("source1", ref_words, 2, None) == ["test", "phrase"]
+
+    # Test with end position only
+    assert finder._get_reference_words("source1", ref_words, None, 2) == ["hello", "world"]
+
+    # Test with neither position specified
+    assert finder._get_reference_words("source1", ref_words, None, None) == ref_words
+
+
+def test_create_initial_gap(finder):
+    """Test creating gap before first anchor"""
+    words = ["hello", "world", "test", "phrase"]
+    ref_texts_clean = {"source1": ["hello", "world", "different", "text"], "source2": ["start", "hello", "world", "end"]}
+
+    # Test with no anchors
+    gap = finder._create_initial_gap(words, None, ref_texts_clean)
+    assert gap is not None
+    assert gap.words == words
+    assert gap.transcription_position == 0
+    assert gap.preceding_anchor is None
+    assert gap.following_anchor is None
+    assert gap.reference_words == ref_texts_clean
+
+    # Test with first anchor at position 0 (should return None)
+    first_anchor = ScoredAnchor(
+        anchor=AnchorSequence(["hello", "world"], 0, {"source1": 0}, 1.0), phrase_score=PhraseScore(PhraseType.COMPLETE, 1.0, 1.0)
+    )
+    gap = finder._create_initial_gap(words, first_anchor, ref_texts_clean)
+    assert gap is None
+
+    # Test with first anchor at position 2
+    first_anchor = ScoredAnchor(
+        anchor=AnchorSequence(["test", "phrase"], 2, {"source1": 2}, 1.0), phrase_score=PhraseScore(PhraseType.COMPLETE, 1.0, 1.0)
+    )
+    gap = finder._create_initial_gap(words, first_anchor, ref_texts_clean)
+    assert gap is not None
+    assert gap.words == ["hello", "world"]
+    assert gap.transcription_position == 0
+    assert gap.preceding_anchor is None
+    assert gap.following_anchor == first_anchor.anchor
+
+
+def test_create_between_gap(finder):
+    """Test creating gap between two anchors"""
+    words = ["hello", "world", "middle", "test", "phrase"]
+    ref_texts_clean = {
+        "source1": ["hello", "world", "middle", "test", "phrase"],
+        "source2": ["hello", "world", "different", "test", "phrase"]
+    }
+    
+    current_anchor = ScoredAnchor(
+        anchor=AnchorSequence(["hello", "world"], 0, {"source1": 0, "source2": 0}, 1.0),
+        phrase_score=PhraseScore(PhraseType.COMPLETE, 1.0, 1.0)
+    )
+    
+    next_anchor = ScoredAnchor(
+        anchor=AnchorSequence(["test", "phrase"], 3, {"source1": 3, "source2": 3}, 1.0),
+        phrase_score=PhraseScore(PhraseType.COMPLETE, 1.0, 1.0)
+    )
+    
+    # Test with gap between anchors
+    gap = finder._create_between_gap(words, current_anchor, next_anchor, ref_texts_clean)
+    assert gap is not None
+    assert gap.words == ["middle"]
+    assert gap.transcription_position == 2
+    assert gap.preceding_anchor == current_anchor.anchor
+    assert gap.following_anchor == next_anchor.anchor
+    assert gap.reference_words == {
+        "source1": ["middle"],
+        "source2": ["different"]
+    }
+    
+    # Test with no gap between anchors
+    next_anchor.anchor.transcription_position = 2
+    gap = finder._create_between_gap(words, current_anchor, next_anchor, ref_texts_clean)
+    assert gap is None
+
+
+def test_create_final_gap(finder):
+    """Test creating gap after last anchor"""
+    words = ["hello", "world", "test", "phrase", "end"]
+    ref_texts_clean = {"source1": ["hello", "world", "final", "words", "here"], "source2": ["hello", "world", "different", "ending"]}
+
+    last_anchor = ScoredAnchor(
+        anchor=AnchorSequence(["hello", "world"], 0, {"source1": 0, "source2": 0}, 1.0),
+        phrase_score=PhraseScore(PhraseType.COMPLETE, 1.0, 1.0),
+    )
+
+    # Test with words after last anchor
+    gap = finder._create_final_gap(words, last_anchor, ref_texts_clean)
+    assert gap is not None
+    assert gap.words == ["test", "phrase", "end"]
+    assert gap.transcription_position == 2
+    assert gap.preceding_anchor == last_anchor.anchor
+    assert gap.following_anchor is None
+    assert gap.reference_words == {"source1": ["final", "words", "here"], "source2": ["different", "ending"]}
+
+    # Test with no words after last anchor
+    words = ["hello", "world"]
+    gap = finder._create_final_gap(words, last_anchor, ref_texts_clean)
+    assert gap is None
+
+
+def test_find_gaps_integration(finder):
+    """Integration test for find_gaps"""
+    transcribed = "hello world test phrase end"
+    references = {"source1": "hello world middle test phrase final", "source2": "hello world different test phrase end"}
+
+    # First find some anchors
+    anchors = finder.find_anchors(transcribed, references)
+    assert len(anchors) > 0
+
+    # Then find gaps
+    gaps = finder.find_gaps(transcribed, anchors, references)
+
+    # Basic validation of gaps
+    assert len(gaps) > 0
+
+    # Verify gaps don't overlap with anchors
+    for gap in gaps:
+        # Check gap has correct structure
+        assert isinstance(gap.words, list)
+        assert isinstance(gap.transcription_position, int)
+        assert isinstance(gap.reference_words, dict)
+
+        # If gap has surrounding anchors, verify positions make sense
+        if gap.preceding_anchor:
+            assert gap.transcription_position >= (gap.preceding_anchor.transcription_position + gap.preceding_anchor.length)
+
+        if gap.following_anchor:
+            assert gap.transcription_position + len(gap.words) <= gap.following_anchor.transcription_position

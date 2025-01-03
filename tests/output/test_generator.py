@@ -57,6 +57,7 @@ def sample_transcription_data():
         transcribed_text="Line 1 Line 2",
         reference_texts={},
         anchor_sequences=[],
+        gap_sequences=[],
         metadata={},
     )
 
@@ -356,6 +357,7 @@ class TestOutputGenerator:
             transcribed_text="Test corrected lyrics",
             reference_texts={},
             anchor_sequences=[],
+            gap_sequences=[],
             metadata={},
         )
 

@@ -229,8 +229,9 @@ class DiffBasedCorrector(CorrectionStrategy):
         transcribed_text = "".join(" ".join(w.text for w in segment.words) for segment in primary_transcription.segments)
         reference_texts = {lyrics.source: lyrics.lyrics for lyrics in lyrics_results}
 
-        # Find anchor sequences
+        # Find anchor sequences and gaps
         anchor_sequences = self.anchor_finder.find_anchors(transcribed_text, reference_texts)
+        gap_sequences = self.anchor_finder.find_gaps(transcribed_text, anchor_sequences, reference_texts)
 
         # Create correction mapping
         self._create_correction_mapping(
@@ -321,6 +322,7 @@ class DiffBasedCorrector(CorrectionStrategy):
             transcribed_text=transcribed_text,
             reference_texts=reference_texts,
             anchor_sequences=anchor_sequences,
+            gap_sequences=gap_sequences,
             metadata={
                 "correction_strategy": "diff_based",
                 "anchor_sequences_count": len(anchor_sequences),

@@ -53,5 +53,6 @@ class LyricsCorrector:
                 transcribed_text=primary_transcription.text,
                 reference_texts={},
                 anchor_sequences=[],
+                gap_sequences=[],
                 metadata=primary_transcription.metadata or {},
             )
