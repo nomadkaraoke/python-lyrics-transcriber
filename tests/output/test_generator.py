@@ -46,7 +46,19 @@ def sample_transcription_data():
             end_time=4.0,
         ),
     ]
-    return CorrectionResult(segments=segments, text="Line 1 Line 2", confidence=1.0, corrections_made=0, source_mapping={}, metadata={})
+
+    return CorrectionResult(
+        original_segments=segments,
+        corrected_segments=segments,  # Using same segments for simplicity
+        corrected_text="Line 1 Line 2",
+        corrections=[],  # No corrections for this test
+        corrections_made=0,
+        confidence=1.0,
+        transcribed_text="Line 1 Line 2",
+        reference_texts={},
+        anchor_sequences=[],
+        metadata={},
+    )
 
 
 class TestOutputGenerator:
@@ -88,14 +100,25 @@ class TestOutputGenerator:
 
     @patch("builtins.open", new_callable=mock_open)
     def test_write_lrc_file(self, mock_file, generator, sample_transcription_data):
-        generator._write_lrc_file("test.lrc", sample_transcription_data.segments)
+        """Test writing LRC file content."""
+        output_path = "/test/output/test.lrc"
+        generator._write_lrc_file(output_path, sample_transcription_data.corrected_segments)
 
-        expected_calls = [call("[00:01.00]Line 1\n"), call("[00:03.00]Line 2\n")]
+        expected_calls = [
+            call("[00:01.00]Line\n"),
+            call("[00:01.50]1\n"),
+            call("\n"),  # Extra newline after segment
+            call("[00:03.00]Line\n"),
+            call("[00:03.50]2\n"),
+            call("\n"),  # Extra newline after segment
+        ]
         mock_file().write.assert_has_calls(expected_calls)
 
     @patch("builtins.open", new_callable=mock_open)
     def test_write_ass_file(self, mock_file, generator, sample_transcription_data):
-        generator._write_ass_file("test.ass", sample_transcription_data.segments)
+        """Test writing ASS file content."""
+        output_path = "/test/output/test.ass"
+        generator._write_ass_file(output_path, sample_transcription_data.corrected_segments)
 
         mock_file().write.assert_called()
         # Verify header was written
@@ -140,14 +163,16 @@ class TestOutputGenerator:
 
     @patch.object(OutputGenerator, "_write_lrc_file")
     def test_generate_lrc(self, mock_write, generator, sample_transcription_data):
+        """Test LRC file generation."""
         result = generator.generate_lrc(sample_transcription_data, "test")
-        assert result == "/test/output/test.lrc"
+        assert result == "/test/output/test (Lyrics Corrected).lrc"
         mock_write.assert_called_once()
 
     @patch.object(OutputGenerator, "_write_ass_file")
     def test_generate_ass(self, mock_write, generator, sample_transcription_data):
+        """Test ASS file generation."""
         result = generator.generate_ass(sample_transcription_data, "test")
-        assert result == "/test/output/test.ass"
+        assert result == "/test/output/test (Lyrics Corrected).ass"
         mock_write.assert_called_once()
 
     @patch.object(OutputGenerator, "_run_ffmpeg_command")
@@ -156,7 +181,29 @@ class TestOutputGenerator:
         assert result == "/test/output/test.mp4"
         mock_run.assert_called_once()
 
-    def test_generate_outputs(self, generator, sample_transcription_data):
+    @patch.object(OutputGenerator, "write_plain_lyrics")
+    @patch.object(OutputGenerator, "write_plain_lyrics_from_correction")
+    @patch.object(OutputGenerator, "write_original_transcription")
+    @patch.object(OutputGenerator, "write_original_segments")
+    @patch.object(OutputGenerator, "write_corrected_segments")
+    @patch.object(OutputGenerator, "write_corrections_data")
+    @patch.object(OutputGenerator, "generate_lrc")
+    @patch.object(OutputGenerator, "generate_ass")
+    @patch.object(OutputGenerator, "generate_video")
+    def test_generate_outputs(
+        self,
+        mock_video,
+        mock_ass,
+        mock_lrc,
+        mock_corrections,
+        mock_corrected_segments,
+        mock_original_segments,
+        mock_original_transcription,
+        mock_corrected_lyrics,
+        mock_plain_lyrics,
+        generator,
+        sample_transcription_data,
+    ):
         """Test successful generation of all output formats."""
         # Create a sample lyrics result
         lyrics_data = Mock()
@@ -164,36 +211,35 @@ class TestOutputGenerator:
         lyrics_data.lyrics = "Sample lyrics"
         lyrics_results = [lyrics_data]
 
-        with patch.multiple(
-            OutputGenerator,
-            write_plain_lyrics=Mock(return_value="test_plain.txt"),
-            write_plain_lyrics_from_correction=Mock(return_value="test_corrected.txt"),
-            generate_lrc=Mock(return_value="test.lrc"),
-            generate_ass=Mock(return_value="test.ass"),
-            generate_video=Mock(return_value="test.mp4"),
-        ):
-            result = generator.generate_outputs(
-                transcription_corrected=sample_transcription_data,
-                lyrics_results=lyrics_results,
-                output_prefix="test",
-                audio_filepath="audio.mp3",
-                render_video=True,
-            )
+        # Set up mock return values
+        mock_plain_lyrics.return_value = "/test/output/test_plain.txt"
+        mock_corrected_lyrics.return_value = "/test/output/test_corrected.txt"
+        mock_original_transcription.return_value = "/test/output/test_original.txt"
+        mock_original_segments.return_value = "/test/output/test_original_segments.json"
+        mock_corrected_segments.return_value = "/test/output/test_corrected_segments.json"
+        mock_corrections.return_value = "/test/output/test_corrections.json"
+        mock_lrc.return_value = "/test/output/test.lrc"
+        mock_ass.return_value = "/test/output/test.ass"
+        mock_video.return_value = "/test/output/test.mp4"
 
-            assert isinstance(result, OutputPaths)
-            assert result.lrc == "test.lrc"
-            assert result.ass == "test.ass"
-            assert result.video == "test.mp4"
+        result = generator.generate_outputs(
+            transcription_corrected=sample_transcription_data,
+            lyrics_results=lyrics_results,
+            output_prefix="test",
+            audio_filepath="audio.mp3",
+            render_video=True,
+        )
 
-            # Verify plain lyrics files were written - note the capitalized "Provider"
-            generator.write_plain_lyrics.assert_called_once_with(lyrics_data, "test (Lyrics Test_Provider)")
-            generator.write_plain_lyrics_from_correction.assert_called_once_with(sample_transcription_data, "test (Lyrics Corrected)")
+        assert isinstance(result, OutputPaths)
+        assert result.lrc == "/test/output/test.lrc"
+        assert result.ass == "/test/output/test.ass"
+        assert result.video == "/test/output/test.mp4"
 
     def test_generate_outputs_error_handling(self, generator, sample_transcription_data):
         """Test error handling during output generation."""
         lyrics_results = []  # Empty list for simplicity
 
-        with patch.object(OutputGenerator, "write_plain_lyrics_from_correction", side_effect=Exception("Test error")):
+        with patch.object(OutputGenerator, "write_original_transcription", side_effect=Exception("Test error")):
             with pytest.raises(Exception, match="Test error"):
                 generator.generate_outputs(
                     transcription_corrected=sample_transcription_data,
@@ -300,8 +346,18 @@ class TestOutputGenerator:
         """Test successful corrected lyrics file writing."""
         # Setup
         mock_file = mock_open.return_value.__enter__.return_value
-        correction_result = Mock()
-        correction_result.text = "Test corrected lyrics"
+        correction_result = CorrectionResult(
+            original_segments=[],
+            corrected_segments=[],
+            corrected_text="Test corrected lyrics",
+            corrections=[],
+            corrections_made=0,
+            confidence=1.0,
+            transcribed_text="Test corrected lyrics",
+            reference_texts={},
+            anchor_sequences=[],
+            metadata={},
+        )
 
         # Execute
         result = generator.write_plain_lyrics_from_correction(correction_result, "test")

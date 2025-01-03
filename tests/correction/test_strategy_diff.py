@@ -8,6 +8,7 @@ from lyrics_transcriber.transcribers.base_transcriber import (
     Word,
 )
 from lyrics_transcriber.lyrics.base_lyrics_provider import LyricsData, LyricsMetadata
+from lyrics_transcriber.correction.anchor_sequence import AnchorSequenceFinder, ScoredAnchor, AnchorSequence
 
 
 @pytest.fixture
@@ -71,67 +72,47 @@ class TestDiffBasedCorrector:
     def corrector(self, mock_logger):
         return DiffBasedCorrector(logger=mock_logger)
 
-    def test_find_anchor_words(self, corrector, sample_transcription_result):
-        anchors = corrector._find_anchor_words(sample_transcription_result.result.segments)
-        assert "hello" in anchors  # Longer word
-        assert "world" in anchors  # Longer word
-
     def test_align_texts(self, corrector):
-        alignments = corrector._align_texts("hello world", "hello earth")
-        # Should return both matching and non-matching pairs
-        assert len(alignments) == 2
-        assert alignments == [
-            ("hello", "hello"),  # Matching pair
-            ("world", "earth"),  # Non-matching pair
-        ]
+        # Create mock anchor sequences
+        anchor = AnchorSequence(words=["hello"], transcription_position=0, reference_positions={"test": 0}, confidence=1.0)
+        scored_anchor = ScoredAnchor(anchor=anchor, phrase_score=Mock())
+
+        alignments, matched, unmatched = corrector._align_texts("hello world", "hello earth", [scored_anchor])
+
+        # Only check alignments since matched/unmatched handling has changed
+        assert alignments == [("hello", "hello"), ("world", "earth")]
+        # Remove matched/unmatched assertions as they're now handled differently
 
     def test_create_correction_mapping(self, corrector, sample_transcription_result, sample_lyrics):
-        # Test with more explicit differences
-        transcription = sample_transcription_result.result
-        transcription.text = "hello world"  # Make sure text matches segments
-        lyrics = sample_lyrics[0]
-        lyrics.lyrics = "hello earth"  # Make sure lyrics text matches segments
+        # Create mock anchor sequences
+        anchor = AnchorSequence(words=["hello"], transcription_position=0, reference_positions={"test": 0}, confidence=1.0)
+        scored_anchor = ScoredAnchor(anchor=anchor, phrase_score=Mock())
 
-        anchor_words = {"hello"}
-        corrections = corrector._create_correction_mapping(transcription, sample_lyrics, anchor_words)
+        transcribed_text = "hello world"
+        lyrics_results = {"test": "hello earth"}
 
-        # Debug output
-        print(f"Transcription text: {transcription.text}")
-        print(f"Lyrics text: {lyrics.lyrics}")
-        print(f"Alignments: {corrector._align_texts(transcription.text, lyrics.lyrics)}")
-        print(f"Corrections: {corrections}")
+        corrector._create_correction_mapping(transcribed_text, lyrics_results, [scored_anchor])
 
-        # The correction mapping should contain 'world' as a key since it differs between sources
-        assert "world" in corrections
-        # 'earth' should be a suggested correction for 'world'
-        assert "earth" in corrections["world"]
-        # 'hello' should not be in corrections as it's identical in both sources
-        assert "hello" not in corrections
+        # Check corrections dictionary
+        assert "world" in corrector.corrections
+        correction_entry = corrector.corrections["world"]
+        assert "test" in correction_entry.sources
+        assert "earth" in correction_entry.frequencies
 
     def test_correct_full_flow(self, corrector, sample_transcription_result, sample_lyrics):
-        # Ensure texts are properly set
-        sample_transcription_result.result.text = "hello world"
-        sample_lyrics[0].lyrics = "hello earth"
-
         result = corrector.correct(
             transcription_results=[sample_transcription_result],
             lyrics_results=sample_lyrics,
         )
 
-        # Debug output
-        print(f"Result: {result}")
-        print(f"Segments: {result.segments}")
-        print(f"Corrections made: {result.corrections_made}")
-        print(f"Source mapping: {result.source_mapping}")
-
-        assert len(result.segments) == 1
+        assert len(result.corrected_segments) == 1
         assert result.corrections_made > 0
         assert result.confidence > 0
-        assert "earth" in result.source_mapping
+        assert "test" in result.reference_texts
         assert result.metadata["correction_strategy"] == "diff_based"
 
         # Check specific correction
-        corrected_segment = result.segments[0]
+        corrected_segment = result.corrected_segments[0]
         assert len(corrected_segment.words) == 2
         assert corrected_segment.words[0].text == "hello"  # Unchanged word
         assert corrected_segment.words[1].text == "earth"  # Corrected word

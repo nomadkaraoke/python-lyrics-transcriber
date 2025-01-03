@@ -50,6 +50,8 @@ class LyricsCorrector:
                 corrections=[],
                 corrections_made=0,
                 confidence=1.0,
+                transcribed_text=primary_transcription.text,
+                reference_texts={},
                 anchor_sequences=[],
                 metadata=primary_transcription.metadata or {},
             )

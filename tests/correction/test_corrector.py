@@ -80,12 +80,16 @@ class TestLyricsCorrector:
         # Create a mock correction strategy that returns expected result
         mock_strategy = Mock()
         mock_strategy.correct.return_value = CorrectionResult(
-            segments=sample_transcription_result.result.segments,
-            text="hello world test lyrics",
-            confidence=1.0,
+            original_segments=sample_transcription_result.result.segments,
+            corrected_segments=sample_transcription_result.result.segments,
+            corrected_text="hello world test lyrics",
+            corrections=[],
             corrections_made=0,
-            source_mapping={},
-            metadata={"correction_strategy": "diff_based", "primary_source": "test"},
+            confidence=1.0,
+            transcribed_text="hello world test lyrics",
+            reference_texts={"test": "hello world test lyrics"},
+            anchor_sequences=[],
+            metadata={"correction_strategy": "diff_based", "primary_source": "test"}
         )
 
         # Replace the default strategy with our mock
@@ -97,8 +101,8 @@ class TestLyricsCorrector:
         mock_strategy.correct.assert_called_once_with(transcription_results=[sample_transcription_result], lyrics_results=sample_lyrics)
 
         # Verify the result
-        assert result.text == "hello world test lyrics", f"Expected matching text but got: '{result.text}'"
-        assert result.segments == sample_transcription_result.result.segments
+        assert result.corrected_text == "hello world test lyrics", f"Expected matching text but got: '{result.corrected_text}'"
+        assert result.corrected_segments == sample_transcription_result.result.segments
         assert result.confidence > 0
         assert result.corrections_made >= 0
         assert "correction_strategy" in result.metadata
@@ -114,7 +118,10 @@ class TestLyricsCorrector:
         result = corrector.run(transcription_results=[sample_transcription_result], lyrics_results=sample_lyrics)
 
         # Should fall back to original transcription
-        assert result.segments == sample_transcription_result.result.segments
-        assert result.text == sample_transcription_result.result.text
+        assert result.corrected_segments == sample_transcription_result.result.segments
+        primary_text = sample_transcription_result.result.text
+        assert result.corrected_text == primary_text
+        assert result.transcribed_text == primary_text
+        assert result.reference_texts == {}  # Empty reference texts in fallback case
         assert result.confidence == 1.0
         assert result.corrections_made == 0

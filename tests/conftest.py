@@ -39,3 +39,10 @@ def cleanup_test_directories():
     # Clean up test_output
     if os.path.exists("test_output"):
         shutil.rmtree("test_output")
+
+
+def main():
+    """Entry point for coverage testing."""
+    import pytest
+
+    pytest.main(["--cov=lyrics_transcriber", "--cov-report=term-missing"])

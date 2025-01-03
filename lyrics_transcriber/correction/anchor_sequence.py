@@ -3,6 +3,7 @@ from typing import Any, Dict, List, Optional, Protocol, Tuple, Set
 import logging
 from .text_analysis import PhraseAnalyzer, PhraseScore
 from .text_utils import clean_text
+from tqdm import tqdm
 
 
 @dataclass
@@ -273,29 +274,17 @@ class AnchorSequenceFinder:
         return trans_overlap or ref_overlap
 
     def _remove_overlapping_sequences(self, anchors: List[AnchorSequence], context: str) -> List[ScoredAnchor]:
-        """Remove overlapping sequences using phrase analysis.
-
-        Args:
-            anchors: List of anchor sequences to filter
-            context: The original transcribed text for phrase analysis
-
-        Returns:
-            List of non-overlapping ScoredAnchor objects
-        """
-        self.logger.info(f"Removing overlapping sequences from {len(anchors)} anchors")
+        """Remove overlapping sequences using phrase analysis."""
         if not anchors:
             return []
 
         # Score all anchors
         scored_anchors = [self._score_anchor(anchor, context) for anchor in anchors]
-
-        # Sort by priority
         scored_anchors.sort(key=self._get_sequence_priority, reverse=True)
 
-        # Filter overlapping sequences
         filtered_scored = []
-        for scored_anchor in scored_anchors:
-            # Check if this sequence overlaps with any existing ones
+        # Add tqdm progress bar
+        for scored_anchor in tqdm(scored_anchors, desc="Filtering overlapping sequences"):
             overlaps = False
             for existing in filtered_scored:
                 if self._sequences_overlap(scored_anchor.anchor, existing.anchor):
@@ -306,4 +295,4 @@ class AnchorSequenceFinder:
                 filtered_scored.append(scored_anchor)
 
         self.logger.info(f"Filtered down to {len(filtered_scored)} non-overlapping anchors")
-        return filtered_scored  # Now return ScoredAnchor objects directly
+        return filtered_scored

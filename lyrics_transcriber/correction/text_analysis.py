@@ -417,7 +417,7 @@ class PhraseAnalyzer:
 
     def calculate_sentence_break_score(self, phrase_doc: Doc, phrase_start: int, phrase_end: int, context_doc: Doc) -> float:
         """Calculate score based on sentence boundary alignment."""
-        self.logger.debug(f"Calculating sentence break score for: {phrase_doc.text}")
+        # self.logger.debug(f"Calculating sentence break score for: {phrase_doc.text}")
         for sent in context_doc.sents:
             sent_start = sent.start_char
             sent_end = sent.end_char

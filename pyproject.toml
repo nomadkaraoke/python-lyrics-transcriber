@@ -21,6 +21,7 @@ dropbox = ">=12"
 python-dotenv = ">=1"
 pydub = ">=0.25"
 spacy = "^3.8.3"
+tqdm = "^4.67.1"
 
 [tool.poetry.group.dev.dependencies]
 black = ">=23"
@@ -33,7 +34,7 @@ line-length = 140
 
 [tool.poetry.scripts]
 lyrics-transcriber = 'lyrics_transcriber.cli.cli_main:main'
-test-cov = "pytest --cov=lyrics_transcriber --cov-report=term-missing"
+test-cov = "tests.conftest:main"
 
 [build-system]
 requires = ["poetry-core"]
