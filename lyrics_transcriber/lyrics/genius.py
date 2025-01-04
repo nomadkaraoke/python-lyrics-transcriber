@@ -1,7 +1,8 @@
 import logging
 from typing import Optional, Dict, Any
 import lyricsgenius
-from .base_lyrics_provider import BaseLyricsProvider, LyricsMetadata, LyricsProviderConfig, LyricsData
+from lyrics_transcriber.types import LyricsData, LyricsMetadata
+from lyrics_transcriber.lyrics.base_lyrics_provider import BaseLyricsProvider, LyricsProviderConfig
 
 
 class GeniusProvider(BaseLyricsProvider):
@@ -67,4 +68,6 @@ class GeniusProvider(BaseLyricsProvider):
         )
 
         # Create result object
-        return LyricsData(source="genius", lyrics=raw_data.get("lyrics", ""), segments=[], metadata=metadata)  # Genius doesn't provide timestamp data
+        return LyricsData(
+            source="genius", lyrics=raw_data.get("lyrics", ""), segments=[], metadata=metadata
+        )  # Genius doesn't provide timestamp data

@@ -1,16 +1,9 @@
 import pytest
 import logging
 from unittest.mock import Mock, call
-from dataclasses import asdict
 import shutil
-from lyrics_transcriber.transcribers.base_transcriber import (
-    BaseTranscriber,
-    TranscriptionData,
-    LyricsSegment,
-    Word,
-    TranscriptionError,
-    LoggerProtocol,
-)
+from lyrics_transcriber.types import LyricsSegment, Word, TranscriptionData
+from lyrics_transcriber.transcribers.base_transcriber import BaseTranscriber
 import tempfile
 import json
 import os
@@ -53,7 +46,7 @@ class MockTranscriber(BaseTranscriber):
 
 @pytest.fixture
 def mock_logger():
-    return Mock(spec=LoggerProtocol)
+    return Mock(spec=logging.Logger)
 
 
 class TestTranscriptionData:

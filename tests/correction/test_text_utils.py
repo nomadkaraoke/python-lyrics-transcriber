@@ -1,4 +1,3 @@
-import pytest
 from lyrics_transcriber.correction.text_utils import clean_text
 
 

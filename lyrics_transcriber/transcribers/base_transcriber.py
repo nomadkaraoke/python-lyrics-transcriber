@@ -1,61 +1,24 @@
 from abc import ABC, abstractmethod
-from dataclasses import dataclass
-from typing import Dict, Any, Optional, Protocol, List, Union
+from typing import Dict, Any, Optional, Union
 from pathlib import Path
 import logging
 import os
 import json
 import hashlib
-from lyrics_transcriber.lyrics.base_lyrics_provider import LyricsSegment, Word
-
-
-@dataclass
-class TranscriptionData:
-    """Structured container for transcription results."""
-
-    segments: List[LyricsSegment]
-    words: List[Word]
-    text: str
-    source: str  # e.g., "whisper", "audioshake"
-    metadata: Optional[Dict[str, Any]] = None
-
-    def to_dict(self) -> Dict[str, Any]:
-        """Convert TranscriptionData to dictionary for JSON serialization."""
-        return {
-            "segments": [segment.to_dict() for segment in self.segments],
-            "words": [word.to_dict() for word in self.words],
-            "text": self.text,
-            "source": self.source,
-            "metadata": self.metadata,
-        }
-
-
-@dataclass
-class TranscriptionResult:
-    name: str
-    priority: int
-    result: TranscriptionData
-
-
-class LoggerProtocol(Protocol):
-    """Protocol for logger interface."""
-
-    def debug(self, msg: str) -> None: ...
-    def info(self, msg: str) -> None: ...
-    def warning(self, msg: str) -> None: ...
-    def error(self, msg: str) -> None: ...
+from lyrics_transcriber.types import TranscriptionData
 
 
 class TranscriptionError(Exception):
     """Base exception for transcription errors."""
 
-    pass
+    def __init__(self, message: str):
+        super().__init__(message)
 
 
 class BaseTranscriber(ABC):
     """Base class for all transcription services."""
 
-    def __init__(self, cache_dir: Union[str, Path], logger: Optional[LoggerProtocol] = None):
+    def __init__(self, cache_dir: Union[str, Path], logger: Optional[logging.Logger] = None):
         """
         Initialize transcriber with cache directory and logger.
 

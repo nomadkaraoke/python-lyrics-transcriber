@@ -1,6 +1,7 @@
 import pytest
-from lyrics_transcriber.correction.anchor_sequence import AnchorSequence, AnchorSequenceFinder, ScoredAnchor
-from lyrics_transcriber.correction.text_analysis import PhraseScore, PhraseType
+
+from lyrics_transcriber.types import AnchorSequence, ScoredAnchor, PhraseScore, PhraseType
+from lyrics_transcriber.correction.anchor_sequence import AnchorSequenceFinder
 
 
 @pytest.fixture
@@ -58,7 +59,7 @@ def test_remove_overlapping_sequences(finder):
     context = "a b c"
     filtered = finder._remove_overlapping_sequences(anchors, context)
     assert len(filtered) == 1
-    assert filtered[0].words == ["a", "b", "c"]
+    assert filtered[0].anchor.words == ["a", "b", "c"]
 
 
 def test_find_anchors_simple(finder):
@@ -85,7 +86,6 @@ def test_find_anchors_simple(finder):
         ngrams = finder._find_ngrams(trans_words, n)
         for ngram, pos in ngrams:
             print(f"\nPosition {pos}: {ngram}")
-            # Check matches in references
             matches = finder._find_matching_sources(ngram, ref_texts_clean, n)
             if matches:
                 print(f"  Matches in: {list(matches.keys())}")
@@ -114,21 +114,20 @@ def test_find_anchors_simple(finder):
 
     # Debug: Print found anchors with details
     print("\nFound anchors:")
-    for anchor in anchors:
-        scored = finder._score_anchor(anchor, transcribed)
-        priority = finder._get_sequence_priority(scored)
-        print(f"\nText: '{anchor.text}'")
-        print(f"Position: {anchor.transcription_position}")
-        print(f"Confidence: {anchor.confidence}")
-        print(f"Reference positions: {anchor.reference_positions}")
+    for scored_anchor in anchors:
+        scored = finder._score_anchor(scored_anchor.anchor, transcribed)
+        print(f"\nText: '{scored_anchor.anchor.text}'")
+        print(f"Position: {scored_anchor.anchor.transcription_position}")
+        print(f"Confidence: {scored_anchor.anchor.confidence}")
+        print(f"Reference positions: {scored_anchor.anchor.reference_positions}")
         print(f"Break score: {scored.phrase_score.natural_break_score}")
         print(f"Total score: {scored.phrase_score.total_score}")
         print(f"Priority: {priority}")
 
     # Update assertions to expect the longest common sequence
     assert len(anchors) == 1
-    assert anchors[0].text == "hello world test"  # Now expects the full matching phrase
-    assert anchors[0].confidence == 0.5  # Only matches in source2
+    assert anchors[0].anchor.text == "hello world test"  # Now expects the full matching phrase
+    assert anchors[0].anchor.confidence == 0.5  # Only matches in source2
 
 
 def test_find_anchors_no_matches(finder):
@@ -144,7 +143,7 @@ def test_find_anchors_min_sources(finder):
     references = {"source1": "hello world different", "source2": "different hello world"}
     anchors = finder.find_anchors(transcribed, references)
     assert len(anchors) == 1
-    assert anchors[0].text == "hello world"
+    assert anchors[0].anchor.text == "hello world"
 
 
 def test_find_anchors_case_insensitive(finder):
@@ -153,7 +152,7 @@ def test_find_anchors_case_insensitive(finder):
     references = {"source1": "hello world test", "source2": "HELLO WORLD TEST"}
     anchors = finder.find_anchors(transcribed, references)
     assert len(anchors) == 1
-    assert anchors[0].text == "hello world test"  # Now expects the full phrase
+    assert anchors[0].anchor.text == "hello world test"  # Now expects the full phrase
 
 
 def test_find_anchors_with_repeated_phrases(finder):
@@ -188,16 +187,16 @@ def test_find_anchors_with_repeated_phrases(finder):
     # Debug: Print found anchors
     print("\nFound anchors:")
     for anchor in anchors:
-        print(f"Text: '{anchor.text}'")
-        print(f"Position: {anchor.transcription_position}")
-        print(f"Reference positions: {anchor.reference_positions}")
-        print(f"Confidence: {anchor.confidence}")
+        print(f"Text: '{anchor.anchor.text}'")
+        print(f"Position: {anchor.anchor.transcription_position}")
+        print(f"Reference positions: {anchor.anchor.reference_positions}")
+        print(f"Confidence: {anchor.anchor.confidence}")
 
     # Original assertions
     assert len(anchors) == 2
-    assert all(anchor.text == "hello world" for anchor in anchors)
-    assert anchors[0].transcription_position == 0
-    assert anchors[1].transcription_position == 2
+    assert all(anchor.anchor.text == "hello world" for anchor in anchors)
+    assert anchors[0].anchor.transcription_position == 0
+    assert anchors[1].anchor.transcription_position == 2
 
 
 def test_find_anchors_with_single_source_repeated_phrase():
@@ -208,8 +207,8 @@ def test_find_anchors_with_single_source_repeated_phrase():
     anchors = finder.find_anchors(transcribed, references)
 
     assert len(anchors) == 2
-    assert all(anchor.text == "test one two" for anchor in anchors)
-    assert all(anchor.confidence == 0.5 for anchor in anchors)  # only matches one source
+    assert all(anchor.anchor.text == "test one two" for anchor in anchors)
+    assert all(anchor.anchor.confidence == 0.5 for anchor in anchors)  # only matches one source
 
 
 def test_real_world_lyrics_scenario():
@@ -224,7 +223,7 @@ def test_real_world_lyrics_scenario():
 
     # Should find at least one of these sequences
     expected_sequences = ["son of a father", "son of a", "of a father"]
-    found_sequences = [anchor.text for anchor in anchors]
+    found_sequences = [anchor.anchor.text for anchor in anchors]
     assert any(seq in found_sequences for seq in expected_sequences), f"Expected one of {expected_sequences}, but found {found_sequences}"
 
 
@@ -270,18 +269,18 @@ def test_find_anchors_with_punctuation():
     # Debug: Print found anchors
     print("\nFound anchors:")
     for anchor in anchors:
-        scored = finder._score_anchor(anchor, transcribed)
+        scored = finder._score_anchor(anchor.anchor, transcribed)
         priority = finder._get_sequence_priority(scored)
-        print(f"Text: '{anchor.text}'")
-        print(f"Position: {anchor.transcription_position}")
-        print(f"Reference positions: {anchor.reference_positions}")
+        print(f"Text: '{anchor.anchor.text}'")
+        print(f"Position: {anchor.anchor.transcription_position}")
+        print(f"Reference positions: {anchor.anchor.reference_positions}")
         print(f"Break score: {scored.phrase_score.natural_break_score}")
         print(f"Total score: {scored.phrase_score.total_score}")
         print(f"Priority: {priority}")
-        print(f"Confidence: {anchor.confidence}")
+        print(f"Confidence: {anchor.anchor.confidence}")
 
     assert len(anchors) > 0
-    assert any("hello world" in anchor.text for anchor in anchors)
+    assert any("hello world" in anchor.anchor.text for anchor in anchors)
 
 
 def test_find_anchors_respects_word_boundaries():
@@ -294,7 +293,7 @@ def test_find_anchors_respects_word_boundaries():
     # Should not match "test" within "testing" or "tester"
     matched_words = set()
     for anchor in anchors:
-        matched_words.update(anchor.words)
+        matched_words.update(anchor.anchor.words)
 
     assert "testing" not in matched_words or "tester" not in matched_words
 
@@ -308,7 +307,7 @@ def test_find_anchors_minimum_length():
 
     # Should find "c d e" but not "a b"
     assert len(anchors) == 1
-    assert anchors[0].text == "c d e"
+    assert anchors[0].anchor.text == "c d e"
 
 
 def test_find_anchors_confidence_calculation():
@@ -319,7 +318,7 @@ def test_find_anchors_confidence_calculation():
     anchors = finder.find_anchors(transcribed, references)
 
     assert len(anchors) == 1
-    assert anchors[0].confidence == 2 / 3  # matches 2 out of 3 sources
+    assert anchors[0].anchor.confidence == 2 / 3  # matches 2 out of 3 sources
 
 
 def test_scored_anchor_total_score():
@@ -363,17 +362,17 @@ def test_remove_overlapping_sequences_prioritizes_better_phrases(finder):
     # Debug: Print filtered sequences
     print("\nFiltered sequences:")
     for seq in filtered:
-        score = finder.phrase_analyzer.score_phrase(seq.words, transcribed)
-        print(f"\nSequence: '{seq.text}'")
+        score = finder.phrase_analyzer.score_phrase(seq.anchor.words, transcribed)
+        print(f"\nSequence: '{seq.anchor.text}'")
         print(f"Break score: {score.natural_break_score}")
         print(f"Total score: {score.total_score}")
         print(f"Phrase type: {score.phrase_type}")
-        priority = finder._get_sequence_priority(finder._score_anchor(seq, transcribed))
+        priority = finder._get_sequence_priority(finder._score_anchor(seq.anchor, transcribed))
         print(f"Priority: {priority}")  # Add priority debug output
 
     # Should prefer the longer sequence
     assert len(filtered) == 1
-    assert filtered[0].text == "my heart will go on and on forever more"
+    assert filtered[0].anchor.text == "my heart will go on and on forever more"
 
 
 def test_remove_overlapping_sequences_with_line_breaks(finder):
@@ -415,20 +414,20 @@ def test_remove_overlapping_sequences_with_line_breaks(finder):
 
     # Debug: Print found anchors with details
     print("\nFound anchors:")
-    for anchor in anchors:
-        print(f"Text: '{anchor.text}'")
-        print(f"Position: {anchor.transcription_position}")
-        print(f"Confidence: {anchor.confidence}")
-        score = finder.phrase_analyzer.score_phrase(anchor.words, transcribed)
+    for scored_anchor in anchors:
+        print(f"\nText: '{scored_anchor.anchor.text}'")
+        print(f"Position: {scored_anchor.anchor.transcription_position}")
+        print(f"Confidence: {scored_anchor.anchor.confidence}")
+        score = finder.phrase_analyzer.score_phrase(scored_anchor.anchor.words, transcribed)
         print(f"Break score: {score.natural_break_score}")
         print(f"Total score: {score.total_score}")
         print(f"Phrase type: {score.phrase_type}")
-        print(f"Length: {len(anchor.words)}")
+        print(f"Length: {len(scored_anchor.anchor.words)}")
 
     # Updated assertions to expect longer sequences
     assert len(anchors) > 0
-    assert "my heart will go on and on forever more" in [a.text for a in anchors]
-    assert "go on and" not in [a.text for a in anchors]  # crosses line break
+    assert "my heart will go on and on forever more" in [a.anchor.text for a in anchors]
+    assert "go on and" not in [a.anchor.text for a in anchors]  # crosses line break
 
 
 def test_remove_overlapping_sequences_with_line_breaks_debug(finder):
@@ -452,7 +451,7 @@ def test_remove_overlapping_sequences_with_line_breaks_debug(finder):
         print(f"Total score: {score.total_score}")
         print(f"Phrase type: {score.phrase_type}")
         priority = finder._get_sequence_priority(finder._score_anchor(seq, transcribed))
-        print(f"Priority: {priority}")  # Add priority debug output
+        print(f"Priority: {priority}")
 
     # Debug: Print comparison details
     score1 = finder.phrase_analyzer.score_phrase(seq1.words, transcribed)
@@ -465,7 +464,7 @@ def test_remove_overlapping_sequences_with_line_breaks_debug(finder):
 
     # Debug: Print result
     print("\nChosen sequence:")
-    chosen = filtered[0]
+    chosen = filtered[0].anchor  # Fix: access the anchor property
     score = finder.phrase_analyzer.score_phrase(chosen.words, transcribed)
     print(f"Text: '{chosen.text}'")
     print(f"Length: {len(chosen.words)}")
@@ -473,11 +472,11 @@ def test_remove_overlapping_sequences_with_line_breaks_debug(finder):
     print(f"Break score: {score.natural_break_score}")
     print(f"Phrase type: {score.phrase_type}")
     priority = finder._get_sequence_priority(finder._score_anchor(chosen, transcribed))
-    print(f"Priority: {priority}")  # Add priority debug output
+    print(f"Priority: {priority}")
 
     # Should choose the longer sequence
     assert len(filtered) == 1
-    assert filtered[0].text == "my heart will go on and on forever more"
+    assert filtered[0].anchor.text == "my heart will go on and on forever more"
 
 
 def test_score_anchor(finder):
@@ -572,12 +571,12 @@ def test_viet_nam_lyrics_scenario():
     # Debug: Print found anchors
     print("\nFound anchors:")
     found_texts = set()  # Use a set to store found texts
-    for anchor in anchors:
-        found_texts.add(anchor.text)  # Add each anchor text to the set
-        scored = finder._score_anchor(anchor, transcribed)
-        print(f"\nText: '{anchor.text}'")
-        print(f"Position: {anchor.transcription_position}")
-        print(f"Confidence: {anchor.confidence}")
+    for scored_anchor in anchors:
+        found_texts.add(scored_anchor.anchor.text)  # Add each anchor text to the set
+        scored = finder._score_anchor(scored_anchor.anchor, transcribed)
+        print(f"\nText: '{scored_anchor.anchor.text}'")
+        print(f"Position: {scored_anchor.anchor.transcription_position}")
+        print(f"Confidence: {scored_anchor.anchor.confidence}")
         print(f"Break score: {scored.phrase_score.natural_break_score}")
         print(f"Total score: {scored.phrase_score.total_score}")
         print(f"Phrase type: {scored.phrase_score.phrase_type}")
@@ -635,27 +634,23 @@ def test_viet_nam_first_line():
 
     # Debug: Print found anchors with detailed scoring
     print("\nFound anchors:")
-    for anchor in anchors:
-        scored = finder._score_anchor(anchor, transcribed)
-        print(f"\nText: '{anchor.text}'")
-        print(f"Position: {anchor.transcription_position}")
-        print(f"Confidence: {anchor.confidence}")
-        print(f"Break score: {scored.phrase_score.natural_break_score}")
-        print(f"Total score: {scored.phrase_score.total_score}")
-        print(f"Phrase type: {scored.phrase_score.phrase_type}")
-        print(f"Priority: {finder._get_sequence_priority(scored)}")
+    for scored_anchor in anchors:
+        scored = finder._score_anchor(scored_anchor.anchor, transcribed)
+        print(f"\nText: '{scored_anchor.anchor.text}'")
+        print(f"Position: {scored_anchor.anchor.transcription_position}")
+        print(f"Confidence: {scored_anchor.anchor.confidence}")
 
         # Debug the break score calculation for each anchor
-        phrase_start = transcribed.find(anchor.text)
-        phrase_end = phrase_start + len(anchor.text)
+        phrase_start = transcribed.find(scored_anchor.anchor.text)
+        phrase_end = phrase_start + len(scored_anchor.anchor.text)
         print(f"Phrase start: {phrase_start}")
         print(f"Phrase end: {phrase_end}")
         print(f"Is full line? {phrase_start == 0 and phrase_end == len(transcribed)}")
 
     # Should find the complete line
-    assert len(anchors) == 1, f"Expected 1 anchor but found {len(anchors)}: {[a.text for a in anchors]}"
-    assert anchors[0].text == "lets say i got a number"
-    assert anchors[0].confidence == 1.0
+    assert len(anchors) == 1, f"Expected 1 anchor but found {len(anchors)}: {[a.anchor.text for a in anchors]}"
+    assert anchors[0].anchor.text == "lets say i got a number"
+    assert anchors[0].anchor.confidence == 1.0
 
 
 def test_hyphenated_words():
@@ -675,7 +670,7 @@ def test_hyphenated_words():
     anchors = finder.find_anchors(transcribed, references)
 
     # Should find the complete phrase despite different hyphenation
-    found_texts = {anchor.text for anchor in anchors}
+    found_texts = {anchor.anchor.text for anchor in anchors}
     assert "fifty thousand five hundred thousand" in found_texts
 
 
@@ -712,20 +707,20 @@ def test_complete_line_matching():
 
     # Debug: Print found anchors
     print("\nFound anchors:")
-    for anchor in anchors:
-        scored = finder._score_anchor(anchor, transcribed)
-        print(f"\nText: '{anchor.text}'")
-        print(f"Position: {anchor.transcription_position}")
-        print(f"Confidence: {anchor.confidence}")
+    for scored_anchor in anchors:
+        scored = finder._score_anchor(scored_anchor.anchor, transcribed)
+        print(f"\nText: '{scored_anchor.anchor.text}'")
+        print(f"Position: {scored_anchor.anchor.transcription_position}")
+        print(f"Confidence: {scored_anchor.anchor.confidence}")
         print(f"Break score: {scored.phrase_score.natural_break_score}")
         print(f"Total score: {scored.phrase_score.total_score}")
         print(f"Phrase type: {scored.phrase_score.phrase_type}")
         print(f"Priority: {finder._get_sequence_priority(scored)}")
 
     # Should find the complete line
-    assert len(anchors) == 1, f"Expected 1 anchor but found {len(anchors)}: {[a.text for a in anchors]}"
-    assert anchors[0].text == "hello world test phrase"
-    assert anchors[0].confidence == 1.0
+    assert len(anchors) == 1, f"Expected 1 anchor but found {len(anchors)}: {[a.anchor.text for a in anchors]}"
+    assert anchors[0].anchor.text == "hello world test phrase"
+    assert anchors[0].anchor.confidence == 1.0
 
     # Also test with a slightly different reference to ensure it still works
     references_with_diff = {
@@ -734,7 +729,7 @@ def test_complete_line_matching():
     }
     anchors = finder.find_anchors(transcribed, references_with_diff)
     assert len(anchors) == 1
-    assert anchors[0].text == "hello world test phrase"
+    assert anchors[0].anchor.text == "hello world test phrase"
 
 
 def test_complete_line_matching_with_apostrophe():
@@ -775,20 +770,20 @@ def test_complete_line_matching_with_apostrophe():
 
     # Debug: Print found anchors
     print("\nFound anchors:")
-    for anchor in anchors:
-        scored = finder._score_anchor(anchor, transcribed)
-        print(f"\nText: '{anchor.text}'")
-        print(f"Position: {anchor.transcription_position}")
-        print(f"Confidence: {anchor.confidence}")
+    for scored_anchor in anchors:
+        scored = finder._score_anchor(scored_anchor.anchor, transcribed)
+        print(f"\nText: '{scored_anchor.anchor.text}'")
+        print(f"Position: {scored_anchor.anchor.transcription_position}")
+        print(f"Confidence: {scored_anchor.anchor.confidence}")
         print(f"Break score: {scored.phrase_score.natural_break_score}")
         print(f"Total score: {scored.phrase_score.total_score}")
         print(f"Phrase type: {scored.phrase_score.phrase_type}")
         print(f"Priority: {finder._get_sequence_priority(scored)}")
 
     # Should find the complete line
-    assert len(anchors) == 1, f"Expected 1 anchor but found {len(anchors)}: {[a.text for a in anchors]}"
-    assert anchors[0].text == "lets say i got a number"
-    assert anchors[0].confidence == 1.0
+    assert len(anchors) == 1, f"Expected 1 anchor but found {len(anchors)}: {[a.anchor.text for a in anchors]}"
+    assert anchors[0].anchor.text == "lets say i got a number"
+    assert anchors[0].anchor.confidence == 1.0
 
 
 def test_complete_line_matching_simple():
@@ -825,20 +820,20 @@ def test_complete_line_matching_simple():
 
     # Debug: Print found anchors
     print("\nFound anchors:")
-    for anchor in anchors:
-        scored = finder._score_anchor(anchor, transcribed)
-        print(f"\nText: '{anchor.text}'")
-        print(f"Position: {anchor.transcription_position}")
-        print(f"Confidence: {anchor.confidence}")
+    for scored_anchor in anchors:
+        scored = finder._score_anchor(scored_anchor.anchor, transcribed)
+        print(f"\nText: '{scored_anchor.anchor.text}'")
+        print(f"Position: {scored_anchor.anchor.transcription_position}")
+        print(f"Confidence: {scored_anchor.anchor.confidence}")
         print(f"Break score: {scored.phrase_score.natural_break_score}")
         print(f"Total score: {scored.phrase_score.total_score}")
         print(f"Phrase type: {scored.phrase_score.phrase_type}")
         print(f"Priority: {finder._get_sequence_priority(scored)}")
 
     # Should find the complete line
-    assert len(anchors) == 1, f"Expected 1 anchor but found {len(anchors)}: {[a.text for a in anchors]}"
-    assert anchors[0].text == "one two three four five six"
-    assert anchors[0].confidence == 1.0
+    assert len(anchors) == 1, f"Expected 1 anchor but found {len(anchors)}: {[a.anchor.text for a in anchors]}"
+    assert anchors[0].anchor.text == "one two three four five six"
+    assert anchors[0].anchor.confidence == 1.0
 
 
 def test_break_score_calculation():
@@ -1012,14 +1007,16 @@ def test_create_initial_gap(finder):
 
     # Test with first anchor at position 0 (should return None)
     first_anchor = ScoredAnchor(
-        anchor=AnchorSequence(["hello", "world"], 0, {"source1": 0}, 1.0), phrase_score=PhraseScore(PhraseType.COMPLETE, 1.0, 1.0)
+        anchor=AnchorSequence(["hello", "world"], 0, {"source1": 0}, 1.0),
+        phrase_score=PhraseScore(PhraseType.COMPLETE, 1.0, 1.0)
     )
     gap = finder._create_initial_gap(words, first_anchor, ref_texts_clean)
     assert gap is None
 
     # Test with first anchor at position 2
     first_anchor = ScoredAnchor(
-        anchor=AnchorSequence(["test", "phrase"], 2, {"source1": 2}, 1.0), phrase_score=PhraseScore(PhraseType.COMPLETE, 1.0, 1.0)
+        anchor=AnchorSequence(["test", "phrase"], 2, {"source1": 2}, 1.0),
+        phrase_score=PhraseScore(PhraseType.COMPLETE, 1.0, 1.0)
     )
     gap = finder._create_initial_gap(words, first_anchor, ref_texts_clean)
     assert gap is not None
@@ -1111,7 +1108,9 @@ def test_find_gaps_integration(finder):
 
         # If gap has surrounding anchors, verify positions make sense
         if gap.preceding_anchor:
-            assert gap.transcription_position >= (gap.preceding_anchor.transcription_position + gap.preceding_anchor.length)
+            assert gap.transcription_position >= (
+                gap.preceding_anchor.anchor.transcription_position + len(gap.preceding_anchor.anchor.words)
+            )
 
         if gap.following_anchor:
             assert gap.transcription_position + len(gap.words) <= gap.following_anchor.transcription_position
@@ -1151,12 +1150,12 @@ def test_pull_it_apart_sequence(finder):
     anchors = finder.find_anchors(transcribed, references)
 
     print("\nFinal selected anchors:")
-    for anchor in anchors:
-        scored = finder._score_anchor(anchor, transcribed)
-        print(f"\nText: '{anchor.text}'")
-        print(f"Position: {anchor.transcription_position}")
-        print(f"Confidence: {anchor.confidence}")
-        print(f"Length: {len(anchor.words)}")
+    for scored_anchor in anchors:
+        scored = finder._score_anchor(scored_anchor.anchor, transcribed)
+        print(f"\nText: '{scored_anchor.anchor.text}'")
+        print(f"Position: {scored_anchor.anchor.transcription_position}")
+        print(f"Confidence: {scored_anchor.anchor.confidence}")
+        print(f"Length: {len(scored_anchor.anchor.words)}")
         print(f"Phrase type: {scored.phrase_score.phrase_type}")
         print(f"Break score: {scored.phrase_score.natural_break_score}")
         print(f"Total score: {scored.phrase_score.total_score}")
@@ -1164,8 +1163,8 @@ def test_pull_it_apart_sequence(finder):
 
     # Check that "pull it apart" is included in some anchor
     found_phrase = False
-    for anchor in anchors:
-        if "pull it apart" in anchor.text:
+    for scored_anchor in anchors:
+        if "pull it apart" in scored_anchor.anchor.text:
             found_phrase = True
             break
 
@@ -1203,15 +1202,8 @@ def test_get_sequence_priority_real_case_1(finder):
     print(f"\nContext: '{context}'")
     print(f"\nShort sequence ({short_anchor.text}):")
     print(f"Priority: {short_priority}")
-    print(f"Break score: {short_scored.phrase_score.natural_break_score}")
-    print(f"Total score: {short_scored.phrase_score.total_score}")
-    print(f"Phrase type: {short_scored.phrase_score.phrase_type}")
-
     print(f"\nLong sequence ({long_anchor.text}):")
     print(f"Priority: {long_priority}")
-    print(f"Break score: {long_scored.phrase_score.natural_break_score}")
-    print(f"Total score: {long_scored.phrase_score.total_score}")
-    print(f"Phrase type: {long_scored.phrase_score.phrase_type}")
 
     # Debug the break score calculation
     print("\nBreak score analysis:")

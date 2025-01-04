@@ -1,48 +1,12 @@
-from dataclasses import dataclass, asdict
+from dataclasses import dataclass
 import logging
-from typing import Optional, Dict, Any, List
+from typing import Optional, Dict, Any
 import json
 import hashlib
 from pathlib import Path
 import os
 from abc import ABC, abstractmethod
-
-
-@dataclass
-class Word:
-    """Represents a single word with its timing and confidence information."""
-
-    text: str
-    start_time: float
-    end_time: float
-    confidence: Optional[float] = None
-
-    def to_dict(self) -> Dict[str, Any]:
-        """Convert Word to dictionary for JSON serialization."""
-        d = asdict(self)
-        # Remove confidence from output if it's None
-        if d["confidence"] is None:
-            del d["confidence"]
-        return d
-
-
-@dataclass
-class LyricsSegment:
-    """Represents a segment/line of lyrics with timing information."""
-
-    text: str
-    words: List[Word]
-    start_time: float
-    end_time: float
-
-    def to_dict(self) -> Dict[str, Any]:
-        """Convert LyricsSegment to dictionary for JSON serialization."""
-        return {
-            "text": self.text,
-            "words": [word.to_dict() for word in self.words],
-            "start_time": self.start_time,
-            "end_time": self.end_time,
-        }
+from lyrics_transcriber.types import LyricsData
 
 
 @dataclass
@@ -53,52 +17,6 @@ class LyricsProviderConfig:
     spotify_cookie: Optional[str] = None
     cache_dir: Optional[str] = None
     audio_filepath: Optional[str] = None
-
-
-@dataclass
-class LyricsMetadata:
-    """Standardized metadata for lyrics results."""
-
-    source: str
-    track_name: str
-    artist_names: str
-
-    # Common metadata fields
-    album_name: Optional[str] = None
-    duration_ms: Optional[int] = None
-    explicit: Optional[bool] = None
-    language: Optional[str] = None
-    is_synced: bool = False
-
-    # Lyrics provider details
-    lyrics_provider: Optional[str] = None
-    lyrics_provider_id: Optional[str] = None
-
-    # Provider-specific metadata
-    provider_metadata: Dict[str, Any] = None
-
-    def to_dict(self) -> Dict[str, Any]:
-        """Convert metadata to dictionary for JSON serialization."""
-        return asdict(self)
-
-
-@dataclass
-class LyricsData:
-    """Standardized response format for all lyrics providers."""
-
-    lyrics: str
-    segments: List[LyricsSegment]
-    metadata: LyricsMetadata
-    source: str  # e.g., "genius", "spotify", etc.
-
-    def to_dict(self) -> Dict[str, Any]:
-        """Convert result to dictionary for JSON serialization."""
-        return {
-            "lyrics": self.lyrics,
-            "segments": [segment.to_dict() for segment in self.segments],
-            "metadata": self.metadata.to_dict(),
-            "source": self.source
-        }
 
 
 class BaseLyricsProvider(ABC):

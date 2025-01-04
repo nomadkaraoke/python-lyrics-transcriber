@@ -1,10 +1,15 @@
 import pytest
 from unittest.mock import Mock
-from lyrics_transcriber.correction.base_strategy import CorrectionResult
+from lyrics_transcriber.types import (
+    CorrectionResult,
+    LyricsData,
+    LyricsMetadata,
+    LyricsSegment,
+    Word,
+    TranscriptionResult,
+    TranscriptionData,
+)
 from lyrics_transcriber.correction.corrector import LyricsCorrector
-from lyrics_transcriber.transcribers.base_transcriber import TranscriptionResult, TranscriptionData
-from lyrics_transcriber.lyrics.base_lyrics_provider import LyricsData, LyricsMetadata
-from lyrics_transcriber.lyrics.base_lyrics_provider import LyricsSegment, Word
 
 
 @pytest.fixture
@@ -90,7 +95,7 @@ class TestLyricsCorrector:
             reference_texts={"test": "hello world test lyrics"},
             anchor_sequences=[],
             gap_sequences=[],
-            metadata={"correction_strategy": "diff_based", "primary_source": "test"}
+            metadata={"correction_strategy": "diff_based", "primary_source": "test"},
         )
 
         # Replace the default strategy with our mock

@@ -1,14 +1,13 @@
 from dataclasses import dataclass
 import os
 import logging
-from typing import Dict, Any, List, Optional, Tuple
+from typing import List, Optional
 import subprocess
 from datetime import timedelta
 import json
 
-from lyrics_transcriber.lyrics.base_lyrics_provider import LyricsData
-from .subtitles import create_styled_subtitles, LyricsScreen, LyricsLine, LyricSegment
-from ..correction.corrector import CorrectionResult
+from lyrics_transcriber.types import LyricsData
+from lyrics_transcriber.correction.corrector import CorrectionResult
 
 
 @dataclass

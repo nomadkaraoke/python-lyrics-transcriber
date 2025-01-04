@@ -9,7 +9,8 @@ import time
 from typing import Optional, Dict, Any, Protocol, Union
 from pathlib import Path
 from pydub import AudioSegment
-from .base_transcriber import BaseTranscriber, TranscriptionData, LyricsSegment, Word, TranscriptionError
+from lyrics_transcriber.types import TranscriptionData, LyricsSegment, Word
+from lyrics_transcriber.transcribers.base_transcriber import BaseTranscriber, TranscriptionError
 
 
 @dataclass
@@ -194,7 +195,7 @@ class WhisperTranscriber(BaseTranscriber):
 
     def _initialize_storage(self) -> FileStorageProtocol:
         """Initialize storage client."""
-        from ..storage.dropbox import DropboxHandler, DropboxConfig
+        from lyrics_transcriber.storage.dropbox import DropboxHandler, DropboxConfig
 
         # Create config using os.getenv directly
         config = DropboxConfig(

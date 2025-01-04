@@ -1,17 +1,13 @@
 import pytest
 import requests
 from unittest.mock import Mock, patch, mock_open
+from lyrics_transcriber.types import TranscriptionData
 from lyrics_transcriber.transcribers.audioshake import (
     AudioShakeConfig,
     AudioShakeAPI,
     AudioShakeTranscriber,
 )
-from lyrics_transcriber.transcribers.base_transcriber import (
-    TranscriptionData,
-    LyricsSegment,
-    Word,
-    TranscriptionError,
-)
+from lyrics_transcriber.transcribers.base_transcriber import TranscriptionError
 import os
 
 

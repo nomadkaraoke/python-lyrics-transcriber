@@ -1,33 +1,9 @@
-from dataclasses import dataclass
-from enum import Enum
 from typing import List
 import spacy
 from spacy.tokens import Doc
 import logging
-from .text_utils import clean_text
-
-
-class PhraseType(Enum):
-    """Types of phrases we can identify"""
-
-    COMPLETE = "complete"  # Grammatically complete unit
-    PARTIAL = "partial"  # Incomplete but valid fragment
-    CROSS_BOUNDARY = "cross"  # Crosses natural boundaries
-
-
-@dataclass
-class PhraseScore:
-    """Scores for a potential phrase"""
-
-    phrase_type: PhraseType
-    natural_break_score: float  # 0-1, how well it respects natural breaks
-    length_score: float  # 0-1, how appropriate the length is
-
-    @property
-    def total_score(self) -> float:
-        """Calculate total score with weights"""
-        weights = {PhraseType.COMPLETE: 1.0, PhraseType.PARTIAL: 0.7, PhraseType.CROSS_BOUNDARY: 0.3}
-        return weights[self.phrase_type] * 0.5 + self.natural_break_score * 0.3 + self.length_score * 0.2
+from lyrics_transcriber.correction.text_utils import clean_text
+from lyrics_transcriber.types import PhraseType, PhraseScore
 
 
 class PhraseAnalyzer:

@@ -1,7 +1,8 @@
 import pytest
 from unittest.mock import Mock, patch
 from lyrics_transcriber.lyrics.spotify import SpotifyProvider
-from lyrics_transcriber.lyrics.base_lyrics_provider import LyricsProviderConfig, LyricsData
+from lyrics_transcriber.lyrics.base_lyrics_provider import LyricsProviderConfig
+from lyrics_transcriber.types import LyricsData
 
 
 @pytest.fixture

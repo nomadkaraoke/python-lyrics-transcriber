@@ -1,138 +1,10 @@
-from dataclasses import dataclass, asdict, field
-from typing import Any, Dict, List, Optional, Protocol, Tuple, Set
+from typing import Dict, List, Optional, Tuple
 import logging
-
-from .models import WordCorrection
-from .text_analysis import PhraseAnalyzer, PhraseScore
-from .text_utils import clean_text
 from tqdm import tqdm
 
-
-@dataclass
-class AnchorSequence:
-    """Represents a sequence of words that appears in both transcribed and reference lyrics."""
-
-    words: List[str]
-    transcription_position: int  # Starting position in transcribed text
-    reference_positions: Dict[str, int]  # Source -> position mapping
-    confidence: float
-
-    @property
-    def text(self) -> str:
-        """Get the sequence as a space-separated string."""
-        return " ".join(self.words)
-
-    @property
-    def length(self) -> int:
-        """Get the number of words in the sequence."""
-        return len(self.words)
-
-    def to_dict(self) -> Dict[str, Any]:
-        """Convert the anchor sequence to a JSON-serializable dictionary."""
-        return {
-            "words": self.words,
-            "text": self.text,
-            "length": self.length,
-            "transcription_position": self.transcription_position,
-            "reference_positions": self.reference_positions,
-            "confidence": self.confidence,
-        }
-
-
-@dataclass
-class ScoredAnchor:
-    """An anchor sequence with its quality score"""
-
-    anchor: AnchorSequence
-    phrase_score: PhraseScore
-
-    @property
-    def words(self) -> List[str]:
-        """Get the words from the underlying anchor."""
-        return self.anchor.words
-
-    @property
-    def text(self) -> str:
-        """Get the text from the underlying anchor."""
-        return self.anchor.text
-
-    @property
-    def confidence(self) -> float:
-        """Get the confidence from the underlying anchor."""
-        return self.anchor.confidence
-
-    @property
-    def transcription_position(self) -> int:
-        """Get the transcription position from the underlying anchor."""
-        return self.anchor.transcription_position
-
-    @property
-    def reference_positions(self) -> Dict[str, int]:
-        """Get the reference positions from the underlying anchor."""
-        return self.anchor.reference_positions
-
-    @property
-    def total_score(self) -> float:
-        """Combine confidence, phrase quality, and length"""
-        # Length bonus: (length - 1) * 0.1 gives 0.1 per extra word
-        length_bonus = (self.anchor.length - 1) * 0.1
-        # Base score heavily weighted towards confidence
-        base_score = self.anchor.confidence * 0.8 + self.phrase_score.total_score * 0.2
-        # Combine scores
-        return base_score + length_bonus
-
-    def to_dict(self) -> Dict[str, Any]:
-        """Convert the scored anchor to a JSON-serializable dictionary."""
-        return {
-            **self.anchor.to_dict(),  # Include all AnchorSequence fields
-            "phrase_score": {
-                "phrase_type": self.phrase_score.phrase_type.value,
-                "natural_break_score": self.phrase_score.natural_break_score,
-                "length_score": self.phrase_score.length_score,
-                "total_score": self.phrase_score.total_score,
-            },
-            "total_score": self.total_score,
-        }
-
-
-@dataclass
-class GapSequence:
-    """Represents a sequence of words between anchor sequences in transcribed lyrics."""
-
-    words: List[str]
-    transcription_position: int
-    preceding_anchor: Optional[AnchorSequence]
-    following_anchor: Optional[AnchorSequence]
-    reference_words: Dict[str, List[str]]
-    corrections: List[WordCorrection] = field(default_factory=list)  # Initialize empty list safely
-
-    @property
-    def text(self) -> str:
-        """Get the sequence as a space-separated string."""
-        return " ".join(self.words)
-
-    @property
-    def length(self) -> int:
-        """Get the number of words in the sequence."""
-        return len(self.words)
-
-    @property
-    def was_corrected(self) -> bool:
-        """Check if this gap has any corrections."""
-        return len(self.corrections) > 0
-
-    def to_dict(self) -> Dict[str, Any]:
-        """Convert the gap sequence to a JSON-serializable dictionary."""
-        return {
-            "words": self.words,
-            "text": self.text,
-            "length": self.length,
-            "transcription_position": self.transcription_position,
-            "preceding_anchor": self.preceding_anchor.to_dict() if self.preceding_anchor else None,
-            "following_anchor": self.following_anchor.to_dict() if self.following_anchor else None,
-            "reference_words": self.reference_words,
-            "corrections": [c.to_dict() for c in self.corrections],
-        }
+from lyrics_transcriber.types import PhraseScore, AnchorSequence, GapSequence, ScoredAnchor
+from lyrics_transcriber.correction.text_analysis import PhraseAnalyzer
+from lyrics_transcriber.correction.text_utils import clean_text
 
 
 class AnchorSequenceFinder:
@@ -383,13 +255,13 @@ class AnchorSequenceFinder:
             ref_words = {source: words for source, words in ref_texts_clean.items()}
             return GapSequence(words, 0, None, None, ref_words)
 
-        if first_anchor.transcription_position > 0:
+        if first_anchor.anchor.transcription_position > 0:
             ref_words = {}
             for source, ref_words_list in ref_texts_clean.items():
-                end_pos = first_anchor.reference_positions.get(source)
+                end_pos = first_anchor.anchor.reference_positions.get(source)
                 ref_words[source] = self._get_reference_words(source, ref_words_list, None, end_pos)
 
-            return GapSequence(words[: first_anchor.transcription_position], 0, None, first_anchor.anchor, ref_words)
+            return GapSequence(words[: first_anchor.anchor.transcription_position], 0, None, first_anchor.anchor, ref_words)
         return None
 
     def _create_between_gap(
@@ -406,16 +278,16 @@ class AnchorSequenceFinder:
         Returns:
             GapSequence if there are words between anchors, None otherwise
         """
-        gap_start = current_anchor.transcription_position + current_anchor.anchor.length
-        gap_end = next_anchor.transcription_position
+        gap_start = current_anchor.anchor.transcription_position + current_anchor.anchor.length
+        gap_end = next_anchor.anchor.transcription_position
 
         if gap_end > gap_start:
             ref_words = {}
-            shared_sources = set(current_anchor.reference_positions.keys()) & set(next_anchor.reference_positions.keys())
+            shared_sources = set(current_anchor.anchor.reference_positions.keys()) & set(next_anchor.anchor.reference_positions.keys())
 
             for source in shared_sources:
-                start_pos = current_anchor.reference_positions[source] + current_anchor.anchor.length
-                end_pos = next_anchor.reference_positions[source]
+                start_pos = current_anchor.anchor.reference_positions[source] + current_anchor.anchor.length
+                end_pos = next_anchor.anchor.reference_positions[source]
                 ref_words[source] = self._get_reference_words(source, ref_texts_clean[source], start_pos, end_pos)
 
             return GapSequence(words[gap_start:gap_end], gap_start, current_anchor.anchor, next_anchor.anchor, ref_words)
@@ -434,12 +306,12 @@ class AnchorSequenceFinder:
         Returns:
             GapSequence if there are words after last anchor, None otherwise
         """
-        last_pos = last_anchor.transcription_position + last_anchor.anchor.length
+        last_pos = last_anchor.anchor.transcription_position + last_anchor.anchor.length
         if last_pos < len(words):
             ref_words = {}
             for source, ref_words_list in ref_texts_clean.items():
-                if source in last_anchor.reference_positions:
-                    start_pos = last_anchor.reference_positions[source] + last_anchor.anchor.length
+                if source in last_anchor.anchor.reference_positions:
+                    start_pos = last_anchor.anchor.reference_positions[source] + last_anchor.anchor.length
                     ref_words[source] = self._get_reference_words(source, ref_words_list, start_pos, None)
 
             return GapSequence(words[last_pos:], last_pos, last_anchor.anchor, None, ref_words)
@@ -451,7 +323,7 @@ class AnchorSequenceFinder:
         ref_texts_clean = {source: self._clean_text(text).split() for source, text in references.items()}
 
         gaps = []
-        sorted_anchors = sorted(anchors, key=lambda x: x.transcription_position)
+        sorted_anchors = sorted(anchors, key=lambda x: x.anchor.transcription_position)
 
         # Handle initial gap
         if initial_gap := self._create_initial_gap(words, sorted_anchors[0] if sorted_anchors else None, ref_texts_clean):

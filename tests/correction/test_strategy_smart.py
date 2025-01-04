@@ -1,10 +1,19 @@
 import pytest
 from unittest.mock import Mock, patch
 import torch
-from lyrics_transcriber.correction.strategy_smart import SmartCorrectionStrategy, PhoneticMatcher, SemanticMatcher, PhraseMatch
-from lyrics_transcriber.correction.anchor_sequence import GapSequence
-from lyrics_transcriber.transcribers.base_transcriber import Word, LyricsSegment, TranscriptionData, TranscriptionResult
-from lyrics_transcriber.lyrics.base_lyrics_provider import LyricsData, LyricsMetadata
+
+
+from lyrics_transcriber.types import (
+    LyricsData,
+    LyricsMetadata,
+    LyricsSegment,
+    Word,
+    TranscriptionData,
+    TranscriptionResult,
+    GapSequence,
+)
+
+from lyrics_transcriber.correction.strategy_smart import SmartCorrectionStrategy, PhoneticMatcher, SemanticMatcher
 
 
 @pytest.fixture

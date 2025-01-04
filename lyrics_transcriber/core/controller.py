@@ -1,15 +1,20 @@
 import os
 import logging
 from dataclasses import dataclass, field
-from typing import Dict, Optional, Any, List
-from ..transcribers.base_transcriber import BaseTranscriber, TranscriptionResult
-from ..transcribers.audioshake import AudioShakeTranscriber, AudioShakeConfig
-from ..transcribers.whisper import WhisperTranscriber, WhisperConfig
-from ..lyrics.base_lyrics_provider import BaseLyricsProvider, LyricsProviderConfig, LyricsData
-from ..lyrics.genius import GeniusProvider
-from ..lyrics.spotify import SpotifyProvider
-from ..output.generator import OutputGenerator, OutputGeneratorConfig
-from ..correction.corrector import LyricsCorrector, CorrectionResult
+from typing import Dict, Optional, List
+from lyrics_transcriber.types import (
+    LyricsData,
+    TranscriptionResult,
+    CorrectionResult,
+)
+from lyrics_transcriber.transcribers.base_transcriber import BaseTranscriber
+from lyrics_transcriber.transcribers.audioshake import AudioShakeTranscriber, AudioShakeConfig
+from lyrics_transcriber.transcribers.whisper import WhisperTranscriber, WhisperConfig
+from lyrics_transcriber.lyrics.base_lyrics_provider import BaseLyricsProvider, LyricsProviderConfig
+from lyrics_transcriber.lyrics.genius import GeniusProvider
+from lyrics_transcriber.lyrics.spotify import SpotifyProvider
+from lyrics_transcriber.output.generator import OutputGenerator, OutputGeneratorConfig
+from lyrics_transcriber.correction.corrector import LyricsCorrector
 
 
 @dataclass

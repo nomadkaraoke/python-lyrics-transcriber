@@ -1,10 +1,9 @@
 import pytest
 from unittest.mock import Mock, patch, mock_open, call
-import os
 import subprocess
+from lyrics_transcriber.types import LyricsSegment, Word, CorrectionResult
+
 from lyrics_transcriber.output.generator import OutputGenerator, OutputGeneratorConfig, OutputPaths
-from lyrics_transcriber.correction.corrector import CorrectionResult
-from lyrics_transcriber.lyrics.base_lyrics_provider import LyricsSegment, Word, Word
 
 
 @pytest.fixture
@@ -185,8 +184,6 @@ class TestOutputGenerator:
     @patch.object(OutputGenerator, "write_plain_lyrics")
     @patch.object(OutputGenerator, "write_plain_lyrics_from_correction")
     @patch.object(OutputGenerator, "write_original_transcription")
-    @patch.object(OutputGenerator, "write_original_segments")
-    @patch.object(OutputGenerator, "write_corrected_segments")
     @patch.object(OutputGenerator, "write_corrections_data")
     @patch.object(OutputGenerator, "generate_lrc")
     @patch.object(OutputGenerator, "generate_ass")
@@ -197,10 +194,8 @@ class TestOutputGenerator:
         mock_ass,
         mock_lrc,
         mock_corrections,
-        mock_corrected_segments,
-        mock_original_segments,
         mock_original_transcription,
-        mock_corrected_lyrics,
+        mock_plain_lyrics_correction,
         mock_plain_lyrics,
         generator,
         sample_transcription_data,
@@ -214,10 +209,8 @@ class TestOutputGenerator:
 
         # Set up mock return values
         mock_plain_lyrics.return_value = "/test/output/test_plain.txt"
-        mock_corrected_lyrics.return_value = "/test/output/test_corrected.txt"
+        mock_plain_lyrics_correction.return_value = "/test/output/test_corrected.txt"
         mock_original_transcription.return_value = "/test/output/test_original.txt"
-        mock_original_segments.return_value = "/test/output/test_original_segments.json"
-        mock_corrected_segments.return_value = "/test/output/test_corrected_segments.json"
         mock_corrections.return_value = "/test/output/test_corrections.json"
         mock_lrc.return_value = "/test/output/test.lrc"
         mock_ass.return_value = "/test/output/test.ass"

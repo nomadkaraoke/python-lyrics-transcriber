@@ -1,6 +1,5 @@
 import pytest
 import logging
-from pathlib import Path
 import shutil
 import os
 import tempfile

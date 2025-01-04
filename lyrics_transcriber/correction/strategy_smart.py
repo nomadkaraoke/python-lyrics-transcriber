@@ -1,15 +1,22 @@
 import logging
-from typing import List, Optional, Dict, Tuple
+from typing import List, Optional, Tuple
 from dataclasses import dataclass
 import torch
 from transformers import AutoTokenizer, AutoModel
 from metaphone import doublemetaphone
 from nltk.metrics import edit_distance
 
-from .base_strategy import CorrectionStrategy, CorrectionResult, WordCorrection
-from ..transcribers.base_transcriber import TranscriptionData, LyricsSegment, Word, TranscriptionResult
-from ..lyrics.base_lyrics_provider import LyricsData
-from .anchor_sequence import AnchorSequenceFinder, GapSequence
+from lyrics_transcriber.types import (
+    LyricsData,
+    LyricsSegment,
+    Word,
+    TranscriptionResult,
+    CorrectionResult,
+    WordCorrection,
+    GapSequence,
+)
+from lyrics_transcriber.correction.base_strategy import CorrectionStrategy
+from lyrics_transcriber.correction.anchor_sequence import AnchorSequenceFinder
 
 
 @dataclass

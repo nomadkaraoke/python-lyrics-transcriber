@@ -1,6 +1,18 @@
 import pytest
-from unittest.mock import Mock, MagicMock
-from lyrics_transcriber.correction.models import WordCorrection
+from unittest.mock import Mock
+from typing import Optional
+
+from lyrics_transcriber.types import (
+    WordCorrection,
+    LyricsData,
+    LyricsMetadata,
+    LyricsSegment,
+    Word,
+    TranscriptionData,
+    TranscriptionResult,
+    AnchorSequence,
+    GapSequence,
+)
 from lyrics_transcriber.correction.strategy_diff import (
     DiffBasedCorrector,
     ExactMatchHandler,
@@ -8,19 +20,6 @@ from lyrics_transcriber.correction.strategy_diff import (
     PhoneticSimilarityHandler,
     MultiWordSequenceHandler,
 )
-from lyrics_transcriber.transcribers.base_transcriber import (
-    TranscriptionData,
-    TranscriptionResult,
-    LyricsSegment,
-    Word,
-)
-from lyrics_transcriber.lyrics.base_lyrics_provider import LyricsData, LyricsMetadata
-from lyrics_transcriber.correction.anchor_sequence import (
-    AnchorSequenceFinder,
-    AnchorSequence,
-    GapSequence,
-)
-from typing import Optional
 
 
 @pytest.fixture
@@ -263,7 +262,7 @@ class TestPhoneticSimilarityHandler:
             print(f"\nSimilar words test: '{word1}' vs '{word2}'")
             print(f"Similarity score: {similarity:.3f}")
             assert similarity > 0.75
-        
+
         # Test dissimilar words with debug output
         for word1, word2 in [("hello", "world"), ("beautiful", "ugly")]:
             similarity = handler._get_phonetic_similarity(word1, word2)

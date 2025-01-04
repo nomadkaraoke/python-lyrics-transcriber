@@ -1,16 +1,21 @@
 import logging
-import difflib
-from typing import Any, Dict, List, Optional, Set, Tuple
+from typing import Dict, List, Optional, Set, Tuple
 from dataclasses import dataclass, field
 import string
 from abc import ABC, abstractmethod
 import Levenshtein
-from difflib import SequenceMatcher
 
-from ..transcribers.base_transcriber import TranscriptionData, LyricsSegment, Word, TranscriptionResult
-from ..lyrics.base_lyrics_provider import LyricsData
-from .base_strategy import CorrectionResult, CorrectionStrategy, WordCorrection
-from .anchor_sequence import AnchorSequenceFinder, AnchorSequence, GapSequence, ScoredAnchor
+from lyrics_transcriber.types import (
+    LyricsData,
+    LyricsSegment,
+    Word,
+    TranscriptionResult,
+    CorrectionResult,
+    WordCorrection,
+    GapSequence,
+)
+from lyrics_transcriber.correction.base_strategy import CorrectionStrategy
+from lyrics_transcriber.correction.anchor_sequence import AnchorSequenceFinder
 
 
 @dataclass

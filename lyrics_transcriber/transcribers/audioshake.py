@@ -4,7 +4,8 @@ import time
 import os
 from typing import Dict, Optional, Any, Union
 from pathlib import Path
-from .base_transcriber import BaseTranscriber, TranscriptionData, LyricsSegment, Word, TranscriptionError
+from lyrics_transcriber.types import TranscriptionData, LyricsSegment, Word
+from lyrics_transcriber.transcribers.base_transcriber import BaseTranscriber, TranscriptionError
 
 
 @dataclass

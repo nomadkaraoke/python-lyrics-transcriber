@@ -2,8 +2,8 @@ import logging
 from typing import Optional, Dict, Any
 import syrics.api
 
-from lyrics_transcriber.lyrics.base_lyrics_provider import LyricsSegment, Word
-from .base_lyrics_provider import BaseLyricsProvider, LyricsProviderConfig, LyricsMetadata, LyricsData
+from lyrics_transcriber.types import LyricsData, LyricsMetadata, LyricsSegment
+from lyrics_transcriber.lyrics.base_lyrics_provider import BaseLyricsProvider, LyricsProviderConfig
 
 
 class SpotifyProvider(BaseLyricsProvider):

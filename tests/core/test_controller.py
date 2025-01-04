@@ -1,12 +1,10 @@
 import pytest
-from unittest.mock import Mock, PropertyMock, patch
+from unittest.mock import Mock, patch
 from lyrics_transcriber.core.controller import (
     LyricsTranscriber,
     TranscriberConfig,
     LyricsConfig,
     OutputConfig,
-    WhisperConfig,
-    AudioShakeConfig,
     TranscriptionResult,
 )
 import logging
@@ -14,7 +12,6 @@ from dataclasses import dataclass
 from typing import Optional
 from lyrics_transcriber.lyrics.base_lyrics_provider import LyricsProviderConfig
 from lyrics_transcriber.lyrics.genius import GeniusProvider
-from lyrics_transcriber.lyrics.spotify import SpotifyProvider
 
 
 @dataclass

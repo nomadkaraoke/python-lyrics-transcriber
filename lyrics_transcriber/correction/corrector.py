@@ -1,11 +1,9 @@
-from dataclasses import dataclass
-from typing import Any, Dict, List, Optional, Protocol
+from typing import List, Optional
 import logging
 
+from lyrics_transcriber.types import LyricsData, TranscriptionResult, CorrectionResult
+from lyrics_transcriber.correction.base_strategy import CorrectionStrategy
 from lyrics_transcriber.correction.strategy_smart import SmartCorrectionStrategy
-from lyrics_transcriber.transcribers.base_transcriber import TranscriptionResult
-from lyrics_transcriber.lyrics.base_lyrics_provider import LyricsData
-from .base_strategy import CorrectionResult, CorrectionStrategy
 
 
 class LyricsCorrector:

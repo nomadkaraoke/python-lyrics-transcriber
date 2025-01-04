@@ -1,16 +1,15 @@
 import pytest
-from pathlib import Path
-import json
 import os
-from unittest.mock import Mock, patch
-from lyrics_transcriber.lyrics.base_lyrics_provider import (
-    BaseLyricsProvider,
-    LyricsProviderConfig,
-    Word,
-    LyricsSegment,
+
+
+from lyrics_transcriber.types import (
     LyricsData,
     LyricsMetadata,
+    LyricsSegment,
+    Word,
 )
+
+from lyrics_transcriber.lyrics.base_lyrics_provider import BaseLyricsProvider, LyricsProviderConfig
 
 
 class MockLyricsProvider(BaseLyricsProvider):

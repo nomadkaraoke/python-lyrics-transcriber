@@ -4,7 +4,7 @@ import os
 from io import BytesIO
 from dropbox.files import WriteMode, FileMetadata
 from dropbox.sharing import SharedLinkSettings, RequestedVisibility
-from dropbox.exceptions import AuthError, ApiError
+from dropbox.exceptions import ApiError
 from lyrics_transcriber.storage.dropbox import (
     DropboxConfig,
     DropboxHandler,
