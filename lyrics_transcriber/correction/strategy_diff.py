@@ -3,11 +3,12 @@ import difflib
 from typing import Any, Dict, List, Optional, Set, Tuple
 from dataclasses import dataclass, field
 import string
+from abc import ABC, abstractmethod
 
 from ..transcribers.base_transcriber import TranscriptionData, LyricsSegment, Word, TranscriptionResult
 from ..lyrics.base_lyrics_provider import LyricsData
 from .base_strategy import CorrectionResult, CorrectionStrategy, WordCorrection
-from .anchor_sequence import AnchorSequenceFinder, AnchorSequence, ScoredAnchor
+from .anchor_sequence import AnchorSequenceFinder, AnchorSequence, GapSequence, ScoredAnchor
 
 
 @dataclass
@@ -37,6 +38,51 @@ class CorrectionEntry:
             self.cases[correction][correction] += 1
 
 
+class GapCorrectionHandler(ABC):
+    """Base class for gap correction strategies."""
+
+    @abstractmethod
+    def can_handle(self, gap: GapSequence, current_word_idx: int) -> bool:
+        """Determine if this handler can process the given gap."""
+        pass
+
+    @abstractmethod
+    def handle(self, gap: GapSequence, word: Word, current_word_idx: int, segment_idx: int) -> Optional[WordCorrection]:
+        """Process the gap and return a correction if possible."""
+        pass
+
+
+class ExactMatchHandler(GapCorrectionHandler):
+    """Handles gaps where reference sources agree and have matching word counts."""
+
+    def can_handle(self, gap: GapSequence, current_word_idx: int) -> bool:
+        if not gap.reference_words:
+            return False
+
+        ref_words_lists = list(gap.reference_words.values())
+        return all(len(words) == gap.length for words in ref_words_lists) and all(
+            words == ref_words_lists[0] for words in ref_words_lists[1:]
+        )
+
+    def handle(self, gap: GapSequence, word: Word, current_word_idx: int, segment_idx: int) -> Optional[WordCorrection]:
+        gap_pos = current_word_idx - gap.transcription_position
+        correction = list(gap.reference_words.values())[0][gap_pos]
+
+        if correction.lower() == word.text.lower():
+            return None
+
+        return WordCorrection(
+            original_word=word.text,
+            corrected_word=correction,
+            segment_index=segment_idx,
+            word_index=current_word_idx,
+            confidence=1.0,
+            source=", ".join(gap.reference_words.keys()),
+            reason="All reference sources agree on correction",
+            alternatives={},
+        )
+
+
 class DiffBasedCorrector(CorrectionStrategy):
     """Implements correction strategy focusing on gaps between anchor sequences."""
 
@@ -47,6 +93,10 @@ class DiffBasedCorrector(CorrectionStrategy):
     ):
         self.logger = logger or logging.getLogger(__name__)
         self.anchor_finder = anchor_finder or AnchorSequenceFinder(logger=self.logger)
+        self.handlers: List[GapCorrectionHandler] = [
+            ExactMatchHandler(),
+            # Add new handlers here
+        ]
 
     def _preserve_formatting(self, original: str, new_word: str) -> str:
         """Preserve original word's formatting when applying correction."""
@@ -54,6 +104,15 @@ class DiffBasedCorrector(CorrectionStrategy):
         leading_space = " " if original != original.lstrip() else ""
         trailing_space = " " if original != original.rstrip() else ""
         return leading_space + new_word.strip() + trailing_space
+
+    def _try_correct_word(self, gap: GapSequence, word: Word, current_word_idx: int, segment_idx: int) -> Optional[WordCorrection]:
+        """Attempt to correct a word using available handlers."""
+        for handler in self.handlers:
+            if handler.can_handle(gap, current_word_idx):
+                correction = handler.handle(gap, word, current_word_idx, segment_idx)
+                if correction:
+                    return correction
+        return None
 
     def correct(
         self,
@@ -84,48 +143,26 @@ class DiffBasedCorrector(CorrectionStrategy):
             corrected_words = []
 
             for word in segment.words:
-                # Find current gap if any
                 gap = next(
                     (g for g in gap_sequences if g.transcription_position <= current_word_idx < g.transcription_position + g.length), None
                 )
 
-                if gap and len(gap.reference_words) > 0:
-                    # Check if all reference sources agree and have same word count
-                    ref_words_lists = list(gap.reference_words.values())
-                    all_same_length = all(len(words) == gap.length for words in ref_words_lists)
-                    all_sources_agree = all(words == ref_words_lists[0] for words in ref_words_lists[1:])
-
-                    if all_same_length and all_sources_agree:
-                        # Get position within gap
-                        gap_pos = current_word_idx - gap.transcription_position
-                        correction = ref_words_lists[0][gap_pos]
-
-                        if correction.lower() != word.text.lower():
-                            corrected_text = self._preserve_formatting(word.text, correction)
-                            corrected_word = Word(
-                                text=corrected_text,
-                                start_time=word.start_time,
-                                end_time=word.end_time,
-                                confidence=1.0,  # High confidence as all sources agree
-                            )
-                            corrected_words.append(corrected_word)
-
-                            correction = WordCorrection(
-                                original_word=word.text,
-                                corrected_word=corrected_text,
-                                segment_index=current_segment_idx,
-                                word_index=current_word_idx,
-                                confidence=1.0,
-                                source=", ".join(gap.reference_words.keys()),
-                                reason="All reference sources agree on correction",
-                                alternatives={},
-                            )
-
-                            corrections.append(correction)
-                            gap.corrections.append(correction)  # Add correction to gap
-                            corrections_made += 1
-                            current_word_idx += 1
-                            continue
+                if gap:
+                    correction = self._try_correct_word(gap, word, current_word_idx, current_segment_idx)
+                    if correction:
+                        corrected_text = self._preserve_formatting(word.text, correction.corrected_word)
+                        corrected_word = Word(
+                            text=corrected_text,
+                            start_time=word.start_time,
+                            end_time=word.end_time,
+                            confidence=correction.confidence,
+                        )
+                        corrected_words.append(corrected_word)
+                        corrections.append(correction)
+                        gap.corrections.append(correction)
+                        corrections_made += 1
+                        current_word_idx += 1
+                        continue
 
                 # If no correction made, keep original word
                 corrected_words.append(word)

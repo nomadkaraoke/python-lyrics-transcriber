@@ -1,6 +1,7 @@
 import pytest
-from unittest.mock import Mock
-from lyrics_transcriber.correction.strategy_diff import DiffBasedCorrector
+from unittest.mock import Mock, MagicMock
+from lyrics_transcriber.correction.models import WordCorrection
+from lyrics_transcriber.correction.strategy_diff import DiffBasedCorrector, ExactMatchHandler, GapCorrectionHandler
 from lyrics_transcriber.transcribers.base_transcriber import (
     TranscriptionData,
     TranscriptionResult,
@@ -13,6 +14,7 @@ from lyrics_transcriber.correction.anchor_sequence import (
     AnchorSequence,
     GapSequence,
 )
+from typing import Optional
 
 
 @pytest.fixture
@@ -90,6 +92,24 @@ def mock_anchor_finder(mock_logger):
     return finder
 
 
+class MockHandler(GapCorrectionHandler):
+    """Mock handler for testing handler chain."""
+
+    def __init__(self, can_handle_result=False, correction=None):
+        self.can_handle_result = can_handle_result
+        self.correction = correction
+        self.can_handle_called = False
+        self.handle_called = False
+
+    def can_handle(self, gap: GapSequence, current_word_idx: int) -> bool:
+        self.can_handle_called = True
+        return self.can_handle_result
+
+    def handle(self, gap: GapSequence, word: Word, current_word_idx: int, segment_idx: int) -> Optional[WordCorrection]:
+        self.handle_called = True
+        return self.correction
+
+
 class TestDiffBasedCorrector:
     @pytest.fixture
     def corrector(self, mock_logger, mock_anchor_finder):
@@ -153,3 +173,72 @@ class TestDiffBasedCorrector:
         assert len(result.corrected_segments) == 1
         assert result.corrections_made == 0
         assert result.corrected_segments[0].words[1].text == "cruel"  # Original word preserved
+
+    def test_handler_chain(self, corrector, sample_transcription_result, sample_lyrics, mock_anchor_finder):
+        # Create mock handlers
+        handler1 = MockHandler(can_handle_result=False)
+        handler2 = MockHandler(
+            can_handle_result=True,
+            correction=WordCorrection(
+                original_word="cruel",
+                corrected_word="test",
+                segment_index=0,
+                word_index=1,
+                confidence=1.0,
+                source="test",
+                reason="test correction",
+                alternatives={},
+            ),
+        )
+        handler3 = MockHandler(can_handle_result=True)  # Should never be called
+
+        # Replace handlers in corrector
+        corrector.handlers = [handler1, handler2, handler3]
+
+        result = corrector.correct(
+            transcription_results=[sample_transcription_result],
+            lyrics_results=sample_lyrics,
+        )
+
+        # Verify handler chain execution
+        assert handler1.can_handle_called
+        assert not handler1.handle_called  # Should not be called since can_handle returned False
+        assert handler2.can_handle_called
+        assert handler2.handle_called
+        assert not handler3.can_handle_called  # Should not be called since handler2 succeeded
+        assert not handler3.handle_called
+
+    def test_exact_match_handler(self):
+        handler = ExactMatchHandler()
+
+        # Test when sources agree
+        gap = GapSequence(
+            words=["test"],
+            transcription_position=0,
+            preceding_anchor=None,
+            following_anchor=None,
+            reference_words={"source1": ["correct"], "source2": ["correct"]},
+        )
+        assert handler.can_handle(gap, 0) == True
+
+        # Test when sources disagree
+        gap.reference_words = {"source1": ["correct"], "source2": ["different"]}
+        assert handler.can_handle(gap, 0) == False
+
+        # Test when lengths don't match
+        gap.reference_words = {"source1": ["two", "words"], "source2": ["two", "words"]}
+        assert handler.can_handle(gap, 0) == False
+
+    def test_handler_registration(self, mock_logger, mock_anchor_finder):
+        """Test that handlers can be registered and are used in order."""
+        corrector = DiffBasedCorrector(logger=mock_logger, anchor_finder=mock_anchor_finder)
+
+        # Verify default handlers
+        assert len(corrector.handlers) == 1
+        assert isinstance(corrector.handlers[0], ExactMatchHandler)
+
+        # Test adding custom handler
+        custom_handler = MockHandler()
+        corrector.handlers.append(custom_handler)
+        assert len(corrector.handlers) == 2
+        assert corrector.handlers[-1] == custom_handler
