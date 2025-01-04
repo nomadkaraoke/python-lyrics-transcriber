@@ -22,6 +22,11 @@ python-dotenv = ">=1"
 pydub = ">=0.25"
 spacy = "^3.8.3"
 tqdm = "^4.67.1"
+python-levenshtein = "^0.26.1"
+transformers = "^4.47.1"
+torch = "^2.5.1"
+metaphone = "^0.6"
+nltk = "^3.9.1"
 
 [tool.poetry.group.dev.dependencies]
 black = ">=23"

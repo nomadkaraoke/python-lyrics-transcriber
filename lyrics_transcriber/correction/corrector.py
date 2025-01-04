@@ -2,9 +2,9 @@ from dataclasses import dataclass
 from typing import Any, Dict, List, Optional, Protocol
 import logging
 
+from lyrics_transcriber.correction.strategy_smart import SmartCorrectionStrategy
 from lyrics_transcriber.transcribers.base_transcriber import TranscriptionResult
 from lyrics_transcriber.lyrics.base_lyrics_provider import LyricsData
-from .strategy_diff import DiffBasedCorrector
 from .base_strategy import CorrectionResult, CorrectionStrategy
 
 
@@ -20,7 +20,7 @@ class LyricsCorrector:
         logger: Optional[logging.Logger] = None,
     ):
         self.logger = logger or logging.getLogger(__name__)
-        self.correction_strategy = correction_strategy or DiffBasedCorrector(logger=self.logger)
+        self.correction_strategy = correction_strategy or SmartCorrectionStrategy(logger=self.logger)
 
     def run(self, transcription_results: List[TranscriptionResult], lyrics_results: List[LyricsData]) -> CorrectionResult:
         """Execute the correction process using configured strategy."""

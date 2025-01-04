@@ -4,6 +4,8 @@ from typing import Any, Dict, List, Optional, Set, Tuple
 from dataclasses import dataclass, field
 import string
 from abc import ABC, abstractmethod
+import Levenshtein
+from difflib import SequenceMatcher
 
 from ..transcribers.base_transcriber import TranscriptionData, LyricsSegment, Word, TranscriptionResult
 from ..lyrics.base_lyrics_provider import LyricsData
@@ -83,6 +85,195 @@ class ExactMatchHandler(GapCorrectionHandler):
         )
 
 
+class PhoneticSimilarityHandler(GapCorrectionHandler):
+    """Handles corrections based on phonetic similarity between words."""
+
+    def __init__(self, similarity_threshold: float = 0.65):
+        self.similarity_threshold = similarity_threshold
+
+    def _clean_word(self, word: str) -> str:
+        """Remove punctuation and standardize for comparison."""
+        return word.strip().lower().strip(string.punctuation)
+
+    def _get_phonetic_similarity(self, word1: str, word2: str) -> float:
+        """Calculate phonetic similarity between two words."""
+        # Clean words
+        w1, w2 = self._clean_word(word1), self._clean_word(word2)
+        if not w1 or not w2:
+            return 0.0
+
+        # Calculate Levenshtein ratio
+        similarity = Levenshtein.ratio(w1, w2)
+
+        # Boost similarity for words starting with the same letter
+        if w1[0] == w2[0]:
+            similarity = (similarity + 1) / 2
+        else:
+            # Penalize words starting with different letters
+            similarity = similarity * 0.9
+
+        # Boost for similar length words
+        length_ratio = min(len(w1), len(w2)) / max(len(w1), len(w2))
+        similarity = (similarity + length_ratio) / 2
+
+        return similarity
+
+    def _find_best_match(self, word: str, reference_words: Dict[str, List[str]]) -> Tuple[Optional[str], float, Set[str]]:
+        """Find the best matching reference word across all sources."""
+        best_match = None
+        best_similarity = 0.0
+        matching_sources = set()
+
+        # Get unique reference words
+        all_ref_words = {w for words in reference_words.values() for w in words}
+
+        for ref_word in all_ref_words:
+            similarity = self._get_phonetic_similarity(word, ref_word)
+
+            if similarity > best_similarity:
+                best_similarity = similarity
+                best_match = ref_word
+                matching_sources = {source for source, words in reference_words.items() if ref_word in words}
+
+        return best_match, best_similarity, matching_sources
+
+    def can_handle(self, gap: GapSequence, current_word_idx: int) -> bool:
+        """Check if we can handle this gap - we'll try if there are reference words."""
+        return bool(gap.reference_words)
+
+    def handle(self, gap: GapSequence, word: Word, current_word_idx: int, segment_idx: int) -> Optional[WordCorrection]:
+        """Try to correct word based on phonetic similarity."""
+        # Skip if word is empty or just punctuation
+        if not word.text.strip():
+            return None
+
+        # Find best matching reference word
+        best_match, similarity, matching_sources = self._find_best_match(word.text, gap.reference_words)
+
+        # Return correction if we found a good match
+        if best_match and similarity >= self.similarity_threshold and best_match.lower() != word.text.lower():
+
+            return WordCorrection(
+                original_word=word.text,
+                corrected_word=best_match,
+                segment_index=segment_idx,
+                word_index=current_word_idx,
+                confidence=similarity,
+                source=", ".join(matching_sources),
+                reason=f"Phonetic similarity ({similarity:.2f})",
+                alternatives={},  # Could add other close matches here
+            )
+
+        return None
+
+
+class MultiWordSequenceHandler(GapCorrectionHandler):
+    """Handles corrections by matching sequences of words."""
+
+    def __init__(self, similarity_threshold: float = 0.65):
+        self.similarity_threshold = similarity_threshold
+        self.phonetic_matcher = PhoneticSimilarityHandler(similarity_threshold)
+
+    def can_handle(self, gap: GapSequence, current_word_idx: int) -> bool:
+        """Check if we can handle this gap."""
+        if not gap.reference_words:
+            return False
+
+        # Don't handle cases where sources disagree
+        ref_words_lists = list(gap.reference_words.values())
+        if not all(words == ref_words_lists[0] for words in ref_words_lists[1:]):
+            print("Sources disagree on reference words")
+            return False
+
+        # Don't handle cases where reference has different length than gap
+        if any(len(words) != len(gap.words) for words in gap.reference_words.values()):
+            print("Reference length doesn't match gap length")
+            return False
+
+        return True
+
+    def _align_sequences(self, gap_words: List[str], ref_words: List[str]) -> List[Tuple[Optional[str], Optional[str], float]]:
+        """Align two sequences of words and return matches with confidence scores."""
+        alignments = []
+
+        print(f"\nDebug: Aligning sequences")
+        print(f"Gap words: {gap_words}")
+        print(f"Reference words: {ref_words}")
+
+        # For each gap word, try to find the best match in the reference words
+        for i, gap_word in enumerate(gap_words):
+            best_match = None
+            best_score = 0.0
+
+            # First, try exact position match if available
+            if i < len(ref_words):
+                ref_word = ref_words[i]
+                # Use a base position confidence even if words aren't similar
+                position_score = 0.7  # Base confidence for position match
+
+                # If words are similar, boost the confidence
+                similarity = self.phonetic_matcher._get_phonetic_similarity(gap_word, ref_word)
+                score = max(position_score, similarity)
+
+                print(f"Position match attempt: '{gap_word}' vs '{ref_word}' (score: {score:.2f})")
+
+                if score >= self.similarity_threshold:
+                    best_match = ref_word
+                    best_score = score
+
+            alignments.append((gap_word, best_match, best_score))
+            print(f"Final alignment for '{gap_word}': {best_match} (score: {best_score:.2f})")
+
+        return alignments
+
+    def handle(self, gap: GapSequence, word: Word, current_word_idx: int, segment_idx: int) -> Optional[WordCorrection]:
+        """Try to correct word based on sequence alignment."""
+        if not word.text.strip():
+            return None
+
+        gap_pos = current_word_idx - gap.transcription_position
+        print(f"\nDebug: Processing word '{word.text}' at position {gap_pos}")
+
+        best_alignment = None
+        best_confidence = 0.0
+        best_sources = set()
+
+        for source, ref_words in gap.reference_words.items():
+            print(f"\nTrying source: {source}")
+            alignments = self._align_sequences(gap.words, ref_words)
+
+            if gap_pos < len(alignments):
+                gap_word, correction, confidence = alignments[gap_pos]
+                print(f"Alignment result: {gap_word} -> {correction} (confidence: {confidence:.2f})")
+
+                if correction and correction.lower() == word.text.lower():
+                    print("Skipping exact match")
+                    return None
+
+                if correction and confidence > best_confidence:
+                    best_alignment = correction
+                    best_confidence = confidence
+                    best_sources = {source}
+                elif correction and confidence == best_confidence:
+                    best_sources.add(source)
+
+        if best_alignment and best_confidence >= self.similarity_threshold:
+            print(f"Making correction: {word.text} -> {best_alignment}")
+            return WordCorrection(
+                original_word=word.text,
+                corrected_word=best_alignment,
+                segment_index=segment_idx,
+                word_index=current_word_idx,
+                confidence=best_confidence,
+                source=", ".join(best_sources),
+                reason=f"Sequence alignment ({best_confidence:.2f})",
+                alternatives={},
+            )
+
+        print("No correction made")
+        return None
+
+
 class DiffBasedCorrector(CorrectionStrategy):
     """Implements correction strategy focusing on gaps between anchor sequences."""
 
@@ -95,7 +286,8 @@ class DiffBasedCorrector(CorrectionStrategy):
         self.anchor_finder = anchor_finder or AnchorSequenceFinder(logger=self.logger)
         self.handlers: List[GapCorrectionHandler] = [
             ExactMatchHandler(),
-            # Add new handlers here
+            MultiWordSequenceHandler(),
+            PhoneticSimilarityHandler(),
         ]
 
     def _preserve_formatting(self, original: str, new_word: str) -> str:
