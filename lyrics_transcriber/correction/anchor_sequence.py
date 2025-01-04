@@ -274,25 +274,27 @@ class AnchorSequenceFinder:
         # self.logger.debug(f"_score_anchor called for sequence: '{anchor.text}'")
         return ScoredAnchor(anchor=anchor, phrase_score=phrase_score)
 
-    def _get_sequence_priority(self, scored_anchor: ScoredAnchor) -> Tuple[float, float, float, int, int]:
+    def _get_sequence_priority(self, scored_anchor: ScoredAnchor) -> Tuple[float, float, float, float, int]:
         """Get priority tuple for sorting sequences.
 
         Returns tuple of:
         - Number of sources matched (higher is better)
+        - Length bonus (length * 0.2) to favor longer sequences
         - Break score (higher is better)
         - Total score (higher is better)
-        - Negative length (shorter is better)
         - Negative position (earlier is better)
 
         Position bonus: Add 1.0 to total score for sequences at position 0
         """
         # self.logger.debug(f"_get_sequence_priority called for anchor: '{scored_anchor.anchor.text}'")
         position_bonus = 1.0 if scored_anchor.anchor.transcription_position == 0 else 0.0
+        length_bonus = len(scored_anchor.anchor.words) * 0.2  # Add bonus for longer sequences
+
         return (
             len(scored_anchor.anchor.reference_positions),  # More sources is better
-            scored_anchor.phrase_score.natural_break_score,
+            length_bonus,  # Longer sequences preferred
+            scored_anchor.phrase_score.natural_break_score,  # Better breaks preferred
             scored_anchor.phrase_score.total_score + position_bonus,  # Add bonus for position 0
-            -len(scored_anchor.anchor.words),  # Shorter sequences preferred
             -scored_anchor.anchor.transcription_position,  # Earlier positions preferred
         )
 

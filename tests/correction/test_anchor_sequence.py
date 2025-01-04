@@ -5,7 +5,7 @@ from lyrics_transcriber.correction.text_analysis import PhraseScore, PhraseType
 
 @pytest.fixture
 def finder():
-    return AnchorSequenceFinder(min_sequence_length=2, min_sources=1)
+    return AnchorSequenceFinder(min_sequence_length=3, min_sources=1)
 
 
 def test_anchor_sequence_properties():
@@ -125,10 +125,10 @@ def test_find_anchors_simple(finder):
         print(f"Total score: {scored.phrase_score.total_score}")
         print(f"Priority: {priority}")
 
-    # Original assertions
+    # Update assertions to expect the longest common sequence
     assert len(anchors) == 1
-    assert anchors[0].text == "hello world"
-    assert anchors[0].confidence == 1.0
+    assert anchors[0].text == "hello world test"  # Now expects the full matching phrase
+    assert anchors[0].confidence == 0.5  # Only matches in source2
 
 
 def test_find_anchors_no_matches(finder):
@@ -148,11 +148,12 @@ def test_find_anchors_min_sources(finder):
 
 
 def test_find_anchors_case_insensitive(finder):
-    transcribed = "Hello World"
-    references = {"source1": "hello world", "source2": "HELLO WORLD"}
+    """Test that case differences don't affect matching"""
+    transcribed = "Hello World Test"
+    references = {"source1": "hello world test", "source2": "HELLO WORLD TEST"}
     anchors = finder.find_anchors(transcribed, references)
     assert len(anchors) == 1
-    assert anchors[0].text == "hello world"
+    assert anchors[0].text == "hello world test"  # Now expects the full phrase
 
 
 def test_find_anchors_with_repeated_phrases(finder):
@@ -332,7 +333,7 @@ def test_scored_anchor_total_score():
 
 
 def test_remove_overlapping_sequences_prioritizes_better_phrases(finder):
-    """Test that overlapping sequences are resolved by total score"""
+    """Test that overlapping sequences are resolved by preferring longer matches"""
     # Override the default min_sequence_length for this test
     finder.min_sequence_length = 4
 
@@ -353,6 +354,8 @@ def test_remove_overlapping_sequences_prioritizes_better_phrases(finder):
         print(f"Break score: {score.natural_break_score}")
         print(f"Total score: {score.total_score}")
         print(f"Phrase type: {score.phrase_type}")
+        priority = finder._get_sequence_priority(finder._score_anchor(seq, transcribed))
+        print(f"Priority: {priority}")  # Add priority debug output
 
     # Filter sequences
     filtered = finder._remove_overlapping_sequences(sequences, transcribed)
@@ -365,14 +368,16 @@ def test_remove_overlapping_sequences_prioritizes_better_phrases(finder):
         print(f"Break score: {score.natural_break_score}")
         print(f"Total score: {score.total_score}")
         print(f"Phrase type: {score.phrase_type}")
+        priority = finder._get_sequence_priority(finder._score_anchor(seq, transcribed))
+        print(f"Priority: {priority}")  # Add priority debug output
 
-    # Should prefer the better-scoring sequence
+    # Should prefer the longer sequence
     assert len(filtered) == 1
-    assert filtered[0].text == "my heart will go on"
+    assert filtered[0].text == "my heart will go on and on forever more"
 
 
 def test_remove_overlapping_sequences_with_line_breaks(finder):
-    """Test that natural breaks affect sequence selection"""
+    """Test that longer sequences are preferred even across line breaks"""
     transcribed = "my heart will go on\nand on forever more"
     references = {"source1": "my heart will go on and on forever more", "source2": "my heart will go on\nand on forever more"}
 
@@ -420,9 +425,9 @@ def test_remove_overlapping_sequences_with_line_breaks(finder):
         print(f"Phrase type: {score.phrase_type}")
         print(f"Length: {len(anchor.words)}")
 
-    # Original assertions
+    # Updated assertions to expect longer sequences
     assert len(anchors) > 0
-    assert "my heart will go on" in [a.text for a in anchors]
+    assert "my heart will go on and on forever more" in [a.text for a in anchors]
     assert "go on and" not in [a.text for a in anchors]  # crosses line break
 
 
@@ -446,6 +451,8 @@ def test_remove_overlapping_sequences_with_line_breaks_debug(finder):
         print(f"Break score: {score.natural_break_score}")
         print(f"Total score: {score.total_score}")
         print(f"Phrase type: {score.phrase_type}")
+        priority = finder._get_sequence_priority(finder._score_anchor(seq, transcribed))
+        print(f"Priority: {priority}")  # Add priority debug output
 
     # Debug: Print comparison details
     score1 = finder.phrase_analyzer.score_phrase(seq1.words, transcribed)
@@ -465,10 +472,12 @@ def test_remove_overlapping_sequences_with_line_breaks_debug(finder):
     print(f"Total score: {score.total_score}")
     print(f"Break score: {score.natural_break_score}")
     print(f"Phrase type: {score.phrase_type}")
+    priority = finder._get_sequence_priority(finder._score_anchor(chosen, transcribed))
+    print(f"Priority: {priority}")  # Add priority debug output
 
-    # Should choose the sequence with better score
+    # Should choose the longer sequence
     assert len(filtered) == 1
-    assert filtered[0].text == "my heart will go on"
+    assert filtered[0].text == "my heart will go on and on forever more"
 
 
 def test_score_anchor(finder):
@@ -494,7 +503,7 @@ def test_score_anchor(finder):
     assert scored2.phrase_score.natural_break_score == 0.0
 
 
-def test_get_sequence_priority(finder):
+def test_get_sequence_priority_simple(finder):
     """Test sequence priority calculation"""
     transcribed = "hello world test"
 
@@ -518,7 +527,7 @@ def test_get_sequence_priority(finder):
 
 
 def test_viet_nam_lyrics_scenario():
-    """Test based on the Minutemen - Viet Nam lyrics pattern"""
+    """Test based on a song's lyrics pattern"""
     transcribed = "Let's say I got a number\nThat number's fifty thousand\nThat's ten percent of five hundred thousand\nOh, here we are\nIn French Indochina"
     references = {
         "genius": "Let's say I got a number\nThat number's fifty thousand\nThat's ten percent of five hundred thousand\nOh, here we are in French Indochina",
@@ -536,11 +545,9 @@ def test_viet_nam_lyrics_scenario():
 
     # Debug: Try specific phrases we expect to find
     expected_phrases = [
-        ["lets", "say", "i", "got", "a", "number"],
-        ["that", "numbers", "fifty", "thousand"],
+        ["lets", "say", "i", "got", "a", "number", "that", "numbers", "fifty", "thousand"],
         ["thats", "ten", "percent", "of", "five", "hundred", "thousand"],
-        ["oh", "here", "we", "are"],
-        ["in", "french", "indochina"],
+        ["oh", "here", "we", "are", "in", "french", "indochina"],
     ]
 
     print("\nTesting expected phrases:")
@@ -578,11 +585,7 @@ def test_viet_nam_lyrics_scenario():
 
     # Test specific expectations
     expected_texts = {
-        "lets say i got a number",
-        "that numbers fifty thousand",
-        "thats ten percent of five hundred thousand",
-        "oh here we are",
-        "in french indochina",
+        "lets say i got a number that numbers fifty thousand thats ten percent of five hundred thousand oh here we are in french indochina"
     }
 
     # Check for missing expected phrases
@@ -1031,19 +1034,19 @@ def test_create_between_gap(finder):
     words = ["hello", "world", "middle", "test", "phrase"]
     ref_texts_clean = {
         "source1": ["hello", "world", "middle", "test", "phrase"],
-        "source2": ["hello", "world", "different", "test", "phrase"]
+        "source2": ["hello", "world", "different", "test", "phrase"],
     }
-    
+
     current_anchor = ScoredAnchor(
         anchor=AnchorSequence(["hello", "world"], 0, {"source1": 0, "source2": 0}, 1.0),
-        phrase_score=PhraseScore(PhraseType.COMPLETE, 1.0, 1.0)
+        phrase_score=PhraseScore(PhraseType.COMPLETE, 1.0, 1.0),
     )
-    
+
     next_anchor = ScoredAnchor(
         anchor=AnchorSequence(["test", "phrase"], 3, {"source1": 3, "source2": 3}, 1.0),
-        phrase_score=PhraseScore(PhraseType.COMPLETE, 1.0, 1.0)
+        phrase_score=PhraseScore(PhraseType.COMPLETE, 1.0, 1.0),
     )
-    
+
     # Test with gap between anchors
     gap = finder._create_between_gap(words, current_anchor, next_anchor, ref_texts_clean)
     assert gap is not None
@@ -1051,11 +1054,8 @@ def test_create_between_gap(finder):
     assert gap.transcription_position == 2
     assert gap.preceding_anchor == current_anchor.anchor
     assert gap.following_anchor == next_anchor.anchor
-    assert gap.reference_words == {
-        "source1": ["middle"],
-        "source2": ["different"]
-    }
-    
+    assert gap.reference_words == {"source1": ["middle"], "source2": ["different"]}
+
     # Test with no gap between anchors
     next_anchor.anchor.transcription_position = 2
     gap = finder._create_between_gap(words, current_anchor, next_anchor, ref_texts_clean)
@@ -1115,3 +1115,110 @@ def test_find_gaps_integration(finder):
 
         if gap.following_anchor:
             assert gap.transcription_position + len(gap.words) <= gap.following_anchor.transcription_position
+
+
+def test_pull_it_apart_sequence(finder):
+    """Test that 'pull it apart' is properly identified as a complete phrase."""
+    transcribed = "Put it together, or you can pull it apart"
+    references = {"genius": "You can put it together\nYou can pull it apart", "spotify": "You can put it together\nYou can pull it apart"}
+
+    # First, let's see what n-grams are being considered
+    words = finder._clean_text(transcribed).split()
+    print("\nCleaned words:", words)
+
+    # Try different n-gram lengths and score each candidate
+    print("\nScoring potential anchors:")
+    ref_texts_clean = {k: finder._clean_text(v).split() for k, v in references.items()}
+
+    candidates = []
+    for n in range(3, 6):
+        ngrams = finder._find_ngrams(words, n)
+        for ngram, pos in ngrams:
+            matches = finder._find_matching_sources(ngram, ref_texts_clean, len(ngram))
+            if matches:
+                # Create and score the anchor
+                anchor = AnchorSequence(ngram, pos, matches, len(matches) / len(references))
+                scored = finder._score_anchor(anchor, transcribed)
+                candidates.append(scored)
+                print(f"\nCandidate: '{' '.join(ngram)}' at position {pos}")
+                print(f"Length: {len(ngram)}")
+                print(f"Phrase type: {scored.phrase_score.phrase_type}")
+                print(f"Break score: {scored.phrase_score.natural_break_score}")
+                print(f"Total score: {scored.phrase_score.total_score}")
+                print(f"Priority: {finder._get_sequence_priority(scored)}")
+
+    # Now check the actual anchors
+    anchors = finder.find_anchors(transcribed, references)
+
+    print("\nFinal selected anchors:")
+    for anchor in anchors:
+        scored = finder._score_anchor(anchor, transcribed)
+        print(f"\nText: '{anchor.text}'")
+        print(f"Position: {anchor.transcription_position}")
+        print(f"Confidence: {anchor.confidence}")
+        print(f"Length: {len(anchor.words)}")
+        print(f"Phrase type: {scored.phrase_score.phrase_type}")
+        print(f"Break score: {scored.phrase_score.natural_break_score}")
+        print(f"Total score: {scored.phrase_score.total_score}")
+        print(f"Priority: {finder._get_sequence_priority(scored)}")
+
+    # Check that "pull it apart" is included in some anchor
+    found_phrase = False
+    for anchor in anchors:
+        if "pull it apart" in anchor.text:
+            found_phrase = True
+            break
+
+    assert found_phrase, "Expected to find 'pull it apart' in anchor sequences"
+
+
+def test_get_sequence_priority_real_case_1(finder):
+    """Test that longer matching sequences are preferred over shorter ones."""
+    # Use the exact context from the real case
+    context = "Put it together, or you can pull it apart"
+
+    # Create test cases with same source count and break score
+    short_anchor = AnchorSequence(
+        words=["you", "can", "pull"],
+        transcription_position=4,
+        reference_positions={"genius": 5, "spotify": 5},  # Use actual reference positions
+        confidence=1.0,
+    )
+
+    long_anchor = AnchorSequence(
+        words=["you", "can", "pull", "it", "apart"],
+        transcription_position=4,
+        reference_positions={"genius": 5, "spotify": 5},
+        confidence=1.0,
+    )
+
+    # Score both anchors
+    short_scored = finder._score_anchor(short_anchor, context)
+    long_scored = finder._score_anchor(long_anchor, context)
+
+    # Get priorities
+    short_priority = finder._get_sequence_priority(short_scored)
+    long_priority = finder._get_sequence_priority(long_scored)
+
+    print(f"\nContext: '{context}'")
+    print(f"\nShort sequence ({short_anchor.text}):")
+    print(f"Priority: {short_priority}")
+    print(f"Break score: {short_scored.phrase_score.natural_break_score}")
+    print(f"Total score: {short_scored.phrase_score.total_score}")
+    print(f"Phrase type: {short_scored.phrase_score.phrase_type}")
+
+    print(f"\nLong sequence ({long_anchor.text}):")
+    print(f"Priority: {long_priority}")
+    print(f"Break score: {long_scored.phrase_score.natural_break_score}")
+    print(f"Total score: {long_scored.phrase_score.total_score}")
+    print(f"Phrase type: {long_scored.phrase_score.phrase_type}")
+
+    # Debug the break score calculation
+    print("\nBreak score analysis:")
+    clean_context = finder._clean_text(context)
+    print(f"Clean context: '{clean_context}'")
+    print(f"Short sequence position: {clean_context.find(' '.join(short_anchor.words))}")
+    print(f"Long sequence position: {clean_context.find(' '.join(long_anchor.words))}")
+
+    # The longer sequence should have higher priority
+    assert long_priority > short_priority, "Longer matching sequence should have higher priority"
