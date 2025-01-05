@@ -1,8 +1,7 @@
+from typing import List
 import pytest
-import logging
-from unittest.mock import Mock, patch
+from unittest.mock import Mock
 from lyrics_transcriber.types import (
-    CorrectionResult,
     LyricsData,
     LyricsMetadata,
     LyricsSegment,
@@ -19,24 +18,19 @@ from lyrics_transcriber.correction.handlers.base import GapCorrectionHandler
 class MockHandler(GapCorrectionHandler):
     """Mock handler for testing."""
 
-    def __init__(self, should_handle=True, correction=None, target_word=None):
+    def __init__(self, should_handle=True, corrections=None):
         self.should_handle = should_handle
-        self.correction = correction
+        self.corrections = corrections or []
         self.can_handle_called = False
         self.handle_called = False
-        self.target_word = target_word  # Add target word to specify which gap this handler handles
 
-    def can_handle(self, gap, current_word_idx):
+    def can_handle(self, gap: GapSequence) -> bool:
         self.can_handle_called = True
-        # Only handle gaps containing our target word
-        return self.should_handle and (not self.target_word or self.target_word in gap.words)
+        return self.should_handle
 
-    def handle(self, gap, word, current_word_idx, segment_idx):
+    def handle(self, gap: GapSequence) -> List[WordCorrection]:
         self.handle_called = True
-        # Only return correction if this is our target word
-        if self.target_word and word.text != self.target_word:
-            return None
-        return self.correction
+        return self.corrections
 
 
 @pytest.fixture
@@ -67,7 +61,7 @@ def sample_transcription_result():
             segments=[segment],
             text="hello wurld test lyrics",
             source="test",
-            words=words,
+            words=[w for w in segment.words],
             metadata={"language": "en"},
         ),
     )
@@ -102,12 +96,11 @@ def mock_anchor_finder():
     finder = Mock()
     # Create a gap sequence that covers just the "wurld" word
     gap = GapSequence(
-        words=["wurld"],  # The word we want to correct
-        transcription_position=1,  # Position of "wurld"
+        words=("wurld",),
+        transcription_position=1,
         preceding_anchor=None,
         following_anchor=None,
-        reference_words={"test": ["world"]},  # The correct word
-        corrections=[],
+        reference_words={"test": ["world"]},
     )
     finder.find_anchors.return_value = []
     finder.find_gaps.return_value = [gap]
@@ -126,12 +119,11 @@ class TestLyricsCorrector:
     def test_run_full_flow(self, mock_logger, sample_transcription_result, sample_lyrics):
         # Create a gap sequence that covers just the "wurld" word
         gap = GapSequence(
-            words=["wurld"],
+            words=("wurld",),
             transcription_position=1,
             preceding_anchor=None,
             following_anchor=None,
             reference_words={"test": ["world"]},
-            corrections=[],
         )
         mock_finder = Mock()
         mock_finder.find_anchors.return_value = []
@@ -148,7 +140,7 @@ class TestLyricsCorrector:
             reason="Test correction",
             alternatives={},
         )
-        mock_handler = MockHandler(should_handle=True, correction=correction)
+        mock_handler = MockHandler(should_handle=True, corrections=[correction])
 
         # Create corrector with our mock handler
         corrector = LyricsCorrector(handlers=[mock_handler], logger=mock_logger, anchor_finder=mock_finder)
@@ -188,67 +180,20 @@ class TestLyricsCorrector:
         # Verify error was logged
         mock_logger.error.assert_called()
 
-    def test_multiple_handlers(self, mock_logger, sample_transcription_result, sample_lyrics):
-        # Create a gap sequence that covers just the "wurld" word
+    def test_partial_gap_correction(self, mock_logger, sample_transcription_result, sample_lyrics):
+        # Create a gap with multiple words
         gap = GapSequence(
-            words=["wurld"],
+            words=("wurld", "test"),
             transcription_position=1,
             preceding_anchor=None,
             following_anchor=None,
-            reference_words={"test": ["world"]},
-            corrections=[],
+            reference_words={"test": ["world", "testing"]},
         )
         mock_finder = Mock()
         mock_finder.find_anchors.return_value = []
         mock_finder.find_gaps.return_value = [gap]
 
-        # Create two handlers with different behaviors
-        correction1 = WordCorrection(
-            original_word="wurld",
-            corrected_word="world",
-            segment_index=0,
-            word_index=1,
-            confidence=0.8,
-            source="test",
-            reason="First correction",
-            alternatives={},
-        )
-        handler1 = MockHandler(should_handle=True, correction=correction1)
-        handler2 = MockHandler(should_handle=False, correction=None)
-
-        corrector = LyricsCorrector(handlers=[handler1, handler2], logger=mock_logger, anchor_finder=mock_finder)
-
-        result = corrector.run(transcription_results=[sample_transcription_result], lyrics_results=sample_lyrics)
-
-        # Verify first handler was used and second was skipped
-        assert handler1.handle_called
-        assert not handler2.handle_called
-        assert len(result.corrections) == 1
-        assert result.corrections[0] == correction1
-
-    def test_handler_ordering_and_gap_correction(self, mock_logger, sample_transcription_result, sample_lyrics):
-        # Create two gaps in our mock anchor finder
-        gap1 = GapSequence(
-            words=("wurld",),
-            transcription_position=1,
-            preceding_anchor=None,
-            following_anchor=None,
-            reference_words={"test": ["world"]},
-            corrections=[],
-        )
-        gap2 = GapSequence(
-            words=("test",),
-            transcription_position=2,
-            preceding_anchor=None,
-            following_anchor=None,
-            reference_words={"test": ["testing"]},
-            corrections=[],
-        )
-        mock_finder = Mock()
-        mock_finder.find_anchors.return_value = []
-        mock_finder.find_gaps.return_value = [gap1, gap2]
-
-        # Create three handlers with different behaviors
+        # First handler corrects only "wurld"
         correction1 = WordCorrection(
             original_word="wurld",
             corrected_word="world",
@@ -256,9 +201,12 @@ class TestLyricsCorrector:
             word_index=1,
             confidence=0.9,
             source="test",
-            reason="First handler correction",
+            reason="First correction",
             alternatives={},
         )
+        handler1 = MockHandler(should_handle=True, corrections=[correction1])
+
+        # Second handler corrects "test"
         correction2 = WordCorrection(
             original_word="test",
             corrected_word="testing",
@@ -266,47 +214,201 @@ class TestLyricsCorrector:
             word_index=2,
             confidence=0.8,
             source="test",
-            reason="Second handler correction",
+            reason="Second correction",
+            alternatives={},
+        )
+        handler2 = MockHandler(should_handle=True, corrections=[correction2])
+
+        corrector = LyricsCorrector(handlers=[handler1, handler2], logger=mock_logger, anchor_finder=mock_finder)
+
+        result = corrector.run(transcription_results=[sample_transcription_result], lyrics_results=sample_lyrics)
+
+        # Verify both corrections were made
+        assert len(result.corrections) == 2
+        assert "world" in result.corrected_text
+        assert "testing" in result.corrected_text
+        assert "wurld" not in result.corrected_text
+        assert result.corrections_made == 2
+
+        # Verify corrections were tracked in gap
+        gap = result.gap_sequences[0]
+        assert gap.is_word_corrected(0)  # "wurld" -> "world"
+        assert gap.is_word_corrected(1)  # "test" -> "testing"
+        assert gap.is_fully_corrected
+
+    def test_skip_fully_corrected_gap(self, mock_logger, sample_transcription_result, sample_lyrics):
+        """Test that handlers are skipped for fully corrected gaps."""
+        # Create pre-existing corrections
+        correction1 = WordCorrection(
+            original_word="wurld",
+            corrected_word="world",
+            word_index=1,
+            segment_index=0,
+            confidence=1.0,
+            source="test",
+            reason="Pre-existing correction",
+            alternatives={},
+        )
+        correction2 = WordCorrection(
+            original_word="test",
+            corrected_word="testing",
+            word_index=2,
+            segment_index=0,
+            confidence=1.0,
+            source="test",
+            reason="Pre-existing correction",
             alternatives={},
         )
 
-        # First handler only corrects "wurld"
-        handler1 = MockHandler(should_handle=True, correction=correction1, target_word="wurld")
+        # Create gap with pre-existing corrections
+        gap = GapSequence(
+            words=("wurld", "test"),
+            transcription_position=1,
+            preceding_anchor=None,
+            following_anchor=None,
+            reference_words={"test": ["world", "testing"]},
+        )
+        gap.add_correction(correction1)
+        gap.add_correction(correction2)
         
-        # Second handler only corrects "test"
-        handler2 = MockHandler(should_handle=True, correction=correction2, target_word="test")
+        mock_finder = Mock()
+        mock_finder.find_anchors.return_value = []
+        mock_finder.find_gaps.return_value = [gap]
         
-        # Third handler should never be called since all gaps are corrected
-        handler3 = Mock(spec=GapCorrectionHandler)
-        handler3.can_handle = Mock(return_value=True)
-        handler3.handle = Mock()
-
+        # This handler should never be called
+        mock_handler = MockHandler(should_handle=True)
+        
         corrector = LyricsCorrector(
-            handlers=[handler1, handler2, handler3],
+            handlers=[mock_handler],
             logger=mock_logger,
             anchor_finder=mock_finder
         )
-
+        
         result = corrector.run(
             transcription_results=[sample_transcription_result],
             lyrics_results=sample_lyrics
         )
+        
+        # Verify handler was never called
+        assert not mock_handler.can_handle_called
+        assert not mock_handler.handle_called
+        
+        # Verify pre-existing corrections were preserved
+        assert len(result.corrections) == 0  # No new corrections should be made
+        assert gap.is_fully_corrected
 
-        # Print debug logs
-        print("\nDebug logs:")
-        for call in mock_logger.debug.call_args_list:
-            print(f"DEBUG: {call[0][0]}")
+    def test_no_corrections_warning(self, mock_logger, sample_transcription_result, sample_lyrics):
+        """Test that a warning is logged when no handler can correct a gap."""
+        gap = GapSequence(
+            words=("wurld",),
+            transcription_position=1,
+            preceding_anchor=None,
+            following_anchor=None,
+            reference_words={"test": ["world"]},
+        )
 
-        # Verify corrections were made in order
-        assert len(result.corrections) == 2, f"Expected 2 corrections, got {len(result.corrections)}"
-        assert result.corrections[0] == correction1, "First correction should be from handler1"
-        assert result.corrections[1] == correction2, "Second correction should be from handler2"
+        mock_finder = Mock()
+        mock_finder.find_anchors.return_value = []
+        mock_finder.find_gaps.return_value = [gap]
 
-        # Verify third handler was never called
-        handler3.handle.assert_not_called()
+        # Handler that can't handle the gap
+        mock_handler = MockHandler(should_handle=False)
 
-        # Verify corrected text contains both corrections
-        assert "world" in result.corrected_text, "Expected 'world' in corrected text"
-        assert "testing" in result.corrected_text, "Expected 'testing' in corrected text"
-        assert "wurld" not in result.corrected_text, "Expected 'wurld' to be corrected"
-        assert result.corrections_made == 2, f"Expected 2 corrections made, got {result.corrections_made}"
+        corrector = LyricsCorrector(handlers=[mock_handler], logger=mock_logger, anchor_finder=mock_finder)
+
+        result = corrector.run(transcription_results=[sample_transcription_result], lyrics_results=sample_lyrics)
+
+        # Verify warning was logged
+        mock_logger.warning.assert_called_with("No handler could handle the gap")
+
+        # Verify no corrections were made
+        assert len(result.corrections) == 0
+        assert not gap.was_corrected
+
+    def test_multiple_gaps_processing(self, mock_logger, sample_transcription_result, sample_lyrics):
+        """Test processing multiple gaps with different handlers."""
+        gap1 = GapSequence(
+            words=("wurld",),
+            transcription_position=1,
+            preceding_anchor=None,
+            following_anchor=None,
+            reference_words={"test": ["world"]},
+        )
+        gap2 = GapSequence(
+            words=("tst", "lyrcs"),
+            transcription_position=2,
+            preceding_anchor=None,
+            following_anchor=None,
+            reference_words={"test": ["test", "lyrics"]},
+        )
+        
+        mock_finder = Mock()
+        mock_finder.find_anchors.return_value = []
+        mock_finder.find_gaps.return_value = [gap1, gap2]
+        
+        # Handler for first gap only
+        correction1 = WordCorrection(
+            original_word="wurld",
+            corrected_word="world",
+            word_index=1,
+            segment_index=0,
+            confidence=1.0,
+            source="test",
+            reason="First gap correction",
+            alternatives={},
+        )
+        handler1 = MockHandler(should_handle=True, corrections=[correction1])
+        # Make handler1 only handle gap1
+        original_can_handle = handler1.can_handle
+        handler1.can_handle = lambda g: g == gap1 and original_can_handle(g)
+        
+        # Handler for second gap only
+        correction2a = WordCorrection(
+            original_word="tst",
+            corrected_word="test",
+            word_index=2,
+            segment_index=0,
+            confidence=1.0,
+            source="test",
+            reason="Second gap correction",
+            alternatives={},
+        )
+        correction2b = WordCorrection(
+            original_word="lyrcs",
+            corrected_word="lyrics",
+            word_index=3,
+            segment_index=0,
+            confidence=1.0,
+            source="test",
+            reason="Second gap correction",
+            alternatives={},
+        )
+        handler2 = MockHandler(should_handle=True, corrections=[correction2a, correction2b])
+        # Make handler2 only handle gap2
+        original_can_handle2 = handler2.can_handle
+        handler2.can_handle = lambda g: g == gap2 and original_can_handle2(g)
+        
+        corrector = LyricsCorrector(
+            handlers=[handler1, handler2],
+            logger=mock_logger,
+            anchor_finder=mock_finder
+        )
+        
+        result = corrector.run(
+            transcription_results=[sample_transcription_result],
+            lyrics_results=sample_lyrics
+        )
+        
+        # Debug: Print all corrections
+        for i, corr in enumerate(result.corrections):
+            print(f"Correction {i}: {corr.original_word} -> {corr.corrected_word}")
+        
+        # Verify both gaps were processed
+        assert len(result.corrections) == 3  # One from first gap, two from second gap
+        assert gap1.was_corrected
+        assert gap2.was_corrected
+        
+        # Verify corrections were applied in correct order
+        assert result.corrections[0].original_word == "wurld"
+        assert result.corrections[1].original_word == "tst"
+        assert result.corrections[2].original_word == "lyrcs"

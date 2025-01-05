@@ -226,11 +226,33 @@ class GapSequence:
     following_anchor: Optional[AnchorSequence]
     reference_words: Dict[str, List[str]]
     corrections: List[WordCorrection] = field(default_factory=list)
+    _corrected_positions: Set[int] = field(default_factory=set, repr=False)
 
     def __post_init__(self):
         # Convert words list to tuple if it's not already
         if isinstance(self.words, list):
             object.__setattr__(self, 'words', tuple(self.words))
+
+    def add_correction(self, correction: WordCorrection) -> None:
+        """Add a correction and mark its position as corrected."""
+        self.corrections.append(correction)
+        relative_pos = correction.word_index - self.transcription_position
+        self._corrected_positions.add(relative_pos)
+
+    def is_word_corrected(self, relative_position: int) -> bool:
+        """Check if a word at the given position (relative to gap start) has been corrected."""
+        return relative_position in self._corrected_positions
+
+    @property
+    def uncorrected_words(self) -> List[Tuple[int, str]]:
+        """Get list of (position, word) tuples for words that haven't been corrected yet."""
+        return [(i, word) for i, word in enumerate(self.words) 
+                if i not in self._corrected_positions]
+
+    @property
+    def is_fully_corrected(self) -> bool:
+        """Check if all words in the gap have been corrected."""
+        return len(self._corrected_positions) == self.length
 
     def __hash__(self):
         # Hash based on words and position
