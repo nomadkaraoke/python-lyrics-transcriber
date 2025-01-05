@@ -1,6 +1,9 @@
 from typing import Dict, List, Optional, Tuple
 import logging
 from tqdm import tqdm
+from multiprocessing import Pool, cpu_count
+from functools import partial
+import time
 
 from lyrics_transcriber.types import PhraseScore, AnchorSequence, GapSequence, ScoredAnchor
 from lyrics_transcriber.correction.text_analysis import PhraseAnalyzer
@@ -199,14 +202,34 @@ class AnchorSequenceFinder:
 
         self.logger.info(f"Scoring {len(anchors)} anchors")
 
-        # Score all anchors with progress bar
-        scored_anchors = [self._score_anchor(anchor, context) for anchor in tqdm(anchors, desc="Scoring anchors")]
+        # Benchmark both approaches
+        start_time = time.time()
+
+        # Try different pool sizes
+        num_processes = max(cpu_count() - 1, 1)  # Leave one CPU free
+        self.logger.info(f"Using {num_processes} processes")
+
+        # Create a partial function with the context parameter fixed
+        score_anchor_partial = partial(self._score_anchor_static, context=context)
+
+        # Use multiprocessing to score anchors in parallel
+        with Pool(processes=num_processes) as pool:
+            scored_anchors = list(
+                tqdm(
+                    pool.imap(score_anchor_partial, anchors, chunksize=50),  # Added chunksize
+                    total=len(anchors),
+                    desc="Scoring anchors (parallel)",
+                )
+            )
+
+        parallel_time = time.time() - start_time
+        self.logger.info(f"Parallel scoring took {parallel_time:.2f} seconds")
+
+        # Sort and filter as before
         scored_anchors.sort(key=self._get_sequence_priority, reverse=True)
 
         self.logger.info(f"Filtering {len(scored_anchors)} overlapping sequences")
-
         filtered_scored = []
-        # Filter with progress bar
         for scored_anchor in tqdm(scored_anchors, desc="Filtering overlaps"):
             overlaps = False
             for existing in filtered_scored:
@@ -219,6 +242,21 @@ class AnchorSequenceFinder:
 
         self.logger.info(f"Filtered down to {len(filtered_scored)} non-overlapping anchors")
         return filtered_scored
+
+    @staticmethod
+    def _score_anchor_static(anchor: AnchorSequence, context: str) -> ScoredAnchor:
+        """Static version of _score_anchor for multiprocessing compatibility."""
+        # Create analyzer only once per process
+        if not hasattr(AnchorSequenceFinder._score_anchor_static, '_phrase_analyzer'):
+            AnchorSequenceFinder._score_anchor_static._phrase_analyzer = PhraseAnalyzer(
+                logger=logging.getLogger(__name__)
+            )
+        
+        phrase_score = AnchorSequenceFinder._score_anchor_static._phrase_analyzer.score_phrase(
+            anchor.words, 
+            context
+        )
+        return ScoredAnchor(anchor=anchor, phrase_score=phrase_score)
 
     def _get_reference_words(self, source: str, ref_words: List[str], start_pos: Optional[int], end_pos: Optional[int]) -> List[str]:
         """Get words from reference text between two positions.
