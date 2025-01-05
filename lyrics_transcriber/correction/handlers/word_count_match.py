@@ -4,7 +4,7 @@ from lyrics_transcriber.types import GapSequence, WordCorrection
 from lyrics_transcriber.correction.handlers.base import GapCorrectionHandler
 
 
-class ExactMatchHandler(GapCorrectionHandler):
+class WordCountMatchHandler(GapCorrectionHandler):
     """Handles gaps where reference sources agree and have matching word counts."""
 
     def can_handle(self, gap: GapSequence) -> bool:

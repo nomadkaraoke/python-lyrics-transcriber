@@ -4,7 +4,7 @@ import logging
 from lyrics_transcriber.types import GapSequence, LyricsData, TranscriptionResult, CorrectionResult, LyricsSegment, WordCorrection, Word
 from lyrics_transcriber.correction.anchor_sequence import AnchorSequenceFinder
 from lyrics_transcriber.correction.handlers.base import GapCorrectionHandler
-from lyrics_transcriber.correction.handlers.exact_match import ExactMatchHandler
+from lyrics_transcriber.correction.handlers.word_count_match import WordCountMatchHandler
 
 
 class LyricsCorrector:
@@ -23,7 +23,7 @@ class LyricsCorrector:
 
         # Default handlers in order of preference
         self.handlers = handlers or [
-            ExactMatchHandler(),
+            WordCountMatchHandler(),
             # AnchorWordsInGapHandler(), # "Correct" words which are in the gap but are identical in the reference
             # CombinedHandler(),  # Try combined matching first
             # MetaphoneHandler(),  # Fall back to individual matchers
