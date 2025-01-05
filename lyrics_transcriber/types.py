@@ -1,5 +1,5 @@
 from dataclasses import dataclass, asdict, field
-from typing import Any, Dict, List, Optional, Set, Protocol
+from typing import Any, Dict, List, Optional, Set, Protocol, Tuple
 from enum import Enum
 
 
@@ -220,12 +220,27 @@ class ScoredAnchor:
 class GapSequence:
     """Represents a sequence of words between anchor sequences in transcribed lyrics."""
 
-    words: List[str]
+    words: Tuple[str, ...]
     transcription_position: int
     preceding_anchor: Optional[AnchorSequence]
     following_anchor: Optional[AnchorSequence]
     reference_words: Dict[str, List[str]]
-    corrections: List[WordCorrection] = field(default_factory=list)  # Initialize empty list safely
+    corrections: List[WordCorrection] = field(default_factory=list)
+
+    def __post_init__(self):
+        # Convert words list to tuple if it's not already
+        if isinstance(self.words, list):
+            object.__setattr__(self, 'words', tuple(self.words))
+
+    def __hash__(self):
+        # Hash based on words and position
+        return hash((self.words, self.transcription_position))
+
+    def __eq__(self, other):
+        if not isinstance(other, GapSequence):
+            return NotImplemented
+        return (self.words == other.words and 
+                self.transcription_position == other.transcription_position)
 
     @property
     def text(self) -> str:

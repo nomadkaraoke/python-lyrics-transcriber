@@ -2,7 +2,7 @@ import pytest
 import logging
 
 from lyrics_transcriber.types import PhraseType
-from lyrics_transcriber.correction.text_analysis import PhraseAnalyzer
+from lyrics_transcriber.correction.phrase_analyzer import PhraseAnalyzer
 from lyrics_transcriber.correction.text_utils import clean_text
 
 

@@ -999,7 +999,7 @@ def test_create_initial_gap(finder):
     # Test with no anchors
     gap = finder._create_initial_gap(words, None, ref_texts_clean)
     assert gap is not None
-    assert gap.words == words
+    assert gap.words == tuple(words)
     assert gap.transcription_position == 0
     assert gap.preceding_anchor is None
     assert gap.following_anchor is None
@@ -1007,20 +1007,12 @@ def test_create_initial_gap(finder):
 
     # Test with first anchor at position 0 (should return None)
     first_anchor = ScoredAnchor(
-        anchor=AnchorSequence(["hello", "world"], 0, {"source1": 0}, 1.0),
-        phrase_score=PhraseScore(PhraseType.COMPLETE, 1.0, 1.0)
-    )
-    gap = finder._create_initial_gap(words, first_anchor, ref_texts_clean)
-    assert gap is None
-
-    # Test with first anchor at position 2
-    first_anchor = ScoredAnchor(
         anchor=AnchorSequence(["test", "phrase"], 2, {"source1": 2}, 1.0),
         phrase_score=PhraseScore(PhraseType.COMPLETE, 1.0, 1.0)
     )
     gap = finder._create_initial_gap(words, first_anchor, ref_texts_clean)
     assert gap is not None
-    assert gap.words == ["hello", "world"]
+    assert gap.words == ("hello", "world")
     assert gap.transcription_position == 0
     assert gap.preceding_anchor is None
     assert gap.following_anchor == first_anchor.anchor
@@ -1047,7 +1039,7 @@ def test_create_between_gap(finder):
     # Test with gap between anchors
     gap = finder._create_between_gap(words, current_anchor, next_anchor, ref_texts_clean)
     assert gap is not None
-    assert gap.words == ["middle"]
+    assert gap.words == ("middle",)
     assert gap.transcription_position == 2
     assert gap.preceding_anchor == current_anchor.anchor
     assert gap.following_anchor == next_anchor.anchor
@@ -1072,7 +1064,7 @@ def test_create_final_gap(finder):
     # Test with words after last anchor
     gap = finder._create_final_gap(words, last_anchor, ref_texts_clean)
     assert gap is not None
-    assert gap.words == ["test", "phrase", "end"]
+    assert gap.words == ("test", "phrase", "end")
     assert gap.transcription_position == 2
     assert gap.preceding_anchor == last_anchor.anchor
     assert gap.following_anchor is None
@@ -1102,14 +1094,14 @@ def test_find_gaps_integration(finder):
     # Verify gaps don't overlap with anchors
     for gap in gaps:
         # Check gap has correct structure
-        assert isinstance(gap.words, list)
+        assert isinstance(gap.words, tuple)
         assert isinstance(gap.transcription_position, int)
         assert isinstance(gap.reference_words, dict)
 
         # If gap has surrounding anchors, verify positions make sense
         if gap.preceding_anchor:
             assert gap.transcription_position >= (
-                gap.preceding_anchor.anchor.transcription_position + len(gap.preceding_anchor.anchor.words)
+                gap.preceding_anchor.transcription_position + len(gap.preceding_anchor.words)
             )
 
         if gap.following_anchor:

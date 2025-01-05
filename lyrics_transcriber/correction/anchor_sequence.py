@@ -6,7 +6,7 @@ from functools import partial
 import time
 
 from lyrics_transcriber.types import PhraseScore, AnchorSequence, GapSequence, ScoredAnchor
-from lyrics_transcriber.correction.text_analysis import PhraseAnalyzer
+from lyrics_transcriber.correction.phrase_analyzer import PhraseAnalyzer
 from lyrics_transcriber.correction.text_utils import clean_text
 
 
