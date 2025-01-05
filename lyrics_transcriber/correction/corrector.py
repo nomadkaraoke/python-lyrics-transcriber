@@ -10,6 +10,7 @@ from lyrics_transcriber.correction.handlers.multi_levenshtein import MultiWordLe
 from lyrics_transcriber.correction.handlers.metaphone import MetaphoneHandler
 from lyrics_transcriber.correction.handlers.semantic import SemanticHandler
 from lyrics_transcriber.correction.handlers.combined import CombinedHandler
+from lyrics_transcriber.correction.handlers.human import HumanHandler
 
 
 class LyricsCorrector:
@@ -29,11 +30,12 @@ class LyricsCorrector:
         # Default handlers in order of preference
         self.handlers = handlers or [
             ExactMatchHandler(),
-            MultiWordLevenshteinHandler(),
-            CombinedHandler(),  # Try combined matching first
+            # CombinedHandler(),  # Try combined matching first
             MetaphoneHandler(),  # Fall back to individual matchers
-            SemanticHandler(),
-            LevenshteinSimilarityHandler(),  # Last resort
+            # SemanticHandler(),
+            # MultiWordLevenshteinHandler(),
+            # LevenshteinSimilarityHandler(),  # Last resort
+            HumanHandler(),  # Open web UI for human to review and correct
         ]
 
     def run(self, transcription_results: List[TranscriptionResult], lyrics_results: List[LyricsData]) -> CorrectionResult:
@@ -111,19 +113,19 @@ class LyricsCorrector:
         # Track current position in segments/words
         current_segment_idx = 0
         current_word_idx = 0
-        
+
         # Keep track of which gaps have been corrected
         corrected_gaps = set()
 
         self.logger.debug(f"Starting correction process with {len(gap_sequences)} gaps")
-        
+
         for segment in segments:
             self.logger.debug(f"Processing segment {current_segment_idx}: {segment.text}")
             corrected_words = []
 
             for word in segment.words:
                 self.logger.debug(f"Processing word at position {current_word_idx}: {word.text}")
-                
+
                 gap = next(
                     (g for g in gap_sequences if g.transcription_position <= current_word_idx < g.transcription_position + g.length), None
                 )
