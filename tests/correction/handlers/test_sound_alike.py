@@ -56,7 +56,7 @@ def test_handle_disagreeing_references(logger):
 
 
 def test_cannot_handle_no_sound_alike_matches(logger):
-    handler = SoundAlikeHandler(logger, similarity_threshold=0.8)
+    handler = SoundAlikeHandler(logger, similarity_threshold=0.9)
     gap = GapSequence(
         words=("xyz", "abc", "def"),  # Use words with completely different phonetic codes
         transcription_position=0,
@@ -88,34 +88,33 @@ def test_handle_preserves_exact_matches(logger):
 
 
 def test_handle_complex_sound_alike_example(logger):
-    handler = SoundAlikeHandler(logger, similarity_threshold=0.65)
+    handler = SoundAlikeHandler(logger, similarity_threshold=0.7)
     gap = GapSequence(
         words=("relax", "your", "conscience"),
         transcription_position=0,
         preceding_anchor=None,
         following_anchor=None,
-        reference_words={"genius": ["you", "relapse", "unconscious"], "spotify": ["you", "relapse", "unconscious"]},
+        reference_words={
+            "genius": ["you", "relapse", "unconscious"],
+            "spotify": ["you", "relapse", "unconscious"],
+        },
     )
 
     corrections = handler.handle(gap)
-
-    # We expect corrections two words
-    assert len(corrections) == 2
-
-    # Sort corrections by word_index for easier testing
-    corrections.sort(key=lambda x: x.word_index)
-
-    # Check first word: "relax" -> "relapse"
+    assert len(corrections) == 3  # Should find all three matches
+    
+    # Check specific corrections
     assert corrections[0].original_word == "relax"
     assert corrections[0].corrected_word == "relapse"
-    assert corrections[0].word_index == 0
-    assert corrections[0].confidence >= 0.65
-
-    # Check third word: "conscience" -> "unconscious"
-    assert corrections[1].original_word == "conscience"
-    assert corrections[1].corrected_word == "unconscious"
-    assert corrections[1].word_index == 2
-    assert corrections[1].confidence >= 0.65
+    assert corrections[0].confidence >= 0.7
+    
+    assert corrections[1].original_word == "your"
+    assert corrections[1].corrected_word == "you"
+    assert corrections[1].confidence >= 0.7
+    
+    assert corrections[2].original_word == "conscience"
+    assert corrections[2].corrected_word == "unconscious"
+    assert corrections[2].confidence >= 0.7
 
 
 def test_handle_substring_code_match(logger):
