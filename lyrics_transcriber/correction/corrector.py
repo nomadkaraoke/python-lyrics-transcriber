@@ -6,6 +6,9 @@ from lyrics_transcriber.correction.anchor_sequence import AnchorSequenceFinder
 from lyrics_transcriber.correction.handlers.base import GapCorrectionHandler
 from lyrics_transcriber.correction.handlers.word_count_match import WordCountMatchHandler
 from lyrics_transcriber.correction.handlers.extra_words import ExtraWordsHandler
+from lyrics_transcriber.correction.handlers.sound_alike import SoundAlikeHandler
+from lyrics_transcriber.correction.handlers.levenshtein import LevenshteinHandler
+from lyrics_transcriber.correction.handlers.repeat import RepeatCorrectionHandler
 
 
 class LyricsCorrector:
@@ -26,12 +29,9 @@ class LyricsCorrector:
         self.handlers = handlers or [
             WordCountMatchHandler(),
             ExtraWordsHandler(),
-            # AnchorWordsInGapHandler(), # "Correct" words which are in the gap but are identical in the reference
-            # CombinedHandler(),  # Try combined matching first
-            # MetaphoneHandler(),  # Fall back to individual matchers
-            # SemanticHandler(),
-            # MultiWordLevenshteinHandler(),
-            # LevenshteinSimilarityHandler(),  # Last resort
+            RepeatCorrectionHandler(),
+            SoundAlikeHandler(),
+            LevenshteinHandler(),  # Last resort
             # HumanHandler(),  # Open web UI for human to review and correct
         ]
 
@@ -143,6 +143,11 @@ class LyricsCorrector:
                     break
 
                 self.logger.debug(f"Trying handler {handler.__class__.__name__}")
+
+                # Pass previous corrections to RepeatCorrectionHandler
+                if isinstance(handler, RepeatCorrectionHandler):
+                    handler.set_previous_corrections(all_corrections)
+
                 if handler.can_handle(gap):
                     self.logger.debug(f"{handler.__class__.__name__} can handle gap")
                     corrections = handler.handle(gap)

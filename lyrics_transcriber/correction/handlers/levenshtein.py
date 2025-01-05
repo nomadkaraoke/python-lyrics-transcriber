@@ -1,23 +1,126 @@
+from typing import List, Optional
 import string
-from typing import Dict, List, Optional, Set, Tuple
 import Levenshtein
+import logging
 
-from lyrics_transcriber.types import GapSequence, Word, WordCorrection
+from lyrics_transcriber.types import GapSequence, WordCorrection
 from lyrics_transcriber.correction.handlers.base import GapCorrectionHandler
 
 
-class LevenshteinSimilarityHandler(GapCorrectionHandler):
-    """Handles corrections based on Levenshtein (edit distance) similarity between words."""
+class LevenshteinHandler(GapCorrectionHandler):
+    """Handles corrections based on Levenshtein (edit distance) similarity between words.
 
-    def __init__(self, similarity_threshold: float = 0.65):
+    This handler looks for words that are similar in spelling to reference words in the same position.
+    The similarity calculation includes:
+    1. Basic Levenshtein ratio
+    2. Bonus for words starting with the same letter
+    3. Penalty for words starting with different letters
+    4. Bonus for similar length words
+
+    Examples:
+        Gap: "wold" (misspelling)
+        References:
+            genius: ["world"]
+            spotify: ["world"]
+        Result:
+            - Correct "wold" to "world" (high confidence due to small edit distance)
+
+        Gap: "worde" (misspelling)
+        References:
+            genius: ["world"]
+            spotify: ["words"]
+        Result:
+            - Correct "worde" to "world" (lower confidence due to disagreeing sources)
+    """
+
+    def __init__(self, similarity_threshold: float = 0.65, logger: Optional[logging.Logger] = None):
         self.similarity_threshold = similarity_threshold
+        self.logger = logger or logging.getLogger(__name__)
+
+    def can_handle(self, gap: GapSequence) -> bool:
+        """Check if we can handle this gap - we'll try if there are reference words."""
+        if not gap.reference_words:
+            self.logger.debug("No reference words available")
+            return False
+
+        if not gap.words:
+            self.logger.debug("No gap words available")
+            return False
+
+        # Check if any word has sufficient similarity to reference
+        for i, word in enumerate(gap.words):
+            for ref_words in gap.reference_words.values():
+                if i < len(ref_words):
+                    similarity = self._get_string_similarity(word, ref_words[i])
+                    if similarity >= self.similarity_threshold:
+                        self.logger.debug(f"Found similar word: '{word}' -> '{ref_words[i]}' ({similarity:.2f})")
+                        return True
+
+        self.logger.debug("No words meet similarity threshold")
+        return False
+
+    def handle(self, gap: GapSequence) -> List[WordCorrection]:
+        """Try to correct words based on string similarity."""
+        corrections = []
+
+        # Process each word in the gap
+        for i, word in enumerate(gap.words):
+            # Skip if word is empty or just punctuation
+            if not word.strip():
+                continue
+
+            # Skip exact matches
+            if any(i < len(ref_words) and word.lower() == ref_words[i].lower() for ref_words in gap.reference_words.values()):
+                self.logger.debug(f"Skipping exact match: '{word}'")
+                continue
+
+            # Find matching reference words at this position
+            matches = {}  # word -> (sources, similarity)
+            for source, ref_words in gap.reference_words.items():
+                if i >= len(ref_words):
+                    continue
+
+                ref_word = ref_words[i]
+                similarity = self._get_string_similarity(word, ref_word)
+
+                if similarity >= self.similarity_threshold:
+                    self.logger.debug(f"Found match: '{word}' -> '{ref_word}' ({similarity:.2f})")
+                    if ref_word not in matches:
+                        matches[ref_word] = ([], similarity)
+                    matches[ref_word][0].append(source)
+
+            # Create correction for best match if any found
+            if matches:
+                best_match, (sources, similarity) = max(
+                    matches.items(), key=lambda x: (len(x[1][0]), x[1][1])  # Sort by number of sources, then similarity
+                )
+
+                source_confidence = len(sources) / len(gap.reference_words)
+                final_confidence = similarity * source_confidence
+
+                self.logger.debug(f"Creating correction: {word} -> {best_match} (confidence: {final_confidence})")
+                corrections.append(
+                    WordCorrection(
+                        original_word=word,
+                        corrected_word=best_match,
+                        segment_index=0,
+                        word_index=gap.transcription_position + i,
+                        confidence=final_confidence,
+                        source=", ".join(sources),
+                        reason=f"LevenshteinHandler: String similarity ({final_confidence:.2f})",
+                        alternatives={k: len(v[0]) for k, v in matches.items()},
+                        is_deletion=False,
+                    )
+                )
+
+        return corrections
 
     def _clean_word(self, word: str) -> str:
         """Remove punctuation and standardize for comparison."""
         return word.strip().lower().strip(string.punctuation)
 
     def _get_string_similarity(self, word1: str, word2: str) -> float:
-        """Calculate string similarity using Levenshtein ratio."""
+        """Calculate string similarity using Levenshtein ratio with adjustments."""
         # Clean words
         w1, w2 = self._clean_word(word1), self._clean_word(word2)
         if not w1 or not w2:
@@ -38,50 +141,3 @@ class LevenshteinSimilarityHandler(GapCorrectionHandler):
         similarity = (similarity + length_ratio) / 2
 
         return similarity
-
-    def _find_best_match(self, word: str, reference_words: Dict[str, List[str]]) -> Tuple[Optional[str], float, Set[str]]:
-        """Find the best matching reference word across all sources."""
-        best_match = None
-        best_similarity = 0.0
-        matching_sources = set()
-
-        # Get unique reference words
-        all_ref_words = {w for words in reference_words.values() for w in words}
-
-        for ref_word in all_ref_words:
-            similarity = self._get_string_similarity(word, ref_word)
-
-            if similarity > best_similarity:
-                best_similarity = similarity
-                best_match = ref_word
-                matching_sources = {source for source, words in reference_words.items() if ref_word in words}
-
-        return best_match, best_similarity, matching_sources
-
-    def can_handle(self, gap: GapSequence, current_word_idx: int) -> bool:
-        """Check if we can handle this gap - we'll try if there are reference words."""
-        return bool(gap.reference_words)
-
-    def handle(self, gap: GapSequence, word: Word, current_word_idx: int, segment_idx: int) -> Optional[WordCorrection]:
-        """Try to correct word based on string similarity."""
-        # Skip if word is empty or just punctuation
-        if not word.text.strip():
-            return None
-
-        # Find best matching reference word
-        best_match, similarity, matching_sources = self._find_best_match(word.text, gap.reference_words)
-
-        # Return correction if we found a good match
-        if best_match and similarity >= self.similarity_threshold and best_match.lower() != word.text.lower():
-            return WordCorrection(
-                original_word=word.text,
-                corrected_word=best_match,
-                segment_index=segment_idx,
-                word_index=current_word_idx,
-                confidence=similarity,
-                source=", ".join(matching_sources),
-                reason=f"String similarity ({similarity:.2f})",
-                alternatives={},
-            )
-
-        return None
