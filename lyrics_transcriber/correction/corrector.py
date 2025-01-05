@@ -5,6 +5,7 @@ from lyrics_transcriber.types import GapSequence, LyricsData, TranscriptionResul
 from lyrics_transcriber.correction.anchor_sequence import AnchorSequenceFinder
 from lyrics_transcriber.correction.handlers.base import GapCorrectionHandler
 from lyrics_transcriber.correction.handlers.word_count_match import WordCountMatchHandler
+from lyrics_transcriber.correction.handlers.extra_words import ExtraWordsHandler
 
 
 class LyricsCorrector:
@@ -24,6 +25,7 @@ class LyricsCorrector:
         # Default handlers in order of preference
         self.handlers = handlers or [
             WordCountMatchHandler(),
+            ExtraWordsHandler(),
             # AnchorWordsInGapHandler(), # "Correct" words which are in the gap but are identical in the reference
             # CombinedHandler(),  # Try combined matching first
             # MetaphoneHandler(),  # Fall back to individual matchers
@@ -176,26 +178,28 @@ class LyricsCorrector:
             for word in segment.words:
                 if current_word_idx in correction_map:
                     correction = correction_map[current_word_idx]
-                    corrected_words.append(
-                        Word(
-                            text=self._preserve_formatting(correction.original_word, correction.corrected_word),
-                            start_time=word.start_time,
-                            end_time=word.end_time,
-                            confidence=correction.confidence,
+                    if not correction.is_deletion:
+                        corrected_words.append(
+                            Word(
+                                text=self._preserve_formatting(correction.original_word, correction.corrected_word),
+                                start_time=word.start_time,
+                                end_time=word.end_time,
+                                confidence=correction.confidence,
+                            )
                         )
-                    )
                 else:
                     corrected_words.append(word)
                 current_word_idx += 1
 
-            corrected_segments.append(
-                LyricsSegment(
-                    text=" ".join(w.text for w in corrected_words),
-                    words=corrected_words,
-                    start_time=segment.start_time,
-                    end_time=segment.end_time,
+            if corrected_words:  # Only create segment if it has words
+                corrected_segments.append(
+                    LyricsSegment(
+                        text=" ".join(w.text for w in corrected_words),
+                        words=corrected_words,
+                        start_time=segment.start_time,
+                        end_time=segment.end_time,
+                    )
                 )
-            )
 
         return corrected_segments
 

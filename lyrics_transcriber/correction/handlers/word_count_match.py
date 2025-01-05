@@ -40,7 +40,7 @@ class WordCountMatchHandler(GapCorrectionHandler):
                         word_index=gap.transcription_position + i,
                         confidence=1.0,
                         source=sources,
-                        reason="Reference sources had same word count as gap",
+                        reason="WordCountMatchHandler: Reference sources had same word count as gap",
                         alternatives={},
                     )
                 )

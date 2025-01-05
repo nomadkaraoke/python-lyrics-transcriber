@@ -91,13 +91,14 @@ class WordCorrection:
     """Details about a single word correction."""
 
     original_word: str
-    corrected_word: str
+    corrected_word: str  # Empty string indicates word should be deleted
     segment_index: int
     word_index: int
     source: str  # e.g., "spotify", "genius"
     confidence: Optional[float]
     reason: str  # e.g., "matched_in_3_sources", "high_confidence_match"
     alternatives: Dict[str, int]  # Other possible corrections and their occurrence counts
+    is_deletion: bool = False  # New field to explicitly mark deletions
 
     def to_dict(self) -> Dict[str, Any]:
         return asdict(self)
@@ -231,7 +232,7 @@ class GapSequence:
     def __post_init__(self):
         # Convert words list to tuple if it's not already
         if isinstance(self.words, list):
-            object.__setattr__(self, 'words', tuple(self.words))
+            object.__setattr__(self, "words", tuple(self.words))
 
     def add_correction(self, correction: WordCorrection) -> None:
         """Add a correction and mark its position as corrected."""
@@ -246,8 +247,7 @@ class GapSequence:
     @property
     def uncorrected_words(self) -> List[Tuple[int, str]]:
         """Get list of (position, word) tuples for words that haven't been corrected yet."""
-        return [(i, word) for i, word in enumerate(self.words) 
-                if i not in self._corrected_positions]
+        return [(i, word) for i, word in enumerate(self.words) if i not in self._corrected_positions]
 
     @property
     def is_fully_corrected(self) -> bool:
@@ -261,8 +261,7 @@ class GapSequence:
     def __eq__(self, other):
         if not isinstance(other, GapSequence):
             return NotImplemented
-        return (self.words == other.words and 
-                self.transcription_position == other.transcription_position)
+        return self.words == other.words and self.transcription_position == other.transcription_position
 
     @property
     def text(self) -> str:
