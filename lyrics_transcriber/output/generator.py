@@ -6,8 +6,9 @@ import subprocess
 from datetime import timedelta
 import json
 
-from lyrics_transcriber.types import LyricsData
+from lyrics_transcriber.types import LyricsData, LyricsSegment
 from lyrics_transcriber.correction.corrector import CorrectionResult
+from lyrics_transcriber.output import subtitles
 
 
 @dataclass
@@ -130,15 +131,38 @@ class OutputGenerator:
             self.logger.error(f"Failed to generate LRC file: {str(e)}")
             raise
 
-    def _write_lrc_file(self, output_path: str, segments: list) -> None:
-        """Write LRC file content with word-level timestamps."""
+    def _write_lrc_file(self, output_path: str, segments: List[LyricsSegment]) -> None:
+        """Write LRC file content with MidiCo-compatible word-level timestamps.
+
+        Args:
+            output_path: Path to write the LRC file
+            segments: List of LyricsSegment objects containing word timing data
+        """
         with open(output_path, "w", encoding="utf-8") as f:
+            # Write MidiCo header
+            f.write("[re:MidiCo]\n")
+
             for segment in segments:
-                # Write each word with its own timestamp on a new line
-                for word in segment.words:
+                for i, word in enumerate(segment.words):
                     start_time = self._format_lrc_timestamp(word.start_time)
-                    f.write(f"[{start_time}]{word.text}\n")
-                f.write("\n")  # Add extra newline after each segment
+
+                    # Add space after all words except last in segment
+                    text = word.text
+                    if i != len(segment.words) - 1:
+                        text += " "
+
+                    # Add "/" prefix for first word in segment
+                    prefix = "/" if i == 0 else ""
+
+                    # Write MidiCo formatted line
+                    f.write(f"[{start_time}]1:{prefix}{text}\n")
+
+    def _format_lrc_timestamp(self, seconds: float) -> str:
+        """Format timestamp for MidiCo LRC format (MM:SS.mmm)."""
+        minutes = int(seconds // 60)
+        seconds = seconds % 60
+        milliseconds = int((seconds % 1) * 1000)
+        return f"{minutes:02d}:{int(seconds):02d}.{milliseconds:03d}"
 
     def generate_ass(self, transcription_data: CorrectionResult, output_prefix: str) -> str:
         """Generate ASS format subtitles file."""
@@ -146,7 +170,20 @@ class OutputGenerator:
         output_path = self._get_output_path(f"{output_prefix} (Lyrics Corrected)", "ass")
 
         try:
-            self._write_ass_file(output_path, transcription_data.corrected_segments)
+            # Create screens from segments
+            initial_screens = self._create_screens(transcription_data.corrected_segments)
+
+            # Get song duration from last segment's end time
+            song_duration = int(transcription_data.corrected_segments[-1].end_time)
+
+            # Process screens using subtitles library
+            screens = subtitles.set_segment_end_times(initial_screens, song_duration)
+            screens = subtitles.set_screen_start_times(screens)
+
+            # Generate ASS file using subtitles library
+            lyric_subtitles_ass = subtitles.create_styled_subtitles(screens, self.video_resolution_num, self.font_size)
+            lyric_subtitles_ass.write(output_path)
+
             self.logger.info(f"ASS file generated: {output_path}")
             return output_path
 
@@ -154,21 +191,40 @@ class OutputGenerator:
             self.logger.error(f"Failed to generate ASS file: {str(e)}")
             raise
 
-    def _write_ass_file(self, output_path: str, segments: list) -> None:
-        """Write ASS file content."""
-        with open(output_path, "w", encoding="utf-8") as f:
-            f.write(self._get_ass_header())
-            for segment in segments:
-                # Change from ts/end_ts to start_time/end_time
-                start_time = self._format_ass_timestamp(segment.start_time)
-                end_time = self._format_ass_timestamp(segment.end_time)
-                line = f"Dialogue: 0,{start_time},{end_time},Default,,0,0,0,,{segment.text}\n"
-                f.write(line)
+    def _create_screens(self, segments: List[LyricsSegment]) -> List[subtitles.LyricsScreen]:
+        """Create LyricsScreen objects from segments.
+
+        Args:
+            segments: List of LyricsSegment objects containing lyrics and timing data
+        """
+        self.logger.debug("Creating screens from segments")
+        screens: List[subtitles.LyricsScreen] = []
+        screen: Optional[subtitles.LyricsScreen] = None
+
+        max_lines_per_screen = 4
+        max_line_length = 36
+
+        for segment in segments:
+            # Create new screen if needed
+            if screen is None or len(screen.lines) >= max_lines_per_screen:
+                screen = subtitles.LyricsScreen(video_size=self.video_resolution_num, line_height=self.line_height, logger=self.logger)
+                screens.append(screen)
+                self.logger.debug(f"Created new screen. Total screens: {len(screens)}")
+
+            # Create line from segment
+            line = subtitles.LyricsLine()
+            lyric_segment = subtitles.LyricSegment(
+                text=segment.text, ts=timedelta(seconds=segment.start_time), end_ts=timedelta(seconds=segment.end_time)
+            )
+            line.segments.append(lyric_segment)
+            screen.lines.append(line)
+
+        return screens
 
     def generate_video(self, ass_path: str, audio_path: str, output_prefix: str) -> str:
         """Generate MP4 video with lyrics overlay."""
         self.logger.info("Generating video with lyrics overlay")
-        output_path = self._get_output_path(output_prefix, "mp4")
+        output_path = self._get_output_path(output_prefix, "mkv")
 
         try:
             cmd = self._build_ffmpeg_command(ass_path, audio_path, output_path)
@@ -181,28 +237,81 @@ class OutputGenerator:
             raise
 
     def _build_ffmpeg_command(self, ass_path: str, audio_path: str, output_path: str) -> list:
-        """Build FFmpeg command for video generation."""
+        """Build FFmpeg command for video generation with optimized settings."""
         width, height = self.video_resolution_num
-        cmd = ["ffmpeg", "-y"]
+
+        # fmt: off
+        cmd = [
+            "ffmpeg",
+            "-r", "30",  # Set frame rate to 30 fps
+        ]
 
         # Input source (background)
         if self.config.video_background_image:
-            cmd.extend(["-i", self.config.video_background_image])
+            self.logger.debug(
+                f"Using background image: {self.config.video_background_image}, "
+                f"with resolution: {width}x{height}"
+            )
+            cmd.extend([
+                "-loop", "1",  # Loop the image
+                "-i", self.config.video_background_image,
+            ])
         else:
-            cmd.extend(["-f", "lavfi", "-i", f"color=c={self.config.video_background_color}:s={width}x{height}"])
+            self.logger.debug(
+                f"Using solid {self.config.video_background_color} background "
+                f"with resolution: {width}x{height}"
+            )
+            cmd.extend([
+                "-f", "lavfi",
+                "-i", f"color=c={self.config.video_background_color}:s={width}x{height}:r=30"
+            ])
 
-        # Add audio and subtitle inputs
-        cmd.extend(["-i", audio_path, "-vf", f"ass={ass_path}", "-c:v", "libx264", "-c:a", "aac", "-shortest", output_path])
+        # Check for hardware acceleration support
+        video_codec = self._get_video_codec()
+        
+        # Add audio input and subtitle overlay
+        cmd.extend([
+            "-i", audio_path,
+            "-c:a", "flac",  # Re-encode audio as FLAC
+            "-vf", f"ass={ass_path}",  # Add subtitles
+            "-c:v", video_codec,
+            # Video quality settings
+            "-preset", "slow",  # Better compression efficiency
+            "-b:v", "5000k",  # Base video bitrate
+            "-minrate", "5000k",  # Minimum bitrate
+            "-maxrate", "20000k",  # Maximum bitrate
+            "-bufsize", "10000k",  # Buffer size (2x base rate)
+            "-shortest",  # End encoding after shortest stream
+            "-y",  # Overwrite output without asking
+        ])
+        # fmt: on
+
+        # Add output path
+        cmd.append(output_path)
 
         return cmd
 
+    def _get_video_codec(self) -> str:
+        """Determine the best available video codec."""
+        try:
+            ffmpeg_codes = subprocess.getoutput("ffmpeg -codecs")
+            if "h264_videotoolbox" in ffmpeg_codes:
+                self.logger.info("Using hardware accelerated h264_videotoolbox")
+                return "h264_videotoolbox"
+        except Exception as e:
+            self.logger.warning(f"Error checking for hardware acceleration: {e}")
+
+        return "libx264"
+
     def _run_ffmpeg_command(self, cmd: list) -> None:
-        """Execute FFmpeg command."""
+        """Execute FFmpeg command with output handling."""
         self.logger.debug(f"Running FFmpeg command: {' '.join(cmd)}")
         try:
-            subprocess.run(cmd, check=True)
+            # Use check_output to capture the output
+            output = subprocess.check_output(cmd, universal_newlines=True, stderr=subprocess.STDOUT)  # Redirect stderr to stdout
+            self.logger.debug(f"FFmpeg output: {output}")
         except subprocess.CalledProcessError as e:
-            self.logger.error(f"FFmpeg error: {str(e)}")
+            self.logger.error(f"FFmpeg error: {e.output}")
             raise
 
     def _get_video_params(self, resolution: str) -> tuple:
@@ -218,40 +327,6 @@ class OutputGenerator:
                 return (640, 360), 50, 50
             case _:
                 raise ValueError("Invalid video_resolution value. Must be one of: 4k, 1080p, 720p, 360p")
-
-    def _format_lrc_timestamp(self, seconds: float) -> str:
-        """Format timestamp for LRC format."""
-        time = timedelta(seconds=seconds)
-        minutes = int(time.total_seconds() / 60)
-        seconds = time.total_seconds() % 60
-        return f"{minutes:02d}:{seconds:05.2f}"
-
-    def _format_ass_timestamp(self, seconds: float) -> str:
-        """Format timestamp for ASS format."""
-        time = timedelta(seconds=seconds)
-        hours = int(time.total_seconds() / 3600)
-        minutes = int((time.total_seconds() % 3600) / 60)
-        seconds = time.total_seconds() % 60
-        centiseconds = int((seconds % 1) * 100)
-        seconds = int(seconds)
-        return f"{hours}:{minutes:02d}:{seconds:02d}.{centiseconds:02d}"
-
-    def _get_ass_header(self) -> str:
-        """Get ASS format header with style definitions."""
-        width, height = self.video_resolution_num
-        return f"""[Script Info]
-ScriptType: v4.00+
-PlayResX: {width}
-PlayResY: {height}
-WrapStyle: 0
-
-[V4+ Styles]
-Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
-Style: Default,Arial,{self.font_size},&H00FFFFFF,&H000000FF,&H00000000,&H00000000,0,0,0,0,100,100,0,0,1,2,2,2,10,10,10,1
-
-[Events]
-Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
-"""
 
     def write_plain_lyrics(self, lyrics_data: LyricsData, output_prefix: str) -> str:
         """Write plain text lyrics file."""

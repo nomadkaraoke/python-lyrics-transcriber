@@ -310,6 +310,7 @@ class LyricsTranscriber:
                 lyrics_results=self.results.lyrics_results,
                 output_prefix=self.output_prefix,
                 audio_filepath=self.audio_filepath,
+                render_video=self.output_config.render_video,
             )
 
             # Store output paths - access attributes directly instead of using .get()
