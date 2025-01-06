@@ -21,10 +21,10 @@ Functions for generating ASS subtitles from lyric data
 class LyricSegmentIterator:
     def __init__(self, lyrics_segments: List[str]):
         self._segments = lyrics_segments
-        self._current_segment = 0
+        self._current_segment = None
 
     def __iter__(self):
-        self._current_segment = 0
+        self._current_sement = 0
         return self
 
     def __next__(self):
@@ -52,17 +52,17 @@ class LyricSegment:
     def to_ass(self) -> str:
         """Render this segment as part of an ASS event line"""
         duration = (self.end_ts - self.ts).total_seconds() * 100
-        return rf"{{\kf{duration}}}{self.text}"
+        return f"{{\kf{duration}}}{self.text}"
 
     def to_dict(self) -> dict:
-        return {"text": self.text, "ts": self.ts.total_seconds(), "end_ts": self.end_ts.total_seconds() if self.end_ts else None}
+        return {"text": self.text, "ts": str(self.ts), "end_ts": str(self.end_ts) if self.end_ts else None}
 
     @classmethod
     def from_dict(cls, data: dict) -> "LyricSegment":
         return cls(
             text=data["text"],
-            ts=timedelta(seconds=data["ts"]),
-            end_ts=timedelta(seconds=data["end_ts"]) if data["end_ts"] is not None else None,
+            ts=timedelta(seconds=float(data["ts"])),
+            end_ts=timedelta(seconds=float(data["end_ts"])) if data["end_ts"] else None,
         )
 
 
@@ -76,7 +76,7 @@ class LyricsLine:
 
     @property
     def end_ts(self) -> Optional[timedelta]:
-        return self.segments[-1].end_ts if self.segments else None
+        return self.segments[-1].end_ts
 
     @ts.setter
     def ts(self, value):
@@ -108,7 +108,7 @@ class LyricsLine:
         """Decorate line with karaoke tags"""
         # Prefix the tag with centisecs prior to line in screen
         start_time = (self.ts - screen_start_ts).total_seconds() * 100
-        line = rf"{{\k{start_time}}}"
+        line = f"{{\k{start_time}}}"
         prev_end: Optional[timedelta] = None
         for s in self.segments:
             if prev_end is not None and prev_end < s.ts:
@@ -191,12 +191,12 @@ class LyricsScreen:
         return LyricsScreen(new_lines, start_ts)
 
     def to_dict(self) -> dict:
-        return {"lines": [line.to_dict() for line in self.lines], "start_ts": self.start_ts.total_seconds() if self.start_ts else None}
+        return {"lines": [line.to_dict() for line in self.lines], "start_ts": str(self.start_ts) if self.start_ts else None}
 
     @classmethod
     def from_dict(cls, data: dict) -> "LyricsScreen":
         lines = [LyricsLine.from_dict(line_data) for line_data in data["lines"]]
-        start_ts = timedelta(seconds=data["start_ts"]) if data["start_ts"] is not None else None
+        start_ts = timedelta(seconds=float(data["start_ts"])) if data["start_ts"] else None
         return cls(lines=lines, start_ts=start_ts)
 
 

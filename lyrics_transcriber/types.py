@@ -103,6 +103,11 @@ class WordCorrection:
     def to_dict(self) -> Dict[str, Any]:
         return asdict(self)
 
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> "WordCorrection":
+        """Create WordCorrection from dictionary."""
+        return cls(**data)
+
 
 @dataclass
 class TranscriptionData:
@@ -154,6 +159,21 @@ class PhraseScore:
         weights = {PhraseType.COMPLETE: 1.0, PhraseType.PARTIAL: 0.7, PhraseType.CROSS_BOUNDARY: 0.3}
         return weights[self.phrase_type] * 0.5 + self.natural_break_score * 0.3 + self.length_score * 0.2
 
+    def to_dict(self) -> Dict[str, Any]:
+        """Convert PhraseScore to dictionary for JSON serialization."""
+        return {
+            "phrase_type": self.phrase_type.value,  # Convert enum to value for JSON
+            "natural_break_score": self.natural_break_score,
+            "length_score": self.length_score,
+        }
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> "PhraseScore":
+        """Create PhraseScore from dictionary."""
+        return cls(
+            phrase_type=PhraseType(data["phrase_type"]), natural_break_score=data["natural_break_score"], length_score=data["length_score"]
+        )
+
 
 @dataclass
 class AnchorSequence:
@@ -185,6 +205,16 @@ class AnchorSequence:
             "confidence": self.confidence,
         }
 
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> "AnchorSequence":
+        """Create AnchorSequence from dictionary."""
+        return cls(
+            words=data["words"],
+            transcription_position=data["transcription_position"],
+            reference_positions=data["reference_positions"],
+            confidence=data["confidence"],
+        )
+
 
 @dataclass
 class ScoredAnchor:
@@ -215,6 +245,11 @@ class ScoredAnchor:
             },
             "total_score": self.total_score,
         }
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> "ScoredAnchor":
+        """Create ScoredAnchor from dictionary."""
+        return cls(anchor=AnchorSequence.from_dict(data["anchor"]), phrase_score=PhraseScore.from_dict(data["phrase_score"]))
 
 
 @dataclass
@@ -291,6 +326,22 @@ class GapSequence:
             "corrections": [c.to_dict() for c in self.corrections],
         }
 
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> "GapSequence":
+        """Create GapSequence from dictionary."""
+        gap = cls(
+            words=tuple(data["words"]),
+            transcription_position=data["transcription_position"],
+            preceding_anchor=AnchorSequence.from_dict(data["preceding_anchor"]) if data["preceding_anchor"] else None,
+            following_anchor=AnchorSequence.from_dict(data["following_anchor"]) if data["following_anchor"] else None,
+            reference_words=data["reference_words"],
+        )
+        # Add any corrections from the data
+        if "corrections" in data:
+            for correction_data in data["corrections"]:
+                gap.add_correction(WordCorrection.from_dict(correction_data))
+        return gap
+
 
 @dataclass
 class CorrectionResult:
@@ -313,6 +364,7 @@ class CorrectionResult:
     reference_texts: Dict[str, str]
     anchor_sequences: List[AnchorSequence]
     gap_sequences: List[GapSequence]
+    resized_segments: List[LyricsSegment]
 
     metadata: Dict[str, Any]
 
@@ -324,6 +376,7 @@ class CorrectionResult:
             "reference_texts": self.reference_texts,
             "anchor_sequences": [a.to_dict() for a in self.anchor_sequences],
             "gap_sequences": [g.to_dict() for g in self.gap_sequences],
+            "resized_segments": [s.to_dict() for s in self.resized_segments],
             "corrected_text": self.corrected_text,
             "corrections_made": self.corrections_made,
             "confidence": self.confidence,

@@ -1,9 +1,12 @@
-from typing import Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple, Union
 import logging
 from tqdm import tqdm
 from multiprocessing import Pool, cpu_count
 from functools import partial
 import time
+from pathlib import Path
+import json
+import hashlib
 
 from lyrics_transcriber.types import PhraseScore, AnchorSequence, GapSequence, ScoredAnchor
 from lyrics_transcriber.correction.phrase_analyzer import PhraseAnalyzer
@@ -13,12 +16,23 @@ from lyrics_transcriber.correction.text_utils import clean_text
 class AnchorSequenceFinder:
     """Identifies and manages anchor sequences between transcribed and reference lyrics."""
 
-    def __init__(self, min_sequence_length: int = 3, min_sources: int = 1, logger: Optional[logging.Logger] = None):
+    def __init__(
+        self,
+        cache_dir: Union[str, Path],
+        min_sequence_length: int = 3,
+        min_sources: int = 1,
+        logger: Optional[logging.Logger] = None,
+    ):
         self.min_sequence_length = min_sequence_length
         self.min_sources = min_sources
         self.logger = logger or logging.getLogger(__name__)
         self.phrase_analyzer = PhraseAnalyzer(logger=self.logger)
-        self.used_positions = {}  # Initialize empty dict for used positions
+        self.used_positions = {}
+
+        # Initialize cache directory
+        self.cache_dir = Path(cache_dir)
+        self.cache_dir.mkdir(parents=True, exist_ok=True)
+        self.logger.debug(f"Initialized AnchorSequenceFinder with cache dir: {self.cache_dir}")
 
     def _clean_text(self, text: str) -> str:
         """Clean text by removing punctuation and normalizing whitespace."""
@@ -79,15 +93,47 @@ class AnchorSequenceFinder:
             return anchor
         return None
 
-    def find_anchors(self, transcribed: str, references: Dict[str, str]) -> List[ScoredAnchor]:
-        """Find anchor sequences that appear in both transcription and references.
+    def _get_cache_key(self, transcribed: str, references: Dict[str, str]) -> str:
+        """Generate a unique cache key for the input combination."""
+        # Create a string that uniquely identifies the inputs
+        input_str = f"{transcribed}|{'|'.join(f'{k}:{v}' for k,v in sorted(references.items()))}"
+        return hashlib.md5(input_str.encode()).hexdigest()
 
-        Returns:
-            List of ScoredAnchor objects containing both the anchor sequences and their quality scores.
-        """
+    def _save_to_cache(self, cache_path: Path, data: Any) -> None:
+        """Save results to cache file."""
+        self.logger.debug(f"Saving to cache: {cache_path}")
+        with open(cache_path, "w") as f:
+            json.dump(data, f, indent=2)
+
+    def _load_from_cache(self, cache_path: Path) -> Optional[Any]:
+        """Load results from cache if available."""
+        try:
+            self.logger.debug(f"Attempting to load from cache: {cache_path}")
+            with open(cache_path, "r") as f:
+                return json.load(f)
+        except (FileNotFoundError, json.JSONDecodeError):
+            self.logger.debug("Cache miss or invalid cache file")
+            return None
+
+    def find_anchors(self, transcribed: str, references: Dict[str, str]) -> List[ScoredAnchor]:
+        """Find anchor sequences that appear in both transcription and references."""
+        cache_key = self._get_cache_key(transcribed, references)
+        cache_path = self.cache_dir / f"anchors_{cache_key}.json"
+
+        # Try to load from cache
+        if cached_data := self._load_from_cache(cache_path):
+            self.logger.info("Loading anchors from cache")
+            try:
+                return [ScoredAnchor.from_dict(anchor) for anchor in cached_data]
+            except KeyError as e:
+                self.logger.warning(f"Cache format mismatch: {e}. Recomputing.")
+
+        # If not in cache or cache format invalid, perform the computation
+        self.logger.info("Cache miss - computing anchors")
+
+        # Compute anchors (existing logic)
         self.logger.info(f"Finding anchor sequences for transcription with length {len(transcribed)}")
 
-        self.logger.info(f"Cleaning and splitting texts")
         # Clean and split texts
         trans_words = self._clean_text(transcribed).split()
         ref_texts_clean = {source: self._clean_text(text).split() for source, text in references.items()}
@@ -129,6 +175,12 @@ class AnchorSequenceFinder:
 
         self.logger.info(f"Found {len(candidate_anchors)} candidate anchors")
         filtered_anchors = self._remove_overlapping_sequences(candidate_anchors, transcribed)
+
+        # Before returning, save to cache with correct format
+        self._save_to_cache(
+            cache_path, [{"anchor": anchor.anchor.to_dict(), "phrase_score": anchor.phrase_score.to_dict()} for anchor in filtered_anchors]
+        )
+
         return filtered_anchors
 
     def _score_sequence(self, words: List[str], context: str) -> PhraseScore:
@@ -247,15 +299,10 @@ class AnchorSequenceFinder:
     def _score_anchor_static(anchor: AnchorSequence, context: str) -> ScoredAnchor:
         """Static version of _score_anchor for multiprocessing compatibility."""
         # Create analyzer only once per process
-        if not hasattr(AnchorSequenceFinder._score_anchor_static, '_phrase_analyzer'):
-            AnchorSequenceFinder._score_anchor_static._phrase_analyzer = PhraseAnalyzer(
-                logger=logging.getLogger(__name__)
-            )
-        
-        phrase_score = AnchorSequenceFinder._score_anchor_static._phrase_analyzer.score_phrase(
-            anchor.words, 
-            context
-        )
+        if not hasattr(AnchorSequenceFinder._score_anchor_static, "_phrase_analyzer"):
+            AnchorSequenceFinder._score_anchor_static._phrase_analyzer = PhraseAnalyzer(logger=logging.getLogger(__name__))
+
+        phrase_score = AnchorSequenceFinder._score_anchor_static._phrase_analyzer.score_phrase(anchor.words, context)
         return ScoredAnchor(anchor=anchor, phrase_score=phrase_score)
 
     def _get_reference_words(self, source: str, ref_words: List[str], start_pos: Optional[int], end_pos: Optional[int]) -> List[str]:
@@ -357,6 +404,16 @@ class AnchorSequenceFinder:
 
     def find_gaps(self, transcribed: str, anchors: List[ScoredAnchor], references: Dict[str, str]) -> List[GapSequence]:
         """Find gaps between anchor sequences in the transcribed text."""
+        cache_key = self._get_cache_key(transcribed, references)
+        cache_path = self.cache_dir / f"gaps_{cache_key}.json"
+
+        # Try to load from cache
+        if cached_data := self._load_from_cache(cache_path):
+            self.logger.info("Loading gaps from cache")
+            return [GapSequence.from_dict(gap) for gap in cached_data]
+
+        # If not in cache, perform the computation
+        self.logger.info("Cache miss - computing gaps")
         words = self._clean_text(transcribed).split()
         ref_texts_clean = {source: self._clean_text(text).split() for source, text in references.items()}
 
@@ -376,4 +433,6 @@ class AnchorSequenceFinder:
         if sorted_anchors and (final_gap := self._create_final_gap(words, sorted_anchors[-1], ref_texts_clean)):
             gaps.append(final_gap)
 
+        # Save to cache
+        self._save_to_cache(cache_path, [gap.to_dict() for gap in gaps])
         return gaps

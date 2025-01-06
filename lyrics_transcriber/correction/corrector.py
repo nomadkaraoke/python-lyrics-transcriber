@@ -1,5 +1,6 @@
-from typing import List, Optional, Tuple
+from typing import List, Optional, Tuple, Union
 import logging
+from pathlib import Path
 
 from lyrics_transcriber.types import GapSequence, LyricsData, TranscriptionResult, CorrectionResult, LyricsSegment, WordCorrection, Word
 from lyrics_transcriber.correction.anchor_sequence import AnchorSequenceFinder
@@ -18,12 +19,13 @@ class LyricsCorrector:
 
     def __init__(
         self,
+        cache_dir: Union[str, Path],
         handlers: Optional[List[GapCorrectionHandler]] = None,
         anchor_finder: Optional[AnchorSequenceFinder] = None,
         logger: Optional[logging.Logger] = None,
     ):
         self.logger = logger or logging.getLogger(__name__)
-        self.anchor_finder = anchor_finder or AnchorSequenceFinder(logger=self.logger)
+        self.anchor_finder = anchor_finder or AnchorSequenceFinder(cache_dir=cache_dir, logger=self.logger)
 
         # Default handlers in order of preference
         self.handlers = handlers or [
@@ -70,6 +72,7 @@ class LyricsCorrector:
                 transcribed_text=transcribed_text,
                 reference_texts=reference_texts,
                 anchor_sequences=anchor_sequences,
+                resized_segments=[],
                 gap_sequences=gap_sequences,
                 metadata={
                     "anchor_sequences_count": len(anchor_sequences),
@@ -221,6 +224,7 @@ class LyricsCorrector:
             reference_texts={},
             anchor_sequences=[],
             gap_sequences=[],
+            resized_segments=[],
             metadata={
                 "error": "Correction failed, using original transcription",
                 "anchor_sequences_count": 0,
