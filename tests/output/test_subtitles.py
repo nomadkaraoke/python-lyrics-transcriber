@@ -4,11 +4,9 @@ from lyrics_transcriber.output.subtitles import (
     LyricSegment,
     LyricsLine,
     LyricsScreen,
-    set_segment_end_times,
-    set_screen_start_times,
     LyricSegmentIterator,
-    create_styled_subtitles,
     LyricsObjectJSONEncoder,
+    SubtitlesGenerator,
 )
 from lyrics_transcriber.output.ass.ass import ASS
 from lyrics_transcriber.output.ass.style import Style
@@ -105,7 +103,9 @@ def test_set_segment_end_times():
         )
     ]
 
-    result = set_segment_end_times(screens, 5)
+    generator = SubtitlesGenerator(output_dir="test_output", video_resolution=(1920, 1080), font_size=48, line_height=60)
+
+    result = generator.set_segment_end_times(screens, 5)
     assert result[0].lines[0].segments[0].end_ts == timedelta(seconds=2)
     assert result[0].lines[0].segments[1].end_ts == timedelta(seconds=5)
 
@@ -116,7 +116,9 @@ def test_set_screen_start_times():
         LyricsScreen(lines=[LyricsLine([LyricSegment("world", timedelta(seconds=3), timedelta(seconds=4))])]),
     ]
 
-    result = set_screen_start_times(screens)
+    generator = SubtitlesGenerator(output_dir="test_output", video_resolution=(1920, 1080), font_size=48, line_height=60)
+
+    result = generator.set_screen_start_times(screens)
     assert result[0].start_ts == timedelta(seconds=0)
     assert result[1].start_ts == timedelta(seconds=2.1)  # Previous end + 0.1s
 
@@ -217,7 +219,9 @@ def test_create_styled_subtitles():
         line_height=60,
     )
 
-    subtitles = create_styled_subtitles(lyric_screens=[screen], resolution=(1920, 1080), fontsize=48)
+    generator = SubtitlesGenerator(output_dir="test_output", video_resolution=(1920, 1080), font_size=48, line_height=60)
+
+    subtitles = generator.create_styled_subtitles([screen], (1920, 1080), 48)
 
     assert isinstance(subtitles, ASS)
     assert len(subtitles.styles) == 1
@@ -289,3 +293,23 @@ def test_lyrics_line_blank_segments():
     assert "world" in text
     # Check for the blank segment timing tag
     assert "\\k100.0" in text  # 1 second gap = 100 centiseconds
+
+
+def test_subtitle_generator():
+    generator = SubtitlesGenerator(output_dir="test_output", video_resolution=(1920, 1080), font_size=48, line_height=60)
+
+    # Test _get_output_path
+    output_path = generator._get_output_path("test", "ass")
+    assert output_path == "test_output/test.ass"
+
+    # Test _create_screens
+    segments = [
+        LyricSegment(text="Hello", ts=timedelta(seconds=1.0), end_ts=timedelta(seconds=2.0)),
+        LyricSegment(text="World", ts=timedelta(seconds=2.0), end_ts=timedelta(seconds=3.0))
+    ]
+    
+    screens = generator._create_screens(segments)
+    assert len(screens) == 1
+    assert len(screens[0].lines) == 2
+    assert screens[0].lines[0].segments[0].text == "Hello"
+    assert screens[0].lines[1].segments[0].text == "World"

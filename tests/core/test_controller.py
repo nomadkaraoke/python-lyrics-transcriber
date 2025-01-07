@@ -169,6 +169,7 @@ def test_generate_outputs(basic_transcriber, mock_output_generator):
         lyrics_results=[],
         output_prefix="Test Artist - Test Song",
         audio_filepath=basic_transcriber.audio_filepath,
+        render_video=False
     )
 
     # Verify results
