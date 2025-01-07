@@ -112,7 +112,7 @@ class OutputGenerator:
             outputs.original_txt = self.plain_text.write_original_transcription(transcription_corrected, output_prefix)
 
             # Resize corrected segments to ensure none are longer than max_line_length
-            resized_segments = self.segment_resizer.resize_segments(transcription_corrected.corrected_segments)
+            resized_segments = self.segment_resizer.resize_segments(transcription_corrected.corrected_segments[:2])
             transcription_corrected.resized_segments = resized_segments
             outputs.corrections_json = self.write_corrections_data(transcription_corrected, output_prefix)
 

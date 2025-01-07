@@ -232,8 +232,15 @@ class SubtitlesGenerator:
 
         try:
             self.logger.debug(f"Processing {len(segments)} segments")
-            for segment in segments:
-                self.logger.debug(f"Segment: {segment.text} ({segment.start_time} - {segment.end_time})")
+            for i, segment in enumerate(segments):
+                self.logger.debug(f"\nSegment {i}:")
+                self.logger.debug(f"  Text: {segment.text}")
+                self.logger.debug(f"  Timing: {segment.start_time:.3f}s - {segment.end_time:.3f}s")
+                self.logger.debug(f"  Words ({len(segment.words)}):")
+                for j, word in enumerate(segment.words):
+                    self.logger.debug(f"    Word {j}: '{word.text}' ({word.start_time:.3f}s - {word.end_time:.3f}s)")
+                    if word.confidence is not None:
+                        self.logger.debug(f"      Confidence: {word.confidence:.3f}")
 
             initial_screens = self._create_screens(segments)
             self.logger.debug(f"Created {len(initial_screens)} initial screens")
