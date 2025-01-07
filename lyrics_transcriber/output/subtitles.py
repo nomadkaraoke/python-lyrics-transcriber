@@ -42,6 +42,11 @@ class LyricsLine:
     segments: List[LyricsSegment] = field(default_factory=list)
     logger: Optional[logging.Logger] = None
 
+    def __post_init__(self):
+        """Ensure logger is initialized"""
+        if self.logger is None:
+            self.logger = logging.getLogger(__name__)
+
     @property
     def ts(self) -> Optional[float]:
         if not self.segments:
@@ -129,7 +134,12 @@ class LyricsScreen:
     start_ts: Optional[timedelta] = None
     video_size: Tuple[int, int] = None
     line_height: int = None
-    logger: logging.Logger = None
+    logger: Optional[logging.Logger] = None
+
+    def __post_init__(self):
+        """Ensure logger is initialized"""
+        if self.logger is None:
+            self.logger = logging.getLogger(__name__)
 
     @property
     def end_ts(self) -> timedelta:
