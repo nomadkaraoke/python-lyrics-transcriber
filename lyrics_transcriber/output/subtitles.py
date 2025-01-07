@@ -8,6 +8,7 @@ from typing import List, Optional, Tuple
 import json
 import itertools
 import logging
+import copy
 
 from lyrics_transcriber.types import LyricsSegment
 from lyrics_transcriber.output.ass.ass import ASS
@@ -37,65 +38,41 @@ class LyricSegmentIterator:
 
 
 @dataclass
-class LyricSegment:
-    text: str
-    ts: timedelta
-    end_ts: Optional[timedelta] = None
-
-    def adjust_timestamps(self, adjustment) -> "LyricSegment":
-        ts = self.ts + adjustment
-        end_ts = self.end_ts + adjustment if self.end_ts else None
-        return LyricSegment(self.text, ts, end_ts)
-
-    def to_ass(self) -> str:
-        """Render this segment as part of an ASS event line"""
-        duration = (self.end_ts - self.ts).total_seconds() * 100
-        return rf"{{\kf{duration}}}{self.text}"
-
-    def to_dict(self) -> dict:
-        return {
-            "text": self.text,
-            "ts": self.ts.total_seconds() if self.ts else None,
-            "end_ts": self.end_ts.total_seconds() if self.end_ts else None,
-        }
-
-    @classmethod
-    def from_dict(cls, data: dict) -> "LyricSegment":
-        return cls(
-            text=data["text"],
-            ts=timedelta(seconds=float(data["ts"])) if data["ts"] is not None else None,
-            end_ts=timedelta(seconds=float(data["end_ts"])) if data["end_ts"] is not None else None,
-        )
-
-
-@dataclass
 class LyricsLine:
-    segments: List[LyricSegment] = field(default_factory=list)
+    segments: List[LyricsSegment] = field(default_factory=list)
+    logger: Optional[logging.Logger] = None
 
     @property
-    def ts(self) -> Optional[timedelta]:
+    def ts(self) -> Optional[float]:
         if not self.segments:
+            self.logger.debug("No segments in line when getting ts")
             return None
-        return self.segments[0].ts
+        self.logger.debug(f"Getting ts from first segment: {self.segments[0].start_time}")
+        return self.segments[0].start_time
 
     @property
-    def end_ts(self) -> Optional[timedelta]:
+    def end_ts(self) -> Optional[float]:
         if not self.segments:
+            self.logger.debug("No segments in line when getting end_ts")
             return None
-        return self.segments[-1].end_ts
+        self.logger.debug(f"Getting end_ts from last segment: {self.segments[-1].end_time}")
+        return self.segments[-1].end_time
 
     @ts.setter
     def ts(self, value):
-        self.segments[0].ts = value
+        self.segments[0].start_time = value
 
     @end_ts.setter
     def end_ts(self, value):
-        self.segments[-1].end_ts = value
+        self.segments[-1].end_time = value
 
     def __str__(self):
         return "".join([f"{{{s.text}}}" for s in self.segments])
 
     def as_ass_event(self, screen_start: timedelta, screen_end: timedelta, style: Style, y_position: int):
+        self.logger.debug(f"Creating ASS event for line: {self}")
+        self.logger.debug(f"Screen timing: {screen_start} - {screen_end}, y_position: {y_position}")
+
         e = Event()
         e.type = "Dialogue"
         e.Layer = 0
@@ -104,30 +81,37 @@ class LyricsLine:
         e.End = screen_end.total_seconds()
         e.MarginV = y_position
         e.Text = self.decorate_ass_line(self.segments, screen_start)
-
-        # Set alignment to top-center
         e.Text = "{\\an8}" + e.Text
 
+        self.logger.debug(f"Created ASS event: {e.Text}")
         return e
 
     def decorate_ass_line(self, segments, screen_start_ts: timedelta):
-        """Decorate line with karaoke tags"""
-        # Prefix the tag with centisecs prior to line in screen
-        start_time = (self.ts - screen_start_ts).total_seconds() * 100
+        self.logger.debug(f"Decorating ASS line with {len(segments)} segments")
+        start_time = (timedelta(seconds=self.ts) - screen_start_ts).total_seconds() * 100
         line = rf"{{\k{start_time}}}"
-        prev_end: Optional[timedelta] = None
-        for s in self.segments:
-            if prev_end is not None and prev_end < s.ts:
-                blank_segment = LyricSegment("", prev_end, s.ts)
-                line += blank_segment.to_ass()
-            line += s.to_ass()
-            prev_end = s.end_ts
+        prev_end: Optional[float] = None
 
+        for s in segments:
+            self.logger.debug(f"Processing segment: {s.text} ({s.start_time} - {s.end_time})")
+            if prev_end is not None and prev_end < s.start_time:
+                duration = (s.start_time - prev_end) * 100
+                line += rf"{{\kf{duration}}}"
+                self.logger.debug(f"Added blank segment with duration: {duration}")
+            duration = (s.end_time - s.start_time) * 100
+            line += rf"{{\kf{duration}}}{s.text}"
+            prev_end = s.end_time
+
+        self.logger.debug(f"Final decorated line: {line}")
         return line
 
-    def adjust_timestamps(self, adjustment) -> "LyricsLine":
-        new_segments = [s.adjust_timestamps(adjustment) for s in self.segments]
-        start_ts = self.ts + adjustment if self.ts else None
+    def adjust_timestamps(self, adjustment: timedelta) -> "LyricsLine":
+        new_segments = []
+        for s in self.segments:
+            new_segment = copy.deepcopy(s)
+            new_segment.start_time += adjustment.total_seconds()
+            new_segment.end_time += adjustment.total_seconds()
+            new_segments.append(new_segment)
         return LyricsLine(new_segments)
 
     def to_dict(self) -> dict:
@@ -135,7 +119,7 @@ class LyricsLine:
 
     @classmethod
     def from_dict(cls, data: dict) -> "LyricsLine":
-        segments = [LyricSegment.from_dict(segment_data) for segment_data in data["segments"]]
+        segments = [LyricsSegment.from_dict(segment_data) for segment_data in data["segments"]]
         return cls(segments=segments)
 
 
@@ -149,38 +133,27 @@ class LyricsScreen:
 
     @property
     def end_ts(self) -> timedelta:
-        return self.lines[-1].end_ts
+        self.logger.debug(f"Getting end_ts from last line: {self.lines[-1].end_ts}")
+        return timedelta(seconds=self.lines[-1].end_ts)
 
     def get_line_y(self, line_num: int) -> int:
         _, h = self.video_size
         line_count = len(self.lines)
         total_height = line_count * self.line_height
-
-        # Calculate the top margin to center the lyrics block
         top_margin = (h - total_height) / 2
-
-        # Calculate the y-position for this specific line
         line_y = top_margin + (line_num * self.line_height)
 
-        # if self.logger:
-        #     self.logger.debug(f"Line {line_num + 1} positioning:")
-        #     self.logger.debug(f"  Video height: {h}")
-        #     self.logger.debug(f"  Total lines: {line_count}")
-        #     self.logger.debug(f"  Line height: {self.line_height}")
-        #     self.logger.debug(f"  Total lyrics height: {total_height}")
-        #     self.logger.debug(f"  Top margin: {top_margin}")
-        #     self.logger.debug(f"  Line y: {line_y}")
+        self.logger.debug(f"Calculated y position for line {line_num}: {line_y}")
+        self.logger.debug(f"Video height: {h}, Lines: {line_count}, Line height: {self.line_height}")
 
         return int(line_y)
 
     def as_ass_events(self, style: Style) -> List[Event]:
+        self.logger.debug(f"Creating ASS events for screen with {len(self.lines)} lines")
         events = []
         for i, line in enumerate(self.lines):
             y_position = self.get_line_y(i)
-
-            # if self.logger:
-            #     self.logger.debug(f"Creating ASS event for line {i + 1} at y-position: {y_position}")
-
+            self.logger.debug(f"Creating event for line {i} at y_position {y_position}")
             event = line.as_ass_event(self.start_ts, self.end_ts, style, y_position)
             events.append(event)
         return events
@@ -208,7 +181,7 @@ class LyricsScreen:
 
 class LyricsObjectJSONEncoder(json.JSONEncoder):
     def default(self, o):
-        if isinstance(o, (LyricSegment, LyricsLine, LyricsScreen)):
+        if isinstance(o, (LyricsSegment, LyricsLine, LyricsScreen)):
             return o.to_dict()
         return super().default(o)
 
@@ -244,99 +217,89 @@ class SubtitlesGenerator:
         return os.path.join(self.output_dir, f"{output_prefix}.{extension}")
 
     def generate_ass(self, segments: List[LyricsSegment], output_prefix: str) -> str:
-        """Generate ASS format subtitles file.
-
-        Args:
-            segments: List of LyricsSegment objects containing timing data
-            output_prefix: Prefix for output filename
-
-        Returns:
-            Path to generated ASS file
-        """
         self.logger.info("Generating ASS format subtitles")
         output_path = self._get_output_path(f"{output_prefix} (Lyrics Corrected)", "ass")
 
         try:
-            # Create screens from segments
+            self.logger.debug(f"Processing {len(segments)} segments")
+            for segment in segments:
+                self.logger.debug(f"Segment: {segment.text} ({segment.start_time} - {segment.end_time})")
+
             initial_screens = self._create_screens(segments)
+            self.logger.debug(f"Created {len(initial_screens)} initial screens")
 
-            # Get song duration from last segment's end time
             song_duration = int(segments[-1].end_time)
+            self.logger.debug(f"Song duration: {song_duration} seconds")
 
-            # Process screens using subtitles library
             screens = self.set_segment_end_times(initial_screens, song_duration)
+            self.logger.debug("Set segment end times")
+
             screens = self.set_screen_start_times(screens)
+            self.logger.debug("Set screen start times")
 
-            # Generate ASS file using subtitles library
             lyric_subtitles_ass = self.create_styled_subtitles(screens, self.video_resolution, self.font_size)
-            lyric_subtitles_ass.write(output_path)
+            self.logger.debug("Created styled subtitles")
 
+            lyric_subtitles_ass.write(output_path)
             self.logger.info(f"ASS file generated: {output_path}")
             return output_path
 
         except Exception as e:
-            self.logger.error(f"Failed to generate ASS file: {str(e)}")
+            self.logger.error(f"Failed to generate ASS file: {str(e)}", exc_info=True)
             raise
 
     def _create_screens(self, segments: List[LyricsSegment]) -> List[LyricsScreen]:
-        """Create LyricsScreen objects from segments.
-
-        Args:
-            segments: List of LyricsSegment objects containing lyrics and timing data
-
-        Returns:
-            List of LyricsScreen objects ready for ASS generation
-        """
         self.logger.debug("Creating screens from segments")
         screens: List[LyricsScreen] = []
         screen: Optional[LyricsScreen] = None
 
         max_lines_per_screen = 4
 
-        for segment in segments:
-            # Create new screen if needed
+        for i, segment in enumerate(segments):
+            self.logger.debug(f"Processing segment {i}: {segment.text}")
+
             if screen is None or len(screen.lines) >= max_lines_per_screen:
                 screen = LyricsScreen(video_size=self.video_resolution, line_height=self.line_height, logger=self.logger)
                 screens.append(screen)
                 self.logger.debug(f"Created new screen. Total screens: {len(screens)}")
 
-            # Create line from segment
-            line = LyricsLine()
-            lyric_segment = LyricSegment(
-                text=segment.text, 
-                ts=segment.ts if isinstance(segment.ts, timedelta) else timedelta(seconds=segment.ts),
-                end_ts=segment.end_ts if isinstance(segment.end_ts, timedelta) else timedelta(seconds=segment.end_ts)
-            )
-            line.segments.append(lyric_segment)
+            line = LyricsLine(logger=self.logger)
+            line.segments.append(segment)
             screen.lines.append(line)
+            self.logger.debug(f"Added line to screen: {line}")
 
         return screens
 
     def set_segment_end_times(self, screens: List[LyricsScreen], song_duration_seconds: int) -> List[LyricsScreen]:
-        """
-        Infer end times of lines for screens where they are not already set.
-        """
+        self.logger.debug("Setting segment end times")
         segments = list(itertools.chain.from_iterable([l.segments for s in screens for l in s.lines]))
+
         for i, segment in enumerate(segments):
-            if not segment.end_ts:
+            self.logger.debug(f"Processing segment {i}: {segment.text}")
+            if not segment.end_time:
                 if i == len(segments) - 1:
-                    segment.end_ts = timedelta(seconds=song_duration_seconds)
+                    self.logger.debug(f"Setting last segment end time to song duration: {song_duration_seconds}")
+                    segment.end_time = song_duration_seconds
                 else:
                     next_segment = segments[i + 1]
-                    segment.end_ts = next_segment.ts
+                    self.logger.debug(f"Setting segment end time to next segment start time: {next_segment.start_time}")
+                    segment.end_time = next_segment.start_time
+
         return screens
 
     def set_screen_start_times(self, screens: List[LyricsScreen]) -> List[LyricsScreen]:
-        """
-        Set start times for screens to the end times of the previous screen.
-        """
+        self.logger.debug("Setting screen start times")
         prev_screen = None
-        for screen in screens:
+
+        for i, screen in enumerate(screens):
             if prev_screen is None:
                 screen.start_ts = timedelta()
+                self.logger.debug(f"Set first screen start time to 0")
             else:
                 screen.start_ts = prev_screen.end_ts + timedelta(seconds=0.1)
+                self.logger.debug(f"Set screen {i} start time to: {screen.start_ts}")
             prev_screen = screen
+
         return screens
 
     def create_styled_subtitles(

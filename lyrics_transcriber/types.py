@@ -5,7 +5,7 @@ from enum import Enum
 
 @dataclass
 class Word:
-    """Represents a single word with its timing and confidence information."""
+    """Represents a single word with its timing (in seconds) and confidence information."""
 
     text: str
     start_time: float
@@ -23,7 +23,7 @@ class Word:
 
 @dataclass
 class LyricsSegment:
-    """Represents a segment/line of lyrics with timing information."""
+    """Represents a segment/line of lyrics with timing information in seconds."""
 
     text: str
     words: List[Word]
