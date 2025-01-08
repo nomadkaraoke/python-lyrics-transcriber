@@ -80,9 +80,21 @@ class LyricsFileGenerator:
             Formatted timestamp string in MM:SS.mmm format
         """
         minutes = int(seconds // 60)
-        seconds = seconds % 60
-        milliseconds = int((seconds % 1) * 1000)
-        return f"{minutes:02d}:{int(seconds):02d}.{milliseconds:03d}"
+        remaining_seconds = seconds % 60
+        
+        # Convert to milliseconds and round to nearest integer
+        total_milliseconds = round(remaining_seconds * 1000)
+        
+        # Extract seconds and milliseconds
+        seconds_part = total_milliseconds // 1000
+        milliseconds = total_milliseconds % 1000
+        
+        # Handle rollover
+        if seconds_part == 60:
+            seconds_part = 0
+            minutes += 1
+            
+        return f"{minutes:02d}:{seconds_part:02d}.{milliseconds:03d}"
 
     # Future methods for other lyrics file formats can be added here
     # def generate_txt(self, segments: List[LyricsSegment], output_prefix: str) -> str:

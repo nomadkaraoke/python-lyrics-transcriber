@@ -27,6 +27,9 @@ class VideoGenerator:
             background_color: Color to use when no background image (default: "black")
             logger: Optional logger instance
         """
+        if not all(x > 0 for x in video_resolution):
+            raise ValueError("Video resolution dimensions must be greater than 0")
+        
         self.output_dir = output_dir
         self.cache_dir = cache_dir
         self.video_resolution = video_resolution
@@ -50,6 +53,12 @@ class VideoGenerator:
         """
         self.logger.info("Generating video with lyrics overlay")
         output_path = self._get_output_path(f"{output_prefix} (With Vocals)", "mkv")
+
+        # Check input files exist before running FFmpeg
+        if not os.path.isfile(ass_path):
+            raise FileNotFoundError(f"Subtitles file not found: {ass_path}")
+        if not os.path.isfile(audio_path):
+            raise FileNotFoundError(f"Audio file not found: {audio_path}")
 
         try:
             cmd = self._build_ffmpeg_command(ass_path, audio_path, output_path)
