@@ -6,14 +6,61 @@ from lyrics_transcriber.types import LyricsSegment, Word
 
 
 class SegmentResizer:
-    """Handles resizing of lyrics segments to ensure proper line lengths."""
+    """Handles resizing of lyrics segments to ensure proper line lengths and natural breaks.
+
+    This class processes lyrics segments and splits them into smaller segments when they exceed
+    a maximum line length. It attempts to split at natural break points like sentence endings,
+    commas, or conjunctions to maintain readability.
+
+    Example:
+        resizer = SegmentResizer(max_line_length=36)
+        segments = [
+            LyricsSegment(
+                text="This is a very long sentence that needs to be split into multiple lines for better readability",
+                words=[...],  # List of Word objects with timing information
+                start_time=0.0,
+                end_time=5.0
+            )
+        ]
+        resized = resizer.resize_segments(segments)
+        # Results in:
+        # [
+        #     LyricsSegment(text="This is a very long sentence", ...),
+        #     LyricsSegment(text="that needs to be split", ...),
+        #     LyricsSegment(text="into multiple lines", ...),
+        #     LyricsSegment(text="for better readability", ...)
+        # ]
+    """
 
     def __init__(self, max_line_length: int = 36, logger: Optional[logging.Logger] = None):
+        """Initialize the SegmentResizer.
+
+        Args:
+            max_line_length: Maximum allowed length for a single line of text
+            logger: Optional logger for debugging information
+        """
         self.max_line_length = max_line_length
         self.logger = logger or logging.getLogger(__name__)
 
     def resize_segments(self, segments: List[LyricsSegment]) -> List[LyricsSegment]:
-        """Main entry point for resizing segments."""
+        """Main entry point for resizing segments.
+
+        Takes a list of potentially long segments and splits them into smaller ones
+        while preserving word timing information.
+
+        Example:
+            Input segment: "Hello world, this is a test. And here's another sentence."
+            Output segments: [
+                "Hello world, this is a test.",
+                "And here's another sentence."
+            ]
+
+        Args:
+            segments: List of LyricsSegment objects to process
+
+        Returns:
+            List of resized LyricsSegment objects
+        """
         self._log_input_segments(segments)
         resized_segments: List[LyricsSegment] = []
 
@@ -32,12 +79,27 @@ class SegmentResizer:
         return resized_segments
 
     def _clean_text(self, text: str) -> str:
-        """Clean text by removing newlines and extra whitespace."""
-        # First replace newlines with spaces, then normalize all whitespace
+        """Clean text by removing newlines and extra whitespace.
+
+        Example:
+            Input: "Hello\n  World  \n!"
+            Output: "Hello World !"
+
+        Args:
+            text: String to clean
+
+        Returns:
+            Cleaned string with normalized whitespace
+        """
         return " ".join(text.replace("\n", " ").split())
 
     def _create_cleaned_segment(self, segment: LyricsSegment) -> LyricsSegment:
-        """Create a new segment with cleaned text."""
+        """Create a new segment with cleaned text while preserving timing info.
+
+        Example:
+            Input: LyricsSegment(text="Hello\n  World\n", words=[...])
+            Output: LyricsSegment(text="Hello World", words=[...])
+        """
         cleaned_text = self._clean_text(segment.text)
         return LyricsSegment(text=cleaned_text, words=segment.words, start_time=segment.start_time, end_time=segment.end_time)
 
@@ -52,7 +114,15 @@ class SegmentResizer:
         )
 
     def _split_oversized_segment(self, segment_idx: int, segment: LyricsSegment) -> List[LyricsSegment]:
-        """Split an oversized segment into multiple segments."""
+        """Split an oversized segment into multiple segments at natural break points.
+
+        Example:
+            Input: "This is a long sentence. Here's another one."
+            Output: [
+                LyricsSegment(text="This is a long sentence.", ...),
+                LyricsSegment(text="Here's another one.", ...)
+            ]
+        """
         self.logger.info(f"Processing oversized segment {segment_idx}: '{segment.text}'")
         segment_text = self._clean_text(segment.text)
         split_lines = self._process_segment_text(segment_text)
@@ -61,27 +131,34 @@ class SegmentResizer:
         return self._create_segments_from_lines(segment_text, split_lines, segment.words)
 
     def _create_segments_from_lines(self, segment_text: str, split_lines: List[str], words: List[Word]) -> List[LyricsSegment]:
-        """Create segments from split lines while preserving word timing."""
+        """Create segments from split lines while preserving word timing.
+
+        Matches words to their corresponding lines based on text position and
+        creates new segments with the correct timing information.
+
+        Example:
+            segment_text: "Hello world, how are you"
+            split_lines: ["Hello world,", "how are you"]
+            words: [Word("Hello", 0.0, 1.0), Word("world", 1.0, 2.0), ...]
+
+        Returns segments with words properly assigned to each line.
+        """
         segments: List[LyricsSegment] = []
         words_to_process = words.copy()
 
         for line in split_lines:
-            # Get all words that belong to this line
             line_words = []
 
             # Keep processing words until we find one that doesn't belong to this line
             while words_to_process:
-                word = words_to_process[0]  # Look at the next word
+                word = words_to_process[0]
 
-                # Check if this word appears in the line
                 if word.text in line:
-                    # Only use the word if it's the next occurrence in the text
                     word_in_line_pos = line.find(word.text)
                     if word_in_line_pos != -1:
                         line_words.append(words_to_process.pop(0))
                         continue
 
-                # If we get here, the word doesn't belong to this line
                 break
 
             if line_words:
@@ -113,22 +190,22 @@ class SegmentResizer:
         line_words = []
         line_text = line.strip()
         remaining_text = line_text
-        
+
         for word in available_words:
             # Skip if word isn't in remaining text
             if word.text not in remaining_text:
                 continue
-            
+
             # Find position of word in line
             word_pos = remaining_text.find(word.text)
             if word_pos != -1:
                 line_words.append(word)
                 # Remove processed text up to and including this word
-                remaining_text = remaining_text[word_pos + len(word.text):].strip()
-            
+                remaining_text = remaining_text[word_pos + len(word.text) :].strip()
+
             if not remaining_text:  # All words found
                 break
-            
+
         return line_words
 
     def _create_segment_from_words(self, line: str, words: List[Word]) -> LyricsSegment:
@@ -209,28 +286,62 @@ class SegmentResizer:
         return best_point if best_point is not None else self.max_line_length
 
     def _score_break_point(self, line: str, point: int, priority: int) -> float:
-        """Score a potential break point based on multiple factors."""
+        """Score a potential break point based on multiple factors.
+
+        Factors considered:
+        1. Priority of the break point type (sentence > clause > comma, etc.)
+        2. Balance of segment lengths
+        3. Proximity to target length
+
+        Example:
+            line: "This is a sentence. And more text."
+            point: 18 (after "sentence.")
+            priority: 0 (sentence break)
+
+        Returns a score where higher is better. Score components:
+        - Base score (100-20*priority): 100 for priority 0
+        - Length ratio bonus (0-10): Based on segment balance
+        - Target length bonus (0-5): Based on proximity to ideal length
+        """
         first_segment = line[:point].strip()
         second_segment = line[point:].strip()
 
-        # Base score starts with priority (higher priority = better score)
+        # Base score starts with priority
         score = 100 - (priority * 20)  # Priorities 0-4 give scores 100,80,60,40,20
 
-        # Penalize if segments are very unbalanced (prefer more even splits)
+        # Length ratio bonus
         length_ratio = min(len(first_segment), len(second_segment)) / max(len(first_segment), len(second_segment))
-        score += length_ratio * 10  # 0-10 points for balance
+        score += length_ratio * 10
 
-        # Bonus for splits that create segments closer to target length
-        target_length = self.max_line_length * 0.7  # Prefer segments around 70% of max
+        # Target length bonus
+        target_length = self.max_line_length * 0.7
         first_length_score = 1 - abs(len(first_segment) - target_length) / self.max_line_length
-        score += first_length_score * 5  # 0-5 points for good length
+        score += first_length_score * 5
 
         return score
 
     def _find_break_points(self, line: str) -> List[List[int]]:
         """Find potential break points in order of preference.
-        Returns a list of lists, where each inner list contains break points of the same priority.
-        Break points are the indices where the text should be split (after the punctuation/phrase).
+
+        Returns a list of lists, where each inner list contains break points
+        of the same priority. Break points are indices where text should be split.
+
+        Priority order:
+        1. Sentence endings (., !, ?)
+        2. Major clause breaks (;, -)
+        3. Comma breaks
+        4. Coordinating conjunctions (and, but, or)
+        5. Prepositions/articles (in, at, the, a)
+
+        Example:
+            Input: "Hello, world. This is a test"
+            Output: [
+                [12],  # sentence break after "world."
+                [],   # no semicolons or dashes
+                [5],  # comma after "Hello,"
+                [],   # no conjunctions
+                [15]  # preposition "is"
+            ]
         """
         break_points = []
 
@@ -238,7 +349,7 @@ class SegmentResizer:
         sentence_breaks = []
         for punct in [".", "!", "?"]:
             for match in re.finditer(rf"\{punct}\s+", line):
-                sentence_breaks.append(match.start() + 1)  # Position after the punctuation
+                sentence_breaks.append(match.start() + 1)
         break_points.append(sentence_breaks)
 
         # Priority 2: Major clause breaks (semicolons, dashes)
