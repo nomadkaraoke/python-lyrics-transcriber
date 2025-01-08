@@ -162,6 +162,7 @@ cython_debug/
 # Project specific
 /output/
 /input/
+/lyrics-transcriber-cache/
 *.wav
 *.flac
 *.lrc
