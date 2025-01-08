@@ -82,12 +82,12 @@ class TestSegmentResizer:
 
         # Should split at the first sentence break (including the period and space)
         assert split_point == 26  # Position after "sentence. "
-        
+
         # Test with comma break in a long sentence
         text = "This is a much longer first part, and this is the second part of it"
         split_point = resizer._find_best_split_point(text)
         assert split_point == 33  # Position after "part, " (including comma and space)
-        
+
         # Test with text shorter than max length
         text = "Short text"
         split_point = resizer._find_best_split_point(text)
@@ -117,7 +117,7 @@ class TestSegmentResizer:
             create_word("second", 2.5, 3.0),
         ]
         segment_text = "First line then second"
-        
+
         # Test first line with exact text match
         line = "First line"
         line_words = resizer._find_words_for_line(
@@ -126,9 +126,9 @@ class TestSegmentResizer:
             line_length=len(line),
             segment_text=segment_text,
             available_words=words.copy(),  # Use a copy to avoid modifying original
-            current_pos=0
+            current_pos=0,
         )
-        
+
         assert len(line_words) == 2, f"Expected 2 words, got {len(line_words)}: {[w.text for w in line_words]}"
         assert [w.text for w in line_words] == ["First", "line"]
         assert line_words[0].start_time == 1.0
@@ -142,9 +142,9 @@ class TestSegmentResizer:
             line_length=len(line),
             segment_text=segment_text,
             available_words=words[2:],  # Only pass remaining words
-            current_pos=segment_text.find(line)
+            current_pos=segment_text.find(line),
         )
-        
+
         assert len(line_words) == 2, f"Expected 2 words, got {len(line_words)}: {[w.text for w in line_words]}"
         assert [w.text for w in line_words] == ["then", "second"]
 
@@ -480,3 +480,43 @@ class TestSegmentResizer:
         for segment in segments:
             word_times = [(w.start_time, w.end_time) for w in segment.words]
             assert word_times == sorted(word_times)  # Times should be in ascending order
+
+    def test_word_preservation_in_segments(self, resizer):
+        """Test that all words are preserved when creating segments, particularly at line boundaries."""
+        words = [
+            create_word("My,", 6.520263204756731, 6.760272893275383),
+            create_word("my,", 6.820275315405047, 7.240292270312689),
+            create_word("at", 8.2003310243873, 8.400339098152843),
+            create_word("Waterloo,", 8.460341520282507, 9.640389155499214),
+            create_word("Napoleon", 9.680390770252323, 10.860438405469033),
+            create_word("did", 10.880439212845587, 11.340457782506338),
+            create_word("surrender\n", 11.420461012012556, 12.600508647229265),  # Note the newline
+        ]
+        segment = create_segment("My, my, at Waterloo, Napoleon did surrender\n", words)
+        
+        result = resizer.resize_segments([segment])
+        
+        # Get all words from all result segments
+        result_words = [word.text for seg in result for word in seg.words]
+        input_words = [word.text for word in words]
+        
+        # Check that no words are lost
+        assert result_words == input_words, f"""
+        Words were lost or altered in the segmentation process.
+        Expected: {input_words}
+        Got: {result_words}
+        
+        Segments produced:
+        {[f"'{seg.text}' -> {[w.text for w in seg.words]}" for seg in result]}
+        """
+        
+        # Check that each segment's text contains all its words
+        for seg in result:
+            seg_words = [w.text for w in seg.words]
+            for word in seg_words:
+                # Strip newlines when checking containment since the segment text will have them removed
+                word_clean = word.strip()
+                assert word_clean in seg.text, f"""
+                Word '{word_clean}' from segment's word list not found in segment text '{seg.text}'
+                Segment words: {seg_words}
+                """

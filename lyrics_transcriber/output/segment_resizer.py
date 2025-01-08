@@ -145,24 +145,38 @@ class SegmentResizer:
         """
         segments: List[LyricsSegment] = []
         words_to_process = words.copy()
+        current_pos = 0
 
         for line in split_lines:
             line_words = []
+            line_text = line.strip()
+            remaining_line = line_text
 
-            # Keep processing words until we find one that doesn't belong to this line
-            while words_to_process:
+            # Keep processing words until we've found all words for this line
+            while words_to_process and remaining_line:
                 word = words_to_process[0]
+                word_clean = self._clean_text(word.text)
 
-                if word.text in line:
-                    word_in_line_pos = line.find(word.text)
-                    if word_in_line_pos != -1:
+                # Check if the cleaned word appears in the remaining line text
+                if word_clean in remaining_line:
+                    word_pos = remaining_line.find(word_clean)
+                    if word_pos != -1:
                         line_words.append(words_to_process.pop(0))
+                        # Remove the word and any following spaces from remaining line
+                        remaining_line = remaining_line[word_pos + len(word_clean):].strip()
                         continue
 
+                # If we can't find the word in the remaining line, we're done with this line
                 break
 
             if line_words:
                 segments.append(self._create_segment_from_words(line, line_words))
+                current_pos += len(line) + 1  # +1 for the space between lines
+
+        # If we have any remaining words, create a final segment with them
+        if words_to_process:
+            remaining_text = " ".join(self._clean_text(w.text) for w in words_to_process)
+            segments.append(self._create_segment_from_words(remaining_text, words_to_process))
 
         return segments
 

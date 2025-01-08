@@ -41,6 +41,7 @@ class LyricSegmentIterator:
 class LyricsLine:
     segments: List[LyricsSegment] = field(default_factory=list)
     logger: Optional[logging.Logger] = None
+    PRE_ROLL_TIME = 5.0  # Seconds to show lines before first word
 
     def __post_init__(self):
         """Ensure logger is initialized"""
@@ -49,19 +50,37 @@ class LyricsLine:
 
     @property
     def ts(self) -> Optional[float]:
+        """Get earliest timestamp from all words in all segments."""
         if not self.segments:
             self.logger.debug("No segments in line when getting ts")
             return None
-        self.logger.debug(f"Getting ts from first segment: {self.segments[0].start_time}")
-        return self.segments[0].start_time
+
+        # Find earliest word start time across all segments
+        earliest_time = float("inf")
+        for segment in self.segments:
+            if segment.words and segment.words[0].start_time < earliest_time:
+                earliest_time = segment.words[0].start_time
+
+        self.logger.debug(f"Getting ts from earliest word: {earliest_time}")
+        return earliest_time
 
     @property
     def end_ts(self) -> Optional[float]:
+        """Get latest timestamp from all words in all segments."""
         if not self.segments:
             self.logger.debug("No segments in line when getting end_ts")
             return None
-        self.logger.debug(f"Getting end_ts from last segment: {self.segments[-1].end_time}")
-        return self.segments[-1].end_time
+
+        # Find latest word end time across all segments
+        latest_time = 0
+        for segment in self.segments:
+            if segment.words:  # Check if segment has words
+                for word in segment.words:
+                    if word.end_time > latest_time:
+                        latest_time = word.end_time
+
+        self.logger.debug(f"Getting end_ts from latest word: {latest_time}")
+        return latest_time
 
     @ts.setter
     def ts(self, value):
@@ -75,38 +94,60 @@ class LyricsLine:
         return "".join([f"{{{s.text}}}" for s in self.segments])
 
     def as_ass_event(self, screen_start: timedelta, screen_end: timedelta, style: Style, y_position: int):
+        """Create ASS event with proper timing."""
         self.logger.debug(f"Creating ASS event for line: {self}")
-        self.logger.debug(f"Screen timing: {screen_start} - {screen_end}, y_position: {y_position}")
+
+        # Start showing line PRE_ROLL_TIME seconds before first word
+        start_time = timedelta(seconds=max(0, self.ts - self.PRE_ROLL_TIME))
+        end_time = timedelta(seconds=self.end_ts)
 
         e = Event()
         e.type = "Dialogue"
         e.Layer = 0
         e.Style = style
-        e.Start = screen_start.total_seconds()
-        e.End = screen_end.total_seconds()
+        e.Start = start_time.total_seconds()
+        e.End = end_time.total_seconds()
         e.MarginV = y_position
-        e.Text = self.decorate_ass_line(self.segments, screen_start)
+        e.Text = self.decorate_ass_line(self.segments, start_time)
         e.Text = "{\\an8}" + e.Text
 
         self.logger.debug(f"Created ASS event: {e.Text}")
         return e
 
-    def decorate_ass_line(self, segments, screen_start_ts: timedelta):
+    def decorate_ass_line(self, segments, start_ts: timedelta):
+        """Create ASS line with word-level karaoke timing."""
         self.logger.debug(f"Decorating ASS line with {len(segments)} segments")
-        start_time = (timedelta(seconds=self.ts) - screen_start_ts).total_seconds() * 100
-        line = rf"{{\k{start_time}}}"
-        prev_end: Optional[float] = None
 
-        for s in segments:
-            self.logger.debug(f"Processing segment: {s.text} ({s.start_time} - {s.end_time})")
-            if prev_end is not None and prev_end < s.start_time:
-                duration = (s.start_time - prev_end) * 100
-                line += rf"{{\kf{duration}}}"
-                self.logger.debug(f"Added blank segment with duration: {duration}")
-            duration = (s.end_time - s.start_time) * 100
-            line += rf"{{\kf{duration}}}{s.text}"
-            prev_end = s.end_time
+        first_word_time = self.ts
+        start_time = max(0, (first_word_time - start_ts.total_seconds()) * 100)
+        line = rf"{{\k{int(start_time)}}}"
 
+        prev_end_time = first_word_time
+
+        for segment in segments:
+            # Split segment text to get actual word count
+            expected_words = [w for w in segment.text.split() if w.strip()]
+            self.logger.debug(f"Processing segment with {len(segment.words)} words (expected {len(expected_words)}): {segment.text}")
+
+            if not segment.words:
+                continue
+
+            for i, word in enumerate(segment.words):
+                # Add gap between words if needed
+                gap = word.start_time - prev_end_time
+                if gap > 0.1:
+                    line += rf"{{\k{int(gap * 100)}}}"
+
+                # Add the word with its duration
+                duration = (word.end_time - word.start_time) * 100
+                word_text = word.text.rstrip()
+                line += rf"{{\kf{int(duration)}}}{word_text} "  # Always add space after word
+
+                prev_end_time = word.end_time
+                self.logger.debug(f"Added word: '{word_text}' with duration {duration}")
+
+        # Remove trailing space
+        line = line.rstrip()
         self.logger.debug(f"Final decorated line: {line}")
         return line
 
@@ -130,11 +171,15 @@ class LyricsLine:
 
 @dataclass
 class LyricsScreen:
+    """Represents a screen of lyrics (multiple lines)."""
+
+    video_size: Tuple[int, int]
+    line_height: int
     lines: List[LyricsLine] = field(default_factory=list)
-    start_ts: Optional[timedelta] = None
-    video_size: Tuple[int, int] = None
-    line_height: int = None
+    _start_ts: timedelta = field(default=timedelta(0))
+    _end_ts: timedelta = field(default=timedelta(0))
     logger: Optional[logging.Logger] = None
+    PRE_ROLL_TIME = 5.0  # Seconds to show screen before first word
 
     def __post_init__(self):
         """Ensure logger is initialized"""
@@ -142,9 +187,42 @@ class LyricsScreen:
             self.logger = logging.getLogger(__name__)
 
     @property
+    def start_ts(self) -> timedelta:
+        """Get screen start timestamp."""
+        # Start showing screen PRE_ROLL_TIME seconds before first word
+        earliest_ts = min(line.ts for line in self.lines)
+        return timedelta(seconds=max(0, earliest_ts - self.PRE_ROLL_TIME))
+
+    @start_ts.setter
+    def start_ts(self, value: timedelta):
+        """Set screen start timestamp."""
+        self._start_ts = value
+
+    @property
     def end_ts(self) -> timedelta:
-        self.logger.debug(f"Getting end_ts from last line: {self.lines[-1].end_ts}")
-        return timedelta(seconds=self.lines[-1].end_ts)
+        """Get screen end timestamp."""
+        return timedelta(seconds=max(line.end_ts for line in self.lines))
+
+    @end_ts.setter
+    def end_ts(self, value: timedelta):
+        """Set screen end timestamp."""
+        self._end_ts = value
+
+    def as_ass_events(self, style: Style) -> List[Event]:
+        """Convert screen to ASS events."""
+        events = []
+        y_position = self._calculate_first_line_position()
+
+        for line in self.lines:
+            events.append(line.as_ass_event(self.start_ts, self.end_ts, style, y_position))
+            y_position += self.line_height
+
+        return events
+
+    def _calculate_first_line_position(self) -> int:
+        """Calculate vertical position of first line."""
+        total_height = len(self.lines) * self.line_height
+        return (self.video_size[1] - total_height) // 4  # Position in top quarter
 
     def get_line_y(self, line_num: int) -> int:
         _, h = self.video_size
@@ -157,16 +235,6 @@ class LyricsScreen:
         self.logger.debug(f"Video height: {h}, Lines: {line_count}, Line height: {self.line_height}")
 
         return int(line_y)
-
-    def as_ass_events(self, style: Style) -> List[Event]:
-        self.logger.debug(f"Creating ASS events for screen with {len(self.lines)} lines")
-        events = []
-        for i, line in enumerate(self.lines):
-            y_position = self.get_line_y(i)
-            self.logger.debug(f"Creating event for line {i} at y_position {y_position}")
-            event = line.as_ass_event(self.start_ts, self.end_ts, style, y_position)
-            events.append(event)
-        return events
 
     def __str__(self):
         lines = [f"{self.start_ts} - {self.end_ts}:"]
@@ -305,17 +373,13 @@ class SubtitlesGenerator:
         return screens
 
     def set_screen_start_times(self, screens: List[LyricsScreen]) -> List[LyricsScreen]:
+        """Set screen timings based on actual content."""
         self.logger.debug("Setting screen start times")
-        prev_screen = None
 
-        for i, screen in enumerate(screens):
-            if prev_screen is None:
-                screen.start_ts = timedelta()
-                self.logger.debug(f"Set first screen start time to 0")
-            else:
-                screen.start_ts = prev_screen.end_ts + timedelta(seconds=0.1)
-                self.logger.debug(f"Set screen {i} start time to: {screen.start_ts}")
-            prev_screen = screen
+        for screen in screens:
+            # Each screen's timing is based on its content
+            screen.start_ts = timedelta(seconds=min(line.ts for line in screen.lines))
+            screen.end_ts = timedelta(seconds=max(line.end_ts for line in screen.lines))
 
         return screens
 
