@@ -41,7 +41,9 @@ class LyricSegmentIterator:
 class LyricsLine:
     segments: List[LyricsSegment] = field(default_factory=list)
     logger: Optional[logging.Logger] = None
-    PRE_ROLL_TIME = 5.0  # Seconds to show lines before first word
+    PRE_ROLL_TIME = 2.0  # Seconds to show lines before first word
+    FADE_IN_MS = 300  # Milliseconds to fade in
+    FADE_OUT_MS = 300  # Milliseconds to fade out
 
     def __post_init__(self):
         """Ensure logger is initialized"""
@@ -96,11 +98,11 @@ class LyricsLine:
     def as_ass_event(self, screen_start: timedelta, screen_end: timedelta, style: Style, y_position: int):
         """Create ASS event with proper timing."""
         self.logger.debug(f"Creating ASS event for line: {self}")
-
+        
         # Start showing line PRE_ROLL_TIME seconds before first word
         start_time = timedelta(seconds=max(0, self.ts - self.PRE_ROLL_TIME))
         end_time = timedelta(seconds=self.end_ts)
-
+        
         e = Event()
         e.type = "Dialogue"
         e.Layer = 0
@@ -108,9 +110,10 @@ class LyricsLine:
         e.Start = start_time.total_seconds()
         e.End = end_time.total_seconds()
         e.MarginV = y_position
-        e.Text = self.decorate_ass_line(self.segments, start_time)
-        e.Text = "{\\an8}" + e.Text
-
+        
+        # Add fade effect before the alignment and karaoke tags
+        e.Text = rf"{{\fad({self.FADE_IN_MS},{self.FADE_OUT_MS})}}{{\an8}}" + self.decorate_ass_line(self.segments, start_time)
+        
         self.logger.debug(f"Created ASS event: {e.Text}")
         return e
 
