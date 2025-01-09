@@ -51,9 +51,6 @@ class SubtitlesGenerator:
             screens = self._create_screens(segments)
             self.logger.debug(f"Created {len(screens)} initial screens")
 
-            screens = self._set_screen_start_times(screens)
-            self.logger.debug("Set screen start times")
-
             lyric_subtitles_ass = self._create_styled_subtitles(screens, self.video_resolution, self.font_size)
             self.logger.debug("Created styled subtitles")
 
@@ -78,8 +75,7 @@ class SubtitlesGenerator:
                 screen = LyricsScreen(video_size=self.video_resolution, line_height=self.line_height, logger=self.logger)
                 screens.append(screen)
 
-            line = LyricsLine(logger=self.logger)
-            line.segments.append(segment)
+            line = LyricsLine(logger=self.logger, segment=segment)
             screen.lines.append(line)
 
         # Log final screen contents
@@ -88,18 +84,7 @@ class SubtitlesGenerator:
             self.logger.debug(f"Screen {i + 1}:")
             self.logger.debug(f"  Number of lines: {len(screen.lines)}")
             for j, line in enumerate(screen.lines):
-                self.logger.debug(f"    Line {j + 1} ({line.ts:.2f}s - {line.end_ts:.2f}s): {line}")
-
-        return screens
-
-    def _set_screen_start_times(self, screens: List[LyricsScreen]) -> List[LyricsScreen]:
-        """Set screen timings based on actual content."""
-        self.logger.debug("Setting screen start times")
-
-        for screen in screens:
-            # Each screen's timing is based on its content
-            screen.start_ts = timedelta(seconds=min(line.ts for line in screen.lines))
-            screen.end_ts = timedelta(seconds=max(line.end_ts for line in screen.lines))
+                self.logger.debug(f"    Line {j + 1} ({line.segment.start_time:.2f}s - {line.segment.end_time:.2f}s): {line}")
 
         return screens
 
