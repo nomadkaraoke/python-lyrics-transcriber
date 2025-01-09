@@ -58,14 +58,8 @@ class SubtitlesGenerator:
                     if word.confidence is not None:
                         self.logger.debug(f"      Confidence: {word.confidence:.3f}")
 
-            initial_screens = self._create_screens(segments)
-            self.logger.debug(f"Created {len(initial_screens)} initial screens")
-
-            song_duration = int(segments[-1].end_time)
-            self.logger.debug(f"Song duration: {song_duration} seconds")
-
-            screens = self.set_segment_end_times(initial_screens, song_duration)
-            self.logger.debug("Set segment end times")
+            screens = self._create_screens(segments)
+            self.logger.debug(f"Created {len(screens)} initial screens")
 
             screens = self.set_screen_start_times(screens)
             self.logger.debug("Set screen start times")
@@ -100,23 +94,6 @@ class SubtitlesGenerator:
             line.segments.append(segment)
             screen.lines.append(line)
             self.logger.debug(f"Added line to screen: {line}")
-
-        return screens
-
-    def set_segment_end_times(self, screens: List[LyricsScreen], song_duration_seconds: int) -> List[LyricsScreen]:
-        self.logger.debug("Setting segment end times")
-        segments = list(itertools.chain.from_iterable([l.segments for s in screens for l in s.lines]))
-
-        for i, segment in enumerate(segments):
-            self.logger.debug(f"Processing segment {i}: {segment.text}")
-            if not segment.end_time:
-                if i == len(segments) - 1:
-                    self.logger.debug(f"Setting last segment end time to song duration: {song_duration_seconds}")
-                    segment.end_time = song_duration_seconds
-                else:
-                    next_segment = segments[i + 1]
-                    self.logger.debug(f"Setting segment end time to next segment start time: {next_segment.start_time}")
-                    segment.end_time = next_segment.start_time
 
         return screens
 

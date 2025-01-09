@@ -9,26 +9,6 @@ from lyrics_transcriber.output.ass.event import Event
 from lyrics_transcriber.output.ass.style import Style
 
 
-class LyricSegmentIterator:
-    def __init__(self, lyrics_segments: List[str]):
-        self._segments = lyrics_segments
-        self._current_segment = 0  # Initialize to 0 instead of None
-
-    def __iter__(self):
-        self._current_segment = 0
-        return self
-
-    def __next__(self):
-        if self._current_segment >= len(self._segments):
-            raise StopIteration
-        val = self._segments[self._current_segment]
-        self._current_segment += 1
-        return val
-
-    def __len__(self):
-        return len(self._segments)
-
-
 @dataclass
 class LyricsLine:
     segments: List[LyricsSegment] = field(default_factory=list)
@@ -48,16 +28,16 @@ class LyricsLine:
         if not self.segments:
             self.logger.debug("No segments in line when getting ts")
             return None
-            
-        earliest_time = float('inf')
+
+        earliest_time = float("inf")
         for segment in self.segments:
             if segment.words:  # Check if segment has words
                 for word in segment.words:
                     if word.start_time < earliest_time:
                         earliest_time = word.start_time
-        
+
         self.logger.debug(f"Getting ts from earliest word: {earliest_time}")
-        return earliest_time if earliest_time != float('inf') else None
+        return earliest_time if earliest_time != float("inf") else None
 
     @property
     def end_ts(self) -> Optional[float]:
@@ -65,14 +45,14 @@ class LyricsLine:
         if not self.segments:
             self.logger.debug("No segments in line when getting end_ts")
             return None
-            
+
         latest_time = 0
         for segment in self.segments:
             if segment.words:  # Check if segment has words
                 for word in segment.words:
                     if word.end_time and word.end_time > latest_time:
                         latest_time = word.end_time
-        
+
         self.logger.debug(f"Getting end_ts from latest word: {latest_time}")
         return latest_time if latest_time > 0 else None
 
@@ -146,23 +126,23 @@ class LyricsLine:
         self.logger.debug(f"Final decorated line: {line}")
         return line
 
-    def adjust_timestamps(self, offset: timedelta) -> 'LyricsLine':
+    def adjust_timestamps(self, offset: timedelta) -> "LyricsLine":
         """Adjust all timestamps by the given offset."""
         new_line = copy.deepcopy(self)
         offset_seconds = offset.total_seconds()
-        
+
         for segment in new_line.segments:
             # Adjust segment times
             segment.start_time += offset_seconds
             if segment.end_time is not None:
                 segment.end_time += offset_seconds
-            
+
             # Adjust word times
             for word in segment.words:
                 word.start_time += offset_seconds
                 if word.end_time is not None:
                     word.end_time += offset_seconds
-        
+
         return new_line
 
     def to_dict(self) -> dict:
