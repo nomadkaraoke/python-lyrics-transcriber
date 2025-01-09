@@ -15,6 +15,7 @@ class LyricsLine:
     segment: LyricsSegment
     logger: Optional[logging.Logger] = None
     PRE_ROLL_TIME = 2.0
+    POST_ROLL_TIME = 2.0
     FADE_IN_MS = 300
     FADE_OUT_MS = 300
 
@@ -23,30 +24,29 @@ class LyricsLine:
         if self.logger is None:
             self.logger = logging.getLogger(__name__)
 
-    def as_ass_event(self, style: Style, y_position: int) -> Event:
-        """Create ASS event with proper timing.
-
-        Args:
-            screen_start: Start time of the screen this line belongs to
-            screen_end: End time of the screen this line belongs to
-            style: Style to apply to the event
-            y_position: Vertical position on screen
-        """
+    def as_ass_event(self, screen_start: timedelta, screen_end: timedelta, style: Style, y_position: int) -> Event:
+        """Create ASS event with proper timing."""
         self.logger.debug(f"Creating ASS event for line: {self}")
 
-        # Calculate line timing within screen bounds
+        # Calculate line timing with pre-roll and post-roll
         line_start = timedelta(seconds=max(0, self.segment.start_time - self.PRE_ROLL_TIME))
-        line_end = timedelta(seconds=self.segment.end_time)
+        line_end = timedelta(seconds=self.segment.end_time + self.POST_ROLL_TIME)  # Add post-roll delay
+
+        # Ensure line timing stays within screen bounds
+        start_time = max(line_start, screen_start)
+        end_time = min(line_end, screen_end)
+
+        self.logger.debug(f"Line timing: {start_time} -> {end_time} (screen: {screen_start} -> {screen_end})")
 
         e = Event()
         e.type = "Dialogue"
         e.Layer = 0
         e.Style = style
-        e.Start = line_start.total_seconds()
-        e.End = line_end.total_seconds()
+        e.Start = start_time.total_seconds()
+        e.End = end_time.total_seconds()
         e.MarginV = y_position
 
-        e.Text = self._create_ass_text(line_start)
+        e.Text = self._create_ass_text(start_time)
         self.logger.debug(f"Created ASS event: {e.Text}")
         return e
 
@@ -123,7 +123,7 @@ class LyricsScreen:
         y_position = self._calculate_first_line_position()
 
         for line in self.lines:
-            events.append(line.as_ass_event(style, y_position))
+            events.append(line.as_ass_event(self.start_ts, self.end_ts, style, y_position))
             y_position += self.line_height
 
         return events
