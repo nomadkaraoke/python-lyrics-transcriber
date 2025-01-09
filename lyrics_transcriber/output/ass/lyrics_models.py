@@ -1,8 +1,8 @@
+import logging
+import copy
 from dataclasses import dataclass, field
 from typing import List, Optional, Tuple
-import logging
 from datetime import timedelta
-import copy
 
 from lyrics_transcriber.types import LyricsSegment
 from lyrics_transcriber.output.ass.event import Event
@@ -36,7 +36,6 @@ class LyricsLine:
                     if word.start_time < earliest_time:
                         earliest_time = word.start_time
 
-        self.logger.debug(f"Getting ts from earliest word: {earliest_time}")
         return earliest_time if earliest_time != float("inf") else None
 
     @property
@@ -53,7 +52,6 @@ class LyricsLine:
                     if word.end_time and word.end_time > latest_time:
                         latest_time = word.end_time
 
-        self.logger.debug(f"Getting end_ts from latest word: {latest_time}")
         return latest_time if latest_time > 0 else None
 
     @ts.setter

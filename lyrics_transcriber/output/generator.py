@@ -149,7 +149,7 @@ class OutputGenerator:
             case "720p":
                 return (1280, 720), 100, 100
             case "360p":
-                return (640, 360), 50, 50
+                return (640, 360), 40, 50
             case _:
                 raise ValueError("Invalid video_resolution value. Must be one of: 4k, 1080p, 720p, 360p")
 

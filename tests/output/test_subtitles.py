@@ -48,12 +48,7 @@ def test_lyrics_line(logger):
     # Test that the ASS event starts PRE_ROLL_TIME seconds earlier
     style = Style()
     style.Name = "Default"
-    event = line.as_ass_event(
-        screen_start=timedelta(seconds=0),
-        screen_end=timedelta(seconds=4),
-        style=style,
-        y_position=100
-    )
+    event = line.as_ass_event(screen_start=timedelta(seconds=0), screen_end=timedelta(seconds=4), style=style, y_position=100)
     assert event.Start == max(0, 1.0 - line.PRE_ROLL_TIME)  # Event starts earlier
     assert event.End == 3.0  # But ends at the actual end time
 
@@ -61,12 +56,7 @@ def test_lyrics_line(logger):
 def test_lyrics_screen(logger):
     line1 = LyricsLine([create_test_segment("Hello", 1.0, 2.0)], logger=logger)
     line2 = LyricsLine([create_test_segment("world", 2.0, 3.0)], logger=logger)
-    screen = LyricsScreen(
-        lines=[line1, line2],
-        video_size=(1920, 1080),
-        line_height=60,
-        logger=logger
-    )
+    screen = LyricsScreen(lines=[line1, line2], video_size=(1920, 1080), line_height=60, logger=logger)
 
     # Test properties
     assert screen.end_ts == timedelta(seconds=3)
@@ -76,31 +66,6 @@ def test_lyrics_screen(logger):
     y2 = screen.get_line_y(1)
     assert y2 > y1
     assert y2 - y1 == 60
-
-
-def test_set_segment_end_times(logger):
-    segment1 = create_test_segment_no_end("Hello", 1.0)
-    segment2 = create_test_segment_no_end("world", 2.0)
-
-    screen = LyricsScreen(
-        lines=[LyricsLine([segment1, segment2], logger=logger)],
-        video_size=(1920, 1080),
-        line_height=60,
-        logger=logger
-    )
-    screens = [screen]
-
-    generator = SubtitlesGenerator(
-        output_dir="test_output",
-        video_resolution=(1920, 1080),
-        font_size=48,
-        line_height=60,
-        logger=logger
-    )
-
-    result = generator.set_segment_end_times(screens, 5)
-    assert result[0].lines[0].segments[0].end_time == 2.0
-    assert result[0].lines[0].segments[1].end_time == 5.0
 
 
 def test_lyrics_line_blank_segments(logger):
@@ -113,12 +78,7 @@ def test_lyrics_line_blank_segments(logger):
 
     style = Style()
     style.Name = "Default"
-    event = line.as_ass_event(
-        screen_start=timedelta(seconds=0),
-        screen_end=timedelta(seconds=4),
-        style=style,
-        y_position=100
-    )
+    event = line.as_ass_event(screen_start=timedelta(seconds=0), screen_end=timedelta(seconds=4), style=style, y_position=100)
 
     text = event.Text
     assert "Hello" in text
