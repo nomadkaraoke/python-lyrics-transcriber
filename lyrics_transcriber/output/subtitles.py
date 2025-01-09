@@ -88,12 +88,7 @@ class SubtitlesGenerator:
 
         return screens
 
-    def _create_styled_subtitles(
-        self,
-        lyric_screens: List[LyricsScreen],
-        resolution,
-        fontsize,
-    ) -> ASS:
+    def _create_styled_ass_instance(self, resolution, fontsize):
         a = ASS()
         a.set_resolution(resolution)
 
@@ -155,7 +150,37 @@ class SubtitlesGenerator:
         a.add_style(style)
 
         a.events_format = ["Layer", "Style", "Start", "End", "MarginV", "Text"]
-        for screen in lyric_screens:
-            [a.add(event) for event in screen.as_ass_events(style)]
+        return a, style
+
+    def _create_styled_subtitles(
+        self,
+        screens: List[LyricsScreen],
+        resolution,
+        fontsize,
+    ) -> ASS:
+        a, style = self._create_styled_ass_instance(resolution, fontsize)
+
+        # First pass: identify screens that should fade in as a unit
+        unified_screens = set()  # Set of indices for screens that should fade in together
+
+        for i, screen in enumerate(screens):
+            if i == 0:
+                # First screen always fades in as a unit
+                unified_screens.add(i)
+                continue
+
+            # Check gap from previous screen
+            prev_screen = screens[i - 1]
+            last_line_end = max(line.segment.end_time for line in prev_screen.lines)
+            effective_screen_end = last_line_end + prev_screen.lines[0].POST_ROLL_TIME + (prev_screen.lines[0].FADE_OUT_MS / 1000)
+            gap_to_current = screen.start_ts.total_seconds() - effective_screen_end
+
+            if gap_to_current >= screen.SCREEN_GAP_THRESHOLD:
+                unified_screens.add(i)
+
+        for i, screen in enumerate(screens):
+            next_screen_start = screens[i + 1].start_ts if i < len(screens) - 1 else None
+            is_unified = i in unified_screens
+            [a.add(event) for event in screen.as_ass_events(style, next_screen_start, is_unified)]
 
         return a

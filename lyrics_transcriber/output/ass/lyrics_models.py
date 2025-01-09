@@ -14,7 +14,7 @@ class LyricsLine:
 
     segment: LyricsSegment
     logger: Optional[logging.Logger] = None
-    PRE_ROLL_TIME = 2.0
+    PRE_ROLL_TIME = 5.0
     POST_ROLL_TIME = 2.0
     FADE_IN_MS = 300
     FADE_OUT_MS = 300
@@ -64,7 +64,6 @@ class LyricsLine:
 
     def _create_karaoke_text(self, start_ts: timedelta) -> str:
         """Create karaoke-timed text with word highlighting."""
-        self.logger.debug(f"Creating karaoke text for {len(self.segment.words)} words")
 
         # Initial delay before first word
         first_word_time = self.segment.start_time
@@ -84,9 +83,12 @@ class LyricsLine:
             text += rf"{{\kf{int(duration)}}}{word.text} "
 
             prev_end_time = word.end_time
-            self.logger.debug(f"Added word: '{word.text}' with duration {duration}")
+            # self.logger.debug(f"Added word: '{word.text}' with duration {duration}")
 
-        return text.rstrip()
+        text_stripped = text.rstrip()
+        self.logger.debug(f"Created karaoke text for {len(self.segment.words)} words: {text_stripped}")
+
+        return text_stripped
 
     def __str__(self):
         return f"{{{self.segment.text}}}"
@@ -101,6 +103,7 @@ class LyricsScreen:
     lines: List[LyricsLine] = field(default_factory=list)
     logger: Optional[logging.Logger] = None
     PRE_ROLL_TIME = 5.0
+    SCREEN_GAP_THRESHOLD = 5.0
 
     def __post_init__(self):
         if self.logger is None:
@@ -117,16 +120,42 @@ class LyricsScreen:
         """Get screen end timestamp."""
         return timedelta(seconds=max(line.segment.end_time for line in self.lines))
 
-    def as_ass_events(self, style: Style) -> List[Event]:
+    def as_ass_events(self, style: Style, next_screen_start: Optional[timedelta] = None, is_unified_screen: bool = False) -> List[Event]:
         """Convert screen to ASS events."""
         events = []
         y_position = self._calculate_first_line_position()
 
+        screen_fade_in_start = self.start_ts if is_unified_screen else None
+        self.logger.debug(f"Screen fade in start: {screen_fade_in_start} (unified_screen: {is_unified_screen})")
+
         for line in self.lines:
-            events.append(line.as_ass_event(self.start_ts, self.end_ts, style, y_position))
+            events.append(self._create_line_event(line=line, y_position=y_position, style=style, screen_fade_in_start=screen_fade_in_start))
             y_position += self.line_height
 
         return events
+
+    def _create_line_event(self, line: LyricsLine, y_position: int, style: Style, screen_fade_in_start: Optional[timedelta]) -> Event:
+        """Create ASS event for a single line, handling screen transitions."""
+        if screen_fade_in_start is not None:
+            # During screen transitions, all lines appear at once
+            start_time = screen_fade_in_start
+            end_time = timedelta(seconds=line.segment.end_time + line.POST_ROLL_TIME)
+        else:
+            # Normal line timing with individual pre-roll
+            start_time = timedelta(seconds=max(0, line.segment.start_time - line.PRE_ROLL_TIME))
+            end_time = timedelta(seconds=line.segment.end_time + line.POST_ROLL_TIME)
+
+        e = Event()
+        e.type = "Dialogue"
+        e.Layer = 0
+        e.Style = style
+        e.Start = start_time.total_seconds()
+        e.End = end_time.total_seconds()
+        e.MarginV = y_position
+
+        e.Text = line._create_ass_text(start_time)
+        self.logger.debug(f"Created ASS event: {e.Text}")
+        return e
 
     def _calculate_first_line_position(self) -> int:
         """Calculate vertical position of first line."""

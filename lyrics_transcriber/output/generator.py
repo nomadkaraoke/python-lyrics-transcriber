@@ -123,6 +123,7 @@ class OutputGenerator:
             outputs.lrc = self.lyrics_file.generate_lrc(resized_segments, output_prefix)
 
             # Generate ASS
+            # outputs.ass = self.subtitle.generate_ass(resized_segments[:8], output_prefix)
             outputs.ass = self.subtitle.generate_ass(resized_segments, output_prefix)
 
             # Generate video if requested
