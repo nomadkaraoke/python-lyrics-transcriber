@@ -86,7 +86,7 @@ class LyricsLine:
             # self.logger.debug(f"Added word: '{word.text}' with duration {duration}")
 
         text_stripped = text.rstrip()
-        self.logger.debug(f"Created karaoke text for {len(self.segment.words)} words: {text_stripped}")
+        # self.logger.debug(f"Created karaoke text for {len(self.segment.words)} words: {text_stripped}")
 
         return text_stripped
 
@@ -102,8 +102,12 @@ class LyricsScreen:
     line_height: int
     lines: List[LyricsLine] = field(default_factory=list)
     logger: Optional[logging.Logger] = None
-    PRE_ROLL_TIME = 5.0
+    MAX_VISIBLE_LINES = 4
     SCREEN_GAP_THRESHOLD = 5.0
+    POST_ROLL_TIME = 2.0
+    FADE_IN_MS = 300
+    FADE_OUT_MS = 300
+    TARGET_PRESHOW_TIME = 5.0
 
     def __post_init__(self):
         if self.logger is None:
@@ -112,38 +116,118 @@ class LyricsScreen:
     @property
     def start_ts(self) -> timedelta:
         """Get screen start timestamp."""
-        earliest_ts = min(line.segment.start_time for line in self.lines)
-        return timedelta(seconds=max(0, earliest_ts - self.PRE_ROLL_TIME))
+        return timedelta(seconds=min(line.segment.start_time for line in self.lines))
 
     @property
     def end_ts(self) -> timedelta:
         """Get screen end timestamp."""
-        return timedelta(seconds=max(line.segment.end_time for line in self.lines))
+        latest_ts = max(line.segment.end_time for line in self.lines)
+        return timedelta(seconds=latest_ts + self.POST_ROLL_TIME)
 
-    def as_ass_events(self, style: Style, next_screen_start: Optional[timedelta] = None, is_unified_screen: bool = False) -> List[Event]:
-        """Convert screen to ASS events."""
+    def _visualize_timeline(self, active_lines: List[Tuple[float, int, str]], current_time: float, new_line_end: float, new_line_text: str):
+        """Create ASCII visualization of line timing."""
+        timeline = ["Timeline:"]
+        timeline.append(f"Current time: {current_time:.2f}s")
+        timeline.append("Active lines:")
+        for end_time, y_pos, text in active_lines:
+            position = y_pos // self.line_height - (self._calculate_first_line_position() // self.line_height)
+            timeline.append(f"  Line {position}: '{text}' ends at {end_time:.2f}s")
+        timeline.append(f"New line would end at: {new_line_end:.2f}s ('{new_line_text}')")
+        self.logger.debug("\n".join(timeline))
+
+    def as_ass_events(
+        self,
+        style: Style,
+        next_screen_start: Optional[timedelta] = None,
+        is_unified_screen: bool = False,
+        previous_active_lines: List[Tuple[float, int, str]] = None,
+    ) -> Tuple[List[Event], List[Tuple[float, int, str]]]:
+        """Convert screen to ASS events. Returns (events, active_lines)."""
         events = []
         y_position = self._calculate_first_line_position()
 
-        screen_fade_in_start = self.start_ts if is_unified_screen else None
-        self.logger.debug(f"Screen fade in start: {screen_fade_in_start} (unified_screen: {is_unified_screen})")
+        # Initialize active_lines with any still-visible lines from previous screens
+        active_lines = previous_active_lines.copy() if previous_active_lines else []
+        self.logger.debug(f"Starting with {len(active_lines)} previous active lines:")
+        for end, pos, text in active_lines:
+            self.logger.debug(f"  - '{text}' ends at {end:.2f}s")
 
-        for line in self.lines:
-            events.append(self._create_line_event(line=line, y_position=y_position, style=style, screen_fade_in_start=screen_fade_in_start))
-            y_position += self.line_height
+        if is_unified_screen:
+            screen_fade_in_start = self.start_ts - timedelta(seconds=self.TARGET_PRESHOW_TIME)
+            self.logger.debug(f"Unified screen fade in at {screen_fade_in_start} (all lines together)")
 
-        return events
+            for line in self.lines:
+                line_end = line.segment.end_time + self.POST_ROLL_TIME + (self.FADE_OUT_MS / 1000)
+                self.logger.debug(f"Adding unified line: '{line.segment.text}' ending at {line_end:.2f}s")
+                active_lines.append((line_end, y_position, line.segment.text))
+                events.append(
+                    self._create_line_event(line=line, y_position=y_position, style=style, screen_fade_in_start=screen_fade_in_start)
+                )
+                y_position += self.line_height
+
+            self.logger.debug(f"After unified screen, active lines: {[(end, text) for end, _, text in active_lines]}")
+        else:
+            for i, line in enumerate(self.lines):
+                line_end = line.segment.end_time + self.POST_ROLL_TIME + (self.FADE_OUT_MS / 1000)
+                target_start = line.segment.start_time - self.TARGET_PRESHOW_TIME
+
+                self.logger.debug(f"Processing line {i+1}: '{line.segment.text}'")
+                self.logger.debug(f"Target start: {target_start:.2f}s, Must show by: {line.segment.start_time:.2f}s")
+
+                # Start with target time
+                fade_in_time = target_start
+
+                while True:
+                    # Remove expired lines at this point in time
+                    prev_active_count = len(active_lines)
+                    active_lines = [(end, pos, text) for end, pos, text in active_lines if end > fade_in_time]
+                    if prev_active_count != len(active_lines):
+                        self.logger.debug(f"Removed {prev_active_count - len(active_lines)} expired lines at {fade_in_time:.2f}s")
+
+                    self._visualize_timeline(active_lines, fade_in_time, line_end, line.segment.text)
+
+                    if len(active_lines) < self.MAX_VISIBLE_LINES:
+                        self.logger.debug(f"Found space for line at {fade_in_time:.2f}s ({len(active_lines)} active lines)")
+                        break
+
+                    # No room yet, wait until next line expires
+                    if active_lines:
+                        prev_time = fade_in_time
+                        fade_in_time = active_lines[0][0]  # Wait until earliest line expires
+                        self.logger.debug(f"No space available at {prev_time:.2f}s, waiting until {fade_in_time:.2f}s")
+
+                    # Safety check: ensure we don't delay past when line needs to be shown
+                    if fade_in_time > line.segment.start_time:
+                        self.logger.error(
+                            f"Cannot find space for line before it needs to be shown! Required: {line.segment.start_time:.2f}s"
+                        )
+                        break
+
+                # Add this line to active lines
+                active_lines.append((line_end, y_position, line.segment.text))
+                active_lines.sort()  # Sort by end time
+
+                self.logger.debug(f"Final decision: fade in at {fade_in_time:.2f}s with {len(active_lines)} active lines")
+
+                events.append(
+                    self._create_line_event(
+                        line=line, y_position=y_position, style=style, screen_fade_in_start=timedelta(seconds=fade_in_time)
+                    )
+                )
+                y_position += self.line_height
+
+        return events, active_lines
 
     def _create_line_event(self, line: LyricsLine, y_position: int, style: Style, screen_fade_in_start: Optional[timedelta]) -> Event:
         """Create ASS event for a single line, handling screen transitions."""
         if screen_fade_in_start is not None:
             # During screen transitions, all lines appear at once
             start_time = screen_fade_in_start
-            end_time = timedelta(seconds=line.segment.end_time + line.POST_ROLL_TIME)
+            end_time = timedelta(seconds=line.segment.end_time + self.POST_ROLL_TIME)
         else:
             # Normal line timing with individual pre-roll
-            start_time = timedelta(seconds=max(0, line.segment.start_time - line.PRE_ROLL_TIME))
-            end_time = timedelta(seconds=line.segment.end_time + line.POST_ROLL_TIME)
+            start_time = timedelta(seconds=max(0, line.segment.start_time - self.PRE_ROLL_TIME))
+            end_time = timedelta(seconds=line.segment.end_time + self.POST_ROLL_TIME)
 
         e = Event()
         e.type = "Dialogue"

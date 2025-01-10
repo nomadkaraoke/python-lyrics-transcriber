@@ -158,29 +158,29 @@ class SubtitlesGenerator:
         resolution,
         fontsize,
     ) -> ASS:
+        """Create styled ASS subtitles."""
         a, style = self._create_styled_ass_instance(resolution, fontsize)
 
-        # First pass: identify screens that should fade in as a unit
-        unified_screens = set()  # Set of indices for screens that should fade in together
-
-        for i, screen in enumerate(screens):
-            if i == 0:
-                # First screen always fades in as a unit
-                unified_screens.add(i)
-                continue
-
-            # Check gap from previous screen
-            prev_screen = screens[i - 1]
-            last_line_end = max(line.segment.end_time for line in prev_screen.lines)
-            effective_screen_end = last_line_end + prev_screen.lines[0].POST_ROLL_TIME + (prev_screen.lines[0].FADE_OUT_MS / 1000)
-            gap_to_current = screen.start_ts.total_seconds() - effective_screen_end
-
-            if gap_to_current >= screen.SCREEN_GAP_THRESHOLD:
-                unified_screens.add(i)
-
+        active_lines = []
         for i, screen in enumerate(screens):
             next_screen_start = screens[i + 1].start_ts if i < len(screens) - 1 else None
-            is_unified = i in unified_screens
-            [a.add(event) for event in screen.as_ass_events(style, next_screen_start, is_unified)]
+            is_unified = i == 0 or (
+                next_screen_start is not None and (screen.start_ts - screens[i - 1].end_ts).total_seconds() >= screen.SCREEN_GAP_THRESHOLD
+            )
+
+            self.logger.debug(f"Processing screen {i+1}:")
+            self.logger.debug(f"Active lines before processing: {[(end, text) for end, _, text in active_lines]}")
+
+            # Get events and updated active lines
+            events, active_lines = screen.as_ass_events(style, next_screen_start, is_unified, active_lines)
+            for event in events:
+                a.add(event)
+
+            # Update active_lines for next screen
+            prev_count = len(active_lines)
+            active_lines = [(end, pos, text) for end, pos, text in active_lines if isinstance(end, float)]
+            self.logger.debug(
+                f"Active lines after processing: {[(end, text) for end, _, text in active_lines]} (removed {prev_count - len(active_lines)} lines)"
+            )
 
         return a
