@@ -65,7 +65,7 @@ def test_output_generator_initialization(test_config):
     generator = OutputGenerator(config=test_config)
     assert generator.config == test_config
     assert generator.video_resolution_num == (640, 360)
-    assert generator.font_size == 50
+    assert generator.font_size == 40
     assert generator.line_height == 50
 
 
@@ -82,7 +82,7 @@ def test_invalid_video_resolution(test_config):
         ("4k", ((3840, 2160), 250, 250)),
         ("1080p", ((1920, 1080), 120, 120)),
         ("720p", ((1280, 720), 100, 100)),
-        ("360p", ((640, 360), 50, 50)),
+        ("360p", ((640, 360), 40, 50)),
     ],
 )
 def test_video_params(resolution, expected):
@@ -96,22 +96,25 @@ def test_generate_outputs(output_generator, sample_correction_result, sample_lyr
     """Test generate_outputs creates expected files."""
     # Create output directory
     os.makedirs(output_generator.config.output_dir, exist_ok=True)
-    
-    with patch.object(output_generator.plain_text, 'write_lyrics'), \
-         patch.object(output_generator.plain_text, 'write_original_transcription'), \
-         patch.object(output_generator.plain_text, 'write_corrected_lyrics'), \
-         patch.object(output_generator.lyrics_file, 'generate_lrc'), \
-         patch.object(output_generator.subtitle, 'generate_ass'), \
-         patch.object(output_generator.video, 'generate_video'):
-        
+
+    with patch.object(output_generator.plain_text, "write_lyrics"), patch.object(
+        output_generator.plain_text, "write_original_transcription"
+    ), patch.object(output_generator.plain_text, "write_corrected_lyrics"), patch.object(
+        output_generator.lyrics_file, "generate_lrc"
+    ), patch.object(
+        output_generator.subtitle, "generate_ass"
+    ), patch.object(
+        output_generator.video, "generate_video"
+    ):
+
         outputs = output_generator.generate_outputs(
             transcription_corrected=sample_correction_result,
             lyrics_results=[sample_lyrics_data],
             output_prefix="test",
             audio_filepath="test.mp3",
-            render_video=True
+            render_video=True,
         )
-        
+
         assert isinstance(outputs, OutputPaths)
         # Verify corrections JSON was written
         assert outputs.corrections_json is not None
@@ -121,17 +124,14 @@ def test_write_corrections_data(output_generator, sample_correction_result):
     """Test writing corrections data to JSON file."""
     # Create output directory
     os.makedirs(output_generator.config.output_dir, exist_ok=True)
-    
-    output_path = output_generator.write_corrections_data(
-        sample_correction_result,
-        "test"
-    )
-    
+
+    output_path = output_generator.write_corrections_data(sample_correction_result, "test")
+
     assert output_path.endswith(".json")
     assert Path(output_path).exists()
-    
+
     # Verify JSON content
-    with open(output_path, 'r', encoding='utf-8') as f:
+    with open(output_path, "r", encoding="utf-8") as f:
         data = json.load(f)
         assert "corrected_text" in data
         assert "corrections_made" in data

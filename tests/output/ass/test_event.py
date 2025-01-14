@@ -5,6 +5,10 @@ from lyrics_transcriber.output.ass.formatters import Formatters
 
 @pytest.fixture
 def event():
+    # Store original formatters
+    original_formatters = Event.formatters
+    
+    # Set test formatters
     Event.formatters = {
         "Layer": (Formatters.str_to_integer, Formatters.integer_to_str),
         "Start": (Formatters.str_to_number, Formatters.number_to_str),
@@ -17,7 +21,11 @@ def event():
         "Effect": (Formatters.same, Formatters.same),
         "Text": (Formatters.same, Formatters.same),
     }
-    return Event()
+    
+    yield Event()
+    
+    # Restore original formatters after test
+    Event.formatters = original_formatters
 
 
 def test_event_initialization(event):

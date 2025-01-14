@@ -22,7 +22,18 @@ def create_segment(start: float, end: float, text: str) -> LyricsSegment:
 
 @pytest.fixture
 def mock_logger():
-    return logging.getLogger("test")
+    """Create a logger that will show debug messages during testing."""
+    logger = logging.getLogger("test")
+    logger.setLevel(logging.DEBUG)
+    
+    # Add a console handler to show the logs
+    handler = logging.StreamHandler()
+    handler.setLevel(logging.DEBUG)
+    formatter = logging.Formatter('%(levelname)s - %(message)s')
+    handler.setFormatter(formatter)
+    logger.addHandler(handler)
+    
+    return logger
 
 
 @pytest.fixture
@@ -84,9 +95,9 @@ def test_generate_ass_success(generator, sample_segments):
 
 def test_generate_ass_empty_segments(generator):
     """Test ASS generation with empty segments list."""
-    with pytest.raises(Exception) as exc_info:
-        generator.generate_ass([], "test_empty")
-    assert "segments" in str(exc_info.value).lower()
+    output_path = generator.generate_ass([], "test_empty")
+    assert os.path.exists(output_path)
+    assert os.path.getsize(output_path) > 0
 
 
 def test_generate_ass_invalid_output_dir(video_resolution, mock_logger):
@@ -132,21 +143,89 @@ def test_output_path_generation(generator):
     assert "test_lyrics" in path
 
 
-def test_generate_ass_with_unicode(generator):
+def test_generate_ass_with_unicode(generator, mock_logger):
     """Test ASS generation with Unicode characters."""
+    # Create segments with multiple words to ensure proper karaoke timing
     segments = [
-        create_segment(1.0, 2.0, "Hello こんにちは"),
-        create_segment(2.5, 3.5, "World 世界"),
+        LyricsSegment(
+            text="Hello こんにちは",
+            start_time=5.0,
+            end_time=6.0,
+            words=[
+                create_word("Hello", 5.0, 5.3),
+                create_word("こんにちは", 5.4, 6.0)
+            ]
+        ),
+        LyricsSegment(
+            text="World 世界",
+            start_time=6.5,
+            end_time=7.5,
+            words=[
+                create_word("World", 6.5, 6.8),
+                create_word("世界", 6.9, 7.5)
+            ]
+        )
     ]
-
+    
+    # Debug: Verify screen creation
+    screens = generator._create_screens(segments)
+    assert len(screens) > 0, "No screens were created"
+    assert len(screens[0].lines) > 0, "No lines in first screen"
+    
+    mock_logger.debug(f"Created {len(screens)} screens")
+    for i, screen in enumerate(screens):
+        mock_logger.debug(f"Screen {i}: {len(screen.lines)} lines")
+        for j, line in enumerate(screen.lines):
+            mock_logger.debug(f"  Line {j}: {line.segment.text} ({line.segment.start_time}-{line.segment.end_time})")
+    
+    # Debug: Verify styled subtitles creation
+    ass_obj = generator._create_styled_subtitles(screens, generator.video_resolution, generator.font_size)
+    assert len(ass_obj.events) > 0, "No events created in ASS object"
+    mock_logger.debug(f"Created {len(ass_obj.events)} events")
+    for event in ass_obj.events:
+        mock_logger.debug(f"Event: {event.Start}-{event.End}: {event.Text}")
+        assert event.Start >= 0, f"Event has negative start time: {event.Start}"
+        assert event.End >= 0, f"Event has negative end time: {event.End}"
+        # Verify event format
+        mock_logger.debug(f"Event type: {event.type}")
+        mock_logger.debug(f"Event style: {event.Style}")
+        # Style can be either a Style object or a string (style name)
+        assert (isinstance(event.Style, str) or 
+                event.Style is None or 
+                hasattr(event.Style, 'Name')), f"Event style should be string, None, or Style object, got {type(event.Style)}"
+        if hasattr(event.Style, 'Name'):
+            assert isinstance(event.Style.Name, str), "Style object should have a string Name"
+    
     output_path = generator.generate_ass(segments, "unicode_test")
-
-    # Verify file exists and contains Unicode
+    
+    # Verify file exists and contains Unicode in the Events section
     assert os.path.exists(output_path)
-    with open(output_path, "r", encoding="utf-8") as f:
+    with open(output_path, 'r', encoding='utf-8') as f:
         content = f.read()
-        assert "こんにちは" in content
-        assert "世界" in content
+        mock_logger.debug("File content:")
+        mock_logger.debug(content)
+        
+        # Verify style section exists
+        assert "[V4+ Styles]" in content
+        assert "Style: Nomad" in content
+        
+        # Verify events section exists and contains our Unicode text
+        assert "[Events]" in content
+        events_section = content.split('[Events]')[1]
+        
+        # Look for Dialogue lines containing our text
+        assert "Dialogue:" in events_section, "No dialogue events found"
+        
+        # Check for both Japanese and English text
+        dialogue_lines = [line for line in events_section.split('\n') if line.startswith('Dialogue:')]
+        full_dialogue = '\n'.join(dialogue_lines)
+        mock_logger.debug("Dialogue lines:")
+        mock_logger.debug(full_dialogue)
+        
+        assert "こんにちは" in full_dialogue, "Japanese text not found in dialogue"
+        assert "世界" in full_dialogue, "Japanese text not found in dialogue"
+        assert "Hello" in full_dialogue, "English text not found in dialogue"
+        assert "World" in full_dialogue, "English text not found in dialogue"
 
 
 def test_generate_ass_style_customization(output_dir, video_resolution, mock_logger):
@@ -156,12 +235,13 @@ def test_generate_ass_style_customization(output_dir, video_resolution, mock_log
         video_resolution=video_resolution,
         font_size=72,  # Larger font
         line_height=90,  # Larger line height
-        logger=mock_logger,
+        logger=mock_logger
     )
-
+    
     segments = [create_segment(1.0, 2.0, "Test")]
     output_path = generator.generate_ass(segments, "style_test")
-
-    with open(output_path, "r", encoding="utf-8") as f:
+    
+    with open(output_path, 'r', encoding='utf-8') as f:
         content = f.read()
-        assert "Fontsize: 72" in content
+        styles_section = content.split('[V4+ Styles]')[1].split('[')[0]
+        assert "Style: Nomad,Avenir Next Bold,72," in styles_section

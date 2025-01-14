@@ -1,7 +1,8 @@
 import os
 import logging
-from datetime import timedelta
 from typing import List, Optional, Tuple
+import subprocess
+import json
 
 from lyrics_transcriber.types import LyricsSegment
 from lyrics_transcriber.output.ass.lyrics_models import LyricsScreen, LyricsLine
@@ -9,10 +10,13 @@ from lyrics_transcriber.output.ass.ass import ASS
 from lyrics_transcriber.output.ass.style import Style
 from lyrics_transcriber.output.ass.constants import ALIGN_TOP_CENTER
 from lyrics_transcriber.output.ass.lyrics_models import LyricsScreen
+from lyrics_transcriber.output.ass.section_detector import SectionDetector
 
 
 class SubtitlesGenerator:
     """Handles generation of subtitle files in various formats."""
+
+    MAX_LINES_PER_SCREEN = 4  # Maximum number of lines to show on screen at once
 
     def __init__(
         self,
@@ -41,14 +45,33 @@ class SubtitlesGenerator:
         """Generate full output path for a file."""
         return os.path.join(self.output_dir, f"{output_prefix}.{extension}")
 
-    def generate_ass(self, segments: List[LyricsSegment], output_prefix: str) -> str:
+    def _get_audio_duration(self, audio_filepath: str) -> float:
+        """Get audio duration using ffprobe."""
+        try:
+            probe_cmd = ["ffprobe", "-v", "error", "-show_entries", "format=duration", "-of", "json", audio_filepath]
+            probe_output = subprocess.check_output(probe_cmd, universal_newlines=True)
+            probe_data = json.loads(probe_output)
+            duration = float(probe_data["format"]["duration"])
+            self.logger.debug(f"Detected audio duration: {duration:.2f}s")
+            return duration
+        except (subprocess.CalledProcessError, json.JSONDecodeError, KeyError) as e:
+            self.logger.error(f"Failed to get audio duration: {e}")
+            # Fallback to last segment end time plus buffer
+            if self.segments:
+                duration = self.segments[-1].end_time + 30.0
+                self.logger.warning(f"Using fallback duration: {duration:.2f}s")
+                return duration
+            return 0.0
+
+    def generate_ass(self, segments: List[LyricsSegment], output_prefix: str, audio_filepath: str) -> str:
         self.logger.info("Generating ASS format subtitles")
         output_path = self._get_output_path(f"{output_prefix} (Lyrics Corrected)", "ass")
 
         try:
             self.logger.debug(f"Processing {len(segments)} segments")
+            song_duration = self._get_audio_duration(audio_filepath)
 
-            screens = self._create_screens(segments)
+            screens = self._create_screens(segments, song_duration)
             self.logger.debug(f"Created {len(screens)} initial screens")
 
             lyric_subtitles_ass = self._create_styled_subtitles(screens, self.video_resolution, self.font_size)
@@ -62,31 +85,37 @@ class SubtitlesGenerator:
             self.logger.error(f"Failed to generate ASS file: {str(e)}", exc_info=True)
             raise
 
-    def _create_screens(self, segments: List[LyricsSegment]) -> List[LyricsScreen]:
+    def _create_screens(self, segments: List[LyricsSegment], song_duration: float) -> List[LyricsScreen]:
         """Create screens from segments with detailed logging."""
         self.logger.debug("Creating screens from segments")
         screens: List[LyricsScreen] = []
         screen: Optional[LyricsScreen] = None
 
-        max_lines_per_screen = 4
+        # Create section screens first
+        section_detector = SectionDetector(logger=self.logger)
+        section_screens = section_detector.process_segments(segments, self.video_resolution, self.line_height, song_duration)
 
+        # Create regular lyric screens
         for i, segment in enumerate(segments):
-            if screen is None or len(screen.lines) >= max_lines_per_screen:
+            if screen is None or len(screen.lines) >= self.MAX_LINES_PER_SCREEN:
                 screen = LyricsScreen(video_size=self.video_resolution, line_height=self.line_height, logger=self.logger)
                 screens.append(screen)
 
             line = LyricsLine(logger=self.logger, segment=segment)
             screen.lines.append(line)
 
+        # Merge all screens in chronological order
+        all_screens = sorted(section_screens + screens, key=lambda s: s.start_ts)
+
         # Log final screen contents
         self.logger.debug("Final screens created:")
-        for i, screen in enumerate(screens):
+        for i, screen in enumerate(all_screens):
             self.logger.debug(f"Screen {i + 1}:")
             self.logger.debug(f"  Number of lines: {len(screen.lines)}")
             for j, line in enumerate(screen.lines):
                 self.logger.debug(f"    Line {j + 1} ({line.segment.start_time:.2f}s - {line.segment.end_time:.2f}s): {line}")
 
-        return screens
+        return all_screens
 
     def _create_styled_ass_instance(self, resolution, fontsize):
         a = ASS()
