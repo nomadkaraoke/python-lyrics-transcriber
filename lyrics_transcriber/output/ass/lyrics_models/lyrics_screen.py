@@ -18,10 +18,11 @@ class LyricsScreen:
     logger: Optional[logging.Logger] = None
     MAX_VISIBLE_LINES = 4
     SCREEN_GAP_THRESHOLD = 5.0
-    POST_ROLL_TIME = 2.0
-    FADE_IN_MS = 300
-    FADE_OUT_MS = 300
+    POST_ROLL_TIME = 0.0
+    FADE_IN_MS = 100
+    FADE_OUT_MS = 100
     TARGET_PRESHOW_TIME = 5.0
+    POSITION_CLEAR_BUFFER_MS = 300
 
     def __post_init__(self):
         if self.logger is None:
@@ -58,100 +59,73 @@ class LyricsScreen:
     ) -> Tuple[List[Event], List[Tuple[float, int, str]]]:
         """Convert screen to ASS events. Returns (events, active_lines)."""
         events = []
-        y_position = self._calculate_first_line_position()
-
-        # Initialize active_lines with any still-visible lines from previous screens
         active_lines = previous_active_lines.copy() if previous_active_lines else []
-        self.logger.debug(f"Starting with {len(active_lines)} previous active lines:")
-        for end, pos, text in active_lines:
-            self.logger.debug(f"  - '{text}' ends at {end:.2f}s")
+
+        if active_lines:
+            self.logger.debug("  Active lines from previous screen:")
+            for end, pos, text in active_lines:
+                self.logger.debug(f"    Line at y={pos}: '{text}' (ends {end:.2f}s)")
 
         if is_unified_screen:
-            screen_fade_in_start = self.start_ts - timedelta(seconds=self.TARGET_PRESHOW_TIME)
-            self.logger.debug(f"Unified screen fade in at {screen_fade_in_start} (all lines together)")
+            fade_in_start = self.start_ts - timedelta(seconds=self.TARGET_PRESHOW_TIME)
+            self.logger.debug(f"  Unified screen fade in at {fade_in_start}")
 
+            y_position = self._calculate_first_line_position()
             for line in self.lines:
-                line_end = line.segment.end_time + self.POST_ROLL_TIME + (self.FADE_OUT_MS / 1000)
-                self.logger.debug(f"Adding unified line: '{line.segment.text}' ending at {line_end:.2f}s")
+                line_end = line.segment.end_time + self.POST_ROLL_TIME
                 active_lines.append((line_end, y_position, line.segment.text))
-                events.append(
-                    self._create_line_event(line=line, y_position=y_position, style=style, screen_fade_in_start=screen_fade_in_start)
-                )
+                events.append(self._create_line_event(line, y_position, style, fade_in_start))
                 y_position += self.line_height
-
-            self.logger.debug(f"After unified screen, active lines: {[(end, text) for end, _, text in active_lines]}")
         else:
             for i, line in enumerate(self.lines):
-                line_end = line.segment.end_time + self.POST_ROLL_TIME
-                fade_out_end = line_end + (self.FADE_OUT_MS / 1000)  # Include fade out time
-                target_start = line.segment.start_time - self.TARGET_PRESHOW_TIME
-
-                self.logger.debug(f"Processing line {i+1}: '{line.segment.text}'")
-                self.logger.debug(f"Target start: {target_start:.2f}s, Must show by: {line.segment.start_time:.2f}s")
-
-                # Start with target time
-                fade_in_time = target_start
+                fade_in_time = line.segment.start_time - self.TARGET_PRESHOW_TIME
+                self.logger.debug(f"  Processing line {i+1}:")
+                self.logger.debug(f"    Text: '{line.segment.text}'")
+                self.logger.debug(f"    Target timing: {fade_in_time:.2f}s -> {line.segment.start_time:.2f}s")
 
                 while True:
-                    # Remove only fully expired lines (including fade out time)
-                    prev_active_count = len(active_lines)
-                    current_time = fade_in_time
-                    active_lines = [
-                        (end, pos, text) for end, pos, text in active_lines 
-                        if (end + (self.FADE_OUT_MS / 1000)) > current_time
-                    ]
-                    if prev_active_count != len(active_lines):
-                        self.logger.debug(f"Removed {prev_active_count - len(active_lines)} expired lines at {fade_in_time:.2f}s")
+                    if i == 0 and previous_active_lines:
+                        top_lines = sorted([(end, pos, text) for end, pos, text in active_lines], key=lambda x: x[1])[:2]
+                        if top_lines:
+                            latest_clear_time = max(
+                                end + (self.FADE_OUT_MS / 1000) + (self.POSITION_CLEAR_BUFFER_MS / 1000) for end, _, _ in top_lines
+                            )
+                            if latest_clear_time > fade_in_time:
+                                fade_in_time = latest_clear_time
+                                self.logger.debug(f"    Waiting for top positions to clear until {fade_in_time:.2f}s")
+                                continue
 
-                    self._visualize_timeline(active_lines, fade_in_time, fade_out_end, line.segment.text)
+                    # Remove expired lines and get available positions
+                    active_lines = [
+                        (end, pos, text)
+                        for end, pos, text in active_lines
+                        if (end + (self.FADE_OUT_MS / 1000) + (self.POSITION_CLEAR_BUFFER_MS / 1000)) > fade_in_time
+                    ]
 
                     if len(active_lines) < self.MAX_VISIBLE_LINES:
-                        self.logger.debug(f"Found space for line at {fade_in_time:.2f}s ({len(active_lines)} active lines)")
                         break
 
-                    # No room yet, wait until next line fully expires (including fade out)
+                    # Wait for next line to expire
                     if active_lines:
-                        prev_time = fade_in_time
-                        active_lines.sort()  # Sort by end time
-                        next_available = active_lines[0][0] + (self.FADE_OUT_MS / 1000)
+                        active_lines.sort()
+                        next_available = active_lines[0][0] + (self.FADE_OUT_MS / 1000) + (self.POSITION_CLEAR_BUFFER_MS / 1000)
                         fade_in_time = next_available
-                        self.logger.debug(f"No space available at {prev_time:.2f}s, waiting until {fade_in_time:.2f}s")
 
-                    # Safety check: ensure we don't delay past when line needs to be shown
-                    if fade_in_time > line.segment.start_time:
-                        self.logger.error(
-                            f"Cannot find space for line before it needs to be shown! Required: {line.segment.start_time:.2f}s"
-                        )
-                        break
-
-                # Calculate y_position based on current active lines
                 y_position = self._calculate_line_position(active_lines, fade_in_time)
-                
-                # Add this line to active lines
+                self.logger.debug(f"    Final position: y={y_position}, fade in at {fade_in_time:.2f}s")
+
+                line_end = line.segment.end_time + self.POST_ROLL_TIME
                 active_lines.append((line_end, y_position, line.segment.text))
-                active_lines.sort()  # Sort by end time
-
-                self.logger.debug(f"Final decision: fade in at {fade_in_time:.2f}s with {len(active_lines)} active lines")
-
-                events.append(
-                    self._create_line_event(
-                        line=line,
-                        y_position=y_position,
-                        style=style,
-                        screen_fade_in_start=timedelta(seconds=fade_in_time)
-                    )
-                )
+                events.append(self._create_line_event(line, y_position, style, timedelta(seconds=fade_in_time)))
 
         return events, active_lines
 
     def _create_line_event(self, line: LyricsLine, y_position: int, style: Style, screen_fade_in_start: Optional[timedelta]) -> Event:
         """Create ASS event for a single line, handling screen transitions."""
         if screen_fade_in_start is not None:
-            # During screen transitions, all lines appear at once
             start_time = screen_fade_in_start
             end_time = timedelta(seconds=line.segment.end_time + self.POST_ROLL_TIME)
         else:
-            # Normal line timing with individual pre-roll
             start_time = timedelta(seconds=max(0, line.segment.start_time - self.PRE_ROLL_TIME))
             end_time = timedelta(seconds=line.segment.end_time + self.POST_ROLL_TIME)
 
@@ -161,10 +135,13 @@ class LyricsScreen:
         e.Style = style
         e.Start = start_time.total_seconds()
         e.End = end_time.total_seconds()
-        e.MarginV = y_position
 
-        e.Text = line._create_ass_text(start_time)
-        self.logger.debug(f"Created ASS event: {e.Text}")
+        # Instead of using MarginV, use absolute positioning
+        x_pos = self.video_size[0] // 2  # Center horizontally
+        text = f"{{\\an8}}{{\\pos({x_pos},{y_position})}}{line._create_ass_text(start_time)}"
+        e.Text = text
+
+        # self.logger.debug(f"Created ASS event: {e.Text}")
         return e
 
     def _calculate_first_line_position(self) -> int:
@@ -176,21 +153,45 @@ class LyricsScreen:
     def _calculate_line_position(self, active_lines: List[Tuple[float, int, str]], current_time: float) -> int:
         """Calculate vertical position for a new line based on current active lines."""
         base_position = self._calculate_first_line_position()
-        
-        # Consider a position occupied until the line has completely faded out
-        used_positions = set(
-            pos for end, pos, _ in active_lines 
-            if (end + (self.FADE_OUT_MS / 1000)) > current_time
+        line_positions = [
+            base_position,
+            base_position + self.line_height,
+            base_position + (2 * self.line_height),
+            base_position + (3 * self.line_height),
+        ]
+
+        # Sort active lines by their vertical position
+        active_lines_sorted = sorted(
+            [(end, pos, text) for end, pos, text in active_lines if (end + (self.FADE_OUT_MS / 1000)) > current_time],
+            key=lambda x: x[1],  # Sort by position
         )
-        
-        # Find the first available position from top to bottom
-        for i in range(self.MAX_VISIBLE_LINES):
-            candidate_position = base_position + (i * self.line_height)
-            if candidate_position not in used_positions:
-                return candidate_position
-                
-        # If no slots are available, use the last position as fallback
-        return base_position + ((self.MAX_VISIBLE_LINES - 1) * self.line_height)
+
+        # Check if first two positions are still in use (including fade out and buffer)
+        buffer_time = 0.3  # 300ms additional buffer
+        positions_in_use = {}  # Changed to dict to track when positions become free
+
+        for end, pos, text in active_lines_sorted:
+            clear_time = end + (self.FADE_OUT_MS / 1000) + buffer_time
+            if clear_time > current_time:
+                positions_in_use[pos] = (text, end, clear_time)
+
+        self.logger.debug(f"    Position status at {current_time:.2f}s:")
+        for pos in line_positions:
+            if pos in positions_in_use:
+                text, end, clear = positions_in_use[pos]
+                self.logger.debug(f"      Position {pos}: occupied by '{text}' until {clear:.2f}s (ends {end:.2f}s + fade + buffer)")
+            else:
+                self.logger.debug(f"      Position {pos}: available")
+
+        # Find first available position from top
+        for position in line_positions:
+            if position not in positions_in_use:
+                self.logger.debug(f"    Selected position {position} (first available from top)")
+                return position
+
+        # If all positions are in use, log details and use last position
+        self.logger.debug("    All positions in use, using last position as fallback")
+        return line_positions[-1]
 
     def __str__(self):
         return "\n".join([f"{self.start_ts} - {self.end_ts}:", *[f"\t{line}" for line in self.lines]])
