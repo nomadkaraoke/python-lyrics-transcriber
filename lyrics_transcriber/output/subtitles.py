@@ -65,7 +65,7 @@ class SubtitlesGenerator:
 
     def generate_ass(self, segments: List[LyricsSegment], output_prefix: str, audio_filepath: str) -> str:
         self.logger.info("Generating ASS format subtitles")
-        output_path = self._get_output_path(f"{output_prefix} (Lyrics Corrected)", "ass")
+        output_path = self._get_output_path(f"{output_prefix} (Karaoke)", "ass")
 
         try:
             self.logger.debug(f"Processing {len(segments)} segments")

@@ -33,7 +33,7 @@ class LyricsFileGenerator:
             Path to generated LRC file
         """
         self.logger.info("Generating LRC format lyrics")
-        output_path = self._get_output_path(f"{output_prefix} (Lyrics Corrected)", "lrc")
+        output_path = self._get_output_path(f"{output_prefix} (Karaoke)", "lrc")
 
         try:
             self._write_lrc_file(output_path, segments)
