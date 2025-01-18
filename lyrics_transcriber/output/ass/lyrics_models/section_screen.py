@@ -25,6 +25,9 @@ class SectionScreen(LyricsScreen):
         super().__init__(video_size=video_size, line_height=line_height, logger=logger)
         self.section_type = section_type
 
+        # Calculate actual duration in seconds (rounded to nearest second)
+        duration_secs = round(end_time - start_time)
+
         # Adjust timing for intro sections
         if section_type == "INTRO":
             self.start_time = 1.0  # Start after 1 second
@@ -33,11 +36,8 @@ class SectionScreen(LyricsScreen):
             self.start_time = start_time
             self.end_time = end_time
 
-        # Calculate duration in seconds
-        duration_secs = int(self.end_time - self.start_time)
-
-        # Create a synthetic segment for the instrumental marker
-        text = f"INSTRUMENTAL - {duration_secs} seconds"
+        # Create a synthetic segment for the section marker
+        text = f"{section_type} ({duration_secs} seconds)"
         word = Word(text=text, start_time=self.start_time, end_time=self.end_time, confidence=1.0)
         segment = LyricsSegment(text=text, start_time=self.start_time, end_time=self.end_time, words=[word])
         self.lines = [LyricsLine(segment=segment, logger=self.logger)]
@@ -48,8 +48,8 @@ class SectionScreen(LyricsScreen):
         next_screen_start: Optional[timedelta],
         previous_active_lines: List[Tuple[float, int, str]] = None,
     ) -> Tuple[List[Event], List[Tuple[float, int, str]]]:
-        """Create ASS events for instrumental markers with karaoke highlighting."""
-        self.logger.debug(f"Creating instrumental marker event for {self.section_type}")
+        """Create ASS events for section markers with karaoke highlighting."""
+        self.logger.debug(f"Creating section marker event for {self.section_type}")
 
         # Wait for previous lines to fade out
         start_time = self.start_time
@@ -72,7 +72,7 @@ class SectionScreen(LyricsScreen):
         duration = int((self.end_time - self.start_time) * 100)  # Convert to centiseconds
         event.Text = f"{{\\fad(300,300)}}{{\\an8}}{{\\K{duration}}}{self.lines[0].segment.text}"
 
-        self.logger.debug(f"Created instrumental event: {event.Text} ({event.Start}s - {event.End}s)")
+        self.logger.debug(f"Created section event: {event.Text} ({event.Start}s - {event.End}s)")
         return [event], []  # No active lines to track for sections
 
     @property

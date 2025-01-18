@@ -12,9 +12,9 @@ class SectionDetector:
         self.gap_threshold = gap_threshold
         self.logger = logger or logging.getLogger(__name__)
         self.intro_padding = 0.0  # No padding for intro
-        self.outro_padding = 0.0  # No padding for outro
+        self.outro_padding = 5.0  # End 5s before song ends
         self.instrumental_start_padding = 1.0  # Start 1s after previous segment
-        self.instrumental_end_padding = 5.0  # End 3s before next segment
+        self.instrumental_end_padding = 5.0  # End 5s before next segment
 
     def process_segments(
         self, segments: List[LyricsSegment], video_size: Tuple[int, int], line_height: int, song_duration: float
@@ -72,12 +72,14 @@ class SectionDetector:
             last_segment = segments[-1]
             outro_duration = song_duration - last_segment.end_time
             if outro_duration >= self.gap_threshold:
-                self.logger.debug(f"Detected outro section: {last_segment.end_time:.2f}s - {song_duration:.2f}s")
+                outro_start = last_segment.end_time + self.outro_padding
+                outro_end = song_duration - self.outro_padding  # End 5s before song ends
+                self.logger.debug(f"Detected outro section: {outro_start:.2f}s - {outro_end:.2f}s")
                 screens.append(
                     SectionScreen(
                         section_type="OUTRO",
-                        start_time=last_segment.end_time + self.outro_padding,
-                        end_time=song_duration,
+                        start_time=outro_start,
+                        end_time=outro_end,
                         video_size=video_size,
                         line_height=line_height,
                         logger=self.logger,
