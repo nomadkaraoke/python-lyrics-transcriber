@@ -16,6 +16,7 @@ class LyricsScreen:
     line_height: int
     lines: List[LyricsLine] = field(default_factory=list)
     logger: Optional[logging.Logger] = None
+    post_instrumental: bool = False
     MAX_VISIBLE_LINES = 4
     SCREEN_GAP_THRESHOLD = 5.0
     POST_ROLL_TIME = 0.0
@@ -55,7 +56,6 @@ class LyricsScreen:
         self,
         style: Style,
         next_screen_start: Optional[timedelta] = None,
-        is_unified_screen: bool = False,
         previous_active_lines: List[Tuple[float, int, str]] = None,
     ) -> Tuple[List[Event], List[Tuple[float, int, str]]]:
         """Convert screen to ASS events. Returns (events, active_lines)."""
@@ -71,9 +71,10 @@ class LyricsScreen:
             for end, pos, text in active_previous_lines:
                 self.logger.debug(f"    Line at y={pos}: '{text}' (ends {end:.2f}s)")
 
-        if is_unified_screen:
+        # Use unified screen behavior for post-instrumental screens
+        if self.post_instrumental:
             fade_in_start = self.start_ts - timedelta(seconds=self.TARGET_PRESHOW_TIME)
-            self.logger.debug(f"  Unified screen fade in at {fade_in_start}")
+            self.logger.debug(f"  Post-instrumental screen fade in at {fade_in_start}")
 
             y_position = self._calculate_first_line_position()
             for line in self.lines:

@@ -4,6 +4,7 @@ from typing import List, Optional, Tuple
 import subprocess
 import json
 
+from lyrics_transcriber.output.ass.lyrics_models.section_screen import SectionScreen
 from lyrics_transcriber.types import LyricsSegment
 from lyrics_transcriber.output.ass.lyrics_models import LyricsScreen, LyricsLine
 from lyrics_transcriber.output.ass.ass import ASS
@@ -90,22 +91,64 @@ class SubtitlesGenerator:
         self.logger.debug("Creating screens from segments")
         screens: List[LyricsScreen] = []
         screen: Optional[LyricsScreen] = None
+        last_instrumental_end = 0.0
 
         # Create section screens first
         section_detector = SectionDetector(logger=self.logger)
         section_screens = section_detector.process_segments(segments, self.video_resolution, self.line_height, song_duration)
 
-        # Create regular lyric screens
+        # Get instrumental section boundaries
+        instrumental_times = [
+            (s.start_time, s.end_time) for s in section_screens if isinstance(s, SectionScreen) and s.section_type == "INSTRUMENTAL"
+        ]
+
+        self.logger.debug(f"Found {len(instrumental_times)} instrumental sections:")
+        for start, end in instrumental_times:
+            self.logger.debug(f"  {start:.2f}s - {end:.2f}s")
+
+        # Create regular lyric screens, splitting at instrumental boundaries
         for i, segment in enumerate(segments):
-            if screen is None or len(screen.lines) >= self.MAX_LINES_PER_SCREEN:
+            self.logger.debug(f"Processing segment {i}: {segment.start_time:.2f}s - {segment.end_time:.2f}s")
+
+            # Skip segments that fall within instrumental sections
+            in_instrumental = False
+            for inst_start, inst_end in instrumental_times:
+                if segment.start_time >= inst_start and segment.start_time < inst_end:
+                    self.logger.debug(f"  Skipping segment - falls within instrumental {inst_start:.2f}s - {inst_end:.2f}s")
+                    in_instrumental = True
+                    break
+
+            if in_instrumental:
+                continue
+
+            # Check if we need to start a new screen
+            start_new_screen = screen is None or len(screen.lines) >= self.MAX_LINES_PER_SCREEN
+
+            # Force new screen if this segment is the first after any instrumental section
+            for inst_start, inst_end in instrumental_times:
+                # Check if previous segment was before instrumental and current is after
+                if screen and screen.lines:
+                    prev_segment = screen.lines[-1].segment
+                    if prev_segment.end_time <= inst_start and segment.start_time >= inst_end:
+                        self.logger.debug(f"  Forcing new screen - first segment after instrumental {inst_start:.2f}s - {inst_end:.2f}s")
+                        start_new_screen = True
+                        break
+
+            if start_new_screen:
                 screen = LyricsScreen(video_size=self.video_resolution, line_height=self.line_height, logger=self.logger)
                 screens.append(screen)
+                self.logger.debug("  Created new screen")
 
             line = LyricsLine(logger=self.logger, segment=segment)
             screen.lines.append(line)
+            self.logger.debug(f"  Added line to screen (now has {len(screen.lines)} lines)")
 
-        # Merge all screens in chronological order
+        # Merge and mark post-instrumental screens
         all_screens = sorted(section_screens + screens, key=lambda s: s.start_ts)
+        for i in range(1, len(all_screens)):
+            if isinstance(all_screens[i - 1], SectionScreen):
+                all_screens[i].post_instrumental = True
+                self.logger.debug(f"Marked screen {i+1} as post-instrumental")
 
         # Log final screen contents
         self.logger.debug("Final screens created:")
@@ -193,15 +236,11 @@ class SubtitlesGenerator:
         active_lines = []
         for i, screen in enumerate(screens):
             next_screen_start = screens[i + 1].start_ts if i < len(screens) - 1 else None
-            is_unified = i == 0 or (
-                next_screen_start is not None and (screen.start_ts - screens[i - 1].end_ts).total_seconds() >= screen.SCREEN_GAP_THRESHOLD
-            )
 
             self.logger.debug(f"Processing screen {i+1}:")
-            self.logger.debug(f"Active lines before processing: {[(end, text) for end, _, text in active_lines]}")
 
             # Get events and updated active lines
-            events, active_lines = screen.as_ass_events(style, next_screen_start, is_unified, active_lines)
+            events, active_lines = screen.as_ass_events(style, next_screen_start, active_lines)
             for event in events:
                 a.add(event)
 

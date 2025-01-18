@@ -11,6 +11,10 @@ class SectionDetector:
     def __init__(self, gap_threshold: float = 10.0, logger: Optional[logging.Logger] = None):
         self.gap_threshold = gap_threshold
         self.logger = logger or logging.getLogger(__name__)
+        self.intro_padding = 0.0  # No padding for intro
+        self.outro_padding = 0.0  # No padding for outro
+        self.instrumental_start_padding = 1.0  # Start 1s after previous segment
+        self.instrumental_end_padding = 5.0  # End 3s before next segment
 
     def process_segments(
         self, segments: List[LyricsSegment], video_size: Tuple[int, int], line_height: int, song_duration: float
@@ -35,7 +39,7 @@ class SectionDetector:
                 SectionScreen(
                     section_type="INTRO",
                     start_time=0.0,
-                    end_time=segments[0].start_time,
+                    end_time=segments[0].start_time - self.intro_padding,
                     video_size=video_size,
                     line_height=line_height,
                     logger=self.logger,
@@ -46,17 +50,22 @@ class SectionDetector:
         for i in range(len(segments) - 1):
             gap = segments[i + 1].start_time - segments[i].end_time
             if gap >= self.gap_threshold:
-                self.logger.debug(f"Detected instrumental section: {segments[i].end_time:.2f} - {segments[i + 1].start_time:.2f}s")
-                screens.append(
-                    SectionScreen(
-                        section_type="INSTRUMENTAL",
-                        start_time=segments[i].end_time,
-                        end_time=segments[i + 1].start_time,
-                        video_size=video_size,
-                        line_height=line_height,
-                        logger=self.logger,
+                instrumental_start = segments[i].end_time + self.instrumental_start_padding
+                instrumental_end = segments[i + 1].start_time - self.instrumental_end_padding
+
+                # Only create section if there's meaningful duration after padding
+                if instrumental_end > instrumental_start:
+                    self.logger.debug(f"Detected instrumental section: {instrumental_start:.2f} - {instrumental_end:.2f}s")
+                    screens.append(
+                        SectionScreen(
+                            section_type="INSTRUMENTAL",
+                            start_time=instrumental_start,
+                            end_time=instrumental_end,
+                            video_size=video_size,
+                            line_height=line_height,
+                            logger=self.logger,
+                        )
                     )
-                )
 
         # Check for outro
         if segments:  # Only add outro if there are segments
@@ -67,7 +76,7 @@ class SectionDetector:
                 screens.append(
                     SectionScreen(
                         section_type="OUTRO",
-                        start_time=last_segment.end_time,
+                        start_time=last_segment.end_time + self.outro_padding,
                         end_time=song_duration,
                         video_size=video_size,
                         line_height=line_height,

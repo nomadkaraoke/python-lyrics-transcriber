@@ -29,7 +29,7 @@ class VideoGenerator:
         """
         if not all(x > 0 for x in video_resolution):
             raise ValueError("Video resolution dimensions must be greater than 0")
-        
+
         self.output_dir = output_dir
         self.cache_dir = cache_dir
         self.video_resolution = video_resolution
@@ -132,6 +132,8 @@ class VideoGenerator:
         # fmt: off
         cmd = [
             "ffmpeg",
+            "-hide_banner",
+            "-loglevel", "error",
             "-r", "30",  # Set frame rate to 30 fps
         ]
 
@@ -193,7 +195,7 @@ class VideoGenerator:
         self.logger.debug(f"Running FFmpeg command: {' '.join(cmd)}")
         try:
             output = subprocess.check_output(cmd, universal_newlines=True, stderr=subprocess.STDOUT)
-            self.logger.debug(f"FFmpeg output: {output}")
+            # self.logger.debug(f"FFmpeg output: {output}")
         except subprocess.CalledProcessError as e:
             self.logger.error(f"FFmpeg error: {e.output}")
             raise
