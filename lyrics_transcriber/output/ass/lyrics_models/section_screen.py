@@ -3,10 +3,9 @@ from typing import List, Optional, Literal, Tuple
 import logging
 from datetime import timedelta
 
-from lyrics_transcriber.types import LyricsSegment, Word
 from lyrics_transcriber.output.ass.style import Style
 from lyrics_transcriber.output.ass.event import Event
-from lyrics_transcriber.output.ass.lyrics_models.lyrics_screen import ScreenConfig, PositionCalculator
+from lyrics_transcriber.output.ass.lyrics_models.lyrics_screen import ScreenConfig
 
 
 @dataclass
