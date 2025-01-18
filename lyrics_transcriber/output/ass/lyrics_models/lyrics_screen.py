@@ -21,6 +21,7 @@ class LyricsScreen:
     POST_ROLL_TIME = 0.0
     FADE_IN_MS = 100
     FADE_OUT_MS = 300
+    CASCADE_DELAY_MS = 200
     TARGET_PRESHOW_TIME = 5.0
     POSITION_CLEAR_BUFFER_MS = 300
 
@@ -102,14 +103,21 @@ class LyricsScreen:
             self.logger.debug(f"    First line '{first_line.segment.text}' starts at {first_line.segment.start_time:.2f}s")
             self.logger.debug(f"    Fading in first line at {first_line_fade_in:.2f}s")
             if len(self.lines) > 1:
-                self.logger.debug(f"    Fading in remaining lines at {remaining_lines_fade_in:.2f}s")
+                self.logger.debug(f"    Fading in remaining lines starting at {remaining_lines_fade_in:.2f}s")
                 if previous_active_lines:
                     self.logger.debug(f"    (waiting for previous line '{last_line[2]}' to clear at {last_line_clear_time:.2f}s)")
 
             # Process lines with staggered fade-in times
             y_position = self._calculate_first_line_position()
             for i, line in enumerate(self.lines):
-                fade_in_time = first_line_fade_in if i == 0 else remaining_lines_fade_in
+                if i == 0:
+                    fade_in_time = first_line_fade_in
+                else:
+                    # Add 100ms delay for each subsequent line after the first
+                    cascade_delay = (i - 1) * self.CASCADE_DELAY_MS / 1000
+                    fade_in_time = remaining_lines_fade_in + cascade_delay
+                    self.logger.debug(f"    Line {i+1} cascade delay: +{cascade_delay:.1f}s")
+
                 self.logger.debug(f"    Placing '{line.segment.text}' at position {y_position}")
                 line_end = line.segment.end_time + self.POST_ROLL_TIME
                 active_lines.append((line_end, y_position, line.segment.text))
