@@ -154,9 +154,14 @@ class SubtitlesGenerator:
         self.logger.debug("Final screens created:")
         for i, screen in enumerate(all_screens):
             self.logger.debug(f"Screen {i + 1}:")
-            self.logger.debug(f"  Number of lines: {len(screen.lines)}")
-            for j, line in enumerate(screen.lines):
-                self.logger.debug(f"    Line {j + 1} ({line.segment.start_time:.2f}s - {line.segment.end_time:.2f}s): {line}")
+            if isinstance(screen, SectionScreen):
+                self.logger.debug(f"  Section: {screen.section_type}")
+                self.logger.debug(f"  Text: {screen.text}")
+                self.logger.debug(f"  Time: {screen.start_time:.2f}s - {screen.end_time:.2f}s")
+            else:
+                self.logger.debug(f"  Number of lines: {len(screen.lines)}")
+                for j, line in enumerate(screen.lines):
+                    self.logger.debug(f"    Line {j + 1} ({line.segment.start_time:.2f}s - {line.segment.end_time:.2f}s): {line}")
 
         return all_screens
 

@@ -1,4 +1,4 @@
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import List, Optional, Tuple
 import logging
 from datetime import timedelta
@@ -9,26 +9,279 @@ from lyrics_transcriber.output.ass.lyrics_models.lyrics_line import LyricsLine
 
 
 @dataclass
+class ScreenConfig:
+    """Configuration for screen timing and layout."""
+
+    # Screen layout
+    max_visible_lines: int = 4
+    line_height: int = 50
+    top_padding: int = 50  # One line height of padding
+    video_height: int = 720  # 720p default
+
+    # Timing configuration
+    screen_gap_threshold: float = 5.0
+    post_roll_time: float = 1.0
+    fade_in_ms: int = 100
+    fade_out_ms: int = 400
+    cascade_delay_ms: int = 200
+    target_preshow_time: float = 5.0
+    position_clear_buffer_ms: int = 300
+
+
+@dataclass
+class LineTimingInfo:
+    """Timing information for a single line."""
+
+    fade_in_time: float
+    end_time: float
+    fade_out_time: float
+    clear_time: float
+
+
+@dataclass
+class LineState:
+    """Complete state for a single line."""
+
+    text: str
+    timing: LineTimingInfo
+    y_position: int
+
+
+class PositionStrategy:
+    """Handles calculation of vertical positions for lines."""
+
+    def __init__(self, video_size: Tuple[int, int], config: ScreenConfig):
+        self.video_size = video_size
+        self.config = config
+
+    def calculate_line_positions(self) -> List[int]:
+        """Calculate vertical positions for all possible lines."""
+        return PositionCalculator.calculate_line_positions(self.config)
+
+
+class PositionCalculator:
+    """Shared position calculation logic."""
+
+    @staticmethod
+    def calculate_first_line_position(config: ScreenConfig) -> int:
+        """Calculate vertical position of first line."""
+        total_height = config.max_visible_lines * config.line_height
+        return config.top_padding + (config.video_height - total_height - config.top_padding) // 4
+
+    @staticmethod
+    def calculate_line_positions(config: ScreenConfig) -> List[int]:
+        """Calculate vertical positions for all possible lines."""
+        first_pos = PositionCalculator.calculate_first_line_position(config)
+        return [first_pos + (i * config.line_height) for i in range(config.max_visible_lines)]
+
+    @staticmethod
+    def position_to_line_index(y_position: int, config: ScreenConfig) -> int:
+        """Convert y-position to 0-based line index."""
+        first_pos = PositionCalculator.calculate_first_line_position(config)
+        return (y_position - first_pos) // config.line_height
+
+    @staticmethod
+    def line_index_to_position(index: int, config: ScreenConfig) -> int:
+        """Convert 0-based line index to y-position."""
+        first_pos = PositionCalculator.calculate_first_line_position(config)
+        return first_pos + (index * config.line_height)
+
+
+class TimingStrategy:
+    """Handles calculation of line timings during screen transitions."""
+
+    def __init__(self, config: ScreenConfig, logger: Optional[logging.Logger] = None):
+        self.config = config
+        self.logger = logger or logging.getLogger(__name__)
+
+    def calculate_line_timings(
+        self,
+        current_lines: List[LyricsLine],
+        previous_active_lines: Optional[List[Tuple[float, int, str]]] = None,
+        post_instrumental: bool = False,
+    ) -> List[LineTimingInfo]:
+        """Calculate timing information for each line in the screen."""
+        if post_instrumental:
+            return self._calculate_post_instrumental_timings(current_lines)
+
+        previous_active_lines = previous_active_lines or []
+
+        # Get first line timing as anchor point
+        first_line = current_lines[0]
+        first_line_fade_in = first_line.segment.start_time - self.config.target_preshow_time
+
+        # Check if we need to wait for previous lines to clear
+        if previous_active_lines:
+            top_lines = sorted([(end, pos, text) for end, pos, text in previous_active_lines], key=lambda x: x[1])[:2]
+            if top_lines:
+                latest_clear_time = max(
+                    end + (self.config.fade_out_ms / 1000) + (self.config.position_clear_buffer_ms / 1000) for end, _, _ in top_lines
+                )
+                first_line_fade_in = max(first_line_fade_in, latest_clear_time)
+                self.logger.debug(f"    Waiting for top lines to clear at {latest_clear_time:.2f}s")
+
+        timings = []
+        for i, line in enumerate(current_lines):
+            timing = self._calculate_line_timing(
+                line=line, line_index=i, first_line_fade_in=first_line_fade_in, previous_active_lines=previous_active_lines
+            )
+            timings.append(timing)
+
+        return timings
+
+    def _calculate_line_timing(
+        self, line: LyricsLine, line_index: int, first_line_fade_in: float, previous_active_lines: List[Tuple[float, int, str]]
+    ) -> LineTimingInfo:
+        """Calculate timing for a single line."""
+        # Base fade in time depends on line position
+        if line_index == 0:
+            fade_in_time = first_line_fade_in
+        elif line_index == 1:
+            # Line 2 follows after cascade delay, but must wait for previous line 2 to clear
+            fade_in_time = first_line_fade_in + (self.config.cascade_delay_ms / 1000)
+            if previous_active_lines:
+                target_pos = PositionCalculator.line_index_to_position(1, self.config)
+                line2_positions = [(end, pos, text) for end, pos, text in previous_active_lines if pos == target_pos]
+                if line2_positions:
+                    prev_line2 = line2_positions[0]
+                    line2_clear_time = prev_line2[0] + (self.config.fade_out_ms / 1000) + (self.config.position_clear_buffer_ms / 1000)
+                    fade_in_time = max(fade_in_time, line2_clear_time)
+                    self.logger.debug(
+                        f"    Previous Line 2 '{prev_line2[2]}' "
+                        f"ends {prev_line2[0]:.2f}s, "
+                        f"fade out {prev_line2[0] + (self.config.fade_out_ms / 1000):.2f}s, "
+                        f"clears {line2_clear_time:.2f}s"
+                    )
+        else:
+            # Lines 3+ must wait for all previous lines to clear
+            if previous_active_lines:
+                last_line = max(previous_active_lines, key=lambda x: x[0])
+                last_line_index = PositionCalculator.position_to_line_index(last_line[1], self.config)
+                last_line_clear_time = last_line[0] + (self.config.fade_out_ms / 1000) + (self.config.position_clear_buffer_ms / 1000)
+                fade_in_time = last_line_clear_time + ((line_index - 2) * self.config.cascade_delay_ms / 1000)
+                self.logger.debug(f"    Waiting for Line {last_line_index + 1} '{last_line[2]}' to clear at {last_line_clear_time:.2f}s")
+            else:
+                fade_in_time = first_line_fade_in + (line_index * self.config.cascade_delay_ms / 1000)
+
+        # Calculate remaining timing information
+        end_time = line.segment.end_time + self.config.post_roll_time
+        fade_out_time = end_time + (self.config.fade_out_ms / 1000)
+        clear_time = fade_out_time + (self.config.position_clear_buffer_ms / 1000)
+
+        return LineTimingInfo(fade_in_time=fade_in_time, end_time=end_time, fade_out_time=fade_out_time, clear_time=clear_time)
+
+    def _calculate_post_instrumental_timings(self, lines: List[LyricsLine]) -> List[LineTimingInfo]:
+        """Calculate timings for post-instrumental screens where all lines appear together."""
+        fade_in_start = lines[0].segment.start_time - self.config.target_preshow_time
+
+        return [
+            LineTimingInfo(
+                fade_in_time=fade_in_start,
+                end_time=line.segment.end_time + self.config.post_roll_time,
+                fade_out_time=line.segment.end_time + self.config.post_roll_time + (self.config.fade_out_ms / 1000),
+                clear_time=line.segment.end_time
+                + self.config.post_roll_time
+                + (self.config.fade_out_ms / 1000)
+                + (self.config.position_clear_buffer_ms / 1000),
+            )
+            for line in lines
+        ]
+
+
+@dataclass
 class LyricsScreen:
     """Represents a screen of lyrics (multiple lines)."""
 
     video_size: Tuple[int, int]
     line_height: int
-    lines: List[LyricsLine] = field(default_factory=list)
+    lines: List[LyricsLine] = None  # Make lines optional
     logger: Optional[logging.Logger] = None
     post_instrumental: bool = False
-    MAX_VISIBLE_LINES = 4
-    SCREEN_GAP_THRESHOLD = 5.0
-    POST_ROLL_TIME = 1.0
-    FADE_IN_MS = 100
-    FADE_OUT_MS = 400
-    CASCADE_DELAY_MS = 200
-    TARGET_PRESHOW_TIME = 5.0
-    POSITION_CLEAR_BUFFER_MS = 300
+    config: Optional[ScreenConfig] = None
 
     def __post_init__(self):
         if self.logger is None:
             self.logger = logging.getLogger(__name__)
+        if self.config is None:
+            self.config = ScreenConfig(line_height=self.line_height)
+        else:
+            # Ensure line_height is consistent
+            self.config.line_height = self.line_height
+
+        # Initialize empty lines list if None
+        if self.lines is None:
+            self.lines = []
+
+        # Update video height in config
+        self.config.video_height = self.video_size[1]
+
+        # Initialize strategies
+        self.position_strategy = PositionStrategy(self.video_size, self.config)
+        self.timing_strategy = TimingStrategy(self.config, self.logger)
+
+    def as_ass_events(
+        self,
+        style: Style,
+        next_screen_start: Optional[timedelta] = None,
+        previous_active_lines: List[Tuple[float, int, str]] = None,
+    ) -> Tuple[List[Event], List[Tuple[float, int, str]]]:
+        """Convert screen to ASS events. Returns (events, active_lines)."""
+        events = []
+        active_lines = []
+        previous_active_lines = previous_active_lines or []
+
+        # Log active lines from previous screen
+        if previous_active_lines:
+            self.logger.debug("  Active lines from previous screen:")
+            for end, pos, text in previous_active_lines:
+                # Convert y-position back to line index (0-based)
+                line_index = PositionCalculator.position_to_line_index(pos, self.config)
+                clear_time = end + (self.config.fade_out_ms / 1000) + (self.config.position_clear_buffer_ms / 1000)
+                self.logger.debug(
+                    f"    Line {line_index + 1}: '{text}' "
+                    f"(ends {end:.2f}s, fade out {end + (self.config.fade_out_ms / 1000):.2f}s, clear {clear_time:.2f}s)"
+                )
+
+        # Calculate positions and timings
+        positions = self.position_strategy.calculate_line_positions()
+        timings = self.timing_strategy.calculate_line_timings(
+            current_lines=self.lines, previous_active_lines=previous_active_lines, post_instrumental=self.post_instrumental
+        )
+
+        # Create line states and events
+        for i, (line, timing) in enumerate(zip(self.lines, timings)):
+            y_position = positions[i]
+
+            # Create line state
+            line_state = LineState(text=line.segment.text, timing=timing, y_position=y_position)
+
+            # Create ASS event
+            event = self._create_line_event(line, line_state, style)
+            events.append(event)
+
+            # Track active line
+            active_lines.append((timing.end_time, y_position, line.segment.text))
+
+            # Log line placement with index
+            self.logger.debug(f"    Line {i + 1}: '{line.segment.text}'")
+
+        return events, active_lines
+
+    def _create_line_event(self, line: LyricsLine, state: LineState, style: Style) -> Event:
+        """Create ASS event for a single line."""
+        e = Event()
+        e.type = "Dialogue"
+        e.Layer = 0
+        e.Style = style
+        e.Start = state.timing.fade_in_time
+        e.End = state.timing.end_time
+
+        # Use absolute positioning
+        x_pos = self.video_size[0] // 2  # Center horizontally
+        text = f"{{\\an8}}{{\\pos({x_pos},{state.y_position})}}{line._create_ass_text(timedelta(seconds=state.timing.fade_in_time))}"
+        e.Text = text
+
+        return e
 
     @property
     def start_ts(self) -> timedelta:
@@ -39,192 +292,7 @@ class LyricsScreen:
     def end_ts(self) -> timedelta:
         """Get screen end timestamp."""
         latest_ts = max(line.segment.end_time for line in self.lines)
-        return timedelta(seconds=latest_ts + self.POST_ROLL_TIME)
-
-    def _visualize_timeline(self, active_lines: List[Tuple[float, int, str]], current_time: float, new_line_end: float, new_line_text: str):
-        """Create ASCII visualization of line timing."""
-        timeline = ["Timeline:"]
-        timeline.append(f"Current time: {current_time:.2f}s")
-        timeline.append("Active lines:")
-        for end_time, y_pos, text in active_lines:
-            position = y_pos // self.line_height - (self._calculate_first_line_position() // self.line_height)
-            timeline.append(f"  Line {position}: '{text}' ends at {end_time:.2f}s")
-        timeline.append(f"New line would end at: {new_line_end:.2f}s ('{new_line_text}')")
-        self.logger.debug("\n".join(timeline))
-
-    def as_ass_events(
-        self,
-        style: Style,
-        next_screen_start: Optional[timedelta] = None,
-        previous_active_lines: List[Tuple[float, int, str]] = None,
-    ) -> Tuple[List[Event], List[Tuple[float, int, str]]]:
-        """Convert screen to ASS events. Returns (events, active_lines)."""
-        events = []
-        active_lines = previous_active_lines.copy() if previous_active_lines else []
-
-        # Filter to only show lines that are still active
-        current_time = self.lines[0].segment.start_time - self.TARGET_PRESHOW_TIME
-        active_previous_lines = [(end, pos, text) for end, pos, text in active_lines if end + (self.FADE_OUT_MS / 1000) > current_time]
-
-        if active_previous_lines:
-            self.logger.debug("  Active lines from previous screen:")
-            for end, pos, text in active_previous_lines:
-                clear_time = end + (self.FADE_OUT_MS / 1000) + (self.POSITION_CLEAR_BUFFER_MS / 1000)
-                self.logger.debug(
-                    f"    Line at y={pos}: '{text}' (ends {end:.2f}s, fade out {end + (self.FADE_OUT_MS / 1000):.2f}s, clear {clear_time:.2f}s)"
-                )
-
-        # Use unified screen behavior for post-instrumental screens
-        if self.post_instrumental:
-            fade_in_start = self.start_ts - timedelta(seconds=self.TARGET_PRESHOW_TIME)
-            self.logger.debug(f"  Post-instrumental screen fade in at {fade_in_start}")
-
-            y_position = self._calculate_first_line_position()
-            for line in self.lines:
-                line_end = line.segment.end_time + self.POST_ROLL_TIME
-                active_lines.append((line_end, y_position, line.segment.text))
-                events.append(self._create_line_event(line, y_position, style, fade_in_start))
-                y_position += self.line_height
-        else:
-            # Calculate when first line should appear
-            first_line = self.lines[0]
-            first_line_fade_in = first_line.segment.start_time - self.TARGET_PRESHOW_TIME
-
-            # For first line of new screen, wait for top positions to clear if needed
-            if previous_active_lines:
-                top_lines = sorted([(end, pos, text) for end, pos, text in active_lines], key=lambda x: x[1])[:2]
-                if top_lines:
-                    latest_clear_time = max(
-                        end + (self.FADE_OUT_MS / 1000) + (self.POSITION_CLEAR_BUFFER_MS / 1000) for end, _, _ in top_lines
-                    )
-                    first_line_fade_in = max(first_line_fade_in, latest_clear_time)
-
-            # Calculate when line 2 can appear (after previous screen's line 2 fades out)
-            second_line_fade_in = first_line_fade_in + (self.CASCADE_DELAY_MS / 1000)  # Default: 100ms after line 1
-            if previous_active_lines:
-                line2_y_pos = self._calculate_first_line_position() + self.line_height
-                line2_positions = [(end, pos, text) for end, pos, text in active_previous_lines if pos == line2_y_pos]
-                if line2_positions:
-                    prev_line2 = line2_positions[0]
-                    line2_clear_time = prev_line2[0] + (self.FADE_OUT_MS / 1000) + (self.POSITION_CLEAR_BUFFER_MS / 1000)
-                    second_line_fade_in = max(second_line_fade_in, line2_clear_time)
-                    self.logger.debug(
-                        f"    Previous line 2 '{prev_line2[2]}' ends {prev_line2[0]:.2f}s, fade out {prev_line2[0] + (self.FADE_OUT_MS / 1000):.2f}s, clears {line2_clear_time:.2f}s"
-                    )
-
-            # Calculate when lines 3+ can appear (after previous screen's last line fades out)
-            if previous_active_lines:
-                last_line = max(active_lines, key=lambda x: x[0])
-                last_line_clear_time = last_line[0] + (self.FADE_OUT_MS / 1000) + (self.POSITION_CLEAR_BUFFER_MS / 1000)
-                third_line_fade_in = last_line_clear_time
-                fourth_line_fade_in = third_line_fade_in + (self.CASCADE_DELAY_MS / 1000)
-            else:
-                third_line_fade_in = second_line_fade_in + (self.CASCADE_DELAY_MS / 1000)
-                fourth_line_fade_in = third_line_fade_in + (self.CASCADE_DELAY_MS / 1000)
-
-            # Log the screen timing strategy
-            self.logger.debug(f"  Screen timing strategy:")
-            self.logger.debug(f"    First line '{first_line.segment.text}' starts at {first_line.segment.start_time:.2f}s")
-            self.logger.debug(f"    Fading in first line at {first_line_fade_in:.2f}s")
-            if len(self.lines) > 1:
-                self.logger.debug(f"    Fading in second line at {second_line_fade_in:.2f}s")
-                if len(self.lines) > 2:
-                    if previous_active_lines:
-                        self.logger.debug(
-                            f"    Previous screen last line '{last_line[2]}' ends {last_line[0]:.2f}s, clears {last_line_clear_time:.2f}s"
-                        )
-                    self.logger.debug(f"    Fading in third line at {third_line_fade_in:.2f}s")
-                    if len(self.lines) > 3:
-                        self.logger.debug(f"    Fading in fourth line at {fourth_line_fade_in:.2f}s")
-
-            # Process lines with consistent cascade timing
-            y_position = self._calculate_first_line_position()
-            for i, line in enumerate(self.lines):
-                if i == 0:
-                    fade_in_time = first_line_fade_in
-                elif i == 1:
-                    fade_in_time = second_line_fade_in
-                elif i == 2:
-                    fade_in_time = third_line_fade_in
-                else:
-                    fade_in_time = fourth_line_fade_in
-
-                self.logger.debug(f"    Placing '{line.segment.text}' at position {y_position}")
-                line_end = line.segment.end_time + self.POST_ROLL_TIME
-                active_lines.append((line_end, y_position, line.segment.text))
-                events.append(self._create_line_event(line, y_position, style, timedelta(seconds=fade_in_time)))
-                y_position += self.line_height
-
-        return events, active_lines
-
-    def _create_line_event(self, line: LyricsLine, y_position: int, style: Style, screen_fade_in_start: Optional[timedelta]) -> Event:
-        """Create ASS event for a single line, handling screen transitions."""
-        if screen_fade_in_start is not None:
-            start_time = screen_fade_in_start
-            end_time = timedelta(seconds=line.segment.end_time + self.POST_ROLL_TIME)
-        else:
-            start_time = timedelta(seconds=max(0, line.segment.start_time - self.PRE_ROLL_TIME))
-            end_time = timedelta(seconds=line.segment.end_time + self.POST_ROLL_TIME)
-
-        e = Event()
-        e.type = "Dialogue"
-        e.Layer = 0
-        e.Style = style
-        e.Start = start_time.total_seconds()
-        e.End = end_time.total_seconds()
-
-        # Instead of using MarginV, use absolute positioning
-        x_pos = self.video_size[0] // 2  # Center horizontally
-        text = f"{{\\an8}}{{\\pos({x_pos},{y_position})}}{line._create_ass_text(start_time)}"
-        e.Text = text
-
-        # self.logger.debug(f"Created ASS event: {e.Text}")
-        return e
-
-    def _calculate_first_line_position(self) -> int:
-        """Calculate vertical position of first line."""
-        total_height = self.MAX_VISIBLE_LINES * self.line_height
-        top_padding = self.line_height  # Add one line height of padding at the top
-        return top_padding + (self.video_size[1] - total_height - top_padding) // 4
-
-    def _calculate_line_position(self, active_lines: List[Tuple[float, int, str]], current_time: float) -> int:
-        """Calculate vertical position for a new line based on current active lines."""
-        base_position = self._calculate_first_line_position()
-        line_positions = [
-            base_position,
-            base_position + self.line_height,
-            base_position + (2 * self.line_height),
-            base_position + (3 * self.line_height),
-        ]
-
-        # Track which positions are in use and when they'll be free
-        buffer_time = (self.FADE_OUT_MS / 1000) + (self.POSITION_CLEAR_BUFFER_MS / 1000)
-        positions_in_use = {}
-
-        for end, pos, text in active_lines:
-            clear_time = end + buffer_time
-            if clear_time > current_time:
-                positions_in_use[pos] = (text, end, clear_time)
-
-        self.logger.debug(f"    Position status at {current_time:.2f}s:")
-        for pos in line_positions:
-            if pos in positions_in_use:
-                text, end, clear = positions_in_use[pos]
-                self.logger.debug(f"      Position {pos}: occupied by '{text}' until {clear:.2f}s (ends {end:.2f}s + fade + buffer)")
-            else:
-                self.logger.debug(f"      Position {pos}: available")
-
-        # Find the next available position in sequence
-        used_positions = set(positions_in_use.keys())
-        for position in line_positions:
-            if position not in used_positions:
-                self.logger.debug(f"    Selected position {position} (next available in sequence)")
-                return position
-
-        # If all positions are in use, wait for the first one to clear
-        earliest_clear_pos = min(line_positions, key=lambda pos: positions_in_use.get(pos, (None, None, float("inf")))[2])
-        self.logger.debug(f"    All positions in use, waiting for {earliest_clear_pos} to clear")
-        return earliest_clear_pos
+        return timedelta(seconds=latest_ts + self.config.post_roll_time)
 
     def __str__(self):
         return "\n".join([f"{self.start_ts} - {self.end_ts}:", *[f"\t{line}" for line in self.lines]])
