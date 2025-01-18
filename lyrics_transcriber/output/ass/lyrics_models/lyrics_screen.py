@@ -20,7 +20,7 @@ class LyricsScreen:
     SCREEN_GAP_THRESHOLD = 5.0
     POST_ROLL_TIME = 0.0
     FADE_IN_MS = 100
-    FADE_OUT_MS = 100
+    FADE_OUT_MS = 300
     TARGET_PRESHOW_TIME = 5.0
     POSITION_CLEAR_BUFFER_MS = 300
 
@@ -77,46 +77,44 @@ class LyricsScreen:
                 events.append(self._create_line_event(line, y_position, style, fade_in_start))
                 y_position += self.line_height
         else:
+            # Calculate when first line should appear
+            first_line = self.lines[0]
+            first_line_fade_in = first_line.segment.start_time - self.TARGET_PRESHOW_TIME
+
+            # For first line of new screen, wait for top positions to clear if needed
+            if previous_active_lines:
+                top_lines = sorted([(end, pos, text) for end, pos, text in active_lines], key=lambda x: x[1])[:2]
+                if top_lines:
+                    latest_clear_time = max(
+                        end + (self.FADE_OUT_MS / 1000) + (self.POSITION_CLEAR_BUFFER_MS / 1000) for end, _, _ in top_lines
+                    )
+                    first_line_fade_in = max(first_line_fade_in, latest_clear_time)
+
+            # Calculate when remaining lines should appear (after previous screen's last line fades out)
+            remaining_lines_fade_in = first_line_fade_in
+            if previous_active_lines:
+                last_line = max(active_lines, key=lambda x: x[0])
+                last_line_clear_time = last_line[0] + (self.FADE_OUT_MS / 1000) + (self.POSITION_CLEAR_BUFFER_MS / 1000)
+                remaining_lines_fade_in = max(first_line_fade_in, last_line_clear_time)
+
+            # Log the screen timing strategy
+            self.logger.debug(f"  Screen timing strategy:")
+            self.logger.debug(f"    First line '{first_line.segment.text}' starts at {first_line.segment.start_time:.2f}s")
+            self.logger.debug(f"    Fading in first line at {first_line_fade_in:.2f}s")
+            if len(self.lines) > 1:
+                self.logger.debug(f"    Fading in remaining lines at {remaining_lines_fade_in:.2f}s")
+                if previous_active_lines:
+                    self.logger.debug(f"    (waiting for previous line '{last_line[2]}' to clear at {last_line_clear_time:.2f}s)")
+
+            # Process lines with staggered fade-in times
+            y_position = self._calculate_first_line_position()
             for i, line in enumerate(self.lines):
-                fade_in_time = line.segment.start_time - self.TARGET_PRESHOW_TIME
-                self.logger.debug(f"  Processing line {i+1}:")
-                self.logger.debug(f"    Text: '{line.segment.text}'")
-                self.logger.debug(f"    Target timing: {fade_in_time:.2f}s -> {line.segment.start_time:.2f}s")
-
-                while True:
-                    if i == 0 and previous_active_lines:
-                        top_lines = sorted([(end, pos, text) for end, pos, text in active_lines], key=lambda x: x[1])[:2]
-                        if top_lines:
-                            latest_clear_time = max(
-                                end + (self.FADE_OUT_MS / 1000) + (self.POSITION_CLEAR_BUFFER_MS / 1000) for end, _, _ in top_lines
-                            )
-                            if latest_clear_time > fade_in_time:
-                                fade_in_time = latest_clear_time
-                                self.logger.debug(f"    Waiting for top positions to clear until {fade_in_time:.2f}s")
-                                continue
-
-                    # Remove expired lines and get available positions
-                    active_lines = [
-                        (end, pos, text)
-                        for end, pos, text in active_lines
-                        if (end + (self.FADE_OUT_MS / 1000) + (self.POSITION_CLEAR_BUFFER_MS / 1000)) > fade_in_time
-                    ]
-
-                    if len(active_lines) < self.MAX_VISIBLE_LINES:
-                        break
-
-                    # Wait for next line to expire
-                    if active_lines:
-                        active_lines.sort()
-                        next_available = active_lines[0][0] + (self.FADE_OUT_MS / 1000) + (self.POSITION_CLEAR_BUFFER_MS / 1000)
-                        fade_in_time = next_available
-
-                y_position = self._calculate_line_position(active_lines, fade_in_time)
-                self.logger.debug(f"    Final position: y={y_position}, fade in at {fade_in_time:.2f}s")
-
+                fade_in_time = first_line_fade_in if i == 0 else remaining_lines_fade_in
+                self.logger.debug(f"    Placing '{line.segment.text}' at position {y_position}")
                 line_end = line.segment.end_time + self.POST_ROLL_TIME
                 active_lines.append((line_end, y_position, line.segment.text))
                 events.append(self._create_line_event(line, y_position, style, timedelta(seconds=fade_in_time)))
+                y_position += self.line_height
 
         return events, active_lines
 
@@ -160,18 +158,12 @@ class LyricsScreen:
             base_position + (3 * self.line_height),
         ]
 
-        # Sort active lines by their vertical position
-        active_lines_sorted = sorted(
-            [(end, pos, text) for end, pos, text in active_lines if (end + (self.FADE_OUT_MS / 1000)) > current_time],
-            key=lambda x: x[1],  # Sort by position
-        )
+        # Track which positions are in use and when they'll be free
+        buffer_time = (self.FADE_OUT_MS / 1000) + (self.POSITION_CLEAR_BUFFER_MS / 1000)
+        positions_in_use = {}
 
-        # Check if first two positions are still in use (including fade out and buffer)
-        buffer_time = 0.3  # 300ms additional buffer
-        positions_in_use = {}  # Changed to dict to track when positions become free
-
-        for end, pos, text in active_lines_sorted:
-            clear_time = end + (self.FADE_OUT_MS / 1000) + buffer_time
+        for end, pos, text in active_lines:
+            clear_time = end + buffer_time
             if clear_time > current_time:
                 positions_in_use[pos] = (text, end, clear_time)
 
@@ -183,15 +175,17 @@ class LyricsScreen:
             else:
                 self.logger.debug(f"      Position {pos}: available")
 
-        # Find first available position from top
+        # Find the next available position in sequence
+        used_positions = set(positions_in_use.keys())
         for position in line_positions:
-            if position not in positions_in_use:
-                self.logger.debug(f"    Selected position {position} (first available from top)")
+            if position not in used_positions:
+                self.logger.debug(f"    Selected position {position} (next available in sequence)")
                 return position
 
-        # If all positions are in use, log details and use last position
-        self.logger.debug("    All positions in use, using last position as fallback")
-        return line_positions[-1]
+        # If all positions are in use, wait for the first one to clear
+        earliest_clear_pos = min(line_positions, key=lambda pos: positions_in_use.get(pos, (None, None, float("inf")))[2])
+        self.logger.debug(f"    All positions in use, waiting for {earliest_clear_pos} to clear")
+        return earliest_clear_pos
 
     def __str__(self):
         return "\n".join([f"{self.start_ts} - {self.end_ts}:", *[f"\t{line}" for line in self.lines]])
