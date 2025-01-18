@@ -245,10 +245,6 @@ class SubtitlesGenerator:
                 a.add(event)
 
             # Update active_lines for next screen
-            prev_count = len(active_lines)
             active_lines = [(end, pos, text) for end, pos, text in active_lines if isinstance(end, float)]
-            self.logger.debug(
-                f"Active lines after processing: {[(end, text) for end, _, text in active_lines]} (removed {prev_count - len(active_lines)} lines)"
-            )
 
         return a

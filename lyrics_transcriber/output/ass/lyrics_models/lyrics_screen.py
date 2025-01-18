@@ -19,9 +19,9 @@ class LyricsScreen:
     post_instrumental: bool = False
     MAX_VISIBLE_LINES = 4
     SCREEN_GAP_THRESHOLD = 5.0
-    POST_ROLL_TIME = 0.0
+    POST_ROLL_TIME = 1.0
     FADE_IN_MS = 100
-    FADE_OUT_MS = 300
+    FADE_OUT_MS = 400
     CASCADE_DELAY_MS = 200
     TARGET_PRESHOW_TIME = 5.0
     POSITION_CLEAR_BUFFER_MS = 300
@@ -69,7 +69,10 @@ class LyricsScreen:
         if active_previous_lines:
             self.logger.debug("  Active lines from previous screen:")
             for end, pos, text in active_previous_lines:
-                self.logger.debug(f"    Line at y={pos}: '{text}' (ends {end:.2f}s)")
+                clear_time = end + (self.FADE_OUT_MS / 1000) + (self.POSITION_CLEAR_BUFFER_MS / 1000)
+                self.logger.debug(
+                    f"    Line at y={pos}: '{text}' (ends {end:.2f}s, fade out {end + (self.FADE_OUT_MS / 1000):.2f}s, clear {clear_time:.2f}s)"
+                )
 
         # Use unified screen behavior for post-instrumental screens
         if self.post_instrumental:
@@ -96,32 +99,55 @@ class LyricsScreen:
                     )
                     first_line_fade_in = max(first_line_fade_in, latest_clear_time)
 
-            # Calculate when remaining lines should appear (after previous screen's last line fades out)
-            remaining_lines_fade_in = first_line_fade_in
+            # Calculate when line 2 can appear (after previous screen's line 2 fades out)
+            second_line_fade_in = first_line_fade_in + (self.CASCADE_DELAY_MS / 1000)  # Default: 100ms after line 1
+            if previous_active_lines:
+                line2_y_pos = self._calculate_first_line_position() + self.line_height
+                line2_positions = [(end, pos, text) for end, pos, text in active_previous_lines if pos == line2_y_pos]
+                if line2_positions:
+                    prev_line2 = line2_positions[0]
+                    line2_clear_time = prev_line2[0] + (self.FADE_OUT_MS / 1000) + (self.POSITION_CLEAR_BUFFER_MS / 1000)
+                    second_line_fade_in = max(second_line_fade_in, line2_clear_time)
+                    self.logger.debug(
+                        f"    Previous line 2 '{prev_line2[2]}' ends {prev_line2[0]:.2f}s, fade out {prev_line2[0] + (self.FADE_OUT_MS / 1000):.2f}s, clears {line2_clear_time:.2f}s"
+                    )
+
+            # Calculate when lines 3+ can appear (after previous screen's last line fades out)
             if previous_active_lines:
                 last_line = max(active_lines, key=lambda x: x[0])
                 last_line_clear_time = last_line[0] + (self.FADE_OUT_MS / 1000) + (self.POSITION_CLEAR_BUFFER_MS / 1000)
-                remaining_lines_fade_in = max(first_line_fade_in, last_line_clear_time)
+                third_line_fade_in = last_line_clear_time
+                fourth_line_fade_in = third_line_fade_in + (self.CASCADE_DELAY_MS / 1000)
+            else:
+                third_line_fade_in = second_line_fade_in + (self.CASCADE_DELAY_MS / 1000)
+                fourth_line_fade_in = third_line_fade_in + (self.CASCADE_DELAY_MS / 1000)
 
             # Log the screen timing strategy
             self.logger.debug(f"  Screen timing strategy:")
             self.logger.debug(f"    First line '{first_line.segment.text}' starts at {first_line.segment.start_time:.2f}s")
             self.logger.debug(f"    Fading in first line at {first_line_fade_in:.2f}s")
             if len(self.lines) > 1:
-                self.logger.debug(f"    Fading in remaining lines starting at {remaining_lines_fade_in:.2f}s")
-                if previous_active_lines:
-                    self.logger.debug(f"    (waiting for previous line '{last_line[2]}' to clear at {last_line_clear_time:.2f}s)")
+                self.logger.debug(f"    Fading in second line at {second_line_fade_in:.2f}s")
+                if len(self.lines) > 2:
+                    if previous_active_lines:
+                        self.logger.debug(
+                            f"    Previous screen last line '{last_line[2]}' ends {last_line[0]:.2f}s, clears {last_line_clear_time:.2f}s"
+                        )
+                    self.logger.debug(f"    Fading in third line at {third_line_fade_in:.2f}s")
+                    if len(self.lines) > 3:
+                        self.logger.debug(f"    Fading in fourth line at {fourth_line_fade_in:.2f}s")
 
-            # Process lines with staggered fade-in times
+            # Process lines with consistent cascade timing
             y_position = self._calculate_first_line_position()
             for i, line in enumerate(self.lines):
                 if i == 0:
                     fade_in_time = first_line_fade_in
+                elif i == 1:
+                    fade_in_time = second_line_fade_in
+                elif i == 2:
+                    fade_in_time = third_line_fade_in
                 else:
-                    # Add 100ms delay for each subsequent line after the first
-                    cascade_delay = (i - 1) * self.CASCADE_DELAY_MS / 1000
-                    fade_in_time = remaining_lines_fade_in + cascade_delay
-                    self.logger.debug(f"    Line {i+1} cascade delay: +{cascade_delay:.1f}s")
+                    fade_in_time = fourth_line_fade_in
 
                 self.logger.debug(f"    Placing '{line.segment.text}' at position {y_position}")
                 line_end = line.segment.end_time + self.POST_ROLL_TIME

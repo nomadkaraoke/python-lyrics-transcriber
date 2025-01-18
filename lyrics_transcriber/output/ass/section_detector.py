@@ -72,7 +72,7 @@ class SectionDetector:
             last_segment = segments[-1]
             outro_duration = song_duration - last_segment.end_time
             if outro_duration >= self.gap_threshold:
-                outro_start = last_segment.end_time + self.outro_padding
+                outro_start = last_segment.end_time + self.instrumental_start_padding
                 outro_end = song_duration - self.outro_padding  # End 5s before song ends
                 self.logger.debug(f"Detected outro section: {outro_start:.2f}s - {outro_end:.2f}s")
                 screens.append(

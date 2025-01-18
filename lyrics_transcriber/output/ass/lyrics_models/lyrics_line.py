@@ -17,7 +17,7 @@ class LyricsLine:
     PRE_ROLL_TIME = 5.0
     POST_ROLL_TIME = 2.0
     FADE_IN_MS = 300
-    FADE_OUT_MS = 300
+    FADE_OUT_MS = 600
 
     def __post_init__(self):
         """Ensure logger is initialized"""
