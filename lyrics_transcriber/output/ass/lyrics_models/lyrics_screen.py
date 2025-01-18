@@ -183,7 +183,7 @@ class LyricsScreen:
 
     def _calculate_first_line_position(self) -> int:
         """Calculate vertical position of first line."""
-        total_height = len(self.lines) * self.line_height
+        total_height = self.MAX_VISIBLE_LINES * self.line_height
         top_padding = self.line_height  # Add one line height of padding at the top
         return top_padding + (self.video_size[1] - total_height - top_padding) // 4
 
