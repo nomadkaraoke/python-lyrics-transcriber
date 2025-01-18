@@ -62,9 +62,13 @@ class LyricsScreen:
         events = []
         active_lines = previous_active_lines.copy() if previous_active_lines else []
 
-        if active_lines:
+        # Filter to only show lines that are still active
+        current_time = self.lines[0].segment.start_time - self.TARGET_PRESHOW_TIME
+        active_previous_lines = [(end, pos, text) for end, pos, text in active_lines if end + (self.FADE_OUT_MS / 1000) > current_time]
+
+        if active_previous_lines:
             self.logger.debug("  Active lines from previous screen:")
-            for end, pos, text in active_lines:
+            for end, pos, text in active_previous_lines:
                 self.logger.debug(f"    Line at y={pos}: '{text}' (ends {end:.2f}s)")
 
         if is_unified_screen:
