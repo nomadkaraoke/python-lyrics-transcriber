@@ -28,40 +28,38 @@ class CDGGenerator:
         self.logger = logger or logging.getLogger(__name__)
         self.cdg_visible_width = 280
 
-    def generate_cdg(self, segments: List[LyricsSegment], output_prefix: str) -> str:
-        """Generate a CDG file from lyrics segments.
-
-        Args:
-            segments: List of LyricsSegment objects with timing and text
-            output_prefix: Prefix for output filename
-
-        Returns:
-            Path to generated CDG file
-        """
-        self.logger.info("Generating CDG file")
-
-        # TODO: Implement CDG file generation
-        # This will involve:
-        # 1. Converting segments to CDG commands
-        # 2. Writing the binary CDG file format
-        # 3. Handling font/color/positioning
-
-        output_path = f"{self.output_dir}/{output_prefix}.cdg"
-        self.logger.info(f"CDG file generated: {output_path}")
-
-        return output_path
-
-    def generate_cdg_from_lrc(
+    def generate_cdg(
         self,
-        lrc_file: str,
+        segments: List[LyricsSegment],
         audio_file: str,
         title: str,
         artist: str,
         cdg_styles: dict,
     ) -> Tuple[str, str, str]:
-        """Generate a CDG file from an LRC file and audio file."""
+        """Generate a CDG file from lyrics segments and audio file.
+
+        Args:
+            segments: List of LyricsSegment objects containing timing and text
+            audio_file: Path to the audio file
+            title: Title of the song
+            artist: Artist name
+            cdg_styles: Dictionary containing CDG style parameters
+
+        Returns:
+            Tuple containing paths to (cdg_file, mp3_file, zip_file)
+        """
         self._validate_and_setup_font(cdg_styles)
-        toml_file = self._create_toml_file(lrc_file, audio_file, title, artist, cdg_styles)
+
+        # Convert segments to the format expected by the rest of the code
+        lyrics_data = self._convert_segments_to_lyrics_data(segments)
+
+        toml_file = self._create_toml_file(
+            audio_file=audio_file,
+            title=title,
+            artist=artist,
+            lyrics_data=lyrics_data,
+            cdg_styles=cdg_styles,
+        )
 
         try:
             self._compose_cdg(toml_file)
@@ -80,6 +78,74 @@ class CDGGenerator:
             self.logger.error(f"Error composing CDG: {e}")
             raise
 
+    def _convert_segments_to_lyrics_data(self, segments: List[LyricsSegment]) -> List[dict]:
+        """Convert LyricsSegment objects to the format needed for CDG generation."""
+        lyrics_data = []
+
+        for segment in segments:
+            # Convert each word to a lyric entry
+            for word in segment.words:
+                # Convert time from seconds to centiseconds
+                timestamp = int(word.start_time * 100)
+                lyrics_data.append({"timestamp": timestamp, "text": word.text.upper()})  # CDG format expects uppercase text
+                self.logger.debug(f"Added lyric: timestamp {timestamp}, text '{word.text}'")
+
+        # Sort by timestamp to ensure correct order
+        lyrics_data.sort(key=lambda x: x["timestamp"])
+        return lyrics_data
+
+    def _create_toml_file(
+        self,
+        audio_file: str,
+        title: str,
+        artist: str,
+        lyrics_data: List[dict],
+        cdg_styles: dict,
+    ) -> str:
+        """Create TOML configuration file for CDG generation."""
+        toml_file = os.path.join(self.output_dir, f"{title} - {artist}.toml")
+        self.logger.debug(f"Generating TOML file: {toml_file}")
+
+        self.generate_toml(
+            audio_file=audio_file,
+            title=title,
+            artist=artist,
+            lyrics_data=lyrics_data,
+            output_file=toml_file,
+            cdg_styles=cdg_styles,
+        )
+        return toml_file
+
+    def generate_toml(
+        self,
+        audio_file: str,
+        title: str,
+        artist: str,
+        lyrics_data: List[dict],
+        output_file: str,
+        cdg_styles: dict,
+    ) -> None:
+        """Generate a TOML configuration file for CDG creation."""
+        audio_file = os.path.abspath(audio_file)
+        self.logger.debug(f"Using absolute audio file path: {audio_file}")
+
+        self._validate_cdg_styles(cdg_styles)
+        instrumentals = self._detect_instrumentals(lyrics_data, cdg_styles)
+        sync_times, formatted_lyrics = self._format_lyrics_data(lyrics_data, instrumentals, cdg_styles)
+
+        toml_data = self._create_toml_data(
+            title=title,
+            artist=artist,
+            audio_file=audio_file,
+            output_name=title,
+            sync_times=sync_times,
+            instrumentals=instrumentals,
+            formatted_lyrics=formatted_lyrics,
+            cdg_styles=cdg_styles,
+        )
+
+        self._write_toml_file(toml_data, output_file)
+
     def _validate_and_setup_font(self, cdg_styles: dict) -> None:
         """Validate and set up font path in CDG styles."""
         if not cdg_styles.get("font_path"):
@@ -95,21 +161,6 @@ class CDGGenerator:
                     f"Font file {cdg_styles['font_path']} not found in package fonts directory {package_font_path}, will use default font"
                 )
                 cdg_styles["font_path"] = None
-
-    def _create_toml_file(self, lrc_file: str, audio_file: str, title: str, artist: str, cdg_styles: dict) -> str:
-        """Create TOML configuration file for CDG generation."""
-        toml_file = os.path.join(self.output_dir, f"{Path(lrc_file).stem}.toml")
-        self.logger.debug(f"Generating TOML file: {toml_file}")
-
-        self.generate_toml(
-            lrc_file,
-            audio_file,
-            title,
-            artist,
-            toml_file,
-            cdg_styles,
-        )
-        return toml_file
 
     def _compose_cdg(self, toml_file: str) -> None:
         """Compose CDG using KaraokeComposer."""
@@ -153,29 +204,6 @@ class CDGGenerator:
         if not os.path.isfile(mp3_file):
             raise FileNotFoundError(f"MP3 file not found after extraction: {mp3_file}")
 
-    def parse_lrc(self, lrc_file):
-        with open(lrc_file, "r", encoding="utf-8") as f:
-            content = f.read()
-
-        # Extract timestamps and lyrics
-        pattern = r"\[(\d{2}):(\d{2})\.(\d{3})\](\d+:)?(/?.*)"
-        matches = re.findall(pattern, content)
-
-        if not matches:
-            raise ValueError(f"No valid lyrics found in the LRC file: {lrc_file}")
-
-        lyrics = []
-        for match in matches:
-            minutes, seconds, milliseconds = map(int, match[:3])
-            timestamp = (minutes * 60 + seconds) * 100 + int(milliseconds / 10)  # Convert to centiseconds
-            text = match[4].strip().upper()
-            if text:  # Only add non-empty lyrics
-                lyrics.append({"timestamp": timestamp, "text": text})
-                # self.logger.debug(f"Parsed lyric: {timestamp} - {text}")
-
-        self.logger.info(f"Found {len(lyrics)} lyric lines")
-        return lyrics
-
     def detect_instrumentals(
         self,
         lyrics_data,
@@ -214,37 +242,6 @@ class CDGGenerator:
 
         self.logger.info(f"Total instrumentals detected: {len(instrumentals)}")
         return instrumentals
-
-    def generate_toml(
-        self,
-        lrc_file: str,
-        audio_file: str,
-        title: str,
-        artist: str,
-        output_file: str,
-        cdg_styles: dict,
-    ) -> None:
-        """Generate a TOML configuration file for CDG creation."""
-        audio_file = os.path.abspath(audio_file)
-        self.logger.debug(f"Using absolute audio file path: {audio_file}")
-
-        self._validate_cdg_styles(cdg_styles)
-        lyrics_data = self._parse_lrc_file(lrc_file)
-        instrumentals = self._detect_instrumentals(lyrics_data, cdg_styles)
-        sync_times, formatted_lyrics = self._format_lyrics_data(lyrics_data, instrumentals, cdg_styles)
-
-        toml_data = self._create_toml_data(
-            title=title,
-            artist=artist,
-            audio_file=audio_file,
-            lrc_file=lrc_file,
-            sync_times=sync_times,
-            instrumentals=instrumentals,
-            formatted_lyrics=formatted_lyrics,
-            cdg_styles=cdg_styles,
-        )
-
-        self._write_toml_file(toml_data, output_file)
 
     def _validate_cdg_styles(self, cdg_styles: dict) -> None:
         """Validate required style parameters are present."""
@@ -292,17 +289,6 @@ class CDGGenerator:
         missing_styles = required_styles - set(cdg_styles.keys())
         if missing_styles:
             raise ValueError(f"Missing required style parameters: {', '.join(missing_styles)}")
-
-    def _parse_lrc_file(self, lrc_file: str) -> List[dict]:
-        """Parse LRC file and return lyrics data."""
-        try:
-            lyrics_data = self.parse_lrc(lrc_file)
-            if not lyrics_data:
-                raise ValueError(f"No lyrics data found in the LRC file: {lrc_file}")
-            return lyrics_data
-        except ValueError as e:
-            self.logger.error(f"Error parsing LRC file: {e}")
-            raise
 
     def _detect_instrumentals(self, lyrics_data: List[dict], cdg_styles: dict) -> List[dict]:
         """Detect instrumental sections in lyrics."""
@@ -356,7 +342,7 @@ class CDGGenerator:
         title: str,
         artist: str,
         audio_file: str,
-        lrc_file: str,
+        output_name: str,
         sync_times: List[int],
         instrumentals: List[dict],
         formatted_lyrics: List[str],
@@ -367,7 +353,7 @@ class CDGGenerator:
             "title": title,
             "artist": artist,
             "file": audio_file,
-            "outname": Path(lrc_file).stem,
+            "outname": output_name,
             "clear_mode": cdg_styles["clear_mode"],
             "sync_offset": cdg_styles["sync_offset"],
             "background": cdg_styles["background_color"],

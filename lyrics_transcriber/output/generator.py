@@ -128,8 +128,8 @@ class OutputGenerator:
             outputs.lrc = self.lyrics_file.generate_lrc(resized_segments, output_prefix)
 
             # Generate CDG file using LRC
-            outputs.cdg, outputs.mp3, outputs.cdg_zip = self.cdg.generate_cdg_from_lrc(
-                lrc_file=outputs.lrc,
+            outputs.cdg, outputs.mp3, outputs.cdg_zip = self.cdg.generate_cdg(
+                segments=resized_segments,
                 audio_file=audio_filepath,
                 title=title or output_prefix,
                 artist=artist or "",
