@@ -12,24 +12,7 @@ from lyrics_transcriber.output.subtitles import SubtitlesGenerator
 from lyrics_transcriber.output.video import VideoGenerator
 from lyrics_transcriber.output.segment_resizer import SegmentResizer
 from lyrics_transcriber.output.cdg import CDGGenerator
-
-
-@dataclass
-class OutputGeneratorConfig:
-    """Configuration for output generation."""
-
-    output_dir: str
-    cache_dir: str
-    styles: dict
-    video_resolution: str = "360p"
-    max_line_length: int = 36
-
-    def __post_init__(self):
-        """Validate configuration after initialization."""
-        if not self.output_dir:
-            raise ValueError("output_dir must be provided")
-        if not self.cache_dir:
-            raise ValueError("cache_dir must be provided")
+from lyrics_transcriber.core.config import OutputConfig
 
 
 @dataclass
@@ -52,14 +35,14 @@ class OutputGenerator:
 
     def __init__(
         self,
-        config: OutputGeneratorConfig,
+        config: OutputConfig,
         logger: Optional[logging.Logger] = None,
     ):
         """
         Initialize OutputGenerator with configuration.
 
         Args:
-            config: OutputGeneratorConfig instance with required paths
+            config: OutputConfig instance with required paths and settings
             logger: Optional logger instance
         """
         self.config = config
@@ -70,26 +53,41 @@ class OutputGenerator:
         # Set video resolution parameters
         self.video_resolution_num, self.font_size, self.line_height = self._get_video_params(self.config.video_resolution)
 
+        self.segment_resizer = SegmentResizer(max_line_length=self.config.max_line_length, logger=self.logger)
+
         # Initialize generators
         self.plain_text = PlainTextGenerator(self.config.output_dir, self.logger)
         self.lyrics_file = LyricsFileGenerator(self.config.output_dir, self.logger)
-        self.cdg = CDGGenerator(self.config.output_dir, self.logger)
-        self.subtitle = SubtitlesGenerator(
-            output_dir=self.config.output_dir,
-            video_resolution=self.video_resolution_num,
-            font_size=self.font_size,
-            line_height=self.line_height,
-            styles=self.config.styles,
-            logger=self.logger,
-        )
-        self.video = VideoGenerator(
-            output_dir=self.config.output_dir,
-            cache_dir=self.config.cache_dir,
-            video_resolution=self.video_resolution_num,
-            styles=self.config.styles,
-            logger=self.logger,
-        )
-        self.segment_resizer = SegmentResizer(max_line_length=self.config.max_line_length, logger=self.logger)
+
+        if self.config.render_video or self.config.generate_cdg:
+            # Load output styles from JSON
+            try:
+                with open(self.config.output_styles_json, "r") as f:
+                    self.config.styles = json.load(f)
+                self.logger.debug(f"Loaded output styles from: {self.config.output_styles_json}")
+            except Exception as e:
+                raise ValueError(f"Failed to load output styles file: {str(e)}")
+
+        if self.config.generate_cdg:
+            self.cdg = CDGGenerator(self.config.output_dir, self.logger)
+
+        if self.config.render_video:
+            self.subtitle = SubtitlesGenerator(
+                output_dir=self.config.output_dir,
+                video_resolution=self.video_resolution_num,
+                font_size=self.font_size,
+                line_height=self.line_height,
+                styles=self.config.styles,
+                logger=self.logger,
+            )
+
+            self.video = VideoGenerator(
+                output_dir=self.config.output_dir,
+                cache_dir=self.config.cache_dir,
+                video_resolution=self.video_resolution_num,
+                styles=self.config.styles,
+                logger=self.logger,
+            )
 
         # Log the configured directories
         self.logger.debug(f"Initialized OutputGenerator with output_dir: {self.config.output_dir}")
@@ -103,7 +101,6 @@ class OutputGenerator:
         audio_filepath: str,
         artist: Optional[str] = None,
         title: Optional[str] = None,
-        render_video: bool = False,
     ) -> OutputPaths:
         """Generate all requested output formats."""
         outputs = OutputPaths()
@@ -127,20 +124,20 @@ class OutputGenerator:
             # Generate LRC using LyricsFileGenerator
             outputs.lrc = self.lyrics_file.generate_lrc(resized_segments, output_prefix)
 
-            # Generate CDG file using LRC
-            outputs.cdg, outputs.mp3, outputs.cdg_zip = self.cdg.generate_cdg(
-                segments=resized_segments,
-                audio_file=audio_filepath,
-                title=title or output_prefix,
-                artist=artist or "",
-                cdg_styles=self.config.styles["cdg"],
-            )
-
-            # Generate ASS subtitles
-            outputs.ass = self.subtitle.generate_ass(resized_segments, output_prefix, audio_filepath)
+            # Generate CDG file if requested
+            if self.config.generate_cdg:
+                outputs.cdg, outputs.mp3, outputs.cdg_zip = self.cdg.generate_cdg(
+                    segments=resized_segments,
+                    audio_file=audio_filepath,
+                    title=title or output_prefix,
+                    artist=artist or "",
+                    cdg_styles=self.config.styles["cdg"],
+                )
 
             # Generate video if requested
-            if render_video and outputs.ass:
+            if self.config.render_video:
+                # Generate ASS subtitles
+                outputs.ass = self.subtitle.generate_ass(resized_segments, output_prefix, audio_filepath)
                 outputs.video = self.video.generate_video(outputs.ass, audio_filepath, output_prefix)
 
             return outputs

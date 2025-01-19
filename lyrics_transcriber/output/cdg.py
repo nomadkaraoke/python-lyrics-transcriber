@@ -88,7 +88,7 @@ class CDGGenerator:
                 # Convert time from seconds to centiseconds
                 timestamp = int(word.start_time * 100)
                 lyrics_data.append({"timestamp": timestamp, "text": word.text.upper()})  # CDG format expects uppercase text
-                self.logger.debug(f"Added lyric: timestamp {timestamp}, text '{word.text}'")
+                # self.logger.debug(f"Added lyric: timestamp {timestamp}, text '{word.text}'")
 
         # Sort by timestamp to ensure correct order
         lyrics_data.sort(key=lambda x: x["timestamp"])
@@ -312,20 +312,20 @@ class CDGGenerator:
         formatted_lyrics = []
 
         for i, lyric in enumerate(lyrics_data):
-            self.logger.debug(f"Processing lyric {i}: timestamp {lyric['timestamp']}, text '{lyric['text']}'")
+            # self.logger.debug(f"Processing lyric {i}: timestamp {lyric['timestamp']}, text '{lyric['text']}'")
 
             if i == 0 or lyric["timestamp"] - lyrics_data[i - 1]["timestamp"] >= cdg_styles["lead_in_threshold"]:
                 lead_in_start = lyric["timestamp"] - cdg_styles["lead_in_total"]
-                self.logger.debug(f"Adding lead-in before lyric {i} at timestamp {lead_in_start}")
+                # self.logger.debug(f"Adding lead-in before lyric {i} at timestamp {lead_in_start}")
                 for j, symbol in enumerate(cdg_styles["lead_in_symbols"]):
                     sync_time = lead_in_start + j * cdg_styles["lead_in_duration"]
                     sync_times.append(sync_time)
                     formatted_lyrics.append(symbol)
-                    self.logger.debug(f"  Added lead-in symbol {j+1}: '{symbol}' at {sync_time}")
+                    # self.logger.debug(f"  Added lead-in symbol {j+1}: '{symbol}' at {sync_time}")
 
             sync_times.append(lyric["timestamp"])
             formatted_lyrics.append(lyric["text"])
-            self.logger.debug(f"Added lyric: '{lyric['text']}' at {lyric['timestamp']}")
+            # self.logger.debug(f"Added lyric: '{lyric['text']}' at {lyric['timestamp']}")
 
         formatted_text = self.format_lyrics(
             formatted_lyrics,
@@ -446,7 +446,7 @@ class CDGGenerator:
         page_number = 1
 
         for i, text in enumerate(lyrics_data):
-            self.logger.debug(f"Processing text {i}: '{text}' (sync time: {sync_times[i]})")
+            # self.logger.debug(f"Processing text {i}: '{text}' (sync time: {sync_times[i]})")
 
             if text.startswith("/"):
                 if current_line:
@@ -454,16 +454,16 @@ class CDGGenerator:
                     for wrapped_line in wrapped_lines:
                         formatted_lyrics.append(wrapped_line)
                         lines_on_page += 1
-                        self.logger.debug(f"Added wrapped line: '{wrapped_line}'. Lines on page: {lines_on_page}")
+                        # self.logger.debug(f"Added wrapped line: '{wrapped_line}'. Lines on page: {lines_on_page}")
                         if lines_on_page == 4:
                             lines_on_page = 0
                             page_number += 1
-                            self.logger.debug(f"Page full. New page number: {page_number}")
+                            # self.logger.debug(f"Page full. New page number: {page_number}")
                     current_line = ""
                 text = text[1:]
 
             current_line += text + " "
-            self.logger.debug(f"Current line: '{current_line}'")
+            # self.logger.debug(f"Current line: '{current_line}'")
 
             is_last_before_instrumental = any(
                 inst["sync"] > sync_times[i] and (i == len(sync_times) - 1 or sync_times[i + 1] > inst["sync"]) for inst in instrumentals
@@ -475,29 +475,29 @@ class CDGGenerator:
                     for wrapped_line in wrapped_lines:
                         formatted_lyrics.append(wrapped_line)
                         lines_on_page += 1
-                        self.logger.debug(f"Added wrapped line at end of section: '{wrapped_line}'. Lines on page: {lines_on_page}")
+                        # self.logger.debug(f"Added wrapped line at end of section: '{wrapped_line}'. Lines on page: {lines_on_page}")
                         if lines_on_page == 4:
                             lines_on_page = 0
                             page_number += 1
-                            self.logger.debug(f"Page full. New page number: {page_number}")
+                            # self.logger.debug(f"Page full. New page number: {page_number}")
                     current_line = ""
 
                 if is_last_before_instrumental:
                     blank_lines_needed = 4 - lines_on_page
                     if blank_lines_needed < 4:
                         formatted_lyrics.extend(["~"] * blank_lines_needed)
-                        self.logger.debug(f"Added {blank_lines_needed} empty lines before instrumental. Lines on page was {lines_on_page}")
+                        # self.logger.debug(f"Added {blank_lines_needed} empty lines before instrumental. Lines on page was {lines_on_page}")
                     lines_on_page = 0
                     page_number += 1
-                    self.logger.debug(f"Reset lines_on_page to 0. New page number: {page_number}")
+                    # self.logger.debug(f"Reset lines_on_page to 0. New page number: {page_number}")
 
         final_lyrics = []
         for line in formatted_lyrics:
             final_lyrics.append(line)
             if line.endswith(("!", "?", ".")) and not line == "~":
                 final_lyrics.append("~")
-                self.logger.debug("Added empty line after punctuation")
+                # self.logger.debug("Added empty line after punctuation")
 
         result = "\n".join(final_lyrics)
-        self.logger.debug(f"Final formatted lyrics:\n{result}")
+        # self.logger.debug(f"Final formatted lyrics:\n{result}")
         return result

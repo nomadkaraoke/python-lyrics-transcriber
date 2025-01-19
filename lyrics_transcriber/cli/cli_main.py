@@ -67,6 +67,7 @@ def create_arg_parser() -> argparse.ArgumentParser:
         type=Path,
         help="JSON file containing output style configurations for CDG and video generation",
     )
+    output_group.add_argument("--generate_cdg", action="store_true", help="Generate CDG karaoke files")
 
     # Video options
     video_group = parser.add_argument_group("Video Options")
@@ -135,6 +136,7 @@ def create_configs(args: argparse.Namespace, env_config: Dict[str, str]) -> tupl
         output_dir=str(args.output_dir) if args.output_dir else os.getcwd(),
         cache_dir=str(args.cache_dir),
         render_video=args.render_video,
+        generate_cdg=args.generate_cdg,
         video_resolution=args.video_resolution,
     )
 
@@ -191,18 +193,28 @@ def main() -> None:
         # Log results
         logger.info("*** Success! ***")
 
+        # Log all generated output files
+        if results.original_txt:
+            logger.info(f"Generated original transcription: {results.original_txt}")
+        if results.corrections_json:
+            logger.info(f"Generated corrections data: {results.corrections_json}")
+
+        if results.corrected_txt:
+            logger.info(f"Generated corrected lyrics: {results.corrected_txt}")
         if results.lrc_filepath:
             logger.info(f"Generated LRC file: {results.lrc_filepath}")
-        if results.mp3_filepath:
-            logger.info(f"Generated MP3 file: {results.mp3_filepath}")
+
         if results.cdg_filepath:
             logger.info(f"Generated CDG file: {results.cdg_filepath}")
+        if results.mp3_filepath:
+            logger.info(f"Generated MP3 file: {results.mp3_filepath}")
         if results.cdg_zip_filepath:
-            logger.info(f"Generated CDG ZIP file: {results.cdg_zip_filepath}")
+            logger.info(f"Generated CDG ZIP archive: {results.cdg_zip_filepath}")
+
         if results.ass_filepath:
-            logger.info(f"Generated ASS file: {results.ass_filepath}")
+            logger.info(f"Generated ASS subtitles: {results.ass_filepath}")
         if results.video_filepath:
-            logger.info(f"Generated MKV video file: {results.video_filepath}")
+            logger.info(f"Generated video: {results.video_filepath}")
 
     except Exception as e:
         # Get the full exception traceback

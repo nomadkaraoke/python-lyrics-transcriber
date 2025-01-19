@@ -1,6 +1,5 @@
 import os
 import logging
-import json
 from dataclasses import dataclass, field
 from typing import Dict, Optional, List
 from lyrics_transcriber.types import (
@@ -14,41 +13,9 @@ from lyrics_transcriber.transcribers.whisper import WhisperTranscriber, WhisperC
 from lyrics_transcriber.lyrics.base_lyrics_provider import BaseLyricsProvider, LyricsProviderConfig
 from lyrics_transcriber.lyrics.genius import GeniusProvider
 from lyrics_transcriber.lyrics.spotify import SpotifyProvider
-from lyrics_transcriber.output.generator import OutputGenerator, OutputGeneratorConfig
+from lyrics_transcriber.output.generator import OutputGenerator
 from lyrics_transcriber.correction.corrector import LyricsCorrector
-
-
-@dataclass
-class TranscriberConfig:
-    """Configuration for transcription services."""
-
-    audioshake_api_token: Optional[str] = None
-    runpod_api_key: Optional[str] = None
-    whisper_runpod_id: Optional[str] = None
-
-
-@dataclass
-class LyricsConfig:
-    """Configuration for lyrics services."""
-
-    genius_api_token: Optional[str] = None
-    spotify_cookie: Optional[str] = None
-
-
-@dataclass
-class OutputConfig:
-    """Configuration for output generation."""
-
-    output_styles_json: str
-    output_dir: Optional[str] = os.getcwd()
-    cache_dir: str = os.getenv("LYRICS_TRANSCRIBER_CACHE_DIR", "/tmp/lyrics-transcriber-cache/")
-    render_video: bool = False
-    video_resolution: str = "360p"
-
-    def __post_init__(self):
-        """Validate configuration after initialization."""
-        if self.output_styles_json and not os.path.isfile(self.output_styles_json):
-            raise FileNotFoundError(f"Output styles JSON file not found: {self.output_styles_json}")
+from lyrics_transcriber.core.config import TranscriberConfig, LyricsConfig, OutputConfig
 
 
 @dataclass
@@ -69,6 +36,9 @@ class LyricsControllerResult:
     mp3_filepath: Optional[str] = None
     cdg_filepath: Optional[str] = None
     cdg_zip_filepath: Optional[str] = None
+    original_txt: Optional[str] = None
+    corrected_txt: Optional[str] = None
+    corrections_json: Optional[str] = None
 
 
 class LyricsTranscriber:
@@ -202,26 +172,7 @@ class LyricsTranscriber:
 
     def _initialize_output_generator(self) -> OutputGenerator:
         """Initialize output generation service."""
-        # Load output styles from JSON
-        try:
-            with open(self.output_config.output_styles_json, "r") as f:
-                styles = json.load(f)
-            self.logger.debug(f"Loaded output styles from: {self.output_config.output_styles_json}")
-        except json.JSONDecodeError as e:
-            raise ValueError(f"Invalid JSON in output styles file: {str(e)}")
-        except Exception as e:
-            raise ValueError(f"Failed to load output styles file: {str(e)}")
-
-        # Convert OutputConfig to OutputGeneratorConfig
-        generator_config = OutputGeneratorConfig(
-            output_dir=self.output_config.output_dir,
-            cache_dir=self.output_config.cache_dir,
-            styles=styles,
-            video_resolution=self.output_config.video_resolution,
-        )
-
-        # Initialize output generator
-        return OutputGenerator(config=generator_config, logger=self.logger)
+        return OutputGenerator(config=self.output_config, logger=self.logger)
 
     def process(self) -> LyricsControllerResult:
         """
@@ -328,17 +279,18 @@ class LyricsTranscriber:
                 audio_filepath=self.audio_filepath,
                 artist=self.artist,
                 title=self.title,
-                render_video=self.output_config.render_video,
             )
 
-            # Store output paths - access attributes directly instead of using .get()
+            # Store all output paths in results
             self.results.lrc_filepath = output_files.lrc
             self.results.ass_filepath = output_files.ass
-
-            self.results.mp3_filepath = output_files.mp3
-            self.results.cdg_filepath = output_files.cdg
-            self.results.cdg_zip_filepath = output_files.cdg_zip
             self.results.video_filepath = output_files.video
+            self.results.original_txt = output_files.original_txt
+            self.results.corrected_txt = output_files.corrected_txt
+            self.results.corrections_json = output_files.corrections_json
+            self.results.cdg_filepath = output_files.cdg
+            self.results.mp3_filepath = output_files.mp3
+            self.results.cdg_zip_filepath = output_files.cdg_zip
 
         except Exception as e:
             self.logger.error(f"Failed to generate outputs: {str(e)}")

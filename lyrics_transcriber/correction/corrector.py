@@ -94,15 +94,6 @@ class LyricsCorrector:
         trailing_space = " " if original != original.rstrip() else ""
         return leading_space + new_word.strip() + trailing_space
 
-    def _try_correct_word(self, gap: GapSequence, word: Word, current_word_idx: int, segment_idx: int) -> Optional[WordCorrection]:
-        """Attempt to correct a word using available handlers."""
-        for handler in self.handlers:
-            if handler.can_handle(gap, current_word_idx):
-                correction = handler.handle(gap, word, current_word_idx, segment_idx)
-                if correction:
-                    return correction
-        return None
-
     def _process_corrections(
         self, segments: List[LyricsSegment], gap_sequences: List[GapSequence]
     ) -> Tuple[List[WordCorrection], List[LyricsSegment]]:

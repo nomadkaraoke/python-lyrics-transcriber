@@ -969,11 +969,11 @@ class KaraokeComposer:
         # Queue the erasing of this line if necessary
         if should_erase_this_line:
             assert line_erase_info is not None
-            logger.debug(
-                f"t={self.writer.packets_queued}: erasing lyric "
-                f"{line_erase_info.lyric_index} line "
-                f"{line_erase_info.line_index}"
-            )
+            # logger.debug(
+            #     f"t={self.writer.packets_queued}: erasing lyric "
+            #     f"{line_erase_info.lyric_index} line "
+            #     f"{line_erase_info.line_index}"
+            # )
             if line_erase_info.text.strip():
                 state.draw_queue.extend(line_image_to_packets(
                     line_erase_info.image,
@@ -987,11 +987,11 @@ class KaraokeComposer:
         # Queue the drawing of this line if necessary
         if should_draw_this_line:
             assert line_draw_info is not None
-            logger.debug(
-                f"t={self.writer.packets_queued}: drawing lyric "
-                f"{line_draw_info.lyric_index} line "
-                f"{line_draw_info.line_index}"
-            )
+            # logger.debug(
+            #     f"t={self.writer.packets_queued}: drawing lyric "
+            #     f"{line_draw_info.lyric_index} line "
+            #     f"{line_draw_info.line_index}"
+            # )
             if line_draw_info.text.strip():
                 state.draw_queue.extend(line_image_to_packets(
                     line_draw_info.image,
