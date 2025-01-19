@@ -31,10 +31,14 @@ class VideoGenerator:
         self.output_dir = output_dir
         self.cache_dir = cache_dir
         self.video_resolution = video_resolution
-        self.background_image = styles["karaoke"]["background_image"]
-        self.background_color = styles["karaoke"]["background_color"]
         self.logger = logger or logging.getLogger(__name__)
 
+        # Get background settings from styles, with defaults
+        karaoke_styles = styles.get("karaoke", {})
+        self.background_image = karaoke_styles.get("background_image")
+        self.background_color = karaoke_styles.get("background_color", "black")
+
+        # Validate background image if specified
         if self.background_image and not os.path.isfile(self.background_image):
             raise FileNotFoundError(f"Video background image not found: {self.background_image}")
 

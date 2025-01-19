@@ -103,7 +103,7 @@ class CDGGenerator:
         cdg_styles: dict,
     ) -> str:
         """Create TOML configuration file for CDG generation."""
-        toml_file = os.path.join(self.output_dir, f"{title} - {artist}.toml")
+        toml_file = os.path.join(self.output_dir, f"{artist} - {title} (Karaoke CDG).toml")
         self.logger.debug(f"Generating TOML file: {toml_file}")
 
         self.generate_toml(
@@ -137,7 +137,7 @@ class CDGGenerator:
             title=title,
             artist=artist,
             audio_file=audio_file,
-            output_name=title,
+            output_name=f"{artist} - {title} (Karaoke CDG)",
             sync_times=sync_times,
             instrumentals=instrumentals,
             formatted_lyrics=formatted_lyrics,
@@ -169,7 +169,7 @@ class CDGGenerator:
 
     def _find_cdg_zip(self, artist: str, title: str) -> str:
         """Find the generated CDG ZIP file."""
-        expected_zip = f"{artist} - {title} (Karaoke).zip"
+        expected_zip = f"{artist} - {title} (Karaoke CDG).zip"
         output_zip = os.path.join(self.output_dir, expected_zip)
 
         self.logger.info(f"Looking for CDG ZIP file in output directory: {output_zip}")
@@ -191,11 +191,11 @@ class CDGGenerator:
 
     def _get_cdg_path(self, artist: str, title: str) -> str:
         """Get the path to the CDG file."""
-        return os.path.join(self.output_dir, f"{artist} - {title} (Karaoke).cdg")
+        return os.path.join(self.output_dir, f"{artist} - {title} (Karaoke CDG).cdg")
 
     def _get_mp3_path(self, artist: str, title: str) -> str:
         """Get the path to the MP3 file."""
-        return os.path.join(self.output_dir, f"{artist} - {title} (Karaoke).mp3")
+        return os.path.join(self.output_dir, f"{artist} - {title} (Karaoke CDG).mp3")
 
     def _verify_output_files(self, cdg_file: str, mp3_file: str) -> None:
         """Verify that the required output files exist."""
