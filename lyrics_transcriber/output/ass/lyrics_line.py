@@ -4,6 +4,9 @@ import logging
 from datetime import timedelta
 
 from lyrics_transcriber.types import LyricsSegment
+from lyrics_transcriber.output.ass.event import Event
+from lyrics_transcriber.output.ass.style import Style
+from lyrics_transcriber.output.ass.config import LineState
 
 
 @dataclass
@@ -17,6 +20,33 @@ class LyricsLine:
         """Ensure logger is initialized"""
         if self.logger is None:
             self.logger = logging.getLogger(__name__)
+
+    def create_ass_event(self, state: LineState, style: Style, video_width: int, config) -> Event:
+        """Create ASS event for this line."""
+        e = Event()
+        e.type = "Dialogue"
+        e.Layer = 0
+        e.Style = style
+        e.Start = state.timing.fade_in_time
+        e.End = state.timing.end_time
+
+        # Use absolute positioning
+        x_pos = video_width // 2  # Center horizontally
+
+        # Add fade effect using config values
+        fade_in_ms = config.fade_in_ms
+        fade_out_ms = config.fade_out_ms
+
+        # fmt: off
+        text = (
+            f"{{\\an8}}{{\\pos({x_pos},{state.y_position})}}"
+            f"{{\\fad({fade_in_ms},{fade_out_ms})}}"
+            f"{self._create_ass_text(timedelta(seconds=state.timing.fade_in_time))}"
+        )
+        # fmt: on
+        e.Text = text
+
+        return e
 
     def _create_ass_text(self, start_ts: timedelta) -> str:
         """Create the ASS text with karaoke timing tags."""

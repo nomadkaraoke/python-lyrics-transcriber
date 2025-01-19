@@ -218,7 +218,14 @@ class LyricsScreen:
             line_state = LineState(text=line.segment.text, timing=timing, y_position=y_position)
 
             # Create ASS event
-            event = self._create_line_event(line, line_state, style)
+            # fmt: off
+            event = line.create_ass_event(
+                state=line_state,
+                style=style,
+                video_width=self.video_size[0],
+                config=self.config
+            )
+            # fmt: on
             events.append(event)
 
             # Track active line
@@ -228,22 +235,6 @@ class LyricsScreen:
             self.logger.debug(f"    Line {i + 1}: '{line.segment.text}'")
 
         return events, active_lines
-
-    def _create_line_event(self, line: LyricsLine, state: LineState, style: Style) -> Event:
-        """Create ASS event for a single line."""
-        e = Event()
-        e.type = "Dialogue"
-        e.Layer = 0
-        e.Style = style
-        e.Start = state.timing.fade_in_time
-        e.End = state.timing.end_time
-
-        # Use absolute positioning
-        x_pos = self.video_size[0] // 2  # Center horizontally
-        text = f"{{\\an8}}{{\\pos({x_pos},{state.y_position})}}{line._create_ass_text(timedelta(seconds=state.timing.fade_in_time))}"
-        e.Text = text
-
-        return e
 
     @property
     def start_ts(self) -> timedelta:

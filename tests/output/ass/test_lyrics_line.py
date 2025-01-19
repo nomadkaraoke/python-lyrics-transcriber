@@ -4,11 +4,29 @@ from unittest.mock import Mock
 
 from lyrics_transcriber.types import LyricsSegment, Word
 from lyrics_transcriber.output.ass.lyrics_line import LyricsLine
+from lyrics_transcriber.output.ass.style import Style
+from lyrics_transcriber.output.ass.config import ScreenConfig, LineTimingInfo, LineState
 
 
 @pytest.fixture
 def mock_logger():
     return Mock()
+
+
+@pytest.fixture
+def style():
+    style = Style()
+    style.Name = "Test"
+    return style
+
+
+@pytest.fixture
+def config():
+    return ScreenConfig(
+        fade_in_ms=300,
+        fade_out_ms=600,
+        line_height=60,
+    )
 
 
 def create_segment(words, start_time=10.0):
@@ -136,3 +154,142 @@ def test_custom_logger():
     line = LyricsLine(segment=segment, logger=logger)
 
     assert line.logger == logger
+
+
+class TestAssEventCreation:
+    def test_basic_event_creation(self, style, config):
+        """Test basic ASS event creation."""
+        # fmt: off
+        segment = create_segment([
+            ("Test", 1.0)  # 10.0 - 11.0
+        ])
+        line = LyricsLine(segment=segment)
+        
+        timing = LineTimingInfo(
+            fade_in_time=10.0,
+            end_time=11.0,
+            fade_out_time=11.3,
+            clear_time=11.6
+        )
+        state = LineState(
+            text="Test",
+            timing=timing,
+            y_position=100
+        )
+        
+        event = line.create_ass_event(
+            state=state,
+            style=style,
+            video_width=1920,
+            config=config
+        )
+        # fmt: on
+
+        # Check event properties
+        assert event.type == "Dialogue"
+        assert event.Layer == 0
+        assert event.Style == style
+        assert event.Start == 10.0
+        assert event.End == 11.0
+
+        # Check text formatting
+        text = event.Text
+        assert "\\an8" in text  # Top alignment
+        assert "\\pos(960,100)" in text  # Centered horizontally
+        assert f"\\fad({config.fade_in_ms},{config.fade_out_ms})" in text  # Fade effect
+        assert "\\k0" in text  # Initial timing
+        assert "\\kf100" in text  # Word duration
+
+    def test_event_positioning(self, style, config):
+        """Test event positioning with different video widths."""
+        # fmt: off
+        segment = create_segment([("Test", 1.0)])
+        line = LyricsLine(segment=segment)
+        
+        state = LineState(
+            text="Test",
+            timing=LineTimingInfo(
+                fade_in_time=10.0,
+                end_time=11.0,
+                fade_out_time=11.3,
+                clear_time=11.6
+            ),
+            y_position=100
+        )
+        # fmt: on
+
+        # Test with different video widths
+        widths = [1920, 1280, 640]
+        for width in widths:
+            event = line.create_ass_event(state, style, width, config)
+            assert f"\\pos({width//2},100)" in event.Text
+
+    def test_fade_configuration(self, style, config):
+        """Test fade effect with different configurations."""
+        # fmt: off
+        segment = create_segment([("Test", 1.0)])
+        line = LyricsLine(segment=segment)
+        
+        state = LineState(
+            text="Test",
+            timing=LineTimingInfo(
+                fade_in_time=10.0,
+                end_time=11.0,
+                fade_out_time=11.3,
+                clear_time=11.6
+            ),
+            y_position=100
+        )
+        
+        # Test with different fade configurations
+        configs = [
+            ScreenConfig(fade_in_ms=100, fade_out_ms=200),
+            ScreenConfig(fade_in_ms=300, fade_out_ms=600),
+            ScreenConfig(fade_in_ms=500, fade_out_ms=1000),
+        ]
+        # fmt: on
+
+        for cfg in configs:
+            event = line.create_ass_event(state, style, 1920, cfg)
+            assert f"\\fad({cfg.fade_in_ms},{cfg.fade_out_ms})" in event.Text
+
+    def test_complex_line_event(self, style, config):
+        """Test event creation with multiple words and gaps."""
+        # fmt: off
+        words = [
+            ("First", 0.5),    # 10.0 - 10.5
+            ("gap", 0.5),      # 11.0 - 11.5 (0.5s gap)
+            ("here", 0.5),     # 12.0 - 12.5 (0.5s gap)
+        ]
+        segment = create_segment(words)
+        
+        # Manually adjust timing to create gaps
+        segment.words[1].start_time = 11.0
+        segment.words[1].end_time = 11.5
+        segment.words[2].start_time = 12.0
+        segment.words[2].end_time = 12.5
+        
+        line = LyricsLine(segment=segment)
+        
+        state = LineState(
+            text=" ".join(word for word, _ in words),
+            timing=LineTimingInfo(
+                fade_in_time=10.0,
+                end_time=12.5,
+                fade_out_time=12.8,
+                clear_time=13.1
+            ),
+            y_position=100
+        )
+        # fmt: on
+
+        event = line.create_ass_event(state, style, 1920, config)
+
+        # Check all components are present
+        text = event.Text
+        assert "\\an8" in text
+        assert "\\pos(960,100)" in text
+        assert f"\\fad({config.fade_in_ms},{config.fade_out_ms})" in text
+        assert "\\k0" in text
+        assert "\\kf50" in text  # Word durations
+        assert "\\k50" in text  # Gaps
