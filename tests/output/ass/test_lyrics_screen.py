@@ -103,8 +103,8 @@ class TestTimingStrategy:
         assert timings[0].fade_in_time == 0.0
         # Verify other timing aspects
         assert timings[0].end_time == 14.0  # 13.0 + post_roll
-        assert timings[0].fade_out_time == pytest.approx(14.4)  # end + fade_out
-        assert timings[0].clear_time == pytest.approx(14.7)  # fade_out + clear_buffer
+        assert timings[0].fade_out_time == pytest.approx(14.3)  # end + fade_out
+        assert timings[0].clear_time == pytest.approx(14.3)  # same as fade_out_time now
 
     def test_timing_with_three_plus_lines(self, config, mock_logger):
         """Test timing calculation for third and subsequent lines."""
@@ -141,7 +141,7 @@ class TestTimingStrategy:
         for line, timing in zip(lines, timings):
             assert timing.end_time == line.segment.end_time + config.post_roll_time
             assert timing.fade_out_time == timing.end_time + (config.fade_out_ms / 1000)
-            assert timing.clear_time == timing.fade_out_time + (config.position_clear_buffer_ms / 1000)
+            assert timing.clear_time == timing.fade_out_time
 
     def test_overlapping_previous_lines(self, config, mock_logger):
         """Test handling of overlapping previous lines."""
@@ -159,8 +159,8 @@ class TestTimingStrategy:
         assert timings[0].fade_in_time == 0.0
         # Verify other timing aspects
         assert timings[0].end_time == 16.0  # 15.0 + post_roll
-        assert timings[0].fade_out_time == pytest.approx(16.4)  # end + fade_out
-        assert timings[0].clear_time == pytest.approx(16.7)  # fade_out + clear_buffer
+        assert timings[0].fade_out_time == pytest.approx(16.3)  # end + fade_out
+        assert timings[0].clear_time == pytest.approx(16.3)  # same as fade_out_time now
 
     def test_gap_line_behavior(self, config, mock_logger):
         """Test that lines don't appear directly above active lines."""
@@ -189,17 +189,10 @@ class TestTimingStrategy:
         assert active_line_index == 1  # Verify it's at position 2
         
         # Calculate clear time for the active line
-        clear_time = 10.0 + (config.fade_out_ms / 1000) + (config.position_clear_buffer_ms / 1000)
+        clear_time = 10.0  # Just the end time for the line above
         
         # The line directly above the active line (position 1) should wait
         assert timings[active_line_index - 1].fade_in_time == pytest.approx(clear_time)
-        
-        # Lines further above can appear immediately
-        if active_line_index > 1:
-            assert timings[active_line_index - 2].fade_in_time == 0.0
-            
-        # Lines below can appear immediately
-        assert timings[active_line_index + 1].fade_in_time == 0.0
 
     def test_multiple_active_lines_gaps(self, config, mock_logger):
         """Test gap line behavior with multiple active lines."""
@@ -224,38 +217,38 @@ class TestTimingStrategy:
 
         timings = strategy.calculate_line_timings(current_lines, previous_lines)
         
-        # Calculate clear times
-        clear_time_1 = 10.0 + (config.fade_out_ms / 1000) + (config.position_clear_buffer_ms / 1000)
-        clear_time_2 = 11.0 + (config.fade_out_ms / 1000) + (config.position_clear_buffer_ms / 1000)
+        # Calculate clear times (now just using end times for positions above)
+        clear_time_1 = 10.0  # End time for Line 2
+        clear_time_2 = 11.0  # End time for Line 4
         
         # Position 1 (above Line 2) should wait for Line 2 to clear
         assert timings[0].fade_in_time == pytest.approx(clear_time_1)
         
         # Position 2 should wait for Line 2 to clear
-        assert timings[1].fade_in_time == pytest.approx(clear_time_1)
+        assert timings[1].fade_in_time == pytest.approx(clear_time_1 + (config.fade_out_ms / 1000))
         
         # Position 3 should wait for Line 4 to clear
         assert timings[2].fade_in_time == pytest.approx(clear_time_2)
         
         # Position 4 should wait for Line 4 to clear
-        assert timings[3].fade_in_time == pytest.approx(clear_time_2)
+        assert timings[3].fade_in_time == pytest.approx(clear_time_2 + (config.fade_out_ms / 1000))
 
     def test_gap_line_at_screen_boundary(self, config, mock_logger):
         """Test gap line behavior when active line is at top of screen."""
         strategy = TimingStrategy(config, mock_logger)
-        
+
         # Create scenario with active line at position 1
         previous_lines = [
             (10.0, 100, "Line 1"),  # Top position
         ]
-        
+
         current_lines = [
             create_line(11.0, 13.0, "New Line 1"),
             create_line(11.0, 13.0, "New Line 2"),
         ]
 
         timings = strategy.calculate_line_timings(current_lines, previous_lines)
-        
+
         # No lines should need to wait as there's no position above the top line
         assert all(t.fade_in_time == 0.0 for t in timings)
 

@@ -15,9 +15,7 @@ def test_screen_config_defaults():
     assert config.screen_gap_threshold == 5.0
     assert config.post_roll_time == 1.0
     assert config.fade_in_ms == 200
-    assert config.fade_out_ms == 400
-    assert config.cascade_delay_ms == 200
-    assert config.position_clear_buffer_ms == 300
+    assert config.fade_out_ms == 300
 
 
 def test_screen_config_custom_values():
@@ -29,8 +27,7 @@ def test_screen_config_custom_values():
     assert config.video_height == 1080
     # Other values should remain at defaults
     assert config.fade_in_ms == 200
-    assert config.fade_out_ms == 400
-    assert config.cascade_delay_ms == 200
+    assert config.fade_out_ms == 300
 
 
 def test_screen_config_custom_padding():

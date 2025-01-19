@@ -15,9 +15,7 @@ class ScreenConfig:
         self.screen_gap_threshold = 5.0
         self.post_roll_time = 1.0
         self.fade_in_ms = 200
-        self.fade_out_ms = 400
-        self.cascade_delay_ms = 200
-        self.position_clear_buffer_ms = 300
+        self.fade_out_ms = 300
 
 
 @dataclass
