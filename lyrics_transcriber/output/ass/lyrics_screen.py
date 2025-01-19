@@ -5,46 +5,8 @@ from datetime import timedelta
 
 from lyrics_transcriber.output.ass.style import Style
 from lyrics_transcriber.output.ass.event import Event
-from lyrics_transcriber.output.ass.lyrics_models.lyrics_line import LyricsLine
-
-
-@dataclass
-class ScreenConfig:
-    """Configuration for screen timing and layout."""
-
-    # Screen layout
-    max_visible_lines: int = 4
-    line_height: int = 50
-    top_padding: int = 50  # One line height of padding
-    video_height: int = 720  # 720p default
-
-    # Timing configuration
-    screen_gap_threshold: float = 5.0
-    post_roll_time: float = 1.0
-    fade_in_ms: int = 100
-    fade_out_ms: int = 400
-    cascade_delay_ms: int = 200
-    target_preshow_time: float = 5.0
-    position_clear_buffer_ms: int = 300
-
-
-@dataclass
-class LineTimingInfo:
-    """Timing information for a single line."""
-
-    fade_in_time: float
-    end_time: float
-    fade_out_time: float
-    clear_time: float
-
-
-@dataclass
-class LineState:
-    """Complete state for a single line."""
-
-    text: str
-    timing: LineTimingInfo
-    y_position: int
+from lyrics_transcriber.output.ass.lyrics_line import LyricsLine
+from lyrics_transcriber.output.ass.config import ScreenConfig, LineTimingInfo, LineState
 
 
 class PositionStrategy:
@@ -112,13 +74,13 @@ class TimingStrategy:
 
         # Check if we need to wait for previous lines to clear
         if previous_active_lines:
-            top_lines = sorted([(end, pos, text) for end, pos, text in previous_active_lines], key=lambda x: x[1])[:2]
-            if top_lines:
-                latest_clear_time = max(
-                    end + (self.config.fade_out_ms / 1000) + (self.config.position_clear_buffer_ms / 1000) for end, _, _ in top_lines
-                )
-                first_line_fade_in = max(first_line_fade_in, latest_clear_time)
-                self.logger.debug(f"    Waiting for top lines to clear at {latest_clear_time:.2f}s")
+            # Calculate latest clear time from ALL previous lines
+            latest_clear_time = max(
+                end + (self.config.fade_out_ms / 1000) + (self.config.position_clear_buffer_ms / 1000)
+                for end, _, _ in previous_active_lines
+            )
+            first_line_fade_in = max(first_line_fade_in, latest_clear_time)
+            self.logger.debug(f"    Waiting for lines to clear at {latest_clear_time:.2f}s")
 
         timings = []
         for i, line in enumerate(current_lines):

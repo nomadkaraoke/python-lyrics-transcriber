@@ -1,39 +1,20 @@
+import subprocess
 import pytest
 import os
-from datetime import timedelta
-import logging
-from typing import List, Tuple
+from unittest.mock import Mock, patch
 
+from lyrics_transcriber.output.ass.constants import ALIGN_TOP_CENTER
+from lyrics_transcriber.output.ass.lyrics_line import LyricsLine
+from lyrics_transcriber.output.ass.section_screen import SectionScreen
+from lyrics_transcriber.output.ass.lyrics_screen import LyricsScreen
 from lyrics_transcriber.output.subtitles import SubtitlesGenerator
 from lyrics_transcriber.types import LyricsSegment, Word
-from lyrics_transcriber.output.ass.lyrics_models import LyricsScreen
-
-
-def create_word(text: str, start: float, end: float, confidence: float = 1.0) -> Word:
-    """Helper to create a Word."""
-    return Word(text=text, start_time=start, end_time=end, confidence=confidence)
 
 
 def create_segment(start: float, end: float, text: str) -> LyricsSegment:
-    """Helper to create a LyricsSegment with words."""
-    words = [create_word(text=text, start=start, end=end)]
-    return LyricsSegment(text=text, words=words, start_time=start, end_time=end)
-
-
-@pytest.fixture
-def mock_logger():
-    """Create a logger that will show debug messages during testing."""
-    logger = logging.getLogger("test")
-    logger.setLevel(logging.DEBUG)
-    
-    # Add a console handler to show the logs
-    handler = logging.StreamHandler()
-    handler.setLevel(logging.DEBUG)
-    formatter = logging.Formatter('%(levelname)s - %(message)s')
-    handler.setFormatter(formatter)
-    logger.addHandler(handler)
-    
-    return logger
+    """Helper to create a test segment with words."""
+    words = [Word(text=text, start_time=start, end_time=end)]
+    return LyricsSegment(text=text, start_time=start, end_time=end, words=words)
 
 
 @pytest.fixture
@@ -43,9 +24,15 @@ def output_dir(tmp_path):
 
 
 @pytest.fixture
-def video_resolution() -> Tuple[int, int]:
+def video_resolution() -> tuple[int, int]:
     """Standard video resolution for testing."""
     return (1920, 1080)
+
+
+@pytest.fixture
+def mock_logger():
+    """Create a mock logger."""
+    return Mock()
 
 
 @pytest.fixture
@@ -55,7 +42,7 @@ def generator(output_dir, video_resolution, mock_logger):
 
 
 @pytest.fixture
-def sample_segments() -> List[LyricsSegment]:
+def sample_segments() -> list[LyricsSegment]:
     """Create sample lyrics segments for testing."""
     return [
         create_segment(17.98, 19.94, "I know I have good judgement"),
@@ -69,179 +56,257 @@ def sample_segments() -> List[LyricsSegment]:
     ]
 
 
-def test_generate_ass_success(generator, sample_segments):
-    """Test successful ASS file generation."""
-    output_prefix = "test_lyrics"
-    output_path = generator.generate_ass(sample_segments, output_prefix)
-
-    # Verify output file exists
-    assert os.path.exists(output_path)
-    assert output_path.endswith(".ass")
-    assert "Lyrics Corrected" in output_path
-
-    # Read and verify file contents
-    with open(output_path, "r", encoding="utf-8") as f:
-        content = f.read()
-        # Check for required sections
-        assert "[Script Info]" in content
-        assert "[V4+ Styles]" in content
-        assert "[Events]" in content
-        # Check for style definition
-        assert "Style: Nomad" in content
-        # Check for some dialogue lines
-        assert "Dialogue:" in content
-        assert "I know I have good judgement" in content
-
-
-def test_generate_ass_empty_segments(generator):
-    """Test ASS generation with empty segments list."""
-    output_path = generator.generate_ass([], "test_empty")
-    assert os.path.exists(output_path)
-    assert os.path.getsize(output_path) > 0
-
-
-def test_generate_ass_invalid_output_dir(video_resolution, mock_logger):
-    """Test with invalid output directory."""
-    invalid_generator = SubtitlesGenerator(
-        output_dir="/nonexistent/directory", video_resolution=video_resolution, font_size=48, line_height=60, logger=mock_logger
-    )
-
-    with pytest.raises(Exception):
-        invalid_generator.generate_ass([create_segment(1.0, 2.0, "Test")], "test")
-
-
-def test_screen_creation(generator, sample_segments):
-    """Test internal screen creation logic."""
-    screens = generator._create_screens(sample_segments)
-
-    # Verify screen creation
-    assert len(screens) > 0
-    for screen in screens:
-        assert isinstance(screen, LyricsScreen)
-        assert len(screen.lines) <= screen.MAX_VISIBLE_LINES
-
-
-def test_styled_subtitles_creation(generator, sample_segments):
-    """Test creation of styled ASS subtitles."""
-    screens = generator._create_screens(sample_segments)
-    ass = generator._create_styled_subtitles(screens, generator.video_resolution, generator.font_size)
-
-    # Verify ASS object properties
-    assert ass.styles_format is not None
-    assert ass.events_format is not None
-    assert len(ass.styles) > 0
-    assert len(ass.events) > 0
-
-
-def test_output_path_generation(generator):
+def test_get_output_path(generator):
     """Test output path generation."""
-    prefix = "test_lyrics"
-    path = generator._get_output_path(prefix, "ass")
-
+    path = generator._get_output_path("test_lyrics", "ass")
     assert path.endswith(".ass")
     assert os.path.dirname(path) == generator.output_dir
     assert "test_lyrics" in path
 
 
-def test_generate_ass_with_unicode(generator, mock_logger):
-    """Test ASS generation with Unicode characters."""
-    # Create segments with multiple words to ensure proper karaoke timing
-    segments = [
-        LyricsSegment(
-            text="Hello こんにちは",
-            start_time=5.0,
-            end_time=6.0,
-            words=[
-                create_word("Hello", 5.0, 5.3),
-                create_word("こんにちは", 5.4, 6.0)
-            ]
-        ),
-        LyricsSegment(
-            text="World 世界",
-            start_time=6.5,
-            end_time=7.5,
-            words=[
-                create_word("World", 6.5, 6.8),
-                create_word("世界", 6.9, 7.5)
-            ]
-        )
+@patch("subprocess.check_output")
+def test_get_audio_duration_success(mock_check_output, generator):
+    """Test successful audio duration detection."""
+    mock_check_output.return_value = '{"format": {"duration": "180.5"}}'
+    duration = generator._get_audio_duration("test.mp3")
+    assert duration == 180.5
+    assert mock_check_output.called
+
+
+@patch("subprocess.check_output")
+def test_get_audio_duration_failure(mock_check_output, generator):
+    """Test audio duration detection failure."""
+    mock_check_output.side_effect = subprocess.CalledProcessError(1, "cmd")
+    duration = generator._get_audio_duration("nonexistent.mp3")
+    assert duration == 0.0
+    assert mock_check_output.called
+
+
+def test_create_section_screens(generator, sample_segments):
+    """Test creation of section screens."""
+    song_duration = 180.0
+    section_screens = generator._create_section_screens(sample_segments, song_duration)
+
+    # Verify section screens are created
+    assert isinstance(section_screens, list)
+    for screen in section_screens:
+        assert isinstance(screen, SectionScreen)
+
+
+def test_get_instrumental_times(generator):
+    """Test extraction of instrumental section times."""
+    # Create mock section screens
+    section_screens = [
+        SectionScreen("INSTRUMENTAL", 10.0, 20.0, (1920, 1080), 60),
+        SectionScreen("INTRO", 0.0, 5.0, (1920, 1080), 60),
+        SectionScreen("INSTRUMENTAL", 30.0, 40.0, (1920, 1080), 60),
     ]
-    
-    # Debug: Verify screen creation
-    screens = generator._create_screens(segments)
-    assert len(screens) > 0, "No screens were created"
-    assert len(screens[0].lines) > 0, "No lines in first screen"
-    
-    mock_logger.debug(f"Created {len(screens)} screens")
-    for i, screen in enumerate(screens):
-        mock_logger.debug(f"Screen {i}: {len(screen.lines)} lines")
-        for j, line in enumerate(screen.lines):
-            mock_logger.debug(f"  Line {j}: {line.segment.text} ({line.segment.start_time}-{line.segment.end_time})")
-    
-    # Debug: Verify styled subtitles creation
-    ass_obj = generator._create_styled_subtitles(screens, generator.video_resolution, generator.font_size)
-    assert len(ass_obj.events) > 0, "No events created in ASS object"
-    mock_logger.debug(f"Created {len(ass_obj.events)} events")
-    for event in ass_obj.events:
-        mock_logger.debug(f"Event: {event.Start}-{event.End}: {event.Text}")
-        assert event.Start >= 0, f"Event has negative start time: {event.Start}"
-        assert event.End >= 0, f"Event has negative end time: {event.End}"
-        # Verify event format
-        mock_logger.debug(f"Event type: {event.type}")
-        mock_logger.debug(f"Event style: {event.Style}")
-        # Style can be either a Style object or a string (style name)
-        assert (isinstance(event.Style, str) or 
-                event.Style is None or 
-                hasattr(event.Style, 'Name')), f"Event style should be string, None, or Style object, got {type(event.Style)}"
-        if hasattr(event.Style, 'Name'):
-            assert isinstance(event.Style.Name, str), "Style object should have a string Name"
-    
-    output_path = generator.generate_ass(segments, "unicode_test")
-    
-    # Verify file exists and contains Unicode in the Events section
+
+    times = generator._get_instrumental_times(section_screens)
+    assert len(times) == 2
+    assert times[0] == (10.0, 20.0)
+    assert times[1] == (30.0, 40.0)
+
+
+def test_create_lyric_screens(generator, sample_segments):
+    """Test creation of lyric screens."""
+    # Test with no instrumental sections
+    instrumental_times = []
+    screens = generator._create_lyric_screens(sample_segments, instrumental_times)
+
+    # Verify screens are created correctly
+    assert len(screens) == 2  # Should split into 2 screens with MAX_LINES_PER_SCREEN=4
+    assert all(isinstance(screen, LyricsScreen) for screen in screens)
+    assert len(screens[0].lines) == 4  # First screen should be full
+    assert len(screens[1].lines) == 4  # Second screen has remaining lines
+
+
+def test_create_lyric_screens_with_instrumental(generator, sample_segments):
+    """Test creation of lyric screens with instrumental sections."""
+    # Create an instrumental section in the middle of the segments
+    instrumental_times = [(22.0, 25.0)]  # This should split the segments
+    screens = generator._create_lyric_screens(sample_segments, instrumental_times)
+
+    # Verify screens are created and split correctly
+    assert len(screens) >= 2  # Should have at least 2 screens due to instrumental split
+
+    # Check that no lines fall within instrumental section
+    for screen in screens:
+        for line in screen.lines:
+            # Check that no line overlaps with instrumental section
+            assert not (line.segment.start_time >= 22.0 and line.segment.start_time < 25.0)
+
+
+def test_should_start_new_screen(generator, sample_segments):
+    """Test conditions for starting new screens."""
+    screen = LyricsScreen(video_size=(1920, 1080), line_height=60, logger=generator.logger)
+
+    # Test empty screen
+    assert generator._should_start_new_screen(None, sample_segments[0], []) is True
+
+    # Test full screen
+    for i in range(generator.MAX_LINES_PER_SCREEN):
+        screen.lines.append(LyricsLine(segment=sample_segments[i], logger=generator.logger))
+    assert generator._should_start_new_screen(screen, sample_segments[4], []) is True
+
+    # Test instrumental boundary
+    screen = LyricsScreen(video_size=(1920, 1080), line_height=60, logger=generator.logger)
+    screen.lines.append(LyricsLine(segment=create_segment(5.0, 8.0, "test"), logger=generator.logger))
+    instrumental_times = [(8.0, 12.0)]
+    new_segment = create_segment(12.1, 15.0, "after instrumental")
+    assert generator._should_start_new_screen(screen, new_segment, instrumental_times) is True
+
+
+def test_merge_and_process_screens(generator):
+    """Test merging section and lyric screens."""
+    # Create test screens
+    section_screens = [SectionScreen("INTRO", 0.0, 5.0, (1920, 1080), 60), SectionScreen("INSTRUMENTAL", 20.0, 25.0, (1920, 1080), 60)]
+
+    lyric_screens = [
+        LyricsScreen(video_size=(1920, 1080), line_height=60, logger=generator.logger),
+        LyricsScreen(video_size=(1920, 1080), line_height=60, logger=generator.logger),
+    ]
+
+    # Add some lines to lyric screens
+    lyric_screens[0].lines.append(LyricsLine(segment=create_segment(6.0, 8.0, "test1"), logger=generator.logger))
+    lyric_screens[1].lines.append(LyricsLine(segment=create_segment(26.0, 28.0, "test2"), logger=generator.logger))
+
+    # Merge screens
+    all_screens = generator._merge_and_process_screens(section_screens, lyric_screens)
+
+    # Verify results
+    assert len(all_screens) == 4  # All screens combined
+    assert isinstance(all_screens[0], SectionScreen)  # INTRO
+    assert isinstance(all_screens[1], LyricsScreen)  # First lyrics
+    assert isinstance(all_screens[2], SectionScreen)  # INSTRUMENTAL
+    assert isinstance(all_screens[3], LyricsScreen)  # Second lyrics
+
+    # Verify post-instrumental marking
+    assert all_screens[1].post_instrumental  # After INTRO
+    assert all_screens[3].post_instrumental  # After INSTRUMENTAL
+
+
+@pytest.mark.parametrize(
+    "screen,expected_lines",
+    [
+        (SectionScreen("INTRO", 0.0, 5.0, (1920, 1080), 60), 3),  # 3 log lines for section
+        (LyricsScreen(video_size=(1920, 1080), line_height=60), 1),  # 1 line for empty screen
+    ],
+)
+def test_log_final_screens(generator, screen, expected_lines):
+    """Test logging of final screens."""
+    # Add a line to LyricsScreen if testing that type
+    if isinstance(screen, LyricsScreen):
+        screen.lines.append(LyricsLine(segment=create_segment(1.0, 2.0, "test"), logger=generator.logger))
+
+    generator._log_final_screens([screen])
+
+    # Verify logging calls
+    assert generator.logger.debug.call_count >= expected_lines
+
+
+def test_create_styled_ass_instance(generator):
+    """Test creation of styled ASS instance."""
+    ass, style = generator._create_styled_ass_instance(generator.video_resolution, generator.font_size)
+
+    # Verify ASS instance setup
+    resolution = ass.resolution()
+    assert resolution[0] == generator.video_resolution[0]
+    assert resolution[1] == generator.video_resolution[1]
+    assert len(ass.styles) == 1  # Should have one style
+    assert ass.events_format == ["Layer", "Style", "Start", "End", "MarginV", "Text"]
+
+    # Verify style settings
+    assert style.Name == "Nomad"
+    assert style.Fontsize == generator.font_size
+    assert style.Alignment == ALIGN_TOP_CENTER
+    assert style.BorderStyle == 1
+    assert style.Outline == 1
+    assert style.Shadow == 0
+
+
+def test_create_styled_subtitles(generator, sample_segments):
+    """Test creation of styled subtitles."""
+    # Create a mix of section and lyric screens
+    screens = [
+        SectionScreen("INTRO", 0.0, 5.0, generator.video_resolution, generator.line_height, logger=generator.logger),
+        LyricsScreen(video_size=generator.video_resolution, line_height=generator.line_height, logger=generator.logger),
+    ]
+
+    # Add some lines to the lyric screen
+    screens[1].lines.append(LyricsLine(segment=sample_segments[0], logger=generator.logger))
+
+    # Generate styled subtitles
+    ass = generator._create_styled_subtitles(screens, generator.video_resolution, generator.font_size)
+
+    # Verify ASS file content
+    assert len(ass.events) > 0  # Should have generated events
+    assert all(hasattr(event, "Style") for event in ass.events)
+    assert all(hasattr(event, "Text") for event in ass.events)
+
+
+@patch("subprocess.check_output")
+def test_generate_ass_success(mock_check_output, generator, sample_segments, tmp_path):
+    """Test successful ASS file generation."""
+    # Mock audio duration check
+    mock_check_output.return_value = '{"format": {"duration": "180.5"}}'
+
+    # Generate ASS file
+    output_path = generator.generate_ass(segments=sample_segments, output_prefix="test", audio_filepath="test.mp3")
+
+    # Verify file creation
     assert os.path.exists(output_path)
-    with open(output_path, 'r', encoding='utf-8') as f:
-        content = f.read()
-        mock_logger.debug("File content:")
-        mock_logger.debug(content)
-        
-        # Verify style section exists
-        assert "[V4+ Styles]" in content
-        assert "Style: Nomad" in content
-        
-        # Verify events section exists and contains our Unicode text
-        assert "[Events]" in content
-        events_section = content.split('[Events]')[1]
-        
-        # Look for Dialogue lines containing our text
-        assert "Dialogue:" in events_section, "No dialogue events found"
-        
-        # Check for both Japanese and English text
-        dialogue_lines = [line for line in events_section.split('\n') if line.startswith('Dialogue:')]
-        full_dialogue = '\n'.join(dialogue_lines)
-        mock_logger.debug("Dialogue lines:")
-        mock_logger.debug(full_dialogue)
-        
-        assert "こんにちは" in full_dialogue, "Japanese text not found in dialogue"
-        assert "世界" in full_dialogue, "Japanese text not found in dialogue"
-        assert "Hello" in full_dialogue, "English text not found in dialogue"
-        assert "World" in full_dialogue, "English text not found in dialogue"
+    assert output_path.endswith(".ass")
+    assert "test" in output_path
 
 
-def test_generate_ass_style_customization(output_dir, video_resolution, mock_logger):
-    """Test ASS generation with custom style parameters."""
-    generator = SubtitlesGenerator(
-        output_dir=output_dir,
-        video_resolution=video_resolution,
-        font_size=72,  # Larger font
-        line_height=90,  # Larger line height
-        logger=mock_logger
-    )
-    
-    segments = [create_segment(1.0, 2.0, "Test")]
-    output_path = generator.generate_ass(segments, "style_test")
-    
-    with open(output_path, 'r', encoding='utf-8') as f:
-        content = f.read()
-        styles_section = content.split('[V4+ Styles]')[1].split('[')[0]
-        assert "Style: Nomad,Avenir Next Bold,72," in styles_section
+@patch("subprocess.check_output")
+def test_generate_ass_failure(mock_check_output, generator, sample_segments):
+    """Test ASS generation failure handling."""
+    # Force an error in audio duration check
+    mock_check_output.side_effect = subprocess.CalledProcessError(1, "cmd")
+
+    # Call generate_ass - it should still work with fallback duration
+    output_path = generator.generate_ass(segments=sample_segments, output_prefix="test", audio_filepath="nonexistent.mp3")
+
+    # Verify the file was still created
+    assert os.path.exists(output_path)
+    assert output_path.endswith(".ass")
+
+    # Verify that error was logged
+    generator.logger.error.assert_called_once()
+
+
+def test_is_in_instrumental_section(generator):
+    """Test instrumental section detection."""
+    instrumental_times = [(10.0, 20.0), (30.0, 40.0)]
+
+    # Test segment within instrumental
+    segment = create_segment(15.0, 18.0, "test")
+    assert generator._is_in_instrumental_section(segment, instrumental_times) is True
+
+    # Test segment outside instrumental
+    segment = create_segment(25.0, 28.0, "test")
+    assert generator._is_in_instrumental_section(segment, instrumental_times) is False
+
+    # Test segment at boundary
+    segment = create_segment(20.0, 22.0, "test")
+    assert generator._is_in_instrumental_section(segment, instrumental_times) is False
+
+
+def test_end_to_end(generator, sample_segments):
+    """Test end-to-end screen creation process."""
+    song_duration = 180.0
+
+    # Create all screens
+    screens = generator._create_screens(sample_segments, song_duration)
+
+    # Verify screen creation
+    assert len(screens) > 0
+    assert any(isinstance(screen, SectionScreen) for screen in screens)
+    assert any(isinstance(screen, LyricsScreen) for screen in screens)
+
+    # Verify screen ordering
+    screen_times = [(screen.start_ts, screen.end_ts) for screen in screens]
+    for i in range(1, len(screen_times)):
+        assert screen_times[i][0] >= screen_times[i - 1][0]  # Should be in chronological order

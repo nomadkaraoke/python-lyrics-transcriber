@@ -4,13 +4,13 @@ from typing import List, Optional, Tuple, Union
 import subprocess
 import json
 
-from lyrics_transcriber.output.ass.lyrics_models.section_screen import SectionScreen
+from lyrics_transcriber.output.ass.section_screen import SectionScreen
 from lyrics_transcriber.types import LyricsSegment
-from lyrics_transcriber.output.ass.lyrics_models import LyricsScreen, LyricsLine
+from lyrics_transcriber.output.ass import LyricsScreen, LyricsLine
 from lyrics_transcriber.output.ass.ass import ASS
 from lyrics_transcriber.output.ass.style import Style
 from lyrics_transcriber.output.ass.constants import ALIGN_TOP_CENTER
-from lyrics_transcriber.output.ass.lyrics_models import LyricsScreen
+from lyrics_transcriber.output.ass import LyricsScreen
 from lyrics_transcriber.output.ass.section_detector import SectionDetector
 
 
@@ -46,7 +46,7 @@ class SubtitlesGenerator:
         """Generate full output path for a file."""
         return os.path.join(self.output_dir, f"{output_prefix}.{extension}")
 
-    def _get_audio_duration(self, audio_filepath: str) -> float:
+    def _get_audio_duration(self, audio_filepath: str, segments: Optional[List[LyricsSegment]] = None) -> float:
         """Get audio duration using ffprobe."""
         try:
             probe_cmd = ["ffprobe", "-v", "error", "-show_entries", "format=duration", "-of", "json", audio_filepath]
@@ -58,8 +58,8 @@ class SubtitlesGenerator:
         except (subprocess.CalledProcessError, json.JSONDecodeError, KeyError) as e:
             self.logger.error(f"Failed to get audio duration: {e}")
             # Fallback to last segment end time plus buffer
-            if self.segments:
-                duration = self.segments[-1].end_time + 30.0
+            if segments:
+                duration = segments[-1].end_time + 30.0
                 self.logger.warning(f"Using fallback duration: {duration:.2f}s")
                 return duration
             return 0.0
@@ -70,7 +70,7 @@ class SubtitlesGenerator:
 
         try:
             self.logger.debug(f"Processing {len(segments)} segments")
-            song_duration = self._get_audio_duration(audio_filepath)
+            song_duration = self._get_audio_duration(audio_filepath, segments)
 
             screens = self._create_screens(segments, song_duration)
             self.logger.debug(f"Created {len(screens)} initial screens")

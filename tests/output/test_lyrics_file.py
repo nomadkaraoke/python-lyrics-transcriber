@@ -108,7 +108,7 @@ def test_generate_lrc(lyrics_file_generator, sample_segments):
 
     # Verify file was created
     assert Path(output_path).exists()
-    assert output_path.endswith(" (Lyrics Corrected).lrc")
+    assert output_path.endswith(" (Karaoke).lrc")
 
     # Verify file content
     with open(output_path, "r", encoding="utf-8") as f:

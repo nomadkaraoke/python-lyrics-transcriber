@@ -2,7 +2,7 @@ from typing import List, Optional, Tuple
 import logging
 
 from lyrics_transcriber.types import LyricsSegment
-from lyrics_transcriber.output.ass.lyrics_models import LyricsScreen, SectionScreen
+from lyrics_transcriber.output.ass import LyricsScreen, SectionScreen
 
 
 class SectionDetector:
