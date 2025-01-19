@@ -6,6 +6,8 @@ import toml
 from pathlib import Path
 from PIL import ImageFont
 import os
+import zipfile
+import shutil
 
 from lyrics_transcriber.output.cdgmaker.composer import KaraokeComposer
 from lyrics_transcriber.output.cdgmaker.render import get_wrapped_text
@@ -74,18 +76,14 @@ class CDGGenerator:
                 cdg_styles["font_path"] = package_font_path
                 self.logger.debug(f"Found font in package fonts directory: {cdg_styles['font_path']}")
             else:
-                self.logger.warning(f"Font file {cdg_styles['font_path']} not found in package fonts directory {package_font_path}, will use default font")
+                self.logger.warning(
+                    f"Font file {cdg_styles['font_path']} not found in package fonts directory {package_font_path}, will use default font"
+                )
                 cdg_styles["font_path"] = None
 
-        # Set up logging for this function if it hasn't been configured
-        if not self.logger.handlers:
-            handler = logging.StreamHandler()
-            formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
-            handler.setFormatter(formatter)
-            self.logger.addHandler(handler)
-            self.logger.setLevel(logging.INFO)
-
-        toml_file = f"{Path(lrc_file).stem}.toml"
+        # Generate TOML in output directory
+        toml_file = os.path.join(self.output_dir, f"{Path(lrc_file).stem}.toml")
+        self.logger.debug(f"Generating TOML file: {toml_file}")
 
         self.generate_toml(
             lrc_file,
@@ -99,7 +97,38 @@ class CDGGenerator:
         try:
             kc = KaraokeComposer.from_file(toml_file)
             kc.compose()
+
+            # Look for the generated ZIP file in the output directory
+            expected_zip = f"{artist} - {title} (Karaoke).zip"
+            output_zip = os.path.join(self.output_dir, expected_zip)
+
+            self.logger.info(f"Looking for CDG ZIP file in output directory: {output_zip}")
+
+            if os.path.isfile(output_zip):
+                self.logger.info(f"Found CDG ZIP file: {output_zip}")
+            else:
+                self.logger.error("Failed to find CDG ZIP file. Output directory contents:")
+                for file in os.listdir(self.output_dir):
+                    self.logger.error(f" - {file}")
+                raise FileNotFoundError(f"CDG ZIP file not found: {output_zip}")
+
+            # Extract the ZIP file to the output directory
+            self.logger.info(f"Extracting CDG ZIP file: {output_zip}")
+            with zipfile.ZipFile(output_zip, "r") as zip_ref:
+                zip_ref.extractall(self.output_dir)
+
+            # Return the path to the CDG file
+            cdg_file = os.path.join(self.output_dir, f"{artist} - {title} (Karaoke).cdg")
+            if not os.path.isfile(cdg_file):
+                raise FileNotFoundError(f"CDG file not found after extraction: {cdg_file}")
+
+            mp3_file = os.path.join(self.output_dir, f"{artist} - {title} (Karaoke).mp3")
+            if not os.path.isfile(mp3_file):
+                raise FileNotFoundError(f"MP3 file not found after extraction: {mp3_file}")
+
             self.logger.info("CDG file generated successfully")
+            return cdg_file, mp3_file, output_zip
+
         except Exception as e:
             self.logger.error(f"Error composing CDG: {e}")
             raise
@@ -179,46 +208,17 @@ class CDGGenerator:
         Generate a TOML configuration file for CDG creation.
 
         Args:
-            cdg_styles (dict): Must contain all style-related parameters:
-                - title_color
-                - artist_color
-                - background_color
-                - border_color
-                - font_path
-                - font_size
-                - stroke_width
-                - stroke_style
-                - active_fill
-                - active_stroke
-                - inactive_fill
-                - inactive_stroke
-                - title_screen_background
-                - instrumental_background
-                - instrumental_transition
-                - instrumental_font_color
-                - title_screen_transition
-                - row
-                - line_tile_height
-                - lines_per_page
-                - clear_mode
-                - sync_offset
-                - instrumental_gap_threshold
-                - instrumental_text
-                - lead_in_threshold
-                - lead_in_symbols
-                - lead_in_duration
-                - lead_in_total
-                - title_artist_gap
-                - intro_duration_seconds
-                - first_syllable_buffer_seconds
-                - outro_background
-                - outro_transition
-                - outro_text_line1
-                - outro_text_line2
-                - outro_line1_color
-                - outro_line2_color
-                - outro_line1_line2_gap
+            lrc_file (str): Path to the LRC file
+            audio_file (str): Path to the audio file
+            title (str): Title of the song
+            artist (str): Artist name
+            output_file (str): Path to write the TOML file
+            cdg_styles (dict): Must contain all style-related parameters
         """
+        # Convert audio_file to absolute path if it isn't already
+        audio_file = os.path.abspath(audio_file)
+        self.logger.debug(f"Using absolute audio file path: {audio_file}")
+
         # Validate required style parameters
         required_styles = {
             "title_color",

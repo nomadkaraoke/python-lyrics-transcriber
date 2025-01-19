@@ -193,16 +193,23 @@ def main() -> None:
 
         if results.lrc_filepath:
             logger.info(f"Generated LRC file: {results.lrc_filepath}")
+        if results.mp3_filepath:
+            logger.info(f"Generated MP3 file: {results.mp3_filepath}")
+        if results.cdg_filepath:
+            logger.info(f"Generated CDG file: {results.cdg_filepath}")
+        if results.cdg_zip_filepath:
+            logger.info(f"Generated CDG ZIP file: {results.cdg_zip_filepath}")
         if results.ass_filepath:
             logger.info(f"Generated ASS file: {results.ass_filepath}")
         if results.video_filepath:
-            logger.info(f"Generated video file: {results.video_filepath}")
+            logger.info(f"Generated MKV video file: {results.video_filepath}")
 
     except Exception as e:
         # Get the full exception traceback
         import traceback
+
         error_details = traceback.format_exc()
-        
+
         # Log both the error message and the full traceback
         logger.error(f"Processing failed: {str(e)}\n\nFull traceback:\n{error_details}")
         exit(1)

@@ -66,6 +66,9 @@ class LyricsControllerResult:
     lrc_filepath: Optional[str] = None
     ass_filepath: Optional[str] = None
     video_filepath: Optional[str] = None
+    mp3_filepath: Optional[str] = None
+    cdg_filepath: Optional[str] = None
+    cdg_zip_filepath: Optional[str] = None
 
 
 class LyricsTranscriber:
@@ -331,6 +334,10 @@ class LyricsTranscriber:
             # Store output paths - access attributes directly instead of using .get()
             self.results.lrc_filepath = output_files.lrc
             self.results.ass_filepath = output_files.ass
+
+            self.results.mp3_filepath = output_files.mp3
+            self.results.cdg_filepath = output_files.cdg
+            self.results.cdg_zip_filepath = output_files.cdg_zip
             self.results.video_filepath = output_files.video
 
         except Exception as e:

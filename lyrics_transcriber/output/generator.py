@@ -43,6 +43,8 @@ class OutputPaths:
     corrected_txt: Optional[str] = None
     corrections_json: Optional[str] = None
     cdg: Optional[str] = None
+    mp3: Optional[str] = None
+    cdg_zip: Optional[str] = None
 
 
 class OutputGenerator:
@@ -126,7 +128,7 @@ class OutputGenerator:
             outputs.lrc = self.lyrics_file.generate_lrc(resized_segments, output_prefix)
 
             # Generate CDG file using LRC
-            outputs.cdg = self.cdg.generate_cdg_from_lrc(
+            outputs.cdg, outputs.mp3, outputs.cdg_zip = self.cdg.generate_cdg_from_lrc(
                 lrc_file=outputs.lrc,
                 audio_file=audio_filepath,
                 title=title or output_prefix,
