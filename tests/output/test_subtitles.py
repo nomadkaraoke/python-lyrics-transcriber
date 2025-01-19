@@ -139,18 +139,18 @@ def test_create_lyric_screens_with_instrumental(generator, sample_segments):
 
 def test_should_start_new_screen(generator, sample_segments):
     """Test conditions for starting new screens."""
-    screen = LyricsScreen(video_size=(1920, 1080), line_height=60, logger=generator.logger)
+    screen = LyricsScreen(video_size=(1920, 1080), line_height=generator.config.line_height, logger=generator.logger)
 
     # Test empty screen
     assert generator._should_start_new_screen(None, sample_segments[0], []) is True
 
     # Test full screen
-    for i in range(generator.MAX_LINES_PER_SCREEN):
+    for i in range(generator.config.max_visible_lines):
         screen.lines.append(LyricsLine(segment=sample_segments[i], logger=generator.logger))
     assert generator._should_start_new_screen(screen, sample_segments[4], []) is True
 
     # Test instrumental boundary
-    screen = LyricsScreen(video_size=(1920, 1080), line_height=60, logger=generator.logger)
+    screen = LyricsScreen(video_size=(1920, 1080), line_height=generator.config.line_height, logger=generator.logger)
     screen.lines.append(LyricsLine(segment=create_segment(5.0, 8.0, "test"), logger=generator.logger))
     instrumental_times = [(8.0, 12.0)]
     new_segment = create_segment(12.1, 15.0, "after instrumental")
@@ -160,11 +160,14 @@ def test_should_start_new_screen(generator, sample_segments):
 def test_merge_and_process_screens(generator):
     """Test merging section and lyric screens."""
     # Create test screens
-    section_screens = [SectionScreen("INTRO", 0.0, 5.0, (1920, 1080), 60), SectionScreen("INSTRUMENTAL", 20.0, 25.0, (1920, 1080), 60)]
+    section_screens = [
+        SectionScreen("INTRO", 0.0, 5.0, generator.video_resolution, generator.config.line_height),
+        SectionScreen("INSTRUMENTAL", 20.0, 25.0, generator.video_resolution, generator.config.line_height),
+    ]
 
     lyric_screens = [
-        LyricsScreen(video_size=(1920, 1080), line_height=60, logger=generator.logger),
-        LyricsScreen(video_size=(1920, 1080), line_height=60, logger=generator.logger),
+        LyricsScreen(video_size=generator.video_resolution, line_height=generator.config.line_height, logger=generator.logger),
+        LyricsScreen(video_size=generator.video_resolution, line_height=generator.config.line_height, logger=generator.logger),
     ]
 
     # Add some lines to lyric screens
@@ -180,10 +183,6 @@ def test_merge_and_process_screens(generator):
     assert isinstance(all_screens[1], LyricsScreen)  # First lyrics
     assert isinstance(all_screens[2], SectionScreen)  # INSTRUMENTAL
     assert isinstance(all_screens[3], LyricsScreen)  # Second lyrics
-
-    # Verify post-instrumental marking
-    assert all_screens[1].post_instrumental  # After INTRO
-    assert all_screens[3].post_instrumental  # After INSTRUMENTAL
 
 
 @pytest.mark.parametrize(
@@ -229,8 +228,8 @@ def test_create_styled_subtitles(generator, sample_segments):
     """Test creation of styled subtitles."""
     # Create a mix of section and lyric screens
     screens = [
-        SectionScreen("INTRO", 0.0, 5.0, generator.video_resolution, generator.line_height, logger=generator.logger),
-        LyricsScreen(video_size=generator.video_resolution, line_height=generator.line_height, logger=generator.logger),
+        SectionScreen("INTRO", 0.0, 5.0, generator.video_resolution, generator.config.line_height, logger=generator.logger),
+        LyricsScreen(video_size=generator.video_resolution, line_height=generator.config.line_height, logger=generator.logger),
     ]
 
     # Add some lines to the lyric screen

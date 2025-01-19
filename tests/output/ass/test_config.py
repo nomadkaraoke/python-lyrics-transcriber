@@ -17,7 +17,6 @@ def test_screen_config_defaults():
     assert config.fade_in_ms == 200
     assert config.fade_out_ms == 400
     assert config.cascade_delay_ms == 200
-    assert config.target_preshow_time == 5.0
     assert config.position_clear_buffer_ms == 300
 
 

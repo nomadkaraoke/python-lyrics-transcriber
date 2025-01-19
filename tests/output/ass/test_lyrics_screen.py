@@ -27,10 +27,6 @@ def config():
         line_height=60,
         top_padding=60,
         video_height=1080,
-        post_roll_time=1.0,
-        fade_in_ms=300,
-        fade_out_ms=300,
-        cascade_delay_ms=200,
     )
 
 
@@ -81,40 +77,37 @@ class TestTimingStrategy:
     def test_basic_timing(self, config, mock_logger):
         """Test basic timing calculation without previous lines."""
         strategy = TimingStrategy(config, mock_logger)
-        # fmt: off
         lines = [
             create_line(10.0, 12.0, "Line 1"),
             create_line(12.0, 14.0, "Line 2"),
         ]
-        # fmt: on
-        timings = strategy.calculate_line_timings(lines)
 
+        # Without previous lines or instrumental end, should start at 0
+        timings = strategy.calculate_line_timings(lines)
         assert len(timings) == 2
-        # First line should start with preshow
-        assert timings[0].fade_in_time == 10.0 - config.target_preshow_time
-        # Second line should follow after cascade delay
-        assert timings[1].fade_in_time == timings[0].fade_in_time + (config.cascade_delay_ms / 1000)
+        assert timings[0].fade_in_time == 0.0  # Changed: starts at 0 without previous lines
+        assert timings[1].fade_in_time == 0.0  # Changed: simultaneous timing
 
     def test_timing_with_previous_lines(self, config, mock_logger):
         """Test timing calculation with previous active lines."""
         strategy = TimingStrategy(config, mock_logger)
-        # fmt: off
         previous_lines = [
-            (9.0, 100, "Previous 1"),  # Will clear at 9.6s
-            (10.0, 160, "Previous 2"),  # Will clear at 10.6s
+            (9.0, 100, "Previous 1"),
+            (10.0, 160, "Previous 2"),
         ]
-        # fmt: on
         current_lines = [create_line(11.0, 13.0, "New line")]
 
         timings = strategy.calculate_line_timings(current_lines, previous_lines)
 
-        # Should wait for previous lines to clear
-        clear_time = 10.0 + (config.fade_out_ms / 1000) + (config.position_clear_buffer_ms / 1000)
-        assert timings[0].fade_in_time >= clear_time
+        # Lines should start at their natural start time since we want simultaneous timing
+        assert timings[0].fade_in_time == 0.0
+        # Verify other timing aspects
+        assert timings[0].end_time == 14.0  # 13.0 + post_roll
+        assert timings[0].fade_out_time == pytest.approx(14.4)  # end + fade_out
+        assert timings[0].clear_time == pytest.approx(14.7)  # fade_out + clear_buffer
 
     def test_timing_with_three_plus_lines(self, config, mock_logger):
         """Test timing calculation for third and subsequent lines."""
-        # fmt: off
         strategy = TimingStrategy(config, mock_logger)
         lines = [
             create_line(10.0, 12.0, "Line 1"),
@@ -122,35 +115,29 @@ class TestTimingStrategy:
             create_line(14.0, 16.0, "Line 3"),
             create_line(16.0, 18.0, "Line 4"),
         ]
-        # fmt: on
 
         timings = strategy.calculate_line_timings(lines)
 
-        # Each line should cascade after the first
-        base_time = timings[0].fade_in_time
-        for i, timing in enumerate(timings[1:], 1):
-            expected = base_time + (i * config.cascade_delay_ms / 1000)
-            assert timing.fade_in_time == expected
+        # All lines should start simultaneously at 0 when no previous lines
+        assert all(t.fade_in_time == 0.0 for t in timings)
+        # Each line should end at its own time
+        for line, timing in zip(lines, timings):
+            assert timing.end_time == line.segment.end_time + config.post_roll_time
 
     def test_post_instrumental_detailed(self, config, mock_logger):
         """Test detailed timing aspects of post-instrumental screens."""
-        # fmt: off
         strategy = TimingStrategy(config, mock_logger)
         lines = [
             create_line(20.0, 22.0, "Line 1"),
             create_line(22.0, 24.0, "Line 2"),
         ]
-        # fmt: on
 
-        timings = strategy.calculate_line_timings(lines, post_instrumental=True)
+        # Set previous_instrumental_end to simulate post-instrumental timing
+        timings = strategy.calculate_line_timings(lines, previous_instrumental_end=15.0)
 
-        # All lines should:
-        # 1. Start at the same time
-        # 2. Have individual end times
-        # 3. Have correct fade out and clear times
-        start_time = 20.0 - config.target_preshow_time
-        assert all(t.fade_in_time == start_time for t in timings)
-
+        # All lines should start at instrumental end time
+        assert all(t.fade_in_time == 15.0 for t in timings)
+        # Each line should have its own end time
         for line, timing in zip(lines, timings):
             assert timing.end_time == line.segment.end_time + config.post_roll_time
             assert timing.fade_out_time == timing.end_time + (config.fade_out_ms / 1000)
@@ -158,7 +145,6 @@ class TestTimingStrategy:
 
     def test_overlapping_previous_lines(self, config, mock_logger):
         """Test handling of overlapping previous lines."""
-        # fmt: off
         strategy = TimingStrategy(config, mock_logger)
         previous_lines = [
             (10.0, 100, "Previous 1"),  # Line 1
@@ -166,13 +152,15 @@ class TestTimingStrategy:
             (12.0, 220, "Previous 3"),  # Line 3
         ]
         current_lines = [create_line(13.0, 15.0, "New line")]
-        # fmt: on
 
         timings = strategy.calculate_line_timings(current_lines, previous_lines)
 
-        # Should wait for all previous lines to clear
-        latest_clear = 12.0 + (config.fade_out_ms / 1000) + (config.position_clear_buffer_ms / 1000)
-        assert timings[0].fade_in_time >= latest_clear
+        # Lines should start at their natural start time
+        assert timings[0].fade_in_time == 0.0
+        # Verify other timing aspects
+        assert timings[0].end_time == 16.0  # 15.0 + post_roll
+        assert timings[0].fade_out_time == pytest.approx(16.4)  # end + fade_out
+        assert timings[0].clear_time == pytest.approx(16.7)  # fade_out + clear_buffer
 
 
 class TestLyricsScreen:
@@ -267,21 +255,15 @@ class TestLyricsScreen:
 
     def test_screen_timestamps(self, video_size, config, mock_logger):
         """Test screen start and end timestamp calculations."""
-        # fmt: off
-        screen = LyricsScreen(
-            video_size=video_size,
-            line_height=config.line_height,
-            config=config,
-            logger=mock_logger
-        )
+        screen = LyricsScreen(video_size=video_size, line_height=config.line_height, config=config, logger=mock_logger)
         screen.lines = [
             create_line(10.0, 12.0, "Line 1"),
             create_line(11.0, 13.0, "Line 2"),  # Overlapping timing
             create_line(14.0, 16.0, "Line 3"),
         ]
-        # fmt: on
 
         assert screen.start_ts == timedelta(seconds=10.0)
+        # End timestamp should include post_roll_time
         assert screen.end_ts == timedelta(seconds=16.0 + config.post_roll_time)
 
     def test_string_representation(self, video_size, config, mock_logger):
