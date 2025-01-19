@@ -60,36 +60,73 @@ class TimingStrategy:
         self,
         current_lines: List[LyricsLine],
         previous_active_lines: Optional[List[Tuple[float, int, str]]] = None,
-        post_instrumental: bool = False,
     ) -> List[LineTimingInfo]:
         """Calculate timing information for each line in the screen."""
-        if post_instrumental:
-            return self._calculate_post_instrumental_timings(current_lines)
-
         previous_active_lines = previous_active_lines or []
 
-        # Get first line timing as anchor point
-        first_line = current_lines[0]
-        first_line_fade_in = first_line.segment.start_time - self.config.target_preshow_time
+        # If no previous lines, all lines can appear together
+        if not previous_active_lines:
+            return self._calculate_simultaneous_timings(current_lines)
 
-        # Check if we need to wait for previous lines to clear
-        if previous_active_lines:
-            # Calculate latest clear time from ALL previous lines
-            latest_clear_time = max(
-                end + (self.config.fade_out_ms / 1000) + (self.config.position_clear_buffer_ms / 1000)
-                for end, _, _ in previous_active_lines
-            )
-            first_line_fade_in = max(first_line_fade_in, latest_clear_time)
-            self.logger.debug(f"    Waiting for lines to clear at {latest_clear_time:.2f}s")
+        # Create a map of position -> clear time from previous lines
+        position_clear_times = {}
+        for end_time, y_position, text in previous_active_lines:
+            clear_time = end_time + (self.config.fade_out_ms / 1000) + (self.config.position_clear_buffer_ms / 1000)
+            position_clear_times[y_position] = clear_time
+            line_index = PositionCalculator.position_to_line_index(y_position, self.config)
+            self.logger.debug(f"    Position {line_index + 1} occupied by '{text}' until {clear_time:.2f}s")
 
+        # Calculate timings for each line
         timings = []
-        for i, line in enumerate(current_lines):
-            timing = self._calculate_line_timing(
-                line=line, line_index=i, first_line_fade_in=first_line_fade_in, previous_active_lines=previous_active_lines
+        positions = PositionCalculator.calculate_line_positions(self.config)
+        for i, (line, position) in enumerate(zip(current_lines, positions)):
+            # Calculate earliest possible fade in time
+            target_preshow = line.segment.start_time - self.config.target_preshow_time
+            position_available = position_clear_times.get(position, 0)
+
+            # Fade in as soon as the position is available
+            fade_in_time = max(target_preshow, position_available)
+
+            # Calculate remaining timing information
+            end_time = line.segment.end_time + self.config.post_roll_time
+            fade_out_time = end_time + (self.config.fade_out_ms / 1000)
+            clear_time = fade_out_time + (self.config.position_clear_buffer_ms / 1000)
+
+            # fmt: off
+            timing = LineTimingInfo(
+                fade_in_time=fade_in_time,
+                end_time=end_time,
+                fade_out_time=fade_out_time,
+                clear_time=clear_time
             )
+            # fmt: on
             timings.append(timing)
 
+            line_index = PositionCalculator.position_to_line_index(position, self.config)
+            self.logger.debug(
+                f"    Line {line_index + 1}: '{line.segment.text}' "
+                f"fades in at {fade_in_time:.2f}s "
+                f"(position available at {position_available:.2f}s)"
+            )
+
         return timings
+
+    def _calculate_simultaneous_timings(self, lines: List[LyricsLine]) -> List[LineTimingInfo]:
+        """Calculate timings for screens where all lines appear together."""
+        fade_in_start = lines[0].segment.start_time - self.config.target_preshow_time
+
+        return [
+            LineTimingInfo(
+                fade_in_time=fade_in_start,
+                end_time=line.segment.end_time + self.config.post_roll_time,
+                fade_out_time=line.segment.end_time + self.config.post_roll_time + (self.config.fade_out_ms / 1000),
+                clear_time=line.segment.end_time
+                + self.config.post_roll_time
+                + (self.config.fade_out_ms / 1000)
+                + (self.config.position_clear_buffer_ms / 1000),
+            )
+            for line in lines
+        ]
 
     def _calculate_line_timing(
         self, line: LyricsLine, line_index: int, first_line_fade_in: float, previous_active_lines: List[Tuple[float, int, str]]
@@ -131,23 +168,6 @@ class TimingStrategy:
         clear_time = fade_out_time + (self.config.position_clear_buffer_ms / 1000)
 
         return LineTimingInfo(fade_in_time=fade_in_time, end_time=end_time, fade_out_time=fade_out_time, clear_time=clear_time)
-
-    def _calculate_post_instrumental_timings(self, lines: List[LyricsLine]) -> List[LineTimingInfo]:
-        """Calculate timings for post-instrumental screens where all lines appear together."""
-        fade_in_start = lines[0].segment.start_time - self.config.target_preshow_time
-
-        return [
-            LineTimingInfo(
-                fade_in_time=fade_in_start,
-                end_time=line.segment.end_time + self.config.post_roll_time,
-                fade_out_time=line.segment.end_time + self.config.post_roll_time + (self.config.fade_out_ms / 1000),
-                clear_time=line.segment.end_time
-                + self.config.post_roll_time
-                + (self.config.fade_out_ms / 1000)
-                + (self.config.position_clear_buffer_ms / 1000),
-            )
-            for line in lines
-        ]
 
 
 @dataclass
@@ -206,9 +226,7 @@ class LyricsScreen:
 
         # Calculate positions and timings
         positions = self.position_strategy.calculate_line_positions()
-        timings = self.timing_strategy.calculate_line_timings(
-            current_lines=self.lines, previous_active_lines=previous_active_lines, post_instrumental=self.post_instrumental
-        )
+        timings = self.timing_strategy.calculate_line_timings(current_lines=self.lines, previous_active_lines=previous_active_lines)
 
         # Create line states and events
         for i, (line, timing) in enumerate(zip(self.lines, timings)):

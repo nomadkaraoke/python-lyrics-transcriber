@@ -1,24 +1,24 @@
 from dataclasses import dataclass
 
 
-@dataclass
 class ScreenConfig:
     """Configuration for screen timing and layout."""
 
-    # Screen layout
-    max_visible_lines: int = 4
-    line_height: int = 50
-    top_padding: int = 50  # One line height of padding
-    video_height: int = 720  # 720p default
+    def __init__(self, line_height: int = 50, max_visible_lines: int = 4, top_padding: int = None, video_height: int = 720):
+        # Screen layout
+        self.max_visible_lines = max_visible_lines
+        self.line_height = line_height
+        self.top_padding = top_padding if top_padding is not None else line_height
+        self.video_height = video_height
 
-    # Timing configuration
-    screen_gap_threshold: float = 5.0
-    post_roll_time: float = 1.0
-    fade_in_ms: int = 100
-    fade_out_ms: int = 400
-    cascade_delay_ms: int = 200
-    target_preshow_time: float = 5.0
-    position_clear_buffer_ms: int = 300
+        # Timing configuration
+        self.screen_gap_threshold = 5.0
+        self.post_roll_time = 1.0
+        self.fade_in_ms = 200
+        self.fade_out_ms = 400
+        self.cascade_delay_ms = 200
+        self.target_preshow_time = 5.0
+        self.position_clear_buffer_ms = 300
 
 
 @dataclass

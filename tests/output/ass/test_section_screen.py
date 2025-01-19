@@ -130,13 +130,21 @@ def test_string_representation():
 
 def test_custom_config():
     """Test section screen with custom config."""
-    from lyrics_transcriber.output.ass.lyrics_screen import ScreenConfig
+    config = ScreenConfig(line_height=80)
+    # Manually set fade values since they're not constructor parameters
+    config.fade_in_ms = 200
+    config.fade_out_ms = 500
 
-    config = ScreenConfig(line_height=80, fade_in_ms=200, fade_out_ms=500)
-
+    # fmt: off
     screen = SectionScreen(
-        section_type="INSTRUMENTAL", start_time=20.0, end_time=30.0, video_size=(1920, 1080), line_height=60, config=config
+        section_type="INSTRUMENTAL",
+        start_time=20.0,
+        end_time=30.0,
+        video_size=(1920, 1080),
+        line_height=60,
+        config=config
     )
+    # fmt: on
 
     events, _ = screen.as_ass_events(style=Style())
     event = events[0]

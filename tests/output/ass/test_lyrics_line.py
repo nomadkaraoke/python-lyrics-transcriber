@@ -22,11 +22,11 @@ def style():
 
 @pytest.fixture
 def config():
-    return ScreenConfig(
-        fade_in_ms=300,
-        fade_out_ms=600,
-        line_height=60,
-    )
+    config = ScreenConfig(line_height=60, video_height=1080)
+    # Set fade values after construction
+    config.fade_in_ms = 300
+    config.fade_out_ms = 600
+    return config
 
 
 def create_segment(words, start_time=10.0):
@@ -242,14 +242,14 @@ class TestAssEventCreation:
         )
         
         # Test with different fade configurations
-        configs = [
-            ScreenConfig(fade_in_ms=100, fade_out_ms=200),
-            ScreenConfig(fade_in_ms=300, fade_out_ms=600),
-            ScreenConfig(fade_in_ms=500, fade_out_ms=1000),
-        ]
-        # fmt: on
+        test_configs = []
+        for fade_in, fade_out in [(100, 200), (300, 600), (500, 1000)]:
+            cfg = ScreenConfig(line_height=60)
+            cfg.fade_in_ms = fade_in
+            cfg.fade_out_ms = fade_out
+            test_configs.append(cfg)
 
-        for cfg in configs:
+        for cfg in test_configs:
             event = line.create_ass_event(state, style, 1920, cfg)
             assert f"\\fad({cfg.fade_in_ms},{cfg.fade_out_ms})" in event.Text
 

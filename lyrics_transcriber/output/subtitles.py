@@ -12,12 +12,11 @@ from lyrics_transcriber.output.ass.style import Style
 from lyrics_transcriber.output.ass.constants import ALIGN_TOP_CENTER
 from lyrics_transcriber.output.ass import LyricsScreen
 from lyrics_transcriber.output.ass.section_detector import SectionDetector
+from lyrics_transcriber.output.ass.config import ScreenConfig
 
 
 class SubtitlesGenerator:
     """Handles generation of subtitle files in various formats."""
-
-    MAX_LINES_PER_SCREEN = 4  # Maximum number of lines to show on screen at once
 
     def __init__(
         self,
@@ -39,7 +38,7 @@ class SubtitlesGenerator:
         self.output_dir = output_dir
         self.video_resolution = video_resolution
         self.font_size = font_size
-        self.line_height = line_height
+        self.config = ScreenConfig(line_height=line_height, video_height=video_resolution[1])
         self.logger = logger or logging.getLogger(__name__)
 
     def _get_output_path(self, output_prefix: str, extension: str) -> str:
@@ -108,7 +107,7 @@ class SubtitlesGenerator:
     def _create_section_screens(self, segments: List[LyricsSegment], song_duration: float) -> List[SectionScreen]:
         """Create section screens using SectionDetector."""
         section_detector = SectionDetector(logger=self.logger)
-        return section_detector.process_segments(segments, self.video_resolution, self.line_height, song_duration)
+        return section_detector.process_segments(segments, self.video_resolution, self.config.line_height, song_duration)
 
     def _get_instrumental_times(self, section_screens: List[SectionScreen]) -> List[Tuple[float, float]]:
         """Extract instrumental section time boundaries."""
@@ -136,7 +135,14 @@ class SubtitlesGenerator:
 
             # Check if we need a new screen
             if self._should_start_new_screen(current_screen, segment, instrumental_times):
-                current_screen = LyricsScreen(video_size=self.video_resolution, line_height=self.line_height, logger=self.logger)
+                # fmt: off
+                current_screen = LyricsScreen(
+                    video_size=self.video_resolution,
+                    line_height=self.config.line_height,
+                    config=self.config,
+                    logger=self.logger
+                )
+                # fmt: on
                 screens.append(current_screen)
                 self.logger.debug("  Created new screen")
 
@@ -162,7 +168,7 @@ class SubtitlesGenerator:
         if current_screen is None:
             return True
 
-        if len(current_screen.lines) >= self.MAX_LINES_PER_SCREEN:
+        if len(current_screen.lines) >= self.config.max_visible_lines:
             return True
 
         # Check if this segment is first after any instrumental section
@@ -178,15 +184,9 @@ class SubtitlesGenerator:
     def _merge_and_process_screens(
         self, section_screens: List[SectionScreen], lyric_screens: List[LyricsScreen]
     ) -> List[Union[SectionScreen, LyricsScreen]]:
-        """Merge section and lyric screens, marking post-instrumental screens."""
-        all_screens = sorted(section_screens + lyric_screens, key=lambda s: s.start_ts)
-
-        for i in range(1, len(all_screens)):
-            if isinstance(all_screens[i - 1], SectionScreen):
-                all_screens[i].post_instrumental = True
-                self.logger.debug(f"Marked screen {i+1} as post-instrumental")
-
-        return all_screens
+        """Merge section and lyric screens in chronological order."""
+        # Sort all screens by start time
+        return sorted(section_screens + lyric_screens, key=lambda s: s.start_ts)
 
     def _log_final_screens(self, screens: List[Union[SectionScreen, LyricsScreen]]) -> None:
         """Log details of all final screens."""
@@ -268,25 +268,28 @@ class SubtitlesGenerator:
 
     def _create_styled_subtitles(
         self,
-        screens: List[LyricsScreen],
-        resolution,
-        fontsize,
+        screens: List[Union[SectionScreen, LyricsScreen]],
+        resolution: Tuple[int, int],
+        fontsize: int,
     ) -> ASS:
-        """Create styled ASS subtitles."""
-        a, style = self._create_styled_ass_instance(resolution, fontsize)
+        """Create styled ASS subtitles from all screens."""
+        # Create ASS file with style
+        ass_file, style = self._create_styled_ass_instance(resolution, fontsize)
 
+        # Process all screens in order, maintaining active line state
         active_lines = []
-        for i, screen in enumerate(screens):
-            next_screen_start = screens[i + 1].start_ts if i < len(screens) - 1 else None
+        for screen in screens:
+            if isinstance(screen, SectionScreen) and screen.section_type == "INSTRUMENTAL":
+                # Clear active lines after instrumental sections
+                active_lines = []
 
-            self.logger.debug(f"Processing screen {i+1}:")
+            # Process screen and get its events
+            events, active_lines = screen.as_ass_events(style=style, previous_active_lines=active_lines)
 
-            # Get events and updated active lines
-            events, active_lines = screen.as_ass_events(style, next_screen_start, active_lines)
+            # Add events to ASS file
             for event in events:
-                a.add(event)
+                ass_file.add(event)
 
-            # Update active_lines for next screen
-            active_lines = [(end, pos, text) for end, pos, text in active_lines if isinstance(end, float)]
+            self.logger.debug(f"Added {len(events)} events for screen")
 
-        return a
+        return ass_file

@@ -1,4 +1,3 @@
-import pytest
 from lyrics_transcriber.output.ass.config import ScreenConfig, LineTimingInfo, LineState
 
 
@@ -15,7 +14,7 @@ def test_screen_config_defaults():
     # Timing defaults
     assert config.screen_gap_threshold == 5.0
     assert config.post_roll_time == 1.0
-    assert config.fade_in_ms == 100
+    assert config.fade_in_ms == 200
     assert config.fade_out_ms == 400
     assert config.cascade_delay_ms == 200
     assert config.target_preshow_time == 5.0
@@ -24,21 +23,25 @@ def test_screen_config_defaults():
 
 def test_screen_config_custom_values():
     """Test custom values can be set in ScreenConfig."""
-    # fmt: off
-    config = ScreenConfig(
-        max_visible_lines=3,
-        line_height=60,
-        fade_in_ms=200,
-        fade_out_ms=500
-    )
-    # fmt: on
+    config = ScreenConfig(line_height=60, max_visible_lines=3, video_height=1080)
 
     assert config.max_visible_lines == 3
     assert config.line_height == 60
-    assert config.fade_in_ms == 200
-    assert config.fade_out_ms == 500
+    assert config.video_height == 1080
     # Other values should remain at defaults
+    assert config.fade_in_ms == 200
+    assert config.fade_out_ms == 400
     assert config.cascade_delay_ms == 200
+
+
+def test_screen_config_custom_padding():
+    """Test custom top padding in ScreenConfig."""
+    config = ScreenConfig(line_height=60, top_padding=100)
+    assert config.top_padding == 100
+
+    # Test default padding equals line height
+    config = ScreenConfig(line_height=80)
+    assert config.top_padding == 80
 
 
 def test_line_timing_info():
