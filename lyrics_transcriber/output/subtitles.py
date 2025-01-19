@@ -273,23 +273,40 @@ class SubtitlesGenerator:
         fontsize: int,
     ) -> ASS:
         """Create styled ASS subtitles from all screens."""
-        # Create ASS file with style
         ass_file, style = self._create_styled_ass_instance(resolution, fontsize)
 
-        # Process all screens in order, maintaining active line state
         active_lines = []
+        previous_instrumental_end = None
+
         for screen in screens:
-            if isinstance(screen, SectionScreen) and screen.section_type == "INSTRUMENTAL":
-                # Clear active lines after instrumental sections
+            if isinstance(screen, SectionScreen):
+                # Create section marker events (returns tuple of ([event], []))
+                section_events, _ = screen.as_ass_events(style=style)
+                for event in section_events:  # Now we're iterating over the list of events
+                    ass_file.add(event)
+
+                previous_instrumental_end = screen.end_time
                 active_lines = []
+                self.logger.debug(f"Found instrumental section ending at {screen.end_time:.2f}s")
+                continue
 
             # Process screen and get its events
-            events, active_lines = screen.as_ass_events(style=style, previous_active_lines=active_lines)
+            self.logger.debug(f"Processing screen with instrumental_end={previous_instrumental_end}")
+            # fmt: off
+            events, active_lines = screen.as_ass_events(
+                style=style, 
+                previous_active_lines=active_lines,
+                previous_instrumental_end=previous_instrumental_end
+            )
+            # fmt: on
 
-            # Add events to ASS file
+            # Only reset instrumental end after we've processed the first post-instrumental screen
+            if previous_instrumental_end is not None:
+                self.logger.debug("Clearing instrumental end time after processing post-instrumental screen")
+                previous_instrumental_end = None
+
+            # Add all events to ASS file
             for event in events:
                 ass_file.add(event)
-
-            self.logger.debug(f"Added {len(events)} events for screen")
 
         return ass_file

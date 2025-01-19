@@ -17,7 +17,6 @@ class ScreenConfig:
         self.fade_in_ms = 200
         self.fade_out_ms = 400
         self.cascade_delay_ms = 200
-        self.target_preshow_time = 5.0
         self.position_clear_buffer_ms = 300
 
 

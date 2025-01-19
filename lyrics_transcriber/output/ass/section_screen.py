@@ -78,8 +78,8 @@ class SectionScreen:
     def as_ass_events(
         self,
         style: Style,
-        next_screen_start: Optional[timedelta] = None,
-        previous_active_lines: List[Tuple[float, int, str]] = None,
+        previous_active_lines: Optional[List[Tuple[float, int, str]]] = None,
+        previous_instrumental_end: Optional[float] = None,
     ) -> Tuple[List[Event], List[Tuple[float, int, str]]]:
         """Create ASS events for section markers with karaoke highlighting."""
         self.logger.debug(f"Creating section marker event for {self.section_type}")
