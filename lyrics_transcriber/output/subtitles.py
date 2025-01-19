@@ -24,6 +24,7 @@ class SubtitlesGenerator:
         video_resolution: Tuple[int, int],
         font_size: int,
         line_height: int,
+        styles: dict,
         logger: Optional[logging.Logger] = None,
     ):
         """Initialize SubtitleGenerator.
@@ -38,6 +39,7 @@ class SubtitlesGenerator:
         self.output_dir = output_dir
         self.video_resolution = video_resolution
         self.font_size = font_size
+        self.styles = styles
         self.config = ScreenConfig(line_height=line_height, video_height=video_resolution[1])
         self.logger = logger or logging.getLogger(__name__)
 
@@ -233,33 +235,44 @@ class SubtitlesGenerator:
         ]
 
         style = Style()
+
         style.type = "Style"
-        style.Name = "Nomad"
-        style.Fontname = "Avenir Next Bold"
+        style.Name = self.styles["karaoke"]["ass_name"]
+        style.Fontname = self.styles["karaoke"]["font"]
         style.Fontsize = fontsize
 
-        style.PrimaryColour = (112, 112, 247, 255)
-        style.SecondaryColour = (255, 255, 255, 255)
-        style.OutlineColour = (26, 58, 235, 255)
-        style.BackColour = (0, 255, 0, 255)  # (26, 58, 235, 255)
-
-        style.Bold = False
-        style.Italic = False
-        style.Underline = False
-        style.StrikeOut = False
-
-        style.ScaleX = 100
-        style.ScaleY = 100
-        style.Spacing = 0
-        style.Angle = 0.0
-        style.BorderStyle = 1
-        style.Outline = 1
-        style.Shadow = 0
         style.Alignment = ALIGN_TOP_CENTER
-        style.MarginL = 0
-        style.MarginR = 0
-        style.MarginV = 0
-        style.Encoding = 0
+
+        # Convert color strings to tuples of integers
+        def parse_color(color_str):
+            return tuple(int(x.strip()) for x in color_str.split(","))
+
+        style.PrimaryColour = parse_color(self.styles["karaoke"]["primary_color"])
+        style.SecondaryColour = parse_color(self.styles["karaoke"]["secondary_color"])
+        style.OutlineColour = parse_color(self.styles["karaoke"]["outline_color"])
+        style.BackColour = parse_color(self.styles["karaoke"]["back_color"])
+
+        # Convert boolean strings to integers (-1 for True, 0 for False)
+        def parse_bool(value):
+            return -1 if value else 0
+
+        style.Bold = parse_bool(self.styles["karaoke"]["bold"])
+        style.Italic = parse_bool(self.styles["karaoke"]["italic"])
+        style.Underline = parse_bool(self.styles["karaoke"]["underline"])
+        style.StrikeOut = parse_bool(self.styles["karaoke"]["strike_out"])
+
+        # Convert numeric strings to appropriate types
+        style.ScaleX = int(self.styles["karaoke"]["scale_x"])
+        style.ScaleY = int(self.styles["karaoke"]["scale_y"])
+        style.Spacing = int(self.styles["karaoke"]["spacing"])
+        style.Angle = float(self.styles["karaoke"]["angle"])
+        style.BorderStyle = int(self.styles["karaoke"]["border_style"])
+        style.Outline = int(self.styles["karaoke"]["outline"])
+        style.Shadow = int(self.styles["karaoke"]["shadow"])
+        style.MarginL = int(self.styles["karaoke"]["margin_l"])
+        style.MarginR = int(self.styles["karaoke"]["margin_r"])
+        style.MarginV = int(self.styles["karaoke"]["margin_v"])
+        style.Encoding = int(self.styles["karaoke"]["encoding"])
 
         a.add_style(style)
 

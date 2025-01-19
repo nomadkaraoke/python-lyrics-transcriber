@@ -1,5 +1,6 @@
 import os
 import logging
+import json
 from dataclasses import dataclass, field
 from typing import Dict, Optional, List
 from lyrics_transcriber.types import (
@@ -38,12 +39,16 @@ class LyricsConfig:
 class OutputConfig:
     """Configuration for output generation."""
 
+    output_styles_json: str
     output_dir: Optional[str] = os.getcwd()
     cache_dir: str = os.getenv("LYRICS_TRANSCRIBER_CACHE_DIR", "/tmp/lyrics-transcriber-cache/")
     render_video: bool = False
     video_resolution: str = "360p"
-    video_background_image: Optional[str] = None
-    video_background_color: str = "black"
+
+    def __post_init__(self):
+        """Validate configuration after initialization."""
+        if self.output_styles_json and not os.path.isfile(self.output_styles_json):
+            raise FileNotFoundError(f"Output styles JSON file not found: {self.output_styles_json}")
 
 
 @dataclass
@@ -194,14 +199,22 @@ class LyricsTranscriber:
 
     def _initialize_output_generator(self) -> OutputGenerator:
         """Initialize output generation service."""
+        # Load output styles from JSON
+        try:
+            with open(self.output_config.output_styles_json, "r") as f:
+                styles = json.load(f)
+            self.logger.debug(f"Loaded output styles from: {self.output_config.output_styles_json}")
+        except json.JSONDecodeError as e:
+            raise ValueError(f"Invalid JSON in output styles file: {str(e)}")
+        except Exception as e:
+            raise ValueError(f"Failed to load output styles file: {str(e)}")
 
         # Convert OutputConfig to OutputGeneratorConfig
         generator_config = OutputGeneratorConfig(
             output_dir=self.output_config.output_dir,
             cache_dir=self.output_config.cache_dir,
+            styles=styles,
             video_resolution=self.output_config.video_resolution,
-            video_background_image=self.output_config.video_background_image,
-            video_background_color=self.output_config.video_background_color,
         )
 
         # Initialize output generator
@@ -310,6 +323,8 @@ class LyricsTranscriber:
                 lyrics_results=self.results.lyrics_results,
                 output_prefix=self.output_prefix,
                 audio_filepath=self.audio_filepath,
+                artist=self.artist,
+                title=self.title,
                 render_video=self.output_config.render_video,
             )
 

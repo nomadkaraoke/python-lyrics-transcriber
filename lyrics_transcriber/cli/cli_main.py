@@ -57,11 +57,15 @@ def create_arg_parser() -> argparse.ArgumentParser:
     # Output options
     output_group = parser.add_argument_group("Output Options")
     output_group.add_argument("--output_dir", type=Path, help="Directory where output files will be saved. Default: current directory")
-
     output_group.add_argument(
         "--cache_dir",
         type=Path,
         help="Directory to cache downloaded/generated files. Default: /tmp/lyrics-transcriber-cache/",
+    )
+    output_group.add_argument(
+        "--output_styles_json",
+        type=Path,
+        help="JSON file containing output style configurations for CDG and video generation",
     )
 
     # Video options
@@ -69,12 +73,6 @@ def create_arg_parser() -> argparse.ArgumentParser:
     video_group.add_argument("--render_video", action="store_true", help="Render a karaoke video with the generated lyrics")
     video_group.add_argument(
         "--video_resolution", choices=["4k", "1080p", "720p", "360p"], default="360p", help="Resolution of the karaoke video. Default: 360p"
-    )
-    video_group.add_argument("--video_background_image", type=Path, help="Image file to use for karaoke video background")
-    video_group.add_argument(
-        "--video_background_color",
-        default="black",
-        help="Color for karaoke video background (hex format or FFmpeg color name). Default: black",
     )
 
     return parser
@@ -133,12 +131,11 @@ def create_configs(args: argparse.Namespace, env_config: Dict[str, str]) -> tupl
     )
 
     output_config = OutputConfig(
+        output_styles_json=str(args.output_styles_json),
         output_dir=str(args.output_dir) if args.output_dir else os.getcwd(),
         cache_dir=str(args.cache_dir),
         render_video=args.render_video,
         video_resolution=args.video_resolution,
-        video_background_image=str(args.video_background_image) if args.video_background_image else None,
-        video_background_color=args.video_background_color,
     )
 
     return transcriber_config, lyrics_config, output_config
@@ -202,5 +199,10 @@ def main() -> None:
             logger.info(f"Generated video file: {results.video_filepath}")
 
     except Exception as e:
-        logger.error(f"Processing failed: {str(e)}")
+        # Get the full exception traceback
+        import traceback
+        error_details = traceback.format_exc()
+        
+        # Log both the error message and the full traceback
+        logger.error(f"Processing failed: {str(e)}\n\nFull traceback:\n{error_details}")
         exit(1)

@@ -13,8 +13,7 @@ class VideoGenerator:
         output_dir: str,
         cache_dir: str,
         video_resolution: Tuple[int, int],
-        background_image: Optional[str] = None,
-        background_color: str = "black",
+        styles: dict,
         logger: Optional[logging.Logger] = None,
     ):
         """Initialize VideoGenerator.
@@ -23,8 +22,7 @@ class VideoGenerator:
             output_dir: Directory where output files will be written
             cache_dir: Directory for temporary files
             video_resolution: Tuple of (width, height) for video resolution
-            background_image: Optional path to background image
-            background_color: Color to use when no background image (default: "black")
+            styles: Dictionary of output video & CDG styling configuration
             logger: Optional logger instance
         """
         if not all(x > 0 for x in video_resolution):
@@ -33,12 +31,12 @@ class VideoGenerator:
         self.output_dir = output_dir
         self.cache_dir = cache_dir
         self.video_resolution = video_resolution
-        self.background_image = background_image
-        self.background_color = background_color
+        self.background_image = styles["karaoke"]["background_image"]
+        self.background_color = styles["karaoke"]["background_color"]
         self.logger = logger or logging.getLogger(__name__)
 
-        if background_image and not os.path.isfile(background_image):
-            raise FileNotFoundError(f"Video background image not found: {background_image}")
+        if self.background_image and not os.path.isfile(self.background_image):
+            raise FileNotFoundError(f"Video background image not found: {self.background_image}")
 
     def generate_video(self, ass_path: str, audio_path: str, output_prefix: str) -> str:
         """Generate MP4 video with lyrics overlay.
