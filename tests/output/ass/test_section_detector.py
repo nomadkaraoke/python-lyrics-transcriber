@@ -152,7 +152,7 @@ def test_section_screen_text_format(detector):
     # For INTRO: original end_time is first_segment.start_time (15.0)
     # and original start_time is 0.0
     original_duration = round(15.0 - 0.0)  # 15 seconds
-    assert intro.text == f"INTRO ({original_duration} seconds)"
+    assert intro.text == f"♪ INTRO ({original_duration} seconds) ♪"
 
 
 def test_section_screen_durations(detector):
@@ -168,13 +168,13 @@ def test_section_screen_durations(detector):
     instrumental = [s for s in screens if s.section_type == "INSTRUMENTAL"][0]
 
     # INTRO duration is calculated before timing adjustments
-    assert intro.text == "INTRO (15 seconds)"  # 15.0 - 0.0
+    assert intro.text == "♪ INTRO (15 seconds) ♪"  # 15.0 - 0.0
 
     # INSTRUMENTAL duration is gap between segments minus padding
     # Start: previous_segment.end_time + start_padding (1s)
     # End: next_segment.start_time - end_padding (5s)
     # Duration: (30.0 - 5.0) - (18.0 + 1.0) = 6 seconds
-    assert instrumental.text == "INSTRUMENTAL (6 seconds)"
+    assert instrumental.text == "♪ INSTRUMENTAL (6 seconds) ♪"
 
 
 def test_section_screen_event_formatting(detector):

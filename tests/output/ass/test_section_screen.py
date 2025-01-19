@@ -42,7 +42,7 @@ def test_intro_section_timing():
     # INTRO sections have special timing adjustments
     assert screen.start_time == 1.0  # Start after 1 second
     assert screen.end_time == 10.0  # End 5 seconds before next section
-    assert screen.text == "INTRO (15 seconds)"  # Duration from original times
+    assert screen.text == "♪ INTRO (15 seconds) ♪"  # Duration from original times
 
 
 def test_instrumental_section_timing():
@@ -52,7 +52,7 @@ def test_instrumental_section_timing():
     # INSTRUMENTAL sections keep their original timing
     assert screen.start_time == 20.0
     assert screen.end_time == 30.0
-    assert screen.text == "INSTRUMENTAL (10 seconds)"
+    assert screen.text == "♪ INSTRUMENTAL (10 seconds) ♪"
 
 
 def test_outro_section_timing():
@@ -62,7 +62,7 @@ def test_outro_section_timing():
     # OUTRO sections keep their original timing
     assert screen.start_time == 160.0
     assert screen.end_time == 180.0
-    assert screen.text == "OUTRO (20 seconds)"
+    assert screen.text == "♪ OUTRO (20 seconds) ♪"
 
 
 def test_ass_event_generation(style, mock_logger, default_config):
@@ -179,6 +179,6 @@ def test_original_duration_preserved():
     screen = SectionScreen(section_type="INTRO", start_time=0.0, end_time=20.0, video_size=(1920, 1080), line_height=60)
 
     # Even though timing is adjusted, text shows original duration
-    assert screen.text == "INTRO (20 seconds)"
+    assert screen.text == "♪ INTRO (20 seconds) ♪"
     assert screen.start_time == 1.0
     assert screen.end_time == 15.0

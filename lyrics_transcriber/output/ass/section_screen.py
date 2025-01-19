@@ -46,7 +46,7 @@ class SectionScreen:
 
     def _create_text(self):
         """Create the section text with duration."""
-        self.text = f"{self.section_type} ({self.original_duration} seconds)"
+        self.text = f"♪ {self.section_type} ({self.original_duration} seconds) ♪"
 
     def _calculate_start_time(self, previous_active_lines: Optional[List[Tuple[float, int, str]]] = None) -> float:
         """Calculate start time accounting for previous lines."""

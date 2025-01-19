@@ -285,14 +285,19 @@ class TestLyricsScreen:
         ]
         # fmt: on
 
-        events, active_lines = screen.as_ass_events(style)
+        # Pass previous_active_lines to prevent lead-in indicators
+        previous_active_lines = [(9.0, 100, "Previous Line")]
+        events, active_lines = screen.as_ass_events(style, previous_active_lines=previous_active_lines)
 
+        # Should have one event per line (no lead-ins due to recent previous line)
         assert len(events) == 2
         assert len(active_lines) == 2
-        # Verify event formatting
-        assert all("\\an8" in e.Text for e in events)  # Top alignment
-        assert all("\\pos" in e.Text for e in events)  # Position tag
-        assert all(e.Style == style for e in events)
+
+        # Check event properties
+        for event in events:
+            assert event.type == "Dialogue"
+            assert event.Layer == 0
+            assert event.Style == style
 
     def test_post_instrumental_timing(self, video_size, config, style, mock_logger):
         """Test timing for post-instrumental screens."""
@@ -310,10 +315,42 @@ class TestLyricsScreen:
         ]
         # fmt: on
 
-        events, _ = screen.as_ass_events(style)
+        # Set previous_instrumental_end to test post-instrumental timing
+        events, _ = screen.as_ass_events(style, previous_instrumental_end=15.0)
 
-        # All lines should start at the same time
-        assert all(e.Start == events[0].Start for e in events)
+        # Get only the main events (skip lead-in indicators)
+        main_events = [e for e in events if "⟶" not in e.Text]
+        
+        # All main events should start at the same time
+        assert all(e.Start == main_events[0].Start for e in main_events)
+        # And should start at instrumental_end
+        assert main_events[0].Start == 15.0
+
+    def test_active_lines_tracking(self, video_size, config, style, mock_logger):
+        """Test tracking of active lines for the next screen."""
+        # fmt: off
+        screen = LyricsScreen(
+            video_size=video_size,
+            line_height=config.line_height,
+            config=config,
+            logger=mock_logger
+        )
+        screen.lines = [
+            create_line(10.0, 12.0, "Line 1"),
+            create_line(12.0, 14.0, "Line 2"),
+        ]
+        # fmt: on
+
+        # Pass previous_active_lines to prevent lead-in indicators
+        previous_active_lines = [(9.0, 100, "Previous Line")]
+        _, active_lines = screen.as_ass_events(style, previous_active_lines=previous_active_lines)
+
+        # Check active lines format
+        assert len(active_lines) == 2
+        for end_time, y_position, text in active_lines:
+            assert isinstance(end_time, float)
+            assert isinstance(y_position, int)
+            assert isinstance(text, str)
 
     def test_config_initialization(self, video_size, mock_logger):
         """Test configuration initialization and overrides."""

@@ -182,6 +182,11 @@ class LyricsScreen:
         active_lines = []
         previous_active_lines = previous_active_lines or []
 
+        # Find the latest end time from previous lines
+        previous_end_time = None
+        if previous_active_lines:
+            previous_end_time = max(end_time for end_time, _, _ in previous_active_lines)
+
         # Log active lines from previous screen
         if previous_active_lines:
             self.logger.debug("  Active lines from previous screen:")
@@ -211,11 +216,20 @@ class LyricsScreen:
             # Create line state
             line_state = LineState(text=line.segment.text, timing=timing, y_position=y_position)
 
-            # Create ASS event
-            event = line.create_ass_event(state=line_state, style=style, video_width=self.video_size[0], config=self.config)
-            events.append(event)
+            # Create ASS events with previous end time info
+            # fmt: off
+            line_events = line.create_ass_events(
+                state=line_state, 
+                style=style, 
+                video_width=self.video_size[0], 
+                config=self.config,
+                previous_end_time=previous_end_time
+            )
+            # fmt: on
+            events.extend(line_events)
 
-            # Track active line
+            # Track this line's end time for the next screen
+            previous_end_time = timing.end_time
             active_lines.append((timing.end_time, y_position, line.segment.text))
 
             # Log line placement with index
