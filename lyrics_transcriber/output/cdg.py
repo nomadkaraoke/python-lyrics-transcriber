@@ -224,16 +224,7 @@ class CDGGenerator:
         output_file: str,
         cdg_styles: dict,
     ) -> None:
-        """Generate a TOML configuration file for CDG creation.
-
-        Args:
-            lrc_file: Path to the LRC file
-            audio_file: Path to the audio file
-            title: Title of the song
-            artist: Artist name
-            output_file: Path to write the TOML file
-            cdg_styles: Must contain all style-related parameters
-        """
+        """Generate a TOML configuration file for CDG creation."""
         audio_file = os.path.abspath(audio_file)
         self.logger.debug(f"Using absolute audio file path: {audio_file}")
 
@@ -247,9 +238,8 @@ class CDGGenerator:
             artist=artist,
             audio_file=audio_file,
             lrc_file=lrc_file,
-            lyrics_data=lyrics_data,
-            instrumentals=instrumentals,
             sync_times=sync_times,
+            instrumentals=instrumentals,
             formatted_lyrics=formatted_lyrics,
             cdg_styles=cdg_styles,
         )
@@ -326,8 +316,12 @@ class CDGGenerator:
             instrumental_text=cdg_styles["instrumental_text"],
         )
 
-    def _format_lyrics_data(self, lyrics_data: List[dict], instrumentals: List[dict], cdg_styles: dict) -> List[str]:
-        """Format lyrics data with lead-in symbols and handle line wrapping."""
+    def _format_lyrics_data(self, lyrics_data: List[dict], instrumentals: List[dict], cdg_styles: dict) -> tuple[List[int], List[str]]:
+        """Format lyrics data with lead-in symbols and handle line wrapping.
+
+        Returns:
+            tuple: (sync_times, formatted_lyrics) where sync_times includes lead-in timings
+        """
         sync_times = []
         formatted_lyrics = []
 
@@ -347,7 +341,7 @@ class CDGGenerator:
             formatted_lyrics.append(lyric["text"])
             self.logger.debug(f"Added lyric: '{lyric['text']}' at {lyric['timestamp']}")
 
-        return sync_times, self.format_lyrics(
+        formatted_text = self.format_lyrics(
             formatted_lyrics,
             instrumentals,
             sync_times,
@@ -355,20 +349,20 @@ class CDGGenerator:
             font_size=cdg_styles["font_size"],
         )
 
+        return sync_times, formatted_text
+
     def _create_toml_data(
         self,
         title: str,
         artist: str,
         audio_file: str,
         lrc_file: str,
-        lyrics_data: List[dict],
         sync_times: List[int],
-        formatted_lyrics: List[str],
         instrumentals: List[dict],
+        formatted_lyrics: List[str],
         cdg_styles: dict,
     ) -> dict:
         """Create TOML data structure."""
-
         return {
             "title": title,
             "artist": artist,
