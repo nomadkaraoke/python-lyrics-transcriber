@@ -79,7 +79,18 @@ class TimingStrategy:
         for end_time, y_position, text in previous_active_lines:
             clear_time = end_time + (self.config.fade_out_ms / 1000) + (self.config.position_clear_buffer_ms / 1000)
             position_clear_times[y_position] = clear_time
+
+            # Add buffer time for the position above the active line
             line_index = PositionCalculator.position_to_line_index(y_position, self.config)
+            # fmt: off
+            if line_index > 0:  # If not the top line
+                position_above = PositionCalculator.line_index_to_position(line_index - 1, self.config)
+                position_clear_times[position_above] = max(
+                    position_clear_times.get(position_above, 0),
+                    clear_time  # Use same clear time as the active line
+                )
+            # fmt: on
+
             self.logger.debug(f"    Position {line_index + 1} occupied by '{text}' until {clear_time:.2f}s")
 
         # Calculate timings for each line
@@ -94,14 +105,7 @@ class TimingStrategy:
             fade_out_time = end_time + (self.config.fade_out_ms / 1000)
             clear_time = fade_out_time + (self.config.position_clear_buffer_ms / 1000)
 
-            # fmt: off
-            timing = LineTimingInfo(
-                fade_in_time=fade_in_time,
-                end_time=end_time,
-                fade_out_time=fade_out_time,
-                clear_time=clear_time
-            )
-            # fmt: on
+            timing = LineTimingInfo(fade_in_time=fade_in_time, end_time=end_time, fade_out_time=fade_out_time, clear_time=clear_time)
             timings.append(timing)
 
             line_index = PositionCalculator.position_to_line_index(position, self.config)

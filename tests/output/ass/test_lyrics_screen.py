@@ -162,6 +162,103 @@ class TestTimingStrategy:
         assert timings[0].fade_out_time == pytest.approx(16.4)  # end + fade_out
         assert timings[0].clear_time == pytest.approx(16.7)  # fade_out + clear_buffer
 
+    def test_gap_line_behavior(self, config, mock_logger):
+        """Test that lines don't appear directly above active lines."""
+        strategy = TimingStrategy(config, mock_logger)
+        
+        # Get position for line 2 (index 1)
+        position_2 = PositionCalculator.line_index_to_position(1, config)
+        
+        # Create a scenario with an active line at position 2
+        previous_lines = [
+            (10.0, position_2, "Line 2"),  # Active line at position 2
+        ]
+        
+        # Create new lines that would fill positions 1-4
+        current_lines = [
+            create_line(11.0, 13.0, "New Line 1"),
+            create_line(11.0, 13.0, "New Line 2"),
+            create_line(11.0, 13.0, "New Line 3"),
+            create_line(11.0, 13.0, "New Line 4"),
+        ]
+
+        timings = strategy.calculate_line_timings(current_lines, previous_lines)
+        
+        # Get the position of the previous active line
+        active_line_index = PositionCalculator.position_to_line_index(position_2, config)
+        assert active_line_index == 1  # Verify it's at position 2
+        
+        # Calculate clear time for the active line
+        clear_time = 10.0 + (config.fade_out_ms / 1000) + (config.position_clear_buffer_ms / 1000)
+        
+        # The line directly above the active line (position 1) should wait
+        assert timings[active_line_index - 1].fade_in_time == pytest.approx(clear_time)
+        
+        # Lines further above can appear immediately
+        if active_line_index > 1:
+            assert timings[active_line_index - 2].fade_in_time == 0.0
+            
+        # Lines below can appear immediately
+        assert timings[active_line_index + 1].fade_in_time == 0.0
+
+    def test_multiple_active_lines_gaps(self, config, mock_logger):
+        """Test gap line behavior with multiple active lines."""
+        strategy = TimingStrategy(config, mock_logger)
+        
+        # Get positions for lines 2 and 4
+        position_2 = PositionCalculator.line_index_to_position(1, config)
+        position_4 = PositionCalculator.line_index_to_position(3, config)
+        
+        # Create scenario with two active lines
+        previous_lines = [
+            (10.0, position_2, "Line 2"),  # Position 2
+            (11.0, position_4, "Line 4"),  # Position 4
+        ]
+        
+        current_lines = [
+            create_line(12.0, 14.0, "New Line 1"),
+            create_line(12.0, 14.0, "New Line 2"),
+            create_line(12.0, 14.0, "New Line 3"),
+            create_line(12.0, 14.0, "New Line 4"),
+        ]
+
+        timings = strategy.calculate_line_timings(current_lines, previous_lines)
+        
+        # Calculate clear times
+        clear_time_1 = 10.0 + (config.fade_out_ms / 1000) + (config.position_clear_buffer_ms / 1000)
+        clear_time_2 = 11.0 + (config.fade_out_ms / 1000) + (config.position_clear_buffer_ms / 1000)
+        
+        # Position 1 (above Line 2) should wait for Line 2 to clear
+        assert timings[0].fade_in_time == pytest.approx(clear_time_1)
+        
+        # Position 2 should wait for Line 2 to clear
+        assert timings[1].fade_in_time == pytest.approx(clear_time_1)
+        
+        # Position 3 should wait for Line 4 to clear
+        assert timings[2].fade_in_time == pytest.approx(clear_time_2)
+        
+        # Position 4 should wait for Line 4 to clear
+        assert timings[3].fade_in_time == pytest.approx(clear_time_2)
+
+    def test_gap_line_at_screen_boundary(self, config, mock_logger):
+        """Test gap line behavior when active line is at top of screen."""
+        strategy = TimingStrategy(config, mock_logger)
+        
+        # Create scenario with active line at position 1
+        previous_lines = [
+            (10.0, 100, "Line 1"),  # Top position
+        ]
+        
+        current_lines = [
+            create_line(11.0, 13.0, "New Line 1"),
+            create_line(11.0, 13.0, "New Line 2"),
+        ]
+
+        timings = strategy.calculate_line_timings(current_lines, previous_lines)
+        
+        # No lines should need to wait as there's no position above the top line
+        assert all(t.fade_in_time == 0.0 for t in timings)
+
 
 class TestLyricsScreen:
     def test_screen_initialization(self, video_size, config, mock_logger):
