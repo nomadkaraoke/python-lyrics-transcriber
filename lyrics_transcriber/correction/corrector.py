@@ -2,6 +2,8 @@ from typing import List, Optional, Tuple, Union
 import logging
 from pathlib import Path
 
+from lyrics_transcriber.correction.handlers.no_space_punct_match import NoSpacePunctuationMatchHandler
+from lyrics_transcriber.correction.handlers.relaxed_word_count_match import RelaxedWordCountMatchHandler
 from lyrics_transcriber.types import GapSequence, LyricsData, TranscriptionResult, CorrectionResult, LyricsSegment, WordCorrection, Word
 from lyrics_transcriber.correction.anchor_sequence import AnchorSequenceFinder
 from lyrics_transcriber.correction.handlers.base import GapCorrectionHandler
@@ -30,6 +32,8 @@ class LyricsCorrector:
         # Default handlers in order of preference
         self.handlers = handlers or [
             WordCountMatchHandler(),
+            RelaxedWordCountMatchHandler(),
+            NoSpacePunctuationMatchHandler(),
             ExtraWordsHandler(),
             RepeatCorrectionHandler(),
             SoundAlikeHandler(),

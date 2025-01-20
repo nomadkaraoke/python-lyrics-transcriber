@@ -115,6 +115,42 @@ class AnchorSequenceFinder:
             self.logger.debug("Cache miss or invalid cache file")
             return None
 
+    def _process_ngram_length(
+        self, n: int, trans_words: List[str], ref_texts_clean: Dict[str, List[str]], min_sources: int
+    ) -> List[AnchorSequence]:
+        """Process a single n-gram length to find matching sequences."""
+        candidate_anchors = []
+        used_positions = {source: set() for source in ref_texts_clean.keys()}
+        used_trans_positions = set()
+
+        # Try each position in the transcribed text multiple times
+        # to catch repeated phrases
+        found_new_match = True
+        while found_new_match:
+            found_new_match = False
+
+            # Generate n-grams from transcribed text
+            trans_ngrams = self._find_ngrams(trans_words, n)
+
+            for ngram, trans_pos in trans_ngrams:
+                # Skip if we've already used this transcription position
+                if trans_pos in used_trans_positions:
+                    continue
+
+                matches = self._find_matching_sources(ngram, ref_texts_clean, n)
+                if len(matches) >= min_sources:
+                    # Mark positions as used
+                    for source, pos in matches.items():
+                        used_positions[source].add(pos)
+                    used_trans_positions.add(trans_pos)
+
+                    anchor = AnchorSequence(ngram, trans_pos, matches, len(matches) / len(ref_texts_clean))
+                    candidate_anchors.append(anchor)
+                    found_new_match = True
+                    break  # Start over to try finding more matches
+
+        return candidate_anchors
+
     def find_anchors(self, transcribed: str, references: Dict[str, str]) -> List[ScoredAnchor]:
         """Find anchor sequences that appear in both transcription and references."""
         cache_key = self._get_cache_key(transcribed, references)
@@ -130,48 +166,36 @@ class AnchorSequenceFinder:
 
         # If not in cache or cache format invalid, perform the computation
         self.logger.info("Cache miss - computing anchors")
-
-        # Compute anchors (existing logic)
         self.logger.info(f"Finding anchor sequences for transcription with length {len(transcribed)}")
 
         # Clean and split texts
         trans_words = self._clean_text(transcribed).split()
         ref_texts_clean = {source: self._clean_text(text).split() for source, text in references.items()}
 
-        candidate_anchors = []
         max_length = min(len(trans_words), min(len(words) for words in ref_texts_clean.values()))
+        n_gram_lengths = range(max_length, self.min_sequence_length - 1, -1)
 
-        self.logger.info(f"Checking sequence lengths")
-        for n in tqdm(range(max_length, self.min_sequence_length - 1, -1), desc="Checking sequence lengths"):
-            # Reset used positions for each n-gram length
-            self.used_positions = {source: set() for source in references.keys()}
-            used_trans_positions = set()
+        # Set up parallel processing
+        num_processes = max(cpu_count() - 1, 1)  # Leave one CPU free
+        self.logger.info(f"Processing {len(n_gram_lengths)} n-gram lengths using {num_processes} processes")
 
-            # Try each position in the transcribed text multiple times
-            # to catch repeated phrases
-            found_new_match = True
-            while found_new_match:
-                found_new_match = False
+        # Create partial function with fixed arguments
+        process_length_partial = partial(
+            self._process_ngram_length, trans_words=trans_words, ref_texts_clean=ref_texts_clean, min_sources=self.min_sources
+        )
 
-                # Generate n-grams from transcribed text
-                trans_ngrams = self._find_ngrams(trans_words, n)
-
-                for ngram, trans_pos in trans_ngrams:
-                    # Skip if we've already used this transcription position
-                    if trans_pos in used_trans_positions:
-                        continue
-
-                    matches = self._find_matching_sources(ngram, ref_texts_clean, n)
-                    if len(matches) >= self.min_sources:
-                        # Mark positions as used
-                        for source, pos in matches.items():
-                            self.used_positions[source].add(pos)
-                        used_trans_positions.add(trans_pos)
-
-                        anchor = AnchorSequence(ngram, trans_pos, matches, len(matches) / len(references))
-                        candidate_anchors.append(anchor)
-                        found_new_match = True
-                        break  # Start over to try finding more matches
+        # Process n-gram lengths in parallel
+        candidate_anchors = []
+        with Pool(processes=num_processes) as pool:
+            results = list(
+                tqdm(
+                    pool.imap(process_length_partial, n_gram_lengths, chunksize=1),
+                    total=len(n_gram_lengths),
+                    desc="Processing n-gram lengths",
+                )
+            )
+            for anchors in results:
+                candidate_anchors.extend(anchors)
 
         self.logger.info(f"Found {len(candidate_anchors)} candidate anchors")
         filtered_anchors = self._remove_overlapping_sequences(candidate_anchors, transcribed)
@@ -370,10 +394,26 @@ class AnchorSequenceFinder:
             ref_words = {}
             shared_sources = set(current_anchor.anchor.reference_positions.keys()) & set(next_anchor.anchor.reference_positions.keys())
 
+            # Check for large position differences in next_anchor
+            if len(next_anchor.anchor.reference_positions) > 1:
+                positions = list(next_anchor.anchor.reference_positions.values())
+                max_diff = max(positions) - min(positions)
+                if max_diff > 20:
+                    # Find source with earliest position
+                    earliest_source = min(next_anchor.anchor.reference_positions.items(), key=lambda x: x[1])[0]
+                    self.logger.warning(
+                        f"Large position difference ({max_diff} words) in next anchor '{' '.join(next_anchor.anchor.words)}'. "
+                        f"Using only earliest source: {earliest_source} at position {next_anchor.anchor.reference_positions[earliest_source]}"
+                    )
+                    # Only consider the earliest source for the gap
+                    shared_sources &= {earliest_source}
+
             for source in shared_sources:
                 start_pos = current_anchor.anchor.reference_positions[source] + current_anchor.anchor.length
                 end_pos = next_anchor.anchor.reference_positions[source]
-                ref_words[source] = self._get_reference_words(source, ref_texts_clean[source], start_pos, end_pos)
+                words_list = self._get_reference_words(source, ref_texts_clean[source], start_pos, end_pos)
+                if words_list:  # Only add source if it has words
+                    ref_words[source] = words_list
 
             return GapSequence(words[gap_start:gap_end], gap_start, current_anchor.anchor, next_anchor.anchor, ref_words)
         return None
