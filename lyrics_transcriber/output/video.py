@@ -63,13 +63,29 @@ class VideoGenerator:
             raise FileNotFoundError(f"Audio file not found: {audio_path}")
 
         try:
-            cmd = self._build_ffmpeg_command(ass_path, audio_path, output_path)
+            # Create a temporary copy of the ASS file with a safe filename
+            temp_ass_path = os.path.join(self.cache_dir, "temp_subtitles.ass")
+            import shutil
+
+            shutil.copy2(ass_path, temp_ass_path)
+            self.logger.debug(f"Created temporary ASS file: {temp_ass_path}")
+
+            cmd = self._build_ffmpeg_command(temp_ass_path, audio_path, output_path)
             self._run_ffmpeg_command(cmd)
             self.logger.info(f"Video generated: {output_path}")
+
+            # Clean up temporary file
+            os.remove(temp_ass_path)
             return output_path
 
         except Exception as e:
             self.logger.error(f"Failed to generate video: {str(e)}")
+            # Clean up temporary file in case of error
+            if "temp_ass_path" in locals():
+                try:
+                    os.remove(temp_ass_path)
+                except:
+                    pass
             raise
 
     def _get_output_path(self, output_prefix: str, extension: str) -> str:
