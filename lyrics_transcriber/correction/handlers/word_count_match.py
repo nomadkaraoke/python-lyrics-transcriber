@@ -26,16 +26,19 @@ class WordCountMatchHandler(GapCorrectionHandler):
 
     def handle(self, gap: GapSequence) -> List[WordCorrection]:
         corrections = []
-        reference_words = list(gap.reference_words.values())[0]
+        # Get both clean and original reference words from first source
+        source = list(gap.reference_words.keys())[0]
+        reference_words = gap.reference_words[source]
+        reference_words_original = gap.reference_words_original[source]
         sources = ", ".join(gap.reference_words.keys())
 
         # Since we know all reference sources agree, we can correct all words in the gap
-        for i, (orig_word, ref_word) in enumerate(zip(gap.words, reference_words)):
+        for i, (orig_word, ref_word, ref_word_original) in enumerate(zip(gap.words, reference_words, reference_words_original)):
             if orig_word.lower() != ref_word.lower():
                 corrections.append(
                     WordCorrection(
                         original_word=orig_word,
-                        corrected_word=ref_word,
+                        corrected_word=ref_word_original,  # Use the original formatted word
                         segment_index=0,  # This will be updated when applying corrections
                         word_index=gap.transcription_position + i,
                         confidence=1.0,

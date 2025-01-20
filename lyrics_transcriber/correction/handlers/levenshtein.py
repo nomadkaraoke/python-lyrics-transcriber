@@ -77,17 +77,19 @@ class LevenshteinHandler(GapCorrectionHandler):
             # Find matching reference words at this position
             matches = {}  # word -> (sources, similarity)
             for source, ref_words in gap.reference_words.items():
+                ref_words_original = gap.reference_words_original[source]  # Get original formatted words
                 if i >= len(ref_words):
                     continue
 
                 ref_word = ref_words[i]
+                ref_word_original = ref_words_original[i]  # Get original formatted word
                 similarity = self._get_string_similarity(word, ref_word)
 
                 if similarity >= self.similarity_threshold:
                     self.logger.debug(f"Found match: '{word}' -> '{ref_word}' ({similarity:.2f})")
-                    if ref_word not in matches:
-                        matches[ref_word] = ([], similarity)
-                    matches[ref_word][0].append(source)
+                    if ref_word_original not in matches:  # Use original formatted word as key
+                        matches[ref_word_original] = ([], similarity)
+                    matches[ref_word_original][0].append(source)
 
             # Create correction for best match if any found
             if matches:
@@ -102,7 +104,7 @@ class LevenshteinHandler(GapCorrectionHandler):
                 corrections.append(
                     WordCorrection(
                         original_word=word,
-                        corrected_word=best_match,
+                        corrected_word=best_match,  # Using original formatted word
                         segment_index=0,
                         word_index=gap.transcription_position + i,
                         confidence=final_confidence,

@@ -184,49 +184,39 @@ class LyricsTranscriber:
         Raises:
             Exception: If a critical error occurs during processing.
         """
-        try:
-            # Step 1: Fetch lyrics if artist and title are provided
-            if self.artist and self.title:
-                self.fetch_lyrics()
+        # Step 1: Fetch lyrics if artist and title are provided
+        if self.artist and self.title:
+            self.fetch_lyrics()
 
-            # Step 2: Run transcription
-            self.transcribe()
+        # Step 2: Run transcription
+        self.transcribe()
 
-            # Step 3: Process and correct lyrics
-            self.correct_lyrics()
+        # Step 3: Process and correct lyrics
+        self.correct_lyrics()
 
-            # Step 4: Generate outputs
-            self.generate_outputs()
+        # Step 4: Generate outputs
+        self.generate_outputs()
 
-            self.logger.info("Processing completed successfully")
-            return self.results
-
-        except Exception as e:
-            self.logger.error(f"Error during processing: {str(e)}")
-            raise
+        self.logger.info("Processing completed successfully")
+        return self.results
 
     def fetch_lyrics(self) -> None:
         """Fetch lyrics from available providers."""
         self.logger.info(f"Fetching lyrics for {self.artist} - {self.title}")
 
-        try:
-            for name, provider in self.lyrics_providers.items():
-                try:
-                    result = provider.fetch_lyrics(self.artist, self.title)
-                    if result:
-                        self.results.lyrics_results.append(result)
-                        self.logger.info(f"Successfully fetched lyrics from {name}")
+        for name, provider in self.lyrics_providers.items():
+            try:
+                result = provider.fetch_lyrics(self.artist, self.title)
+                if result:
+                    self.results.lyrics_results.append(result)
+                    self.logger.info(f"Successfully fetched lyrics from {name}")
 
-                except Exception as e:
-                    self.logger.error(f"Failed to fetch lyrics from {name}: {str(e)}")
-                    continue
+            except Exception as e:
+                self.logger.error(f"Failed to fetch lyrics from {name}: {str(e)}")
+                continue
 
-            if not self.results.lyrics_results:
-                self.logger.warning("No lyrics found from any source")
-
-        except Exception as e:
-            self.logger.error(f"Failed to fetch lyrics: {str(e)}")
-            # Don't raise - we can continue without lyrics
+        if not self.results.lyrics_results:
+            self.logger.warning("No lyrics found from any source")
 
     def transcribe(self) -> None:
         """Run transcription using all available transcribers."""
@@ -234,18 +224,13 @@ class LyricsTranscriber:
 
         for name, transcriber_info in self.transcribers.items():
             self.logger.info(f"Running transcription with {name}")
-            try:
-                result = transcriber_info["instance"].transcribe(self.audio_filepath)
-                if result:
-                    # Add the transcriber name and priority to the result
-                    self.results.transcription_results.append(
-                        TranscriptionResult(name=name, priority=transcriber_info["priority"], result=result)
-                    )
-                    self.logger.debug(f"Transcription completed for {name}")
-
-            except Exception as e:
-                self.logger.error(f"Transcription failed for {name}: {str(e)}", exc_info=True)
-                continue
+            result = transcriber_info["instance"].transcribe(self.audio_filepath)
+            if result:
+                # Add the transcriber name and priority to the result
+                self.results.transcription_results.append(
+                    TranscriptionResult(name=name, priority=transcriber_info["priority"], result=result)
+                )
+                self.logger.debug(f"Transcription completed for {name}")
 
         if not self.results.transcription_results:
             self.logger.warning("No successful transcriptions from any provider")
@@ -254,44 +239,35 @@ class LyricsTranscriber:
         """Run lyrics correction using transcription and internet lyrics."""
         self.logger.info("Starting lyrics correction process")
 
-        try:
-            # Run correction
-            corrected_data = self.corrector.run(
-                transcription_results=self.results.transcription_results, lyrics_results=self.results.lyrics_results
-            )
+        # Run correction
+        corrected_data = self.corrector.run(
+            transcription_results=self.results.transcription_results, lyrics_results=self.results.lyrics_results
+        )
 
-            # Store corrected results
-            self.results.transcription_corrected = corrected_data
-            self.logger.info("Lyrics correction completed")
-
-        except Exception as e:
-            self.logger.error(f"Failed to correct lyrics: {str(e)}", exc_info=True)
+        # Store corrected results
+        self.results.transcription_corrected = corrected_data
+        self.logger.info("Lyrics correction completed")
 
     def generate_outputs(self) -> None:
         """Generate output files."""
         self.logger.info("Generating output files")
 
-        try:
-            output_files = self.output_generator.generate_outputs(
-                transcription_corrected=self.results.transcription_corrected,
-                lyrics_results=self.results.lyrics_results,
-                output_prefix=self.output_prefix,
-                audio_filepath=self.audio_filepath,
-                artist=self.artist,
-                title=self.title,
-            )
+        output_files = self.output_generator.generate_outputs(
+            transcription_corrected=self.results.transcription_corrected,
+            lyrics_results=self.results.lyrics_results,
+            output_prefix=self.output_prefix,
+            audio_filepath=self.audio_filepath,
+            artist=self.artist,
+            title=self.title,
+        )
 
-            # Store all output paths in results
-            self.results.lrc_filepath = output_files.lrc
-            self.results.ass_filepath = output_files.ass
-            self.results.video_filepath = output_files.video
-            self.results.original_txt = output_files.original_txt
-            self.results.corrected_txt = output_files.corrected_txt
-            self.results.corrections_json = output_files.corrections_json
-            self.results.cdg_filepath = output_files.cdg
-            self.results.mp3_filepath = output_files.mp3
-            self.results.cdg_zip_filepath = output_files.cdg_zip
-
-        except Exception as e:
-            self.logger.error(f"Failed to generate outputs: {str(e)}")
-            raise
+        # Store all output paths in results
+        self.results.lrc_filepath = output_files.lrc
+        self.results.ass_filepath = output_files.ass
+        self.results.video_filepath = output_files.video
+        self.results.original_txt = output_files.original_txt
+        self.results.corrected_txt = output_files.corrected_txt
+        self.results.corrections_json = output_files.corrections_json
+        self.results.cdg_filepath = output_files.cdg
+        self.results.mp3_filepath = output_files.mp3
+        self.results.cdg_zip_filepath = output_files.cdg_zip

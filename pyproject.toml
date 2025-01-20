@@ -27,6 +27,8 @@ transformers = "^4.47.1"
 torch = "^2.5.1"
 metaphone = "^0.6"
 nltk = "^3.9.1"
+spacy-syllables = "^3.0.2"
+syllables = "^1.0.9"
 
 [tool.poetry.group.dev.dependencies]
 black = ">=23"

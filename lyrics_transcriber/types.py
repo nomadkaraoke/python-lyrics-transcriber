@@ -99,6 +99,9 @@ class WordCorrection:
     reason: str  # e.g., "matched_in_3_sources", "high_confidence_match"
     alternatives: Dict[str, int]  # Other possible corrections and their occurrence counts
     is_deletion: bool = False  # New field to explicitly mark deletions
+    # New fields for handling word splits
+    split_index: Optional[int] = None  # Position in the split sequence (0-based)
+    split_total: Optional[int] = None  # Total number of words in split
 
     def to_dict(self) -> Dict[str, Any]:
         return asdict(self)
@@ -261,6 +264,7 @@ class GapSequence:
     preceding_anchor: Optional[AnchorSequence]
     following_anchor: Optional[AnchorSequence]
     reference_words: Dict[str, List[str]]
+    reference_words_original: Dict[str, List[str]]  # New field for formatted reference words
     corrections: List[WordCorrection] = field(default_factory=list)
     _corrected_positions: Set[int] = field(default_factory=set, repr=False)
 
@@ -323,6 +327,7 @@ class GapSequence:
             "preceding_anchor": self.preceding_anchor.to_dict() if self.preceding_anchor else None,
             "following_anchor": self.following_anchor.to_dict() if self.following_anchor else None,
             "reference_words": self.reference_words,
+            "reference_words_original": self.reference_words_original,
             "corrections": [c.to_dict() for c in self.corrections],
         }
 
@@ -335,6 +340,7 @@ class GapSequence:
             preceding_anchor=AnchorSequence.from_dict(data["preceding_anchor"]) if data["preceding_anchor"] else None,
             following_anchor=AnchorSequence.from_dict(data["following_anchor"]) if data["following_anchor"] else None,
             reference_words=data["reference_words"],
+            reference_words_original=data.get("reference_words_original", {}),
         )
         # Add any corrections from the data
         if "corrections" in data:

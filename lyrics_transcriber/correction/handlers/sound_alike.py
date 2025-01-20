@@ -77,7 +77,8 @@ class SoundAlikeHandler(GapCorrectionHandler):
             matches: Dict[str, Tuple[List[str], float]] = {}
 
             for source, ref_words in gap.reference_words.items():
-                for j, ref_word in enumerate(ref_words):
+                ref_words_original = gap.reference_words_original[source]  # Get original formatted words
+                for j, (ref_word, ref_word_original) in enumerate(zip(ref_words, ref_words_original)):
                     ref_codes = doublemetaphone(ref_word)
 
                     match_confidence = self._get_match_confidence(word_codes, ref_codes)
@@ -89,9 +90,9 @@ class SoundAlikeHandler(GapCorrectionHandler):
                         adjusted_confidence = match_confidence * position_multiplier
 
                         if adjusted_confidence >= self.similarity_threshold:
-                            if ref_word not in matches:
-                                matches[ref_word] = ([], adjusted_confidence)
-                            matches[ref_word][0].append(source)
+                            if ref_word_original not in matches:  # Use original formatted word as key
+                                matches[ref_word_original] = ([], adjusted_confidence)
+                            matches[ref_word_original][0].append(source)
 
             # Create correction for best match if any found
             if matches:
@@ -104,7 +105,7 @@ class SoundAlikeHandler(GapCorrectionHandler):
                 corrections.append(
                     WordCorrection(
                         original_word=word,
-                        corrected_word=best_match,
+                        corrected_word=best_match,  # Already using original formatted word
                         segment_index=0,
                         word_index=gap.transcription_position + i,
                         confidence=final_confidence,

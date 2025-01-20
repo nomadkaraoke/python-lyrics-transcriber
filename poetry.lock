@@ -295,6 +295,21 @@ gs = ["google-cloud-storage"]
 s3 = ["boto3 (>=1.34.0)"]
 
 [[package]]
+name = "cmudict"
+version = "1.0.32"
+description = "A versioned python wrapper package for The CMU Pronouncing Dictionary data files."
+optional = false
+python-versions = "<4.0,>=3.8"
+files = [
+    {file = "cmudict-1.0.32-py3-none-any.whl", hash = "sha256:b9323664d49d128193c480ec97a3270ab2162469289bb26e950d13b2ef661c41"},
+    {file = "cmudict-1.0.32.tar.gz", hash = "sha256:e84a587bb610b3a837a93f07494e874860cf205ea7f23db652b871093a699f38"},
+]
+
+[package.dependencies]
+importlib-metadata = ">=5"
+importlib-resources = ">=5"
+
+[[package]]
 name = "colorama"
 version = "0.4.6"
 description = "Cross-platform colored terminal text."
@@ -575,6 +590,47 @@ files = [
 
 [package.extras]
 all = ["flake8 (>=7.1.1)", "mypy (>=1.11.2)", "pytest (>=8.3.2)", "ruff (>=0.6.2)"]
+
+[[package]]
+name = "importlib-metadata"
+version = "6.11.0"
+description = "Read metadata from Python packages"
+optional = false
+python-versions = ">=3.8"
+files = [
+    {file = "importlib_metadata-6.11.0-py3-none-any.whl", hash = "sha256:f0afba6205ad8f8947c7d338b5342d5db2afbfd82f9cbef7879a9539cc12eb9b"},
+    {file = "importlib_metadata-6.11.0.tar.gz", hash = "sha256:1231cf92d825c9e03cfc4da076a16de6422c863558229ea0b22b675657463443"},
+]
+
+[package.dependencies]
+zipp = ">=0.5"
+
+[package.extras]
+docs = ["furo", "jaraco.packaging (>=9.3)", "jaraco.tidelift (>=1.4)", "rst.linker (>=1.9)", "sphinx (<7.2.5)", "sphinx (>=3.5)", "sphinx-lint"]
+perf = ["ipython"]
+testing = ["flufl.flake8", "importlib-resources (>=1.3)", "packaging", "pyfakefs", "pytest (>=6)", "pytest-black (>=0.3.7)", "pytest-checkdocs (>=2.4)", "pytest-cov", "pytest-enabler (>=2.2)", "pytest-mypy (>=0.9.1)", "pytest-perf (>=0.9.2)", "pytest-ruff"]
+
+[[package]]
+name = "importlib-resources"
+version = "6.5.2"
+description = "Read resources from Python packages"
+optional = false
+python-versions = ">=3.9"
+files = [
+    {file = "importlib_resources-6.5.2-py3-none-any.whl", hash = "sha256:789cfdc3ed28c78b67a06acb8126751ced69a3d5f79c095a98298cd8a760ccec"},
+    {file = "importlib_resources-6.5.2.tar.gz", hash = "sha256:185f87adef5bcc288449d98fb4fba07cea78bc036455dd44c5fc4a2fe78fed2c"},
+]
+
+[package.dependencies]
+zipp = {version = ">=3.1.0", markers = "python_version < \"3.10\""}
+
+[package.extras]
+check = ["pytest-checkdocs (>=2.4)", "pytest-ruff (>=0.2.1)"]
+cover = ["pytest-cov"]
+doc = ["furo", "jaraco.packaging (>=9.3)", "jaraco.tidelift (>=1.4)", "rst.linker (>=1.9)", "sphinx (>=3.5)", "sphinx-lint"]
+enabler = ["pytest-enabler (>=2.2)"]
+test = ["jaraco.test (>=5.4)", "pytest (>=6,!=8.1.*)", "zipp (>=3.17)"]
+type = ["pytest-mypy"]
 
 [[package]]
 name = "iniconfig"
@@ -1740,6 +1796,21 @@ files = [
 ]
 
 [[package]]
+name = "pyphen"
+version = "0.17.0"
+description = "Pure Python module to hyphenate text"
+optional = false
+python-versions = ">=3.9"
+files = [
+    {file = "pyphen-0.17.0-py3-none-any.whl", hash = "sha256:dad0b2e4aa80f6d70bf06711b2da36c47a756b933c1d0c4cbbab40f643a5958c"},
+    {file = "pyphen-0.17.0.tar.gz", hash = "sha256:1d13acd1ce37a384d7612954ae6c7801bb4c5316da0e2b937b2127ba702a3da4"},
+]
+
+[package.extras]
+doc = ["sphinx", "sphinx_rtd_theme"]
+test = ["pytest", "ruff"]
+
+[[package]]
 name = "pytest"
 version = "8.3.4"
 description = "pytest: simple powerful testing with Python"
@@ -2395,6 +2466,24 @@ files = [
 ]
 
 [[package]]
+name = "spacy-syllables"
+version = "3.0.2"
+description = "spacy pipeline component for syllables"
+optional = false
+python-versions = ">=3.7"
+files = [
+    {file = "spacy_syllables-3.0.2-py3-none-any.whl", hash = "sha256:0c67cfc086624c643f510bb05c53c93c323de4357761b500ce8d9e48942618ed"},
+    {file = "spacy_syllables-3.0.2.tar.gz", hash = "sha256:1f45a8307382daa0c65d32a996d84bd5dd90552f42e675f721342c35ba3d032b"},
+]
+
+[package.dependencies]
+pyphen = ">=0.10.0"
+spacy = ">=3.0.3"
+
+[package.extras]
+dev = ["black (>=23.1.0)", "pytest"]
+
+[[package]]
 name = "spotipy"
 version = "2.24.0"
 description = "A light weight Python library for the Spotify Web API"
@@ -2478,6 +2567,21 @@ files = [
     {file = "striprtf-0.0.28-py3-none-any.whl", hash = "sha256:d441f32aeb730c347ccbbbbb06a057b8df1a4e46df0bdb9fca548c601988929c"},
     {file = "striprtf-0.0.28.tar.gz", hash = "sha256:902806a2e0821faf412130450bdbb84f15e996a729061a51fe7286c620b6fee3"},
 ]
+
+[[package]]
+name = "syllables"
+version = "1.0.9"
+description = "A Python package for estimating the number of syllables in a word."
+optional = false
+python-versions = ">=3.7.2,<4.0.0"
+files = [
+    {file = "syllables-1.0.9-py3-none-any.whl", hash = "sha256:341d1e5dd396589d385a8c462ea483081d344fa5652e02d29d1047a342c88d9b"},
+    {file = "syllables-1.0.9.tar.gz", hash = "sha256:e73be37d7420bd94cae1ec5511dc6392e1305fe0837a89def9bcabad27f91f6f"},
+]
+
+[package.dependencies]
+cmudict = ">=1.0.11,<2.0.0"
+importlib-metadata = ">=5.1,<7.0"
 
 [[package]]
 name = "sympy"
@@ -3000,7 +3104,26 @@ files = [
     {file = "wrapt-1.17.0.tar.gz", hash = "sha256:16187aa2317c731170a88ef35e8937ae0f533c402872c1ee5e6d079fcf320801"},
 ]
 
+[[package]]
+name = "zipp"
+version = "3.21.0"
+description = "Backport of pathlib-compatible object wrapper for zip files"
+optional = false
+python-versions = ">=3.9"
+files = [
+    {file = "zipp-3.21.0-py3-none-any.whl", hash = "sha256:ac1bbe05fd2991f160ebce24ffbac5f6d11d83dc90891255885223d42b3cd931"},
+    {file = "zipp-3.21.0.tar.gz", hash = "sha256:2c9958f6430a2040341a52eb608ed6dd93ef4392e02ffe219417c1b28b5dd1f4"},
+]
+
+[package.extras]
+check = ["pytest-checkdocs (>=2.4)", "pytest-ruff (>=0.2.1)"]
+cover = ["pytest-cov"]
+doc = ["furo", "jaraco.packaging (>=9.3)", "jaraco.tidelift (>=1.4)", "rst.linker (>=1.9)", "sphinx (>=3.5)", "sphinx-lint"]
+enabler = ["pytest-enabler (>=2.2)"]
+test = ["big-O", "importlib-resources", "jaraco.functools", "jaraco.itertools", "jaraco.test", "more-itertools", "pytest (>=6,!=8.1.*)", "pytest-ignore-flaky"]
+type = ["pytest-mypy"]
+
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.9,<3.13"
-content-hash = "9e01fa5163b169536171e64f849e1ac83162968e6c577aa286cc8e31fb34a10c"
+content-hash = "bd9573a136378da98cf43013a212f6ec3debd1ccef04b8777030dfc99a3c1fff"
