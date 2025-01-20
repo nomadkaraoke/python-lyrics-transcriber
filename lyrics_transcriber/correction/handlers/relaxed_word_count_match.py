@@ -1,25 +1,26 @@
-from typing import List
+from typing import List, Tuple, Dict, Any, Optional
 
 from lyrics_transcriber.types import GapSequence, WordCorrection
 from lyrics_transcriber.correction.handlers.base import GapCorrectionHandler
+from lyrics_transcriber.correction.handlers.word_operations import WordOperations
 
 
 class RelaxedWordCountMatchHandler(GapCorrectionHandler):
     """Handles gaps where at least one reference source has matching word count."""
 
-    def can_handle(self, gap: GapSequence) -> bool:
+    def can_handle(self, gap: GapSequence) -> Tuple[bool, Dict[str, Any]]:
         # Must have reference words
         if not gap.reference_words:
-            return False
+            return False, {}
 
         # Check if any source has matching word count
         for words in gap.reference_words.values():
             if len(words) == gap.length:
-                return True
+                return True, {}
 
-        return False
+        return False, {}
 
-    def handle(self, gap: GapSequence) -> List[WordCorrection]:
+    def handle(self, gap: GapSequence, data: Optional[Dict[str, Any]] = None) -> List[WordCorrection]:
         corrections = []
 
         # Find the first source that has matching word count
@@ -37,15 +38,13 @@ class RelaxedWordCountMatchHandler(GapCorrectionHandler):
         for i, (orig_word, ref_word, ref_word_original) in enumerate(zip(gap.words, reference_words, reference_words_original)):
             if orig_word.lower() != ref_word.lower():
                 corrections.append(
-                    WordCorrection(
+                    WordOperations.create_word_replacement_correction(
                         original_word=orig_word,
-                        corrected_word=ref_word_original,  # Use the original formatted word
-                        segment_index=0,  # This will be updated when applying corrections
+                        corrected_word=ref_word_original,
                         word_index=gap.transcription_position + i,
-                        confidence=1.0,
                         source=matching_source,
+                        confidence=1.0,
                         reason=f"RelaxedWordCountMatchHandler: Source '{matching_source}' had matching word count",
-                        alternatives={},
                     )
                 )
 

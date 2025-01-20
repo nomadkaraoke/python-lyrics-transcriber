@@ -50,6 +50,10 @@ export interface GapSequence {
         spotify?: string[]
         genius?: string[]
     }
+    reference_words_original?: {
+        spotify?: string[]
+        genius?: string[]
+    }
     corrections: Correction[]
 }
 

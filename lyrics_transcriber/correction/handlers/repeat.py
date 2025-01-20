@@ -1,9 +1,10 @@
-from typing import List, Dict, Optional
+from typing import List, Dict, Optional, Tuple, Any
 from lyrics_transcriber.types import GapSequence, WordCorrection
+from lyrics_transcriber.correction.handlers.base import GapCorrectionHandler
 import logging
 
 
-class RepeatCorrectionHandler:
+class RepeatCorrectionHandler(GapCorrectionHandler):
     """Handler that applies corrections that were previously made by other handlers."""
 
     def __init__(self, logger: Optional[logging.Logger] = None, confidence_threshold: float = 0.7):
@@ -11,15 +12,15 @@ class RepeatCorrectionHandler:
         self.confidence_threshold = confidence_threshold
         self.previous_corrections: List[WordCorrection] = []
 
-    def can_handle(self, gap: GapSequence) -> bool:
+    def can_handle(self, gap: GapSequence) -> Tuple[bool, Dict[str, Any]]:
         """Check if any words in the gap match previous corrections."""
-        return bool(self.previous_corrections)
+        return bool(self.previous_corrections), {}
 
     def set_previous_corrections(self, corrections: List[WordCorrection]) -> None:
         """Store corrections from previous handlers to use as reference."""
         self.previous_corrections = corrections
 
-    def handle(self, gap: GapSequence) -> List[WordCorrection]:
+    def handle(self, gap: GapSequence, data: Optional[Dict[str, Any]] = None) -> List[WordCorrection]:
         """Apply previous corrections to matching words in the current gap."""
         corrections = []
 

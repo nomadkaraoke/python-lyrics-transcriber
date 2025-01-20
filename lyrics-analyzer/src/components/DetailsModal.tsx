@@ -71,8 +71,17 @@ export default function DetailsModal({ open, content, onClose }: DetailsModalPro
             case 'gap':
                 return (
                     <Grid container spacing={2}>
-                        <GridItem title="Current Word" value={`"${content.data.word}"`} />
-                        <GridItem title="Full Text" value={`"${content.data.text}"`} />
+                        <GridItem
+                            title="Transcribed Text"
+                            value={`"${content.data.text}"`}
+                        />
+                        <GridItem
+                            title="Corrected Text"
+                            value={`"${content.data.words.map(word => {
+                                const correction = content.data.corrections.find(c => c.original_word === word);
+                                return correction ? correction.corrected_word : word;
+                            }).join(' ')}"`}
+                        />
                         <GridItem title="Position" value={content.data.position} />
                         <GridItem title="Length" value={`${content.data.length} words`} />
                         {content.data.corrections.length > 0 && (

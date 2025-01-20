@@ -1,4 +1,4 @@
-from typing import List, Dict, Tuple, Optional
+from typing import List, Dict, Tuple, Optional, Any
 import logging
 from metaphone import doublemetaphone
 from lyrics_transcriber.types import GapSequence, WordCorrection
@@ -35,16 +35,16 @@ class SoundAlikeHandler(GapCorrectionHandler):
         self.logger = logger or logging.getLogger(__name__)
         self.similarity_threshold = similarity_threshold
 
-    def can_handle(self, gap: GapSequence) -> bool:
+    def can_handle(self, gap: GapSequence) -> Tuple[bool, Dict[str, Any]]:
         # Must have reference words
         if not gap.reference_words:
             self.logger.debug("No reference words available")
-            return False
+            return False, {}
 
         # Gap must have words
         if not gap.words:
             self.logger.debug("No gap words available")
-            return False
+            return False, {}
 
         # Check if any gap word has a metaphone match with any reference word
         for word in gap.words:
@@ -56,11 +56,11 @@ class SoundAlikeHandler(GapCorrectionHandler):
                     self.logger.debug(f"Reference word '{ref_word}' has metaphone codes: {ref_codes}")
                     if self._codes_match(word_codes, ref_codes):
                         self.logger.debug(f"Found metaphone match between '{word}' and '{ref_word}'")
-                        return True
+                        return True, {}
         self.logger.debug("No metaphone matches found")
-        return False
+        return False, {}
 
-    def handle(self, gap: GapSequence) -> List[WordCorrection]:
+    def handle(self, gap: GapSequence, data: Optional[Dict[str, Any]] = None) -> List[WordCorrection]:
         corrections = []
 
         # For each word in the gap

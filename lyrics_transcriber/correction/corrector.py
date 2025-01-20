@@ -39,8 +39,7 @@ class LyricsCorrector:
             ExtraWordsHandler(),
             RepeatCorrectionHandler(),
             SoundAlikeHandler(),
-            LevenshteinHandler(),  # Last resort
-            # HumanHandler(),  # Open web UI for human to review and correct
+            LevenshteinHandler(),
         ]
 
     def run(self, transcription_results: List[TranscriptionResult], lyrics_results: List[LyricsData]) -> CorrectionResult:
@@ -142,9 +141,11 @@ class LyricsCorrector:
                 if isinstance(handler, RepeatCorrectionHandler):
                     handler.set_previous_corrections(all_corrections)
 
-                if handler.can_handle(gap):
+                can_handle, handler_data = handler.can_handle(gap)
+                if can_handle:
                     self.logger.debug(f"{handler.__class__.__name__} can handle gap")
-                    corrections = handler.handle(gap)
+                    # Only pass handler_data if it's not empty
+                    corrections = handler.handle(gap, handler_data if handler_data else None)
                     if corrections:
                         # Add corrections to gap and track corrected positions
                         for correction in corrections:

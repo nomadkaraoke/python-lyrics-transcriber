@@ -1,4 +1,4 @@
-from typing import List, Optional
+from typing import List, Optional, Tuple, Dict, Any
 import string
 import Levenshtein
 import logging
@@ -37,15 +37,15 @@ class LevenshteinHandler(GapCorrectionHandler):
         self.similarity_threshold = similarity_threshold
         self.logger = logger or logging.getLogger(__name__)
 
-    def can_handle(self, gap: GapSequence) -> bool:
+    def can_handle(self, gap: GapSequence) -> Tuple[bool, Dict[str, Any]]:
         """Check if we can handle this gap - we'll try if there are reference words."""
         if not gap.reference_words:
             self.logger.debug("No reference words available")
-            return False
+            return False, {}
 
         if not gap.words:
             self.logger.debug("No gap words available")
-            return False
+            return False, {}
 
         # Check if any word has sufficient similarity to reference
         for i, word in enumerate(gap.words):
@@ -54,12 +54,12 @@ class LevenshteinHandler(GapCorrectionHandler):
                     similarity = self._get_string_similarity(word, ref_words[i])
                     if similarity >= self.similarity_threshold:
                         self.logger.debug(f"Found similar word: '{word}' -> '{ref_words[i]}' ({similarity:.2f})")
-                        return True
+                        return True, {}
 
         self.logger.debug("No words meet similarity threshold")
-        return False
+        return False, {}
 
-    def handle(self, gap: GapSequence) -> List[WordCorrection]:
+    def handle(self, gap: GapSequence, data: Optional[Dict[str, Any]] = None) -> List[WordCorrection]:
         """Try to correct words based on string similarity."""
         corrections = []
 
