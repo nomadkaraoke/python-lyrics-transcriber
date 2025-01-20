@@ -8,6 +8,7 @@ class Style:
     order = [
         "Name",
         "Fontname",
+        "Fontpath",
         "Fontsize",
         "PrimaryColour",
         "SecondaryColour",
@@ -38,6 +39,7 @@ class Style:
 
         self.Name = ""
         self.Fontname = ""
+        self.Fontpath = ""
         self.Fontsize = 1.0
         self.PrimaryColour = (255, 255, 255, 255)
         self.SecondaryColour = (255, 255, 255, 255)
@@ -99,6 +101,7 @@ class Style:
 
         target.Name = source.Name
         target.Fontname = source.Fontname
+        target.Fontpath = source.Fontpath
         target.Fontsize = source.Fontsize
         target.PrimaryColour = source.PrimaryColour
         target.SecondaryColour = source.SecondaryColour
@@ -131,6 +134,7 @@ class Style:
             and not other.fake
             and (names_can_differ or self.Name == other.Name)
             and self.Fontname == other.Fontname
+            and self.Fontpath == other.Fontpath
             and self.Fontsize == other.Fontsize
             and self.PrimaryColour == other.PrimaryColour
             and self.SecondaryColour == other.SecondaryColour
@@ -158,6 +162,7 @@ class Style:
 Style.formatters = {
     "Name": (Formatters.same, Formatters.same),
     "Fontname": (Formatters.same, Formatters.same),
+    "Fontpath": (Formatters.same, Formatters.same),
     "Fontsize": (Formatters.str_to_number, Formatters.number_to_str),
     "PrimaryColour": (Formatters.str_to_color, Formatters.color_to_str),
     "SecondaryColour": (Formatters.str_to_color, Formatters.color_to_str),

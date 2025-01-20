@@ -165,6 +165,7 @@ class LyricsScreen:
             self.lines = []
 
         # Update video height in config
+        self.config.video_width = self.video_size[0]
         self.config.video_height = self.video_size[1]
 
         # Initialize strategies
@@ -221,7 +222,6 @@ class LyricsScreen:
             line_events = line.create_ass_events(
                 state=line_state, 
                 style=style, 
-                video_width=self.video_size[0], 
                 config=self.config,
                 previous_end_time=previous_end_time
             )

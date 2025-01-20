@@ -40,7 +40,7 @@ class SubtitlesGenerator:
         self.video_resolution = video_resolution
         self.font_size = font_size
         self.styles = styles
-        self.config = ScreenConfig(line_height=line_height, video_height=video_resolution[1])
+        self.config = ScreenConfig(line_height=line_height, video_width=video_resolution[0], video_height=video_resolution[1])
         self.logger = logger or logging.getLogger(__name__)
 
     def _get_output_path(self, output_prefix: str, extension: str) -> str:
@@ -149,7 +149,7 @@ class SubtitlesGenerator:
                 self.logger.debug("  Created new screen")
 
             # Add line to current screen
-            line = LyricsLine(logger=self.logger, segment=segment)
+            line = LyricsLine(logger=self.logger, segment=segment, screen_config=self.config)
             current_screen.lines.append(line)
             self.logger.debug(f"  Added line to screen (now has {len(current_screen.lines)} lines)")
 
@@ -211,6 +211,7 @@ class SubtitlesGenerator:
         a.styles_format = [
             "Name",  # The name of the Style. Case sensitive. Cannot include commas.
             "Fontname",  # The fontname as used by Windows. Case-sensitive.
+            "Fontpath",  # The path to the font file.
             "Fontsize",  # Font size
             "PrimaryColour",  # This is the colour that a subtitle will normally appear in.
             "SecondaryColour",  # This colour may be used instead of the Primary colour when a subtitle is automatically shifted to prevent an onscreen collsion, to distinguish the different subtitles.
@@ -234,11 +235,16 @@ class SubtitlesGenerator:
             "Encoding",  #
         ]
 
+        # Get font settings from styles
+        karaoke_styles = self.styles.get("karaoke", {})
+        font_path = karaoke_styles.get("font_path")
+
         style = Style()
 
         style.type = "Style"
         style.Name = self.styles["karaoke"]["ass_name"]
         style.Fontname = self.styles["karaoke"]["font"]
+        style.Fontpath = font_path
         style.Fontsize = fontsize
 
         style.Alignment = ALIGN_TOP_CENTER

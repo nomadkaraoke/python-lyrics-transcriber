@@ -32,6 +32,8 @@ class SectionScreen:
             self.logger = logging.getLogger(__name__)
         if self.config is None:
             self.config = ScreenConfig(line_height=self.line_height)
+        
+        self.config.video_width = self.video_size[0]
         self.config.video_height = self.video_size[1]
 
     def _calculate_duration(self):
