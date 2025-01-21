@@ -248,6 +248,14 @@ class LyricsTranscriber:
         self.results.transcription_corrected = corrected_data
         self.logger.info("Lyrics correction completed")
 
+        # Add human review step
+        if self.output_config.enable_review:  # We'll need to add this config option
+            from ..review import start_review_server
+
+            self.logger.info("Starting human review process")
+            self.results.transcription_corrected = start_review_server(corrected_data)
+            self.logger.info("Human review completed")
+
     def generate_outputs(self) -> None:
         """Generate output files."""
         self.logger.info("Generating output files")

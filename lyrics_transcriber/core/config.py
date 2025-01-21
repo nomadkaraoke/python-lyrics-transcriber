@@ -32,3 +32,4 @@ class OutputConfig:
     render_video: bool = False
     generate_cdg: bool = False
     video_resolution: str = "360p"
+    enable_review: bool = True

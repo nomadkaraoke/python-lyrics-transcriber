@@ -20,6 +20,16 @@ class Word:
             del d["confidence"]
         return d
 
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> "Word":
+        """Create Word from dictionary."""
+        return cls(
+            text=data["text"],
+            start_time=data["start_time"],
+            end_time=data["end_time"],
+            confidence=data.get("confidence"),  # Use get() since confidence is optional
+        )
+
 
 @dataclass
 class LyricsSegment:
@@ -38,6 +48,16 @@ class LyricsSegment:
             "start_time": self.start_time,
             "end_time": self.end_time,
         }
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> "LyricsSegment":
+        """Create LyricsSegment from dictionary."""
+        return cls(
+            text=data["text"],
+            words=[Word.from_dict(w) for w in data["words"]],
+            start_time=data["start_time"],
+            end_time=data["end_time"],
+        )
 
 
 @dataclass
@@ -390,3 +410,21 @@ class CorrectionResult:
             "corrected_segments": [s.to_dict() for s in self.corrected_segments],
             "metadata": self.metadata,
         }
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> "CorrectionResult":
+        """Create CorrectionResult from dictionary."""
+        return cls(
+            original_segments=[LyricsSegment.from_dict(s) for s in data["original_segments"]],
+            corrected_segments=[LyricsSegment.from_dict(s) for s in data["corrected_segments"]],
+            corrected_text=data["corrected_text"],
+            corrections=[WordCorrection.from_dict(c) for c in data["corrections"]],
+            corrections_made=data["corrections_made"],
+            confidence=data["confidence"],
+            transcribed_text=data["transcribed_text"],
+            reference_texts=data["reference_texts"],
+            anchor_sequences=[AnchorSequence.from_dict(a) for a in data["anchor_sequences"]],
+            gap_sequences=[GapSequence.from_dict(g) for g in data["gap_sequences"]],
+            resized_segments=[LyricsSegment.from_dict(s) for s in data["resized_segments"]],
+            metadata=data["metadata"],
+        )
