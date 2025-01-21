@@ -1,16 +1,20 @@
 import { useState, useCallback } from 'react'
 import { Box, Grid, Paper, Typography, Button, useTheme, useMediaQuery } from '@mui/material'
 import UploadFileIcon from '@mui/icons-material/UploadFile'
-import { LyricsData } from '../types'
+import { LyricsData, CorrectionData } from '../types'
 import TranscriptionView from './TranscriptionView'
 import ReferenceView from './ReferenceView'
 import DetailsModal from './DetailsModal'
 import { COLORS } from './constants'
+import { ApiClient } from '../api'
+import LockIcon from '@mui/icons-material/Lock'
 
 interface LyricsAnalyzerProps {
-    data: LyricsData
+    data: CorrectionData
     onFileLoad: () => void
     onShowMetadata: () => void
+    apiClient: ApiClient | null
+    isReadOnly: boolean
 }
 
 export type ModalContent = {
@@ -28,7 +32,7 @@ export type ModalContent = {
 
 export type FlashType = 'anchor' | 'corrected' | 'uncorrected' | null
 
-export default function LyricsAnalyzer({ data, onFileLoad, onShowMetadata }: LyricsAnalyzerProps) {
+export default function LyricsAnalyzer({ data, onFileLoad, onShowMetadata, apiClient, isReadOnly }: LyricsAnalyzerProps) {
     const [modalContent, setModalContent] = useState<ModalContent | null>(null)
     const [flashingType, setFlashingType] = useState<FlashType>(null)
     const theme = useTheme()
@@ -52,13 +56,21 @@ export default function LyricsAnalyzer({ data, onFileLoad, onShowMetadata }: Lyr
 
     return (
         <Box>
-            <Box sx={{ 
-                display: 'flex', 
+            {isReadOnly && (
+                <Box sx={{ display: 'flex', alignItems: 'center', mb: 2, color: 'text.secondary' }}>
+                    <LockIcon sx={{ mr: 1 }} />
+                    <Typography variant="body2">
+                        View Only Mode
+                    </Typography>
+                </Box>
+            )}
+            <Box sx={{
+                display: 'flex',
                 flexDirection: isMobile ? 'column' : 'row',
                 gap: 2,
-                justifyContent: 'space-between', 
+                justifyContent: 'space-between',
                 alignItems: isMobile ? 'stretch' : 'center',
-                mb: 3 
+                mb: 3
             }}>
                 <Typography variant="h4" sx={{ fontSize: isMobile ? '1.75rem' : '2.125rem' }}>
                     Lyrics Analysis
@@ -226,6 +238,12 @@ export default function LyricsAnalyzer({ data, onFileLoad, onShowMetadata }: Lyr
                     onClose={() => setModalContent(null)}
                     open={Boolean(modalContent)}
                 />
+            )}
+
+            {!isReadOnly && apiClient && (
+                <Box sx={{ mt: 2 }}>
+                    {/* Edit interface coming soon */}
+                </Box>
             )}
         </Box>
     )

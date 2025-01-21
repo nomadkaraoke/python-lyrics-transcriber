@@ -1,13 +1,45 @@
-import { useState } from 'react'
-import { Box, Button, Typography, Grid, Paper, Modal } from '@mui/material'
+import { useState, useEffect } from 'react'
+import { Box, Button, Typography, Grid, Paper, Modal, Alert } from '@mui/material'
 import UploadFileIcon from '@mui/icons-material/UploadFile'
 import LyricsAnalyzer from './components/LyricsAnalyzer'
-import { LyricsData } from './types'
+import { CorrectionData } from './types'
 import { COLORS } from './components/constants'
+import { ApiClient, LiveApiClient, FileOnlyClient } from './api'
 
 export default function App() {
-  const [data, setData] = useState<LyricsData | null>(null)
+  const [data, setData] = useState<CorrectionData | null>(null)
   const [showMetadata, setShowMetadata] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [apiClient, setApiClient] = useState<ApiClient | null>(null)
+  const [isReadOnly, setIsReadOnly] = useState(true)
+
+  useEffect(() => {
+    // Parse query parameters
+    const params = new URLSearchParams(window.location.search)
+    const encodedApiUrl = params.get('baseApiUrl')
+
+    if (encodedApiUrl) {
+      const baseApiUrl = decodeURIComponent(encodedApiUrl)
+      setApiClient(new LiveApiClient(baseApiUrl))
+      setIsReadOnly(false)
+      // Fetch initial data
+      fetchData(baseApiUrl)
+    } else {
+      setApiClient(new FileOnlyClient())
+      setIsReadOnly(true)
+    }
+  }, [])
+
+  const fetchData = async (baseUrl: string) => {
+    try {
+      const client = new LiveApiClient(baseUrl)
+      const data = await client.getCorrectionData()
+      setData(data)
+    } catch (err) {
+      const error = err as Error
+      setError(`Failed to fetch data: ${error.message}`)
+    }
+  }
 
   const handleFileLoad = async () => {
     const input = document.createElement('input')
@@ -20,11 +52,11 @@ export default function App() {
 
       try {
         const text = await file.text()
-        const newData = JSON.parse(text)
+        const newData = JSON.parse(text) as CorrectionData
         setData(newData)
-      } catch (error) {
-        console.error('Error loading file:', error)
-        alert('Error loading file. Please make sure it is a valid JSON file.')
+      } catch (err) {
+        const error = err as Error
+        setError(`Error loading file: ${error.message}. Please make sure it is a valid JSON file.`)
       }
     }
 
@@ -56,14 +88,6 @@ export default function App() {
           </Typography>
           <Box sx={{ mb: 2 }}>
             <Typography variant="subtitle2" color="text.secondary">
-              Strategy
-            </Typography>
-            <Typography>
-              {data.metadata.correction_strategy}
-            </Typography>
-          </Box>
-          <Box sx={{ mb: 2 }}>
-            <Typography variant="subtitle2" color="text.secondary">
               Total Words
             </Typography>
             <Typography>
@@ -87,6 +111,16 @@ export default function App() {
   if (!data) {
     return (
       <Box sx={{ p: 3 }}>
+        {error && (
+          <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError(null)}>
+            {error}
+          </Alert>
+        )}
+        {isReadOnly && (
+          <Alert severity="info" sx={{ mb: 2 }}>
+            Running in read-only mode. Connect to an API to enable editing.
+          </Alert>
+        )}
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
           <Typography variant="h4">
             Lyrics Analysis
@@ -208,10 +242,22 @@ export default function App() {
 
   return (
     <Box sx={{ p: 3 }}>
+      {error && (
+        <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError(null)}>
+          {error}
+        </Alert>
+      )}
+      {isReadOnly && (
+        <Alert severity="info" sx={{ mb: 2 }}>
+          Running in read-only mode. Connect to an API to enable editing.
+        </Alert>
+      )}
       <LyricsAnalyzer
         data={data}
         onFileLoad={handleFileLoad}
         onShowMetadata={() => setShowMetadata(true)}
+        apiClient={apiClient}
+        isReadOnly={isReadOnly}
       />
       {renderMetadataModal()}
     </Box>

@@ -6,8 +6,8 @@ from ..types import CorrectionResult
 import time
 import subprocess
 import os
-import signal
 import atexit
+import urllib.parse
 
 logger = logging.getLogger(__name__)
 
@@ -113,7 +113,9 @@ def start_review_server(correction_result: CorrectionResult) -> CorrectionResult
     logger.info("Server thread started")
 
     # Open browser
-    webbrowser.open("http://localhost:5173")
+    base_api_url = "http://localhost:8000/api"
+    encoded_api_url = urllib.parse.quote(base_api_url, safe="")
+    webbrowser.open(f"http://localhost:5173?baseApiUrl={encoded_api_url}")
     logger.info("Opened browser for review")
 
     # Wait for review to complete
