@@ -140,6 +140,7 @@ export default function LyricsAnalyzer({ data, onFileLoad, apiClient, isReadOnly
                         gaps={data.gap_sequences}
                         onElementClick={setModalContent}
                         flashingType={flashingType}
+                        corrected_segments={data.corrected_segments}
                     />
                 </Grid>
             </Grid>

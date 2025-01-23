@@ -1,6 +1,6 @@
 import { useState } from 'react'
-import { Paper, Typography, Box, Button } from '@mui/material'
-import { LyricsData } from '../types'
+import { Paper, Typography, Box, Button, Tooltip } from '@mui/material'
+import { LyricsData, LyricsSegment } from '../types'
 import { FlashType, ModalContent } from './LyricsAnalyzer'
 import { COLORS } from './constants'
 import { HighlightedWord } from './styles'
@@ -11,6 +11,7 @@ interface ReferenceViewProps {
     gaps: LyricsData['gap_sequences']
     onElementClick: (content: ModalContent) => void
     flashingType: FlashType
+    corrected_segments: LyricsSegment[]
 }
 
 export default function ReferenceView({
@@ -19,6 +20,7 @@ export default function ReferenceView({
     gaps,
     onElementClick,
     flashingType,
+    corrected_segments,
 }: ReferenceViewProps) {
     const [currentSource, setCurrentSource] = useState<'genius' | 'spotify'>('genius')
 
@@ -26,18 +28,62 @@ export default function ReferenceView({
         const text = referenceTexts[currentSource]
         if (!text) return null
 
-        const words = text.split(/(\s+)/)
+        // Normalize reference text by removing all newlines and reducing multiple spaces to single
+        const normalizedRefText = text.replace(/\n/g, ' ').replace(/\s+/g, ' ').trim()
+        
+        // Split into words while preserving spaces
+        const words = normalizedRefText.split(/(\s+)/)
         let currentIndex = 0
 
-        return words.map((word, index) => {
+        // Track which indices should have line breaks based on segments
+        const newlineIndices = new Set(
+            corrected_segments.slice(0, -1).map(segment => 
+                segment.text.split(/\s+/).length
+            ).reduce<number[]>((acc, len) => {
+                const lastIndex = acc.length ? acc[acc.length - 1] : 0
+                acc.push(lastIndex + len)
+                return acc
+            }, [])
+        )
+
+        const elements: React.ReactNode[] = []
+
+        words.forEach((word, index) => {
+            // Skip whitespace without incrementing word index
             if (/^\s+$/.test(word)) {
-                return word
+                elements.push(word)
+                return
+            }
+
+            const thisWordIndex = currentIndex // Store current position for this word
+
+            if (newlineIndices.has(currentIndex)) {
+                elements.push(
+                    <Tooltip 
+                        key={`newline-${currentIndex}`}
+                        title={`Newline inserted after word position ${currentIndex}`}
+                    >
+                        <span 
+                            style={{ 
+                                cursor: 'help',
+                                color: '#666',
+                                backgroundColor: '#eee',
+                                padding: '0 4px',
+                                borderRadius: '3px',
+                                margin: '0 2px'
+                            }}
+                        >
+                            ↵
+                        </span>
+                    </Tooltip>
+                )
+                elements.push('\n')
             }
 
             const anchor = anchors.find(a => {
                 const position = a.reference_positions[currentSource]
                 if (position === undefined) return false
-                return currentIndex >= position && currentIndex < position + a.length
+                return thisWordIndex >= position && thisWordIndex < position + a.length
             })
 
             const correctedGap = gaps.find(g => {
@@ -45,7 +91,7 @@ export default function ReferenceView({
                 const correction = g.corrections[0]
                 const position = correction.reference_positions?.[currentSource]
                 if (position === undefined) return false
-                return currentIndex >= position && currentIndex < position + correction.length
+                return thisWordIndex >= position && thisWordIndex < position + correction.length
             })
 
             const shouldFlash = Boolean(
@@ -53,7 +99,7 @@ export default function ReferenceView({
                 (flashingType === 'corrected' && correctedGap)
             )
 
-            const wordElement = (
+            elements.push(
                 <HighlightedWord
                     key={`${word}-${index}-${shouldFlash}`}
                     shouldFlash={shouldFlash}
@@ -73,7 +119,7 @@ export default function ReferenceView({
                                 type: 'anchor',
                                 data: {
                                     ...anchor,
-                                    position: currentIndex
+                                    position: thisWordIndex
                                 }
                             })
                         } else if (correctedGap) {
@@ -81,7 +127,7 @@ export default function ReferenceView({
                                 type: 'gap',
                                 data: {
                                     ...correctedGap,
-                                    position: currentIndex,
+                                    position: thisWordIndex,
                                     word: word
                                 }
                             })
@@ -92,9 +138,10 @@ export default function ReferenceView({
                 </HighlightedWord>
             )
 
-            currentIndex++
-            return wordElement
+            currentIndex++ // Increment after using the current position
         })
+
+        return elements
     }
 
     return (
