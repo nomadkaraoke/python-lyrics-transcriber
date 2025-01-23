@@ -34,6 +34,9 @@ class RelaxedWordCountMatchHandler(GapCorrectionHandler):
                 reference_words_original = gap.reference_words_original[source]
                 break
 
+        # Use the centralized method to calculate reference positions for the matching source
+        reference_positions = WordOperations.calculate_reference_positions(gap, [matching_source])
+
         # Since we found a source with matching word count, we can correct using that source
         for i, (orig_word, ref_word, ref_word_original) in enumerate(zip(gap.words, reference_words, reference_words_original)):
             if orig_word.lower() != ref_word.lower():
@@ -45,6 +48,7 @@ class RelaxedWordCountMatchHandler(GapCorrectionHandler):
                         source=matching_source,
                         confidence=1.0,
                         reason=f"RelaxedWordCountMatchHandler: Source '{matching_source}' had matching word count",
+                        reference_positions=reference_positions,
                     )
                 )
 

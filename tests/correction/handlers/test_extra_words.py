@@ -1,10 +1,10 @@
 import pytest
-from lyrics_transcriber.correction.handlers.extra_words import ExtraWordsHandler
+from lyrics_transcriber.correction.handlers.extend_anchor import ExtendAnchorHandler
 from lyrics_transcriber.types import GapSequence, WordCorrection
 
 
 def test_can_handle_real_world_example():
-    handler = ExtraWordsHandler()
+    handler = ExtendAnchorHandler()
     gap = GapSequence(
         words=("martyr", "youre", "a"),
         transcription_position=3,
@@ -17,7 +17,7 @@ def test_can_handle_real_world_example():
 
 
 def test_handle_real_world_example():
-    handler = ExtraWordsHandler()
+    handler = ExtendAnchorHandler()
     gap = GapSequence(
         words=("martyr", "youre", "a"),
         transcription_position=3,
@@ -39,14 +39,14 @@ def test_handle_real_world_example():
 
 
 def test_cannot_handle_no_reference():
-    handler = ExtraWordsHandler()
+    handler = ExtendAnchorHandler()
     gap = GapSequence(words=("hello", "world"), transcription_position=0, preceding_anchor=None, following_anchor=None, reference_words={})
 
     assert handler.can_handle(gap) is False
 
 
 def test_cannot_handle_no_matching_words():
-    handler = ExtraWordsHandler()
+    handler = ExtendAnchorHandler()
     gap = GapSequence(
         words=("hello", "world", "test"),
         transcription_position=0,
@@ -59,7 +59,7 @@ def test_cannot_handle_no_matching_words():
 
 
 def test_handle_with_matching_first_word():
-    handler = ExtraWordsHandler()
+    handler = ExtendAnchorHandler()
     gap = GapSequence(
         words=("hello", "extra", "world"),
         transcription_position=0,
@@ -79,7 +79,7 @@ def test_handle_with_matching_first_word():
 
 
 def test_handle_real_world_disagreeing_references():
-    handler = ExtraWordsHandler()
+    handler = ExtendAnchorHandler()
     gap = GapSequence(
         words=("martyr", "youre", "a"),
         transcription_position=3,
@@ -109,7 +109,7 @@ def test_handle_real_world_disagreeing_references():
 
 
 def test_handle_multiple_matching_words():
-    handler = ExtraWordsHandler()
+    handler = ExtendAnchorHandler()
     gap = GapSequence(
         words=("hello", "world", "extra", "words"),
         transcription_position=0,

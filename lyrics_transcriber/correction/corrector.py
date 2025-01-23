@@ -9,7 +9,7 @@ from lyrics_transcriber.types import GapSequence, LyricsData, TranscriptionResul
 from lyrics_transcriber.correction.anchor_sequence import AnchorSequenceFinder
 from lyrics_transcriber.correction.handlers.base import GapCorrectionHandler
 from lyrics_transcriber.correction.handlers.word_count_match import WordCountMatchHandler
-from lyrics_transcriber.correction.handlers.extra_words import ExtraWordsHandler
+from lyrics_transcriber.correction.handlers.extend_anchor import ExtendAnchorHandler
 from lyrics_transcriber.correction.handlers.sound_alike import SoundAlikeHandler
 from lyrics_transcriber.correction.handlers.levenshtein import LevenshteinHandler
 from lyrics_transcriber.correction.handlers.repeat import RepeatCorrectionHandler
@@ -36,7 +36,7 @@ class LyricsCorrector:
             RelaxedWordCountMatchHandler(),
             NoSpacePunctuationMatchHandler(),
             SyllablesMatchHandler(),
-            ExtraWordsHandler(),
+            ExtendAnchorHandler(),
             RepeatCorrectionHandler(),
             SoundAlikeHandler(),
             LevenshteinHandler(),
@@ -129,10 +129,17 @@ class LyricsCorrector:
 
         for gap in gap_sequences:
             self.logger.debug(f"Processing gap: {gap.text}")
+            high_confidence_positions = set()  # Track positions that have high confidence corrections
+            corrected_positions = set()  # Track all corrected positions regardless of confidence
 
             # Try each handler until gap is fully corrected
             for handler in self.handlers:
-                if gap.is_fully_corrected:
+                # Skip if all words have high confidence corrections
+                uncorrected_positions = set(range(gap.transcription_position, gap.transcription_position + gap.length))
+                uncorrected_positions -= corrected_positions  # Skip any corrected positions
+
+                if not uncorrected_positions:
+                    self.logger.debug("All words have been corrected, skipping remaining handlers")
                     break
 
                 self.logger.debug(f"Trying handler {handler.__class__.__name__}")
@@ -149,18 +156,30 @@ class LyricsCorrector:
                     if corrections:
                         # Add corrections to gap and track corrected positions
                         for correction in corrections:
-                            gap.add_correction(correction)
+                            # Skip if this position was already corrected
+                            if correction.original_position in corrected_positions:
+                                continue
 
-                        self.logger.debug(
-                            f"{handler.__class__.__name__} made {len(corrections)} corrections: "
-                            f"{[f'{c.original_word}->{c.corrected_word}' for c in corrections]}"
-                        )
-                        all_corrections.extend(corrections)
+                            gap.add_correction(correction)
+                            corrected_positions.add(correction.original_position)
+                            # Track positions with high confidence corrections (>= 0.9)
+                            if correction.confidence >= 0.9:
+                                high_confidence_positions.add(correction.original_position)
+
+                        # Filter out corrections for already corrected positions
+                        new_corrections = [c for c in corrections if c.original_position in corrected_positions]
+                        if new_corrections:
+                            self.logger.debug(
+                                f"{handler.__class__.__name__} made {len(new_corrections)} corrections: "
+                                f"{[f'{c.original_word}->{c.corrected_word}' for c in new_corrections]}"
+                            )
+                            all_corrections.extend(new_corrections)
 
                         # Log remaining uncorrected words
                         if not gap.is_fully_corrected:
-                            uncorrected = [word for _, word in gap.uncorrected_words]
-                            self.logger.debug(f"Uncorrected words remaining: {', '.join(uncorrected)}")
+                            uncorrected = [word for pos, word in gap.uncorrected_words if pos not in corrected_positions]
+                            if uncorrected:
+                                self.logger.debug(f"Uncorrected words remaining: {', '.join(uncorrected)}")
 
             if not gap.corrections:
                 self.logger.warning("No handler could handle the gap")

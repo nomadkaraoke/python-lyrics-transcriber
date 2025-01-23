@@ -2,9 +2,10 @@ from typing import List, Optional, Tuple, Dict, Any
 
 from lyrics_transcriber.types import GapSequence, WordCorrection
 from lyrics_transcriber.correction.handlers.base import GapCorrectionHandler
+from lyrics_transcriber.correction.handlers.word_operations import WordOperations
 
 
-class ExtraWordsHandler(GapCorrectionHandler):
+class ExtendAnchorHandler(GapCorrectionHandler):
     """Handles gaps where some words match reference text but there are extra words.
 
     This handler looks for cases where:
@@ -71,17 +72,18 @@ class ExtraWordsHandler(GapCorrectionHandler):
                 confidence = len(matching_sources) / len(gap.reference_words)
                 sources = ", ".join(matching_sources)
 
+                # Calculate reference positions for matching sources
+                reference_positions = WordOperations.calculate_reference_positions(gap, matching_sources)
+
                 corrections.append(
-                    WordCorrection(
+                    WordOperations.create_word_replacement_correction(
                         original_word=word,
                         corrected_word=word,  # Same word, just validating
-                        segment_index=0,
                         original_position=gap.transcription_position + i,
-                        confidence=confidence,
                         source=sources,
-                        reason="ExtraWordsHandler: Matched reference source(s)",
-                        alternatives={},
-                        is_deletion=False,
+                        confidence=confidence,
+                        reason="ExtendAnchorHandler: Matched reference source(s)",
+                        reference_positions=reference_positions,
                     )
                 )
             # No else clause - non-matching words are left unchanged

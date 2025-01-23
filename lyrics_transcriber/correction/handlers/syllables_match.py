@@ -110,12 +110,12 @@ class SyllablesMatchHandler(GapCorrectionHandler):
 
     def handle(self, gap: GapSequence, data: Dict[str, Any]) -> List[WordCorrection]:
         corrections = []
-
-        # Get data from can_handle
-        gap_syllables = data["gap_syllables"]
         matching_source = data["matching_source"]
         reference_words = data["reference_words"]
         reference_words_original = data["reference_words_original"]
+
+        # Use the centralized method to calculate reference positions
+        reference_positions = WordOperations.calculate_reference_positions(gap, [matching_source])
 
         # Since we matched syllable counts for the entire gap, we should handle all words
         if len(gap.words) > len(reference_words):
@@ -138,6 +138,7 @@ class SyllablesMatchHandler(GapCorrectionHandler):
                         confidence=0.8,
                         combine_reason="SyllablesMatchHandler: Words combined based on syllable match",
                         delete_reason="SyllablesMatchHandler: Word removed as part of syllable match combination",
+                        reference_positions=reference_positions,
                     )
                 )
 
@@ -158,6 +159,7 @@ class SyllablesMatchHandler(GapCorrectionHandler):
                         source=matching_source,
                         confidence=0.8,
                         reason="SyllablesMatchHandler: Split word based on syllable match",
+                        reference_positions=reference_positions,
                     )
                 )
 
@@ -166,15 +168,14 @@ class SyllablesMatchHandler(GapCorrectionHandler):
             for i, (orig_word, ref_word, ref_word_original) in enumerate(zip(gap.words, reference_words, reference_words_original)):
                 if orig_word.lower() != ref_word.lower():
                     corrections.append(
-                        WordCorrection(
+                        WordOperations.create_word_replacement_correction(
                             original_word=orig_word,
                             corrected_word=ref_word_original,
-                            segment_index=0,
                             original_position=gap.transcription_position + i,
-                            confidence=0.8,
                             source=matching_source,
+                            confidence=0.8,
                             reason=f"SyllablesMatchHandler: Source '{matching_source}' had matching syllable count",
-                            alternatives={},
+                            reference_positions=reference_positions,
                         )
                     )
 

@@ -24,6 +24,8 @@ export interface WordCorrection {
     is_deletion: boolean
     split_index?: number
     split_total?: number
+    reference_positions?: Record<string, number>
+    length: number
 }
 
 export interface AnchorSequence {

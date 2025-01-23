@@ -1,6 +1,7 @@
 from typing import List, Dict, Optional, Tuple, Any
 from lyrics_transcriber.types import GapSequence, WordCorrection
 from lyrics_transcriber.correction.handlers.base import GapCorrectionHandler
+from lyrics_transcriber.correction.handlers.word_operations import WordOperations
 import logging
 
 
@@ -23,6 +24,9 @@ class RepeatCorrectionHandler(GapCorrectionHandler):
     def handle(self, gap: GapSequence, data: Optional[Dict[str, Any]] = None) -> List[WordCorrection]:
         """Apply previous corrections to matching words in the current gap."""
         corrections = []
+
+        # Use the centralized method to calculate reference positions
+        reference_positions = WordOperations.calculate_reference_positions(gap)
 
         # Build a map of original words to their corrections
         correction_map: Dict[str, List[WordCorrection]] = {}
@@ -56,7 +60,11 @@ class RepeatCorrectionHandler(GapCorrectionHandler):
                         source=best_correction.source,
                         reason=f"RepeatCorrectionHandler: Matches previous correction",
                         alternatives={best_correction.corrected_word: 1},
-                        is_deletion=False,
+                        is_deletion=best_correction.is_deletion,
+                        reference_positions=reference_positions,  # Add reference positions
+                        length=best_correction.length,  # Preserve length from original correction
+                        split_index=best_correction.split_index,  # Preserve split info if present
+                        split_total=best_correction.split_total,  # Preserve split info if present
                     )
                 )
 

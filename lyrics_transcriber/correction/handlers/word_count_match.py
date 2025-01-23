@@ -33,6 +33,9 @@ class WordCountMatchHandler(GapCorrectionHandler):
         reference_words_original = gap.reference_words_original[source]
         sources = ", ".join(gap.reference_words.keys())
 
+        # Use the centralized method to calculate reference positions for all sources
+        reference_positions = WordOperations.calculate_reference_positions(gap)
+
         # Since we know all reference sources agree, we can correct all words in the gap
         for i, (orig_word, ref_word, ref_word_original) in enumerate(zip(gap.words, reference_words, reference_words_original)):
             if orig_word.lower() != ref_word.lower():
@@ -44,6 +47,7 @@ class WordCountMatchHandler(GapCorrectionHandler):
                         source=sources,
                         confidence=1.0,
                         reason="WordCountMatchHandler: Reference sources had same word count as gap",
+                        reference_positions=reference_positions,
                     )
                 )
 

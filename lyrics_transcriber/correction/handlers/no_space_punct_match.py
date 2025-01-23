@@ -46,6 +46,9 @@ class NoSpacePunctuationMatchHandler(GapCorrectionHandler):
                 reference_words_original = gap.reference_words_original[source]
                 break
 
+        # Calculate reference positions for the matching source
+        reference_positions = WordOperations.calculate_reference_positions(gap, [matching_source])
+
         # Handle cases where number of words differ
         if len(gap.words) > len(reference_words):
             # Multiple transcribed words -> fewer reference words
@@ -58,6 +61,7 @@ class NoSpacePunctuationMatchHandler(GapCorrectionHandler):
                     confidence=1.0,
                     combine_reason="NoSpacePunctuationMatchHandler: Words combined based on text match",
                     delete_reason="NoSpacePunctuationMatchHandler: Word removed as part of text match combination",
+                    reference_positions=reference_positions,
                 )
             )
 
@@ -71,6 +75,7 @@ class NoSpacePunctuationMatchHandler(GapCorrectionHandler):
                     source=matching_source,
                     confidence=1.0,
                     reason="NoSpacePunctuationMatchHandler: Split word based on text match",
+                    reference_positions=reference_positions,
                 )
             )
 
@@ -79,15 +84,14 @@ class NoSpacePunctuationMatchHandler(GapCorrectionHandler):
             for i, (orig_word, ref_word, ref_word_original) in enumerate(zip(gap.words, reference_words, reference_words_original)):
                 if orig_word.lower() != ref_word.lower():
                     corrections.append(
-                        WordCorrection(
+                        WordOperations.create_word_replacement_correction(
                             original_word=orig_word,
                             corrected_word=ref_word_original,
-                            segment_index=0,
                             original_position=gap.transcription_position + i,
-                            confidence=1.0,
                             source=matching_source,
+                            confidence=1.0,
                             reason=f"NoSpacePunctuationMatchHandler: Source '{matching_source}' matched when spaces and punctuation removed",
-                            alternatives={},
+                            reference_positions=reference_positions,
                         )
                     )
 

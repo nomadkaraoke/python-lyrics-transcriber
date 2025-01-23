@@ -1,9 +1,33 @@
-from typing import List
-from lyrics_transcriber.types import WordCorrection
+from typing import List, Optional, Dict
+from lyrics_transcriber.types import WordCorrection, GapSequence
 
 
 class WordOperations:
     """Utility class for common word manipulation operations used by correction handlers."""
+
+    @staticmethod
+    def calculate_reference_positions(gap: GapSequence, sources: Optional[List[str]] = None) -> Dict[str, int]:
+        """Calculate reference positions for given sources based on preceding anchor.
+
+        Args:
+            gap: The gap sequence containing the preceding anchor
+            sources: Optional list of sources to calculate positions for. If None, uses all sources.
+
+        Returns:
+            Dictionary mapping source names to their reference positions
+        """
+        reference_positions = {}
+        if gap.preceding_anchor:
+            # If no sources specified, use all sources from reference words
+            sources_to_check = sources or list(gap.reference_words.keys())
+
+            for source in sources_to_check:
+                if source in gap.preceding_anchor.reference_positions:
+                    # Calculate position based on anchor position and offset
+                    anchor_pos = gap.preceding_anchor.reference_positions[source]
+                    ref_pos = anchor_pos + len(gap.preceding_anchor.words)
+                    reference_positions[source] = ref_pos
+        return reference_positions
 
     @staticmethod
     def create_word_replacement_correction(
@@ -13,6 +37,7 @@ class WordOperations:
         source: str,
         confidence: float,
         reason: str,
+        reference_positions: Optional[Dict[str, int]] = None,
     ) -> WordCorrection:
         """Creates a correction for replacing a single word with another word."""
         return WordCorrection(
@@ -24,6 +49,8 @@ class WordOperations:
             source=source,
             reason=reason,
             alternatives={},
+            reference_positions=reference_positions,
+            length=1,  # Single word replacement
         )
 
     @staticmethod
@@ -34,6 +61,7 @@ class WordOperations:
         source: str,
         confidence: float,
         reason: str,
+        reference_positions: Optional[Dict[str, int]] = None,
     ) -> List[WordCorrection]:
         """Creates corrections for splitting a single word into multiple words."""
         corrections = []
@@ -50,6 +78,8 @@ class WordOperations:
                     alternatives={},
                     split_index=split_idx,
                     split_total=len(reference_words),
+                    reference_positions=reference_positions,
+                    length=1,  # Each split word is length 1
                 )
             )
         return corrections
@@ -63,6 +93,7 @@ class WordOperations:
         confidence: float,
         combine_reason: str,
         delete_reason: str,
+        reference_positions: Optional[Dict[str, int]] = None,
     ) -> List[WordCorrection]:
         """Creates corrections for combining multiple words into a single word."""
         corrections = []
@@ -78,6 +109,8 @@ class WordOperations:
                 source=source,
                 reason=combine_reason,
                 alternatives={},
+                reference_positions=reference_positions,
+                length=len(original_words),  # Combined word spans all original words
             )
         )
 
@@ -94,6 +127,8 @@ class WordOperations:
                     reason=delete_reason,
                     alternatives={},
                     is_deletion=True,
+                    reference_positions=reference_positions,
+                    length=1,  # Deleted words are length 1
                 )
             )
 

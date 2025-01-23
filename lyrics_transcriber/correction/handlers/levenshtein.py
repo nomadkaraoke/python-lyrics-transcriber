@@ -5,6 +5,7 @@ import logging
 
 from lyrics_transcriber.types import GapSequence, WordCorrection
 from lyrics_transcriber.correction.handlers.base import GapCorrectionHandler
+from lyrics_transcriber.correction.handlers.word_operations import WordOperations
 
 
 class LevenshteinHandler(GapCorrectionHandler):
@@ -100,18 +101,19 @@ class LevenshteinHandler(GapCorrectionHandler):
                 source_confidence = len(sources) / len(gap.reference_words)
                 final_confidence = similarity * source_confidence
 
+                # Calculate reference positions for matching sources
+                reference_positions = WordOperations.calculate_reference_positions(gap, sources)
+
                 self.logger.debug(f"Creating correction: {word} -> {best_match} (confidence: {final_confidence})")
                 corrections.append(
-                    WordCorrection(
+                    WordOperations.create_word_replacement_correction(
                         original_word=word,
                         corrected_word=best_match,  # Using original formatted word
-                        segment_index=0,
                         original_position=gap.transcription_position + i,
-                        confidence=final_confidence,
                         source=", ".join(sources),
+                        confidence=final_confidence,
                         reason=f"LevenshteinHandler: String similarity ({final_confidence:.2f})",
-                        alternatives={k: len(v[0]) for k, v in matches.items()},
-                        is_deletion=False,
+                        reference_positions=reference_positions,
                     )
                 )
 

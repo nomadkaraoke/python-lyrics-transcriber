@@ -14,8 +14,7 @@ export default function TranscriptionView({ data, onElementClick, flashingType }
     const renderHighlightedText = () => {
         const normalizedText = data.corrected_text.replace(/\n\n+/g, '\n')
         const words = normalizedText.split(/(\s+)/)
-        let correctedIndex = 0  // Position in the corrected text
-        let originalIndex = 0   // Position in the original text
+        let wordIndex = 0  // Track actual word positions, ignoring whitespace
 
         // Build a map of original positions to their corrections
         const correctionMap = new Map()
@@ -30,28 +29,28 @@ export default function TranscriptionView({ data, onElementClick, flashingType }
             })
         })
 
-        console.log('Debug: Starting render with correction map:', correctionMap)
-
         return words.map((word, index) => {
+            // Skip whitespace without incrementing wordIndex
             if (/^\s+$/.test(word)) {
                 return word
             }
+
+            const currentWordIndex = wordIndex
 
             // Find the corresponding gap or anchor in the original text
             const anchor = data.anchor_sequences.find(a => {
                 const start = a.transcription_position
                 const end = start + a.length
-                return originalIndex >= start && originalIndex < end
+                return currentWordIndex >= start && currentWordIndex < end
             })
 
             const gap = data.gap_sequences.find(g => {
                 const start = g.transcription_position
                 const end = start + g.length
-                return originalIndex >= start && originalIndex < end
+                return currentWordIndex >= start && currentWordIndex < end
             })
 
             // Get correction info for current position
-            const correction = correctionMap.get(originalIndex)
             const hasCorrections = gap ? gap.corrections.length > 0 : false
 
             const shouldFlash = Boolean(
@@ -82,7 +81,7 @@ export default function TranscriptionView({ data, onElementClick, flashingType }
                                 type: 'anchor',
                                 data: {
                                     ...anchor,
-                                    position: anchor.transcription_position
+                                    position: currentWordIndex
                                 }
                             })
                         } else if (gap) {
@@ -90,7 +89,7 @@ export default function TranscriptionView({ data, onElementClick, flashingType }
                                 type: 'gap',
                                 data: {
                                     ...gap,
-                                    position: gap.transcription_position,
+                                    position: currentWordIndex,
                                     word: word
                                 }
                             })
@@ -101,11 +100,8 @@ export default function TranscriptionView({ data, onElementClick, flashingType }
                 </HighlightedWord>
             )
 
-            // Update indexes based on corrections
-            correctedIndex++
-            if (!correction?.split_total || correction?.is_deletion) {
-                originalIndex++
-            }
+            // Increment word index only for non-whitespace
+            wordIndex++
 
             return wordElement
         })

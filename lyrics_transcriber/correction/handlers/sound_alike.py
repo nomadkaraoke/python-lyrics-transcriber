@@ -3,6 +3,7 @@ import logging
 from metaphone import doublemetaphone
 from lyrics_transcriber.types import GapSequence, WordCorrection
 from lyrics_transcriber.correction.handlers.base import GapCorrectionHandler
+from lyrics_transcriber.correction.handlers.word_operations import WordOperations
 
 
 class SoundAlikeHandler(GapCorrectionHandler):
@@ -63,6 +64,9 @@ class SoundAlikeHandler(GapCorrectionHandler):
     def handle(self, gap: GapSequence, data: Optional[Dict[str, Any]] = None) -> List[WordCorrection]:
         corrections = []
 
+        # Use the centralized method to calculate reference positions for all sources
+        reference_positions = WordOperations.calculate_reference_positions(gap)
+
         # For each word in the gap
         for i, word in enumerate(gap.words):
             word_codes = doublemetaphone(word)
@@ -113,6 +117,8 @@ class SoundAlikeHandler(GapCorrectionHandler):
                         reason=f"SoundAlikeHandler: Phonetic match ({final_confidence:.2f} confidence)",
                         alternatives={k: len(v[0]) for k, v in matches.items()},
                         is_deletion=False,
+                        reference_positions=reference_positions,  # Add reference positions
+                        length=1,  # Single word replacement
                     )
                 )
 

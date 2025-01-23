@@ -124,6 +124,9 @@ class WordCorrection:
     split_total: Optional[int] = None  # Total number of words in split
     # New field to track position after corrections
     corrected_position: Optional[int] = None
+    # New fields to match TypeScript interface
+    reference_positions: Optional[Dict[str, int]] = None  # Maps source to position in reference text
+    length: int = 1  # Default to 1 for single-word corrections
 
     def to_dict(self) -> Dict[str, Any]:
         return asdict(self)
