@@ -27,16 +27,16 @@ def test_handle_phonetic_example(logger):
 
     assert corrections[0].original_word == "fone"
     assert corrections[0].corrected_word == "phone"
-    assert corrections[0].word_index == 0
+    assert corrections[0].original_position == 0
     assert corrections[0].confidence >= 0.7
 
     assert corrections[1].original_word == "lite"
     assert corrections[1].corrected_word == "light"
-    assert corrections[1].word_index == 1
+    assert corrections[1].original_position == 1
 
     assert corrections[2].original_word == "nite"
     assert corrections[2].corrected_word == "night"
-    assert corrections[2].word_index == 2
+    assert corrections[2].original_position == 2
 
 
 def test_handle_disagreeing_references(logger):

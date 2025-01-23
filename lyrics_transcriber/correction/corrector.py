@@ -170,11 +170,11 @@ class LyricsCorrector:
     def _apply_corrections_to_segments(self, segments: List[LyricsSegment], corrections: List[WordCorrection]) -> List[LyricsSegment]:
         """Apply corrections to create new segments."""
         correction_map = {}
-        # Group corrections by word_index to handle splits
+        # Group corrections by original_position to handle splits
         for c in corrections:
-            if c.word_index not in correction_map:
-                correction_map[c.word_index] = []
-            correction_map[c.word_index].append(c)
+            if c.original_position not in correction_map:
+                correction_map[c.original_position] = []
+            correction_map[c.original_position].append(c)
 
         corrected_segments = []
         current_word_idx = 0
@@ -194,6 +194,8 @@ class LyricsCorrector:
                             start_time = word.start_time + (i * split_duration)
                             end_time = start_time + split_duration
 
+                            # Update corrected_position as we create new words
+                            correction.corrected_position = len(corrected_words)
                             corrected_words.append(
                                 Word(
                                     text=self._preserve_formatting(correction.original_word, correction.corrected_word),
@@ -206,6 +208,8 @@ class LyricsCorrector:
                         # Handle single word replacement
                         correction = word_corrections[0]
                         if not correction.is_deletion:
+                            # Update corrected_position
+                            correction.corrected_position = len(corrected_words)
                             corrected_words.append(
                                 Word(
                                     text=self._preserve_formatting(correction.original_word, correction.corrected_word),

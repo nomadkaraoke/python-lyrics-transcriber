@@ -1,10 +1,10 @@
-import { useState, useEffect } from 'react'
-import { Box, Button, Typography, Grid, Paper, Modal, Alert } from '@mui/material'
 import UploadFileIcon from '@mui/icons-material/UploadFile'
+import { Alert, Box, Button, Modal, Typography } from '@mui/material'
+import { useEffect, useState } from 'react'
+import { ApiClient, FileOnlyClient, LiveApiClient } from './api'
+import CorrectionMetrics from './components/CorrectionMetrics'
 import LyricsAnalyzer from './components/LyricsAnalyzer'
 import { CorrectionData } from './types'
-import { COLORS } from './components/constants'
-import { ApiClient, LiveApiClient, FileOnlyClient } from './api'
 
 export default function App() {
   const [data, setData] = useState<CorrectionData | null>(null)
@@ -96,6 +96,22 @@ export default function App() {
           </Box>
           <Box sx={{ mb: 2 }}>
             <Typography variant="subtitle2" color="text.secondary">
+              Gap Sequences
+            </Typography>
+            <Typography>
+              {data.metadata.gap_sequences_count}
+            </Typography>
+          </Box>
+          <Box sx={{ mb: 2 }}>
+            <Typography variant="subtitle2" color="text.secondary">
+              Corrections Made
+            </Typography>
+            <Typography>
+              {data.corrections_made}
+            </Typography>
+          </Box>
+          <Box sx={{ mb: 2 }}>
+            <Typography variant="subtitle2" color="text.secondary">
               Correction Ratio
             </Typography>
             <Typography>
@@ -116,126 +132,34 @@ export default function App() {
             {error}
           </Alert>
         )}
-        {isReadOnly && (
-          <Alert severity="info" sx={{ mb: 2 }}>
-            Running in read-only mode. Connect to an API to enable editing.
-          </Alert>
-        )}
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-          <Typography variant="h4">
-            Lyrics Analysis
-          </Typography>
-          <Button
-            variant="outlined"
-            startIcon={<UploadFileIcon />}
-            onClick={handleFileLoad}
-          >
-            Load File
-          </Button>
-        </Box>
-
-        <Box sx={{ mb: 3 }}>
-          <Grid container spacing={2}>
-            <Grid item xs={3}>
-              <Paper sx={{ p: 2 }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                  <Box
-                    sx={{
-                      width: 16,
-                      height: 16,
-                      borderRadius: 1,
-                      bgcolor: COLORS.anchor,
-                      mr: 1,
-                    }}
-                  />
-                  <Typography variant="subtitle2" color="text.secondary">
-                    Anchor Sequences
-                  </Typography>
-                </Box>
-                <Typography variant="h6">
-                  -
-                </Typography>
-                <Typography variant="caption" color="text.secondary">
-                  Matched sections between transcription and reference
-                </Typography>
-              </Paper>
-            </Grid>
-            <Grid item xs={3}>
-              <Paper sx={{ p: 2 }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                  <Box
-                    sx={{
-                      width: 16,
-                      height: 16,
-                      borderRadius: 1,
-                      bgcolor: COLORS.corrected,
-                      mr: 1,
-                    }}
-                  />
-                  <Typography variant="subtitle2" color="text.secondary">
-                    Corrections Made
-                  </Typography>
-                </Box>
-                <Typography variant="h6">
-                  -
-                </Typography>
-                <Typography variant="caption" color="text.secondary">
-                  Successfully fixed transcription errors
-                </Typography>
-              </Paper>
-            </Grid>
-            <Grid item xs={3}>
-              <Paper sx={{ p: 2 }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                  <Box
-                    sx={{
-                      width: 16,
-                      height: 16,
-                      borderRadius: 1,
-                      bgcolor: COLORS.uncorrectedGap,
-                      mr: 1,
-                    }}
-                  />
-                  <Typography variant="subtitle2" color="text.secondary">
-                    Uncorrected Gaps
-                  </Typography>
-                </Box>
-                <Typography variant="h6">
-                  -
-                </Typography>
-                <Typography variant="caption" color="text.secondary">
-                  Sections that may need manual review
-                </Typography>
-              </Paper>
-            </Grid>
-            <Grid item xs={3}>
-              <Paper
-                sx={{
-                  p: 2,
-                  cursor: 'default', // Don't show pointer when there's no data
-                }}
+        {isReadOnly ? (
+          <>
+            <Alert severity="info" sx={{ mb: 2 }}>
+              Running in read-only mode. Connect to an API to enable editing.
+            </Alert>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+              <Typography variant="h4">
+                Lyrics Correction Review
+              </Typography>
+              <Button
+                variant="outlined"
+                startIcon={<UploadFileIcon />}
+                onClick={handleFileLoad}
               >
-                <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                  <Typography variant="subtitle2" color="text.secondary">
-                    Confidence Score
-                  </Typography>
-                </Box>
-                <Typography variant="h6">
-                  -
-                </Typography>
-                <Typography variant="caption" color="text.secondary">
-                  Click for correction process details
-                </Typography>
-              </Paper>
-            </Grid>
-          </Grid>
-        </Box>
-
-        <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '50vh' }}>
-          <Typography variant="h6" color="text.secondary">
-            Select a lyrics analysis file to begin
-          </Typography>
-        </Box>
+                Load File
+              </Button>
+            </Box>
+            <Box sx={{ mb: 3 }}>
+              <CorrectionMetrics />
+            </Box>
+          </>
+        ) : (
+          <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '50vh' }}>
+            <Typography variant="h6" color="text.secondary">
+              Loading Lyrics Correction Review...
+            </Typography>
+          </Box>
+        )}
       </Box>
     )
   }

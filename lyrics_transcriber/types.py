@@ -113,7 +113,7 @@ class WordCorrection:
     original_word: str
     corrected_word: str  # Empty string indicates word should be deleted
     segment_index: int
-    word_index: int
+    original_position: int
     source: str  # e.g., "spotify", "genius"
     confidence: Optional[float]
     reason: str  # e.g., "matched_in_3_sources", "high_confidence_match"
@@ -122,6 +122,8 @@ class WordCorrection:
     # New fields for handling word splits
     split_index: Optional[int] = None  # Position in the split sequence (0-based)
     split_total: Optional[int] = None  # Total number of words in split
+    # New field to track position after corrections
+    corrected_position: Optional[int] = None
 
     def to_dict(self) -> Dict[str, Any]:
         return asdict(self)
@@ -280,24 +282,43 @@ class GapSequence:
     """Represents a sequence of words between anchor sequences in transcribed lyrics."""
 
     words: Tuple[str, ...]
-    transcription_position: int
+    transcription_position: int  # Original starting position in transcription
     preceding_anchor: Optional[AnchorSequence]
     following_anchor: Optional[AnchorSequence]
     reference_words: Dict[str, List[str]]
-    reference_words_original: Dict[str, List[str]]  # New field for formatted reference words
+    reference_words_original: Dict[str, List[str]]
     corrections: List[WordCorrection] = field(default_factory=list)
     _corrected_positions: Set[int] = field(default_factory=set, repr=False)
-
-    def __post_init__(self):
-        # Convert words list to tuple if it's not already
-        if isinstance(self.words, list):
-            object.__setattr__(self, "words", tuple(self.words))
+    _position_offset: int = field(default=0, repr=False)  # Track cumulative position changes
 
     def add_correction(self, correction: WordCorrection) -> None:
         """Add a correction and mark its position as corrected."""
         self.corrections.append(correction)
-        relative_pos = correction.word_index - self.transcription_position
+        relative_pos = correction.original_position - self.transcription_position
         self._corrected_positions.add(relative_pos)
+
+        # Update position offset based on correction type
+        if correction.is_deletion:
+            self._position_offset -= 1
+        elif correction.split_total:
+            self._position_offset += correction.split_total - 1
+
+        # Update corrected position for the correction
+        correction.corrected_position = correction.original_position + self._position_offset
+
+    def get_corrected_position(self, original_position: int) -> int:
+        """Convert an original position to its corrected position."""
+        offset = sum(
+            -1 if c.is_deletion else (c.split_total - 1 if c.split_total else 0)
+            for c in self.corrections
+            if c.original_position < original_position
+        )
+        return original_position + offset
+
+    @property
+    def corrected_length(self) -> int:
+        """Get the length after applying all corrections."""
+        return self.length + self._position_offset
 
     def is_word_corrected(self, relative_position: int) -> bool:
         """Check if a word at the given position (relative to gap start) has been corrected."""

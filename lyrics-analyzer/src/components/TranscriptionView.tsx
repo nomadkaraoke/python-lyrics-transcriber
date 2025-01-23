@@ -11,30 +11,47 @@ interface TranscriptionViewProps {
 }
 
 export default function TranscriptionView({ data, onElementClick, flashingType }: TranscriptionViewProps) {
-    console.log('TranscriptionView rendered with flashingType:', flashingType)
-
     const renderHighlightedText = () => {
         const normalizedText = data.corrected_text.replace(/\n\n+/g, '\n')
         const words = normalizedText.split(/(\s+)/)
-        let currentIndex = 0
+        let correctedIndex = 0  // Position in the corrected text
+        let originalIndex = 0   // Position in the original text
+
+        // Build a map of original positions to their corrections
+        const correctionMap = new Map()
+        data.gap_sequences.forEach(gap => {
+            gap.corrections.forEach(c => {
+                correctionMap.set(c.original_position, {
+                    original: c.original_word,
+                    corrected: c.corrected_word,
+                    is_deletion: c.is_deletion,
+                    split_total: c.split_total
+                })
+            })
+        })
+
+        console.log('Debug: Starting render with correction map:', correctionMap)
 
         return words.map((word, index) => {
             if (/^\s+$/.test(word)) {
                 return word
             }
 
+            // Find the corresponding gap or anchor in the original text
             const anchor = data.anchor_sequences.find(a => {
                 const start = a.transcription_position
                 const end = start + a.length
-                return currentIndex >= start && currentIndex < end
+                return originalIndex >= start && originalIndex < end
             })
 
             const gap = data.gap_sequences.find(g => {
                 const start = g.transcription_position
                 const end = start + g.length
-                return currentIndex >= start && currentIndex < end
+                return originalIndex >= start && originalIndex < end
             })
 
+            // Get correction info for current position
+            const correction = correctionMap.get(originalIndex)
             const hasCorrections = gap ? gap.corrections.length > 0 : false
 
             const shouldFlash = Boolean(
@@ -65,7 +82,7 @@ export default function TranscriptionView({ data, onElementClick, flashingType }
                                 type: 'anchor',
                                 data: {
                                     ...anchor,
-                                    position: currentIndex
+                                    position: anchor.transcription_position
                                 }
                             })
                         } else if (gap) {
@@ -73,7 +90,7 @@ export default function TranscriptionView({ data, onElementClick, flashingType }
                                 type: 'gap',
                                 data: {
                                     ...gap,
-                                    position: currentIndex,
+                                    position: gap.transcription_position,
                                     word: word
                                 }
                             })
@@ -84,7 +101,12 @@ export default function TranscriptionView({ data, onElementClick, flashingType }
                 </HighlightedWord>
             )
 
-            currentIndex++
+            // Update indexes based on corrections
+            correctedIndex++
+            if (!correction?.split_total || correction?.is_deletion) {
+                originalIndex++
+            }
+
             return wordElement
         })
     }

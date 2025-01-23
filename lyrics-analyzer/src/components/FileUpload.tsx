@@ -67,7 +67,7 @@ export default function FileUpload({ onUpload }: FileUploadProps) {
             />
             <CloudUploadIcon sx={{ fontSize: 48, mb: 2 }} />
             <Typography variant="h6" gutterBottom>
-                Upload Lyrics Analysis JSON
+                Upload Lyrics Correction Review JSON
             </Typography>
             <Typography variant="body2" color="text.secondary">
                 Drag and drop a file here, or click to select

@@ -76,7 +76,7 @@ class ExtraWordsHandler(GapCorrectionHandler):
                         original_word=word,
                         corrected_word=word,  # Same word, just validating
                         segment_index=0,
-                        word_index=gap.transcription_position + i,
+                        original_position=gap.transcription_position + i,
                         confidence=confidence,
                         source=sources,
                         reason="ExtraWordsHandler: Matched reference source(s)",

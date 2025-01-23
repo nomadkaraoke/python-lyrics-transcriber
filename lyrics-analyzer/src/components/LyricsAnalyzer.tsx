@@ -1,13 +1,13 @@
-import { useState, useCallback } from 'react'
-import { Box, Grid, Paper, Typography, Button, useTheme, useMediaQuery } from '@mui/material'
-import UploadFileIcon from '@mui/icons-material/UploadFile'
-import { LyricsData, CorrectionData } from '../types'
-import TranscriptionView from './TranscriptionView'
-import ReferenceView from './ReferenceView'
-import DetailsModal from './DetailsModal'
-import { COLORS } from './constants'
-import { ApiClient } from '../api'
 import LockIcon from '@mui/icons-material/Lock'
+import UploadFileIcon from '@mui/icons-material/UploadFile'
+import { Box, Button, Grid, Typography, useMediaQuery, useTheme } from '@mui/material'
+import { useCallback, useState } from 'react'
+import { ApiClient } from '../api'
+import { CorrectionData, LyricsData } from '../types'
+import CorrectionMetrics from './CorrectionMetrics'
+import DetailsModal from './DetailsModal'
+import ReferenceView from './ReferenceView'
+import TranscriptionView from './TranscriptionView'
 
 interface LyricsAnalyzerProps {
     data: CorrectionData
@@ -32,7 +32,7 @@ export type ModalContent = {
 
 export type FlashType = 'anchor' | 'corrected' | 'uncorrected' | null
 
-export default function LyricsAnalyzer({ data, onFileLoad, onShowMetadata, apiClient, isReadOnly }: LyricsAnalyzerProps) {
+export default function LyricsAnalyzer({ data, onFileLoad, apiClient, isReadOnly }: LyricsAnalyzerProps) {
     const [modalContent, setModalContent] = useState<ModalContent | null>(null)
     const [flashingType, setFlashingType] = useState<FlashType>(null)
     const theme = useTheme()
@@ -73,144 +73,56 @@ export default function LyricsAnalyzer({ data, onFileLoad, onShowMetadata, apiCl
                 mb: 3
             }}>
                 <Typography variant="h4" sx={{ fontSize: isMobile ? '1.75rem' : '2.125rem' }}>
-                    Lyrics Analysis
+                    Lyrics Correction Review
                 </Typography>
-                <Button
-                    variant="outlined"
-                    startIcon={<UploadFileIcon />}
-                    onClick={onFileLoad}
-                    fullWidth={isMobile}
-                >
-                    Load File
-                </Button>
+                {isReadOnly && (
+                    <Button
+                        variant="outlined"
+                        startIcon={<UploadFileIcon />}
+                        onClick={onFileLoad}
+                        fullWidth={isMobile}
+                    >
+                        Load File
+                    </Button>
+                )}
             </Box>
 
             <Box sx={{ mb: 3 }}>
-                <Grid container spacing={2}>
-                    <Grid item xs={12} sm={6} md={3}>
-                        <Paper
-                            sx={{
-                                p: 2,
-                                cursor: 'pointer',
-                                '&:hover': {
-                                    bgcolor: 'action.hover'
-                                }
-                            }}
-                            onClick={() => handleFlash('anchor')}
-                        >
-                            <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                                <Box
-                                    sx={{
-                                        width: 16,
-                                        height: 16,
-                                        borderRadius: 1,
-                                        bgcolor: COLORS.anchor,
-                                        mr: 1,
-                                    }}
-                                />
-                                <Typography variant="subtitle2" color="text.secondary">
-                                    Anchor Sequences
-                                </Typography>
-                            </Box>
-                            <Typography variant="h6">
-                                {data.metadata.anchor_sequences_count}
-                            </Typography>
-                            <Typography variant="caption" color="text.secondary">
-                                Click to highlight matched sections
-                            </Typography>
-                        </Paper>
-                    </Grid>
-                    <Grid item xs={12} sm={6} md={3}>
-                        <Paper
-                            sx={{
-                                p: 2,
-                                cursor: 'pointer',
-                                '&:hover': {
-                                    bgcolor: 'action.hover'
-                                }
-                            }}
-                            onClick={() => handleFlash('corrected')}
-                        >
-                            <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                                <Box
-                                    sx={{
-                                        width: 16,
-                                        height: 16,
-                                        borderRadius: 1,
-                                        bgcolor: COLORS.corrected,
-                                        mr: 1,
-                                    }}
-                                />
-                                <Typography variant="subtitle2" color="text.secondary">
-                                    Corrections Made
-                                </Typography>
-                            </Box>
-                            <Typography variant="h6">
-                                {data.corrections_made}
-                            </Typography>
-                            <Typography variant="caption" color="text.secondary">
-                                Successfully fixed transcription errors
-                            </Typography>
-                        </Paper>
-                    </Grid>
-                    <Grid item xs={12} sm={6} md={3}>
-                        <Paper
-                            sx={{
-                                p: 2,
-                                cursor: 'pointer',
-                                '&:hover': {
-                                    bgcolor: 'action.hover'
-                                }
-                            }}
-                            onClick={() => handleFlash('uncorrected')}
-                        >
-                            <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                                <Box
-                                    sx={{
-                                        width: 16,
-                                        height: 16,
-                                        borderRadius: 1,
-                                        bgcolor: COLORS.uncorrectedGap,
-                                        mr: 1,
-                                    }}
-                                />
-                                <Typography variant="subtitle2" color="text.secondary">
-                                    Uncorrected Gaps
-                                </Typography>
-                            </Box>
-                            <Typography variant="h6">
-                                {data.metadata.gap_sequences_count - data.corrections_made}
-                            </Typography>
-                            <Typography variant="caption" color="text.secondary">
-                                Sections that may need manual review
-                            </Typography>
-                        </Paper>
-                    </Grid>
-                    <Grid item xs={12} sm={6} md={3}>
-                        <Paper
-                            sx={{
-                                p: 2,
-                                cursor: 'pointer',
-                                '&:hover': {
-                                    bgcolor: 'action.hover'
-                                }
-                            }}
-                            onClick={onShowMetadata}
-                        >
-                            <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                                <Typography variant="subtitle2" color="text.secondary">
-                                    Confidence Score
-                                </Typography>
-                            </Box>
-                            <Typography variant="h6">
-                                {(data.confidence * 100).toFixed(1)}%
-                            </Typography>
-                            <Typography variant="caption" color="text.secondary">
-                                Click for correction metadata
-                            </Typography>
-                        </Paper>
-                    </Grid>
-                </Grid>
+                <CorrectionMetrics
+                    // Anchor metrics
+                    anchorCount={data.metadata.anchor_sequences_count}
+                    multiSourceAnchors={data.anchor_sequences.filter(a =>
+                        Object.keys(a.reference_positions).length > 1).length}
+                    singleSourceMatches={{
+                        spotify: data.anchor_sequences.filter(a =>
+                            Object.keys(a.reference_positions).length === 1 && 'spotify' in a.reference_positions).length,
+                        genius: data.anchor_sequences.filter(a =>
+                            Object.keys(a.reference_positions).length === 1 && 'genius' in a.reference_positions).length
+                    }}
+                    // Gap metrics
+                    correctedGapCount={data.gap_sequences.filter(gap =>
+                        gap.corrections?.length > 0).length}
+                    uncorrectedGapCount={data.gap_sequences.filter(gap =>
+                        !gap.corrections?.length).length}
+                    uncorrectedGaps={data.gap_sequences
+                        .filter(gap => !gap.corrections?.length)
+                        .map(gap => ({
+                            position: gap.transcription_position,
+                            length: gap.length
+                        }))}
+                    // Correction details
+                    replacedCount={data.gap_sequences.reduce((count, gap) =>
+                        count + (gap.corrections?.filter(c => !c.is_deletion && !c.split_total).length ?? 0), 0)}
+                    addedCount={data.gap_sequences.reduce((count, gap) =>
+                        count + (gap.corrections?.filter(c => c.split_total).length ?? 0), 0)}
+                    deletedCount={data.gap_sequences.reduce((count, gap) =>
+                        count + (gap.corrections?.filter(c => c.is_deletion).length ?? 0), 0)}
+                    onMetricClick={{
+                        anchor: () => handleFlash('anchor'),
+                        corrected: () => handleFlash('corrected'),
+                        uncorrected: () => handleFlash('uncorrected')
+                    }}
+                />
             </Box>
 
             <Grid container spacing={2} direction={isMobile ? 'column' : 'row'}>

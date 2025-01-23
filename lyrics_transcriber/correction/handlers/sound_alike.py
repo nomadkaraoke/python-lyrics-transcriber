@@ -107,7 +107,7 @@ class SoundAlikeHandler(GapCorrectionHandler):
                         original_word=word,
                         corrected_word=best_match,  # Already using original formatted word
                         segment_index=0,
-                        word_index=gap.transcription_position + i,
+                        original_position=gap.transcription_position + i,
                         confidence=final_confidence,
                         source=", ".join(sources),
                         reason=f"SoundAlikeHandler: Phonetic match ({final_confidence:.2f} confidence)",

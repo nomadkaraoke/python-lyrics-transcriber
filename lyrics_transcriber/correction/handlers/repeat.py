@@ -51,7 +51,7 @@ class RepeatCorrectionHandler(GapCorrectionHandler):
                         original_word=word,
                         corrected_word=best_correction.corrected_word,
                         segment_index=0,
-                        word_index=gap.transcription_position + i,
+                        original_position=gap.transcription_position + i,
                         confidence=best_correction.confidence * 0.9,  # Slightly lower confidence for repeats
                         source=best_correction.source,
                         reason=f"RepeatCorrectionHandler: Matches previous correction",

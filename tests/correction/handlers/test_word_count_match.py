@@ -78,7 +78,7 @@ def test_handle_creates_corrections():
     correction = corrections[0]
     assert correction.original_word == "hello"
     assert correction.corrected_word == "hi"
-    assert correction.word_index == 5
+    assert correction.original_position == 5
     assert correction.confidence == 1.0
     assert correction.source == "spotify, genius"
     assert correction.reason == "WordCountMatchHandler: Reference sources had same word count as gap"
@@ -115,7 +115,7 @@ def test_handle_real_world_example():
     correction = corrections[0]
     assert correction.original_word == "gotta"
     assert correction.corrected_word == "can"
-    assert correction.word_index == 11
+    assert correction.original_position == 11
     assert correction.confidence == 1.0
     assert correction.source == "genius, spotify"
     assert correction.reason == "WordCountMatchHandler: Reference sources had same word count as gap"

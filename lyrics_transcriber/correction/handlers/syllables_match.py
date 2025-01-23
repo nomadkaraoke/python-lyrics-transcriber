@@ -133,7 +133,7 @@ class SyllablesMatchHandler(GapCorrectionHandler):
                     WordOperations.create_word_combine_corrections(
                         original_words=words_to_combine,
                         reference_word=ref_word_original,
-                        word_index=gap.transcription_position + start_idx,
+                        original_position=gap.transcription_position + start_idx,
                         source=matching_source,
                         confidence=0.8,
                         combine_reason="SyllablesMatchHandler: Words combined based on syllable match",
@@ -154,7 +154,7 @@ class SyllablesMatchHandler(GapCorrectionHandler):
                     WordOperations.create_word_split_corrections(
                         original_word=orig_word,
                         reference_words=ref_words_original_for_orig,
-                        word_index=gap.transcription_position + i,
+                        original_position=gap.transcription_position + i,
                         source=matching_source,
                         confidence=0.8,
                         reason="SyllablesMatchHandler: Split word based on syllable match",
@@ -170,7 +170,7 @@ class SyllablesMatchHandler(GapCorrectionHandler):
                             original_word=orig_word,
                             corrected_word=ref_word_original,
                             segment_index=0,
-                            word_index=gap.transcription_position + i,
+                            original_position=gap.transcription_position + i,
                             confidence=0.8,
                             source=matching_source,
                             reason=f"SyllablesMatchHandler: Source '{matching_source}' had matching syllable count",

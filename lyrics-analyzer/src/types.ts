@@ -16,7 +16,7 @@ export interface WordCorrection {
     original_word: string
     corrected_word: string
     segment_index: number
-    word_index: number
+    original_position: number
     source: string
     confidence: number
     reason: string

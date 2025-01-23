@@ -41,7 +41,7 @@ class RelaxedWordCountMatchHandler(GapCorrectionHandler):
                     WordOperations.create_word_replacement_correction(
                         original_word=orig_word,
                         corrected_word=ref_word_original,
-                        word_index=gap.transcription_position + i,
+                        original_position=gap.transcription_position + i,
                         source=matching_source,
                         confidence=1.0,
                         reason=f"RelaxedWordCountMatchHandler: Source '{matching_source}' had matching word count",

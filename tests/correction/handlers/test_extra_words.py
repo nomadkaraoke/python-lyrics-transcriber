@@ -34,7 +34,7 @@ def test_handle_real_world_example():
     assert corrections[0].original_word == "martyr"
     assert corrections[0].corrected_word == "martyr"
     assert corrections[0].is_deletion is False
-    assert corrections[0].word_index == 3
+    assert corrections[0].original_position == 3
     assert corrections[0].confidence == 1.0  # Full confidence as sources agree
 
 
@@ -102,7 +102,7 @@ def test_handle_real_world_disagreeing_references():
     assert corrections[0].original_word == "martyr"
     assert corrections[0].corrected_word == "martyr"
     assert corrections[0].is_deletion is False
-    assert corrections[0].word_index == 3
+    assert corrections[0].original_position == 3
     assert corrections[0].confidence == 0.5  # Lower confidence due to disagreeing sources
     assert corrections[0].source == "genius"  # Only the matching source
     assert "Matched reference" in corrections[0].reason

@@ -33,7 +33,7 @@ def test_handle_repeat_correction(logger):
             original_word="war",
             corrected_word="waterloo",
             segment_index=0,
-            word_index=0,
+            original_position=0,
             confidence=0.9,
             source="genius",
             reason="Previous handler correction",
@@ -57,7 +57,7 @@ def test_handle_repeat_correction(logger):
     assert len(corrections) == 1
     assert corrections[0].original_word == "war"
     assert corrections[0].corrected_word == "waterloo"
-    assert corrections[0].word_index == 5  # Should use gap's transcription_position
+    assert corrections[0].original_position == 5  # Should use gap's transcription_position
     assert corrections[0].confidence == 0.81  # 0.9 * 0.9
     assert "previous correction" in corrections[0].reason.lower()
 
@@ -71,7 +71,7 @@ def test_handle_multiple_previous_corrections(logger):
             original_word="word",
             corrected_word="correction1",
             segment_index=0,
-            word_index=0,
+            original_position=0,
             confidence=0.8,
             source="genius",
             reason="First correction",
@@ -82,7 +82,7 @@ def test_handle_multiple_previous_corrections(logger):
             original_word="word",
             corrected_word="correction2",
             segment_index=0,
-            word_index=1,
+            original_position=1,
             confidence=0.9,
             source="spotify",
             reason="Second correction",
@@ -93,7 +93,7 @@ def test_handle_multiple_previous_corrections(logger):
             original_word="word",
             corrected_word="correction2",
             segment_index=0,
-            word_index=2,
+            original_position=2,
             confidence=0.85,
             source="genius",
             reason="Third correction",
@@ -116,7 +116,7 @@ def test_handle_multiple_previous_corrections(logger):
     assert len(corrections) == 1
     assert corrections[0].original_word == "word"
     assert corrections[0].corrected_word == "correction2"  # Should pick most common correction
-    assert corrections[0].word_index == 10
+    assert corrections[0].original_position == 10
 
 
 def test_ignore_low_confidence_corrections(logger):
@@ -128,7 +128,7 @@ def test_ignore_low_confidence_corrections(logger):
             original_word="test",
             corrected_word="low_confidence",
             segment_index=0,
-            word_index=0,
+            original_position=0,
             confidence=0.6,  # Below threshold
             source="genius",
             reason="Low confidence correction",
@@ -158,7 +158,7 @@ def test_case_insensitive_matching(logger):
             original_word="Word",
             corrected_word="Correction",
             segment_index=0,
-            word_index=0,
+            original_position=0,
             confidence=0.9,
             source="genius",
             reason="Previous correction",

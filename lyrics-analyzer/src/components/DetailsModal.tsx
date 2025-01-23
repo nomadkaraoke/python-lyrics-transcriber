@@ -9,7 +9,7 @@ import {
 } from '@mui/material'
 import CloseIcon from '@mui/icons-material/Close'
 import { ModalContent } from './LyricsAnalyzer'
-import { Correction } from '../types'
+import { WordCorrection } from '../types'
 
 interface DetailsModalProps {
     open: boolean
@@ -49,10 +49,10 @@ export default function DetailsModal({ open, content, onClose }: DetailsModalPro
                                     value={
                                         <Box sx={{ pl: 2 }}>
                                             <Typography>
-                                                Total: {content.data.total_score.toFixed(2)}
+                                                Total: {content.data?.total_score?.toFixed(2) ?? 'N/A'}
                                             </Typography>
                                             <Typography>
-                                                Natural Break: {content.data.phrase_score.natural_break_score.toFixed(2)}
+                                                Natural Break: {content.data?.phrase_score?.natural_break_score?.toFixed(2) ?? 'N/A'}
                                             </Typography>
                                             <Typography>
                                                 Length: {content.data.phrase_score.length_score.toFixed(2)}
@@ -89,7 +89,7 @@ export default function DetailsModal({ open, content, onClose }: DetailsModalPro
                                 title="Corrections"
                                 value={
                                     <Box sx={{ pl: 2 }}>
-                                        {content.data.corrections.map((correction: Correction, i: number) => (
+                                        {content.data.corrections.map((correction: WordCorrection, i: number) => (
                                             <Box key={i} sx={{ mb: 2 }}>
                                                 <Typography>
                                                     "{correction.original_word}" → "{correction.corrected_word}"

@@ -106,7 +106,7 @@ class LevenshteinHandler(GapCorrectionHandler):
                         original_word=word,
                         corrected_word=best_match,  # Using original formatted word
                         segment_index=0,
-                        word_index=gap.transcription_position + i,
+                        original_position=gap.transcription_position + i,
                         confidence=final_confidence,
                         source=", ".join(sources),
                         reason=f"LevenshteinHandler: String similarity ({final_confidence:.2f})",

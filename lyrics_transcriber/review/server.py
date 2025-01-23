@@ -122,9 +122,9 @@ def start_review_server(correction_result: CorrectionResult) -> CorrectionResult
     start_time = time.time()
     while not review_completed:
         time.sleep(0.1)
-        if time.time() - start_time > 300:  # 5 minute timeout
-            logger.warning("Review timed out after 5 minutes")
-            break
+        # if time.time() - start_time > 600:  # 10 minute timeout
+        #     logger.error("Review timed out after 10 minutes")
+        #     raise TimeoutError("Review did not complete within the expected time frame.")
 
     # Clean up Vite server
     if vite_proc:

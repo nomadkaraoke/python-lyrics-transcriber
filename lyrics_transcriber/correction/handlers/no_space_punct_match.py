@@ -53,7 +53,7 @@ class NoSpacePunctuationMatchHandler(GapCorrectionHandler):
                 WordOperations.create_word_combine_corrections(
                     original_words=gap.words,
                     reference_word=reference_words_original[0],
-                    word_index=gap.transcription_position,
+                    original_position=gap.transcription_position,
                     source=matching_source,
                     confidence=1.0,
                     combine_reason="NoSpacePunctuationMatchHandler: Words combined based on text match",
@@ -67,7 +67,7 @@ class NoSpacePunctuationMatchHandler(GapCorrectionHandler):
                 WordOperations.create_word_split_corrections(
                     original_word=gap.words[0],
                     reference_words=reference_words_original,
-                    word_index=gap.transcription_position,
+                    original_position=gap.transcription_position,
                     source=matching_source,
                     confidence=1.0,
                     reason="NoSpacePunctuationMatchHandler: Split word based on text match",
@@ -83,7 +83,7 @@ class NoSpacePunctuationMatchHandler(GapCorrectionHandler):
                             original_word=orig_word,
                             corrected_word=ref_word_original,
                             segment_index=0,
-                            word_index=gap.transcription_position + i,
+                            original_position=gap.transcription_position + i,
                             confidence=1.0,
                             source=matching_source,
                             reason=f"NoSpacePunctuationMatchHandler: Source '{matching_source}' matched when spaces and punctuation removed",
