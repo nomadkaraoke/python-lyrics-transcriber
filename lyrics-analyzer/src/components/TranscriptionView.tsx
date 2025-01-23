@@ -1,16 +1,31 @@
 import { Paper, Typography } from '@mui/material'
-import { LyricsData } from '../types'
+import { LyricsData, HighlightInfo } from '../types'
 import { FlashType, ModalContent } from './LyricsAnalyzer'
 import { COLORS } from './constants'
 import { HighlightedWord } from './styles'
 
+interface WordClickInfo {
+    wordIndex: number
+    type: 'anchor' | 'gap' | 'other'
+    anchor?: LyricsData['anchor_sequences'][0]
+    gap?: LyricsData['gap_sequences'][0]
+}
+
 interface TranscriptionViewProps {
     data: LyricsData
     onElementClick: (content: ModalContent) => void
+    onWordClick?: (info: WordClickInfo) => void
     flashingType: FlashType
+    highlightInfo: HighlightInfo | null
 }
 
-export default function TranscriptionView({ data, onElementClick, flashingType }: TranscriptionViewProps) {
+export default function TranscriptionView({
+    data,
+    onElementClick,
+    onWordClick,
+    flashingType,
+    highlightInfo
+}: TranscriptionViewProps) {
     const renderHighlightedText = () => {
         const normalizedText = data.corrected_text.replace(/\n\n+/g, '\n')
         const words = normalizedText.split(/(\s+)/)
@@ -30,14 +45,11 @@ export default function TranscriptionView({ data, onElementClick, flashingType }
         })
 
         return words.map((word, index) => {
-            // Skip whitespace without incrementing wordIndex
             if (/^\s+$/.test(word)) {
                 return word
             }
 
             const currentWordIndex = wordIndex
-
-            // Find the corresponding gap or anchor in the original text
             const anchor = data.anchor_sequences.find(a => {
                 const start = a.transcription_position
                 const end = start + a.length
@@ -50,13 +62,17 @@ export default function TranscriptionView({ data, onElementClick, flashingType }
                 return currentWordIndex >= start && currentWordIndex < end
             })
 
-            // Get correction info for current position
             const hasCorrections = gap ? gap.corrections.length > 0 : false
 
             const shouldFlash = Boolean(
                 (flashingType === 'anchor' && anchor) ||
                 (flashingType === 'corrected' && hasCorrections) ||
-                (flashingType === 'uncorrected' && gap && !hasCorrections)
+                (flashingType === 'uncorrected' && gap && !hasCorrections) ||
+                (flashingType === 'word' && highlightInfo?.type === 'anchor' && anchor && (
+                    anchor.transcription_position === highlightInfo.transcriptionIndex &&
+                    currentWordIndex >= anchor.transcription_position &&
+                    currentWordIndex < anchor.transcription_position + anchor.length
+                ))
             )
 
             const wordElement = (
@@ -73,9 +89,24 @@ export default function TranscriptionView({ data, onElementClick, flashingType }
                                     : 'transparent',
                         padding: anchor || gap ? '2px 4px' : '0',
                         borderRadius: '3px',
-                        cursor: anchor || gap ? 'pointer' : 'default',
+                        cursor: 'pointer',
                     }}
-                    onClick={() => {
+                    onClick={(e) => {
+                        if (e.detail === 1) {
+                            setTimeout(() => {
+                                if (!e.defaultPrevented) {
+                                    onWordClick?.({
+                                        wordIndex: currentWordIndex,
+                                        type: anchor ? 'anchor' : gap ? 'gap' : 'other',
+                                        anchor,
+                                        gap
+                                    })
+                                }
+                            }, 200)
+                        }
+                    }}
+                    onDoubleClick={(e) => {
+                        e.preventDefault()  // Prevent single-click from firing
                         if (anchor) {
                             onElementClick({
                                 type: 'anchor',
@@ -100,9 +131,7 @@ export default function TranscriptionView({ data, onElementClick, flashingType }
                 </HighlightedWord>
             )
 
-            // Increment word index only for non-whitespace
             wordIndex++
-
             return wordElement
         })
     }

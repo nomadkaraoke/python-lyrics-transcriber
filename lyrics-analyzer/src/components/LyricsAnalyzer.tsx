@@ -3,11 +3,18 @@ import UploadFileIcon from '@mui/icons-material/UploadFile'
 import { Box, Button, Grid, Typography, useMediaQuery, useTheme } from '@mui/material'
 import { useCallback, useState } from 'react'
 import { ApiClient } from '../api'
-import { CorrectionData, LyricsData } from '../types'
+import { CorrectionData, LyricsData, HighlightInfo } from '../types'
 import CorrectionMetrics from './CorrectionMetrics'
 import DetailsModal from './DetailsModal'
 import ReferenceView from './ReferenceView'
 import TranscriptionView from './TranscriptionView'
+
+interface WordClickInfo {
+    wordIndex: number
+    type: 'anchor' | 'gap' | 'other'
+    anchor?: LyricsData['anchor_sequences'][0]
+    gap?: LyricsData['gap_sequences'][0]
+}
 
 interface LyricsAnalyzerProps {
     data: CorrectionData
@@ -30,29 +37,85 @@ export type ModalContent = {
     }
 }
 
-export type FlashType = 'anchor' | 'corrected' | 'uncorrected' | null
+export type FlashType = 'anchor' | 'corrected' | 'uncorrected' | 'word' | null
 
 export default function LyricsAnalyzer({ data, onFileLoad, apiClient, isReadOnly }: LyricsAnalyzerProps) {
     const [modalContent, setModalContent] = useState<ModalContent | null>(null)
     const [flashingType, setFlashingType] = useState<FlashType>(null)
+    const [highlightInfo, setHighlightInfo] = useState<HighlightInfo | null>(null)
     const theme = useTheme()
     const isMobile = useMediaQuery(theme.breakpoints.down('md'))
 
-    const handleFlash = useCallback((type: FlashType) => {
-        // Clear any existing flash animation
+    const handleFlash = useCallback((type: FlashType, info?: HighlightInfo) => {
         setFlashingType(null)
+        setHighlightInfo(null)
 
-        // Force a new render cycle before starting the animation
         requestAnimationFrame(() => {
             requestAnimationFrame(() => {
                 setFlashingType(type)
-                // Reset after animation completes
+                if (info) {
+                    setHighlightInfo(info)
+                }
                 setTimeout(() => {
                     setFlashingType(null)
-                }, 1200) // Adjusted to match new animation duration (0.4s × 3)
+                    setHighlightInfo(null)
+                }, 1200)
             })
         })
     }, [])
+
+    const handleWordClick = useCallback((info: WordClickInfo) => {
+        console.group('Word Click Debug Info')
+
+        // Log the clicked word info
+        console.log(`Clicked word index: ${info.wordIndex}`)
+        console.log(`Word type: ${info.type}`)
+
+        if (info.type === 'anchor' && info.anchor) {
+            // Log detailed anchor info
+            console.log(`Anchor text: "${info.anchor.text}"`)
+            console.log(`Anchor position in transcription: ${info.anchor.transcription_position}`)
+            console.log(`Anchor length: ${info.anchor.length}`)
+            console.log('Reference positions:', {
+                genius: info.anchor.reference_positions.genius,
+                spotify: info.anchor.reference_positions.spotify
+            })
+
+            // Log what we're sending to handleFlash
+            const highlightInfo = {
+                type: 'anchor' as const,
+                transcriptionIndex: info.anchor.transcription_position,
+                transcriptionLength: info.anchor.length,
+                referenceIndices: info.anchor.reference_positions,
+                referenceLength: info.anchor.length
+            }
+            console.log('Sending highlight info:', {
+                type: highlightInfo.type,
+                transIndex: highlightInfo.transcriptionIndex,
+                transLength: highlightInfo.transcriptionLength,
+                refIndices: {
+                    genius: highlightInfo.referenceIndices.genius,
+                    spotify: highlightInfo.referenceIndices.spotify
+                },
+                refLength: highlightInfo.referenceLength
+            })
+
+            handleFlash('word', highlightInfo)
+        } else if (info.type === 'gap' && info.gap) {
+            // Show modal for gaps on single click
+            setModalContent({
+                type: 'gap',
+                data: {
+                    ...info.gap,
+                    position: info.wordIndex,
+                    word: info.gap.text
+                }
+            })
+        } else {
+            console.log('Word is not part of an anchor sequence or gap')
+        }
+        console.groupEnd()
+    }, [handleFlash, setModalContent])
 
     return (
         <Box>
@@ -130,7 +193,9 @@ export default function LyricsAnalyzer({ data, onFileLoad, apiClient, isReadOnly
                     <TranscriptionView
                         data={data}
                         onElementClick={setModalContent}
+                        onWordClick={handleWordClick}
                         flashingType={flashingType}
+                        highlightInfo={highlightInfo}
                     />
                 </Grid>
                 <Grid item xs={12} md={6}>
@@ -139,8 +204,10 @@ export default function LyricsAnalyzer({ data, onFileLoad, apiClient, isReadOnly
                         anchors={data.anchor_sequences}
                         gaps={data.gap_sequences}
                         onElementClick={setModalContent}
+                        onWordClick={handleWordClick}
                         flashingType={flashingType}
                         corrected_segments={data.corrected_segments}
+                        highlightInfo={highlightInfo}
                     />
                 </Grid>
             </Grid>

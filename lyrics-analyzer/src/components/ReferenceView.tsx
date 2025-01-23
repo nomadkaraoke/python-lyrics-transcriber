@@ -1,17 +1,27 @@
 import { useState } from 'react'
 import { Paper, Typography, Box, Button, Tooltip } from '@mui/material'
-import { LyricsData, LyricsSegment } from '../types'
+import { HighlightInfo, LyricsData, LyricsSegment } from '../types'
 import { FlashType, ModalContent } from './LyricsAnalyzer'
 import { COLORS } from './constants'
 import { HighlightedWord } from './styles'
+
+interface WordClickInfo {
+    wordIndex: number
+    type: 'anchor' | 'gap' | 'other'
+    anchor?: LyricsData['anchor_sequences'][0]
+    gap?: LyricsData['gap_sequences'][0]
+}
 
 interface ReferenceViewProps {
     referenceTexts: Record<string, string>
     anchors: LyricsData['anchor_sequences']
     gaps: LyricsData['gap_sequences']
     onElementClick: (content: ModalContent) => void
+    onWordClick?: (info: WordClickInfo) => void
     flashingType: FlashType
     corrected_segments: LyricsSegment[]
+    highlightedWordIndex?: number
+    highlightInfo: HighlightInfo | null
 }
 
 export default function ReferenceView({
@@ -19,8 +29,11 @@ export default function ReferenceView({
     anchors,
     gaps,
     onElementClick,
+    onWordClick,
     flashingType,
     corrected_segments,
+    highlightedWordIndex,
+    highlightInfo,
 }: ReferenceViewProps) {
     const [currentSource, setCurrentSource] = useState<'genius' | 'spotify'>('genius')
 
@@ -130,26 +143,65 @@ export default function ReferenceView({
                 return thisWordIndex >= position && thisWordIndex < position + correction.length
             })
 
-            const shouldFlash = Boolean(
-                (flashingType === 'anchor' && anchor) ||
-                (flashingType === 'corrected' && correctedGap)
-            )
+            const shouldHighlight = (() => {
+                if (flashingType === 'anchor' && anchor) {
+                    return true
+                }
+                
+                if (flashingType === 'word' && highlightInfo?.type === 'anchor' && anchor) {
+                    // Check if this word is part of the highlighted anchor sequence
+                    const refPos = anchor.reference_positions[currentSource]
+                    const highlightPos = highlightInfo.referenceIndices[currentSource]
+                    
+                    console.log('Checking word highlight:', {
+                        wordIndex: thisWordIndex,
+                        refPos,
+                        highlightPos,
+                        anchorLength: anchor.length,
+                        isInRange: thisWordIndex >= refPos && thisWordIndex < refPos + anchor.length
+                    })
+                    
+                    return refPos === highlightPos && 
+                           anchor.length === highlightInfo.referenceLength &&
+                           thisWordIndex >= refPos && 
+                           thisWordIndex < refPos + anchor.length
+                }
+                
+                return false
+            })()
 
             elements.push(
                 <HighlightedWord
-                    key={`${word}-${index}-${shouldFlash}`}
-                    shouldFlash={shouldFlash}
+                    key={`${word}-${index}-${shouldHighlight}`}
+                    shouldFlash={shouldHighlight}
                     style={{
-                        backgroundColor: anchor
-                            ? COLORS.anchor
-                            : correctedGap
-                                ? COLORS.corrected
-                                : 'transparent',
+                        backgroundColor: flashingType === 'word' && highlightedWordIndex === thisWordIndex
+                            ? COLORS.highlighted
+                            : anchor
+                                ? COLORS.anchor
+                                : correctedGap
+                                    ? COLORS.corrected
+                                    : 'transparent',
                         padding: (anchor || correctedGap) ? '2px 4px' : '0',
                         borderRadius: '3px',
-                        cursor: (anchor || correctedGap) ? 'pointer' : 'default',
+                        cursor: 'pointer',
                     }}
-                    onClick={() => {
+                    onClick={(e) => {
+                        if (e.detail === 1) {
+                            setTimeout(() => {
+                                if (!e.defaultPrevented) {
+                                    onWordClick?.({
+                                        wordIndex: thisWordIndex,
+                                        type: anchor ? 'anchor' : correctedGap ? 'gap' : 'other',
+                                        anchor,
+                                        gap: correctedGap
+                                    })
+                                }
+                            }, 200)
+                        }
+                    }}
+                    onDoubleClick={(e) => {
+                        e.preventDefault()  // Prevent single-click from firing
                         if (anchor) {
                             onElementClick({
                                 type: 'anchor',

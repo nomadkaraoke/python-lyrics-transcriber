@@ -100,3 +100,14 @@ export interface CorrectionData {
         correction_ratio: number
     }
 }
+
+export interface HighlightInfo {
+    transcriptionIndex?: number
+    transcriptionLength?: number
+    referenceIndices: {
+        genius?: number
+        spotify?: number
+    }
+    referenceLength?: number
+    type: 'single' | 'gap' | 'anchor'
+}

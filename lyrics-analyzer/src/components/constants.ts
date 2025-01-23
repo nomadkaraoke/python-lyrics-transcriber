@@ -4,6 +4,7 @@ export const COLORS = {
     anchor: '#e3f2fd', // Pale blue
     corrected: '#e8f5e9', // Pale green
     uncorrectedGap: '#fff3e0', // Pale orange
+    highlighted: '#ffeb3b',  // or any color you prefer for highlighting
 } as const
 
 export const flashAnimation = keyframes`
@@ -13,6 +14,6 @@ export const flashAnimation = keyframes`
   }
   50% { 
     opacity: 0.6;
-    background-color: ${COLORS.anchor};
+    background-color: ${COLORS.highlighted};
   }
 ` 
