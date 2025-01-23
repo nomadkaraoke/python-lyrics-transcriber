@@ -30,20 +30,53 @@ export default function ReferenceView({
 
         // Normalize reference text by removing all newlines and reducing multiple spaces to single
         const normalizedRefText = text.replace(/\n/g, ' ').replace(/\s+/g, ' ').trim()
-        
+
         // Split into words while preserving spaces
         const words = normalizedRefText.split(/(\s+)/)
         let currentIndex = 0
 
-        // Track which indices should have line breaks based on segments
+        // Find the end-of-line anchors from corrected_segments and store segment info
+        const newlineInfo = new Map<number, string>()
         const newlineIndices = new Set(
-            corrected_segments.slice(0, -1).map(segment => 
-                segment.text.split(/\s+/).length
-            ).reduce<number[]>((acc, len) => {
-                const lastIndex = acc.length ? acc[acc.length - 1] : 0
-                acc.push(lastIndex + len)
-                return acc
-            }, [])
+            corrected_segments.slice(0, -1).map((segment, segmentIndex) => {
+                // Get the last word position in this segment
+                const segmentWords = segment.text.trim().split(/\s+/)
+                const lastWord = segmentWords[segmentWords.length - 1]
+
+                // Find the anchor that contains this last word
+                const matchingAnchor = anchors.find(a => {
+                    const transcriptionStart = a.transcription_position
+                    const transcriptionEnd = transcriptionStart + a.length
+                    const lastWordPosition = corrected_segments
+                        .slice(0, segmentIndex)
+                        .reduce((acc, s) => acc + s.text.trim().split(/\s+/).length, 0) + segmentWords.length - 1
+
+                    return lastWordPosition >= transcriptionStart && lastWordPosition < transcriptionEnd
+                })
+
+                if (!matchingAnchor) {
+                    console.warn(`Could not find anchor for segment end: "${segment.text.trim()}"`)
+                    return null
+                }
+
+                const refPosition = matchingAnchor.reference_positions[currentSource]
+                if (refPosition === undefined) return null
+
+                // Calculate the offset from the anchor's start to our word
+                const wordOffsetInAnchor = matchingAnchor.words.indexOf(lastWord)
+                const finalPosition = refPosition + wordOffsetInAnchor + 1  // Add 1 to get position after the word
+
+                // Store the segment text for this position
+                newlineInfo.set(finalPosition, segment.text.trim())
+
+                // console.log(
+                //     `Segment ${segmentIndex}: "${segment.text.trim()}" → ` +
+                //     `Last word "${lastWord}" found in anchor "${matchingAnchor.text}" → ` +
+                //     `Newline after reference position ${finalPosition} (ref_pos ${refPosition} + offset ${wordOffsetInAnchor} + 1)`
+                // )
+
+                return finalPosition
+            }).filter((pos): pos is number => pos !== null)
         )
 
         const elements: React.ReactNode[] = []
@@ -55,16 +88,19 @@ export default function ReferenceView({
                 return
             }
 
-            const thisWordIndex = currentIndex // Store current position for this word
+            const thisWordIndex = currentIndex
 
-            if (newlineIndices.has(currentIndex)) {
+            if (newlineIndices.has(thisWordIndex)) {
                 elements.push(
-                    <Tooltip 
-                        key={`newline-${currentIndex}`}
-                        title={`Newline inserted after word position ${currentIndex}`}
+                    <Tooltip
+                        key={`newline-${thisWordIndex}`}
+                        title={
+                            `Newline inserted after word position ${thisWordIndex}\n` +
+                            `End of segment: "${newlineInfo.get(thisWordIndex)}"`
+                        }
                     >
-                        <span 
-                            style={{ 
+                        <span
+                            style={{
                                 cursor: 'help',
                                 color: '#666',
                                 backgroundColor: '#eee',
