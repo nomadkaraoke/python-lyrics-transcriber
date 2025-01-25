@@ -3,11 +3,12 @@ import UploadFileIcon from '@mui/icons-material/UploadFile'
 import { Box, Button, Grid, Typography, useMediaQuery, useTheme } from '@mui/material'
 import { useCallback, useState } from 'react'
 import { ApiClient } from '../api'
-import { CorrectionData, LyricsData, HighlightInfo } from '../types'
+import { CorrectionData, LyricsData, HighlightInfo, AnchorMatchInfo } from '../types'
 import CorrectionMetrics from './CorrectionMetrics'
 import DetailsModal from './DetailsModal'
 import ReferenceView from './ReferenceView'
 import TranscriptionView from './TranscriptionView'
+import DebugPanel from './DebugPanel'
 
 interface WordClickInfo {
     wordIndex: number
@@ -43,6 +44,8 @@ export default function LyricsAnalyzer({ data, onFileLoad, apiClient, isReadOnly
     const [modalContent, setModalContent] = useState<ModalContent | null>(null)
     const [flashingType, setFlashingType] = useState<FlashType>(null)
     const [highlightInfo, setHighlightInfo] = useState<HighlightInfo | null>(null)
+    const [currentSource, setCurrentSource] = useState<'genius' | 'spotify'>('genius')
+    const [anchorMatchInfo, setAnchorMatchInfo] = useState<AnchorMatchInfo[]>([])
     const theme = useTheme()
     const isMobile = useMediaQuery(theme.breakpoints.down('md'))
 
@@ -188,6 +191,12 @@ export default function LyricsAnalyzer({ data, onFileLoad, apiClient, isReadOnly
                 />
             </Box>
 
+            <DebugPanel
+                data={data}
+                currentSource={currentSource}
+                anchorMatchInfo={anchorMatchInfo}
+            />
+
             <Grid container spacing={2} direction={isMobile ? 'column' : 'row'}>
                 <Grid item xs={12} md={6}>
                     <TranscriptionView
@@ -208,6 +217,9 @@ export default function LyricsAnalyzer({ data, onFileLoad, apiClient, isReadOnly
                         flashingType={flashingType}
                         corrected_segments={data.corrected_segments}
                         highlightInfo={highlightInfo}
+                        currentSource={currentSource}
+                        onSourceChange={setCurrentSource}
+                        onDebugInfoUpdate={setAnchorMatchInfo}
                     />
                 </Grid>
             </Grid>

@@ -1,6 +1,6 @@
-import { useState } from 'react'
+import { useEffect, useMemo, useRef } from 'react'
 import { Paper, Typography, Box, Button, Tooltip } from '@mui/material'
-import { HighlightInfo, LyricsData, LyricsSegment } from '../types'
+import { AnchorMatchInfo, HighlightInfo, LyricsData, LyricsSegment } from '../types'
 import { FlashType, ModalContent } from './LyricsAnalyzer'
 import { COLORS } from './constants'
 import { HighlightedWord } from './styles'
@@ -22,7 +22,13 @@ interface ReferenceViewProps {
     corrected_segments: LyricsSegment[]
     highlightedWordIndex?: number
     highlightInfo: HighlightInfo | null
+    currentSource: 'genius' | 'spotify'
+    onSourceChange: (source: 'genius' | 'spotify') => void
+    onDebugInfoUpdate?: (info: AnchorMatchInfo[]) => void
 }
+
+const normalizeWord = (word: string): string =>
+    word.toLowerCase().replace(/[.,!?']/g, '')
 
 export default function ReferenceView({
     referenceTexts,
@@ -34,107 +40,139 @@ export default function ReferenceView({
     corrected_segments,
     highlightedWordIndex,
     highlightInfo,
+    currentSource,
+    onSourceChange,
+    onDebugInfoUpdate
 }: ReferenceViewProps) {
-    const [currentSource, setCurrentSource] = useState<'genius' | 'spotify'>('genius')
+    // Create a ref to store debug info to avoid dependency cycles
+    const debugInfoRef = useRef<AnchorMatchInfo[]>([])
 
-    const renderHighlightedText = () => {
-        const text = referenceTexts[currentSource]
-        if (!text) return null
+    const { newlineInfo, newlineIndices } = useMemo(() => {
+        debugInfoRef.current = corrected_segments.map(segment => ({
+            segment: segment.text.trim(),
+            lastWord: '',
+            normalizedLastWord: '',
+            overlappingAnchors: [],
+            matchingGap: null,
+            debugLog: []
+        }));
 
-        // Normalize reference text by removing all newlines and reducing multiple spaces to single
-        const normalizedRefText = text.replace(/\n/g, ' ').replace(/\s+/g, ' ').trim()
-
-        // Split into words while preserving spaces
-        const words = normalizedRefText.split(/(\s+)/)
-        let currentIndex = 0
-
-        // Find the end-of-line anchors from corrected_segments and store segment info
         const newlineInfo = new Map<number, string>()
         const newlineIndices = new Set(
             corrected_segments.slice(0, -1).map((segment, segmentIndex) => {
-                // Get the last word position in this segment
-                const segmentWords = segment.text.trim().split(/\s+/)
+                const segmentText = segment.text.trim()
+                const segmentWords = segmentText.split(/\s+/)
                 const lastWord = segmentWords[segmentWords.length - 1]
+                const normalizedLastWord = normalizeWord(lastWord)
 
-                // Find the anchor that contains this last word
+                debugInfoRef.current[segmentIndex].debugLog?.push(
+                    `Processing segment: "${segmentText}"\n` +
+                    `  Words: ${segmentWords.join('|')}\n` +
+                    `  Last word: "${lastWord}"\n` +
+                    `  Normalized last word: "${normalizedLastWord}"`
+                )
+
+                // Calculate word position
+                const segmentStartWord = corrected_segments
+                    .slice(0, segmentIndex)
+                    .reduce((acc, s) => acc + s.text.trim().split(/\s+/).length, 0)
+                const lastWordPosition = segmentStartWord + segmentWords.length - 1
+
+                // Try to find the anchor containing this word
                 const matchingAnchor = anchors.find(a => {
-                    const transcriptionStart = a.transcription_position
-                    const transcriptionEnd = transcriptionStart + a.length
-                    const lastWordPosition = corrected_segments
-                        .slice(0, segmentIndex)
-                        .reduce((acc, s) => acc + s.text.trim().split(/\s+/).length, 0) + segmentWords.length - 1
+                    const start = a.transcription_position
+                    const end = start + a.length - 1
+                    const isMatch = lastWordPosition >= start && lastWordPosition <= end
 
-                    return lastWordPosition >= transcriptionStart && lastWordPosition < transcriptionEnd
+                    debugInfoRef.current[segmentIndex].debugLog?.push(
+                        `Checking anchor: "${a.text}"\n` +
+                        `  Position range: ${start}-${end}\n` +
+                        `  Last word position: ${lastWordPosition}\n` +
+                        `  Is in range: ${isMatch}\n` +
+                        `  Words: ${a.words.join('|')}`
+                    )
+
+                    return isMatch
                 })
 
-                if (!matchingAnchor) {
-                    console.warn(`Could not find anchor for segment end: "${segment.text.trim()}"`)
-                    return null
+                if (matchingAnchor?.reference_positions[currentSource] !== undefined) {
+                    const anchorWords = matchingAnchor.words
+                    const wordIndex = anchorWords.findIndex(w => {
+                        const normalizedAnchorWord = normalizeWord(w)
+                        const matches = normalizedAnchorWord === normalizedLastWord
+
+                        debugInfoRef.current[segmentIndex].debugLog?.push(
+                            `Comparing words:\n` +
+                            `  Anchor word: "${w}" (normalized: "${normalizedAnchorWord}")\n` +
+                            `  Segment word: "${lastWord}" (normalized: "${normalizedLastWord}")\n` +
+                            `  Matches: ${matches}`
+                        )
+
+                        return matches
+                    })
+
+                    if (wordIndex !== -1) {
+                        const position = matchingAnchor.reference_positions[currentSource] + wordIndex
+
+                        debugInfoRef.current[segmentIndex].debugLog?.push(
+                            `Found match:\n` +
+                            `  Word index in anchor: ${wordIndex}\n` +
+                            `  Reference position: ${matchingAnchor.reference_positions[currentSource]}\n` +
+                            `  Final position: ${position}`
+                        )
+
+                        // Update debug info with word matching details
+                        debugInfoRef.current[segmentIndex] = {
+                            ...debugInfoRef.current[segmentIndex],
+                            lastWord,
+                            normalizedLastWord,
+                            overlappingAnchors: [{
+                                text: matchingAnchor.text,
+                                range: [matchingAnchor.transcription_position, matchingAnchor.transcription_position + matchingAnchor.length - 1],
+                                words: anchorWords,
+                                hasMatchingWord: true
+                            }],
+                            wordPositionDebug: {
+                                anchorWords,
+                                wordIndex,
+                                referencePosition: matchingAnchor.reference_positions[currentSource],
+                                finalPosition: position,
+                                normalizedWords: {
+                                    anchor: normalizeWord(anchorWords[wordIndex]),
+                                    segment: normalizedLastWord
+                                }
+                            }
+                        }
+
+                        newlineInfo.set(position, segment.text.trim())
+                        return position
+                    }
                 }
 
-                const refPosition = matchingAnchor.reference_positions[currentSource]
-                if (refPosition === undefined) return null
-
-                // Calculate the offset from the anchor's start to our word
-                const wordOffsetInAnchor = matchingAnchor.words.indexOf(lastWord)
-                const finalPosition = refPosition + wordOffsetInAnchor + 1  // Add 1 to get position after the word
-
-                // Store the segment text for this position
-                newlineInfo.set(finalPosition, segment.text.trim())
-
-                // console.log(
-                //     `Segment ${segmentIndex}: "${segment.text.trim()}" → ` +
-                //     `Last word "${lastWord}" found in anchor "${matchingAnchor.text}" → ` +
-                //     `Newline after reference position ${finalPosition} (ref_pos ${refPosition} + offset ${wordOffsetInAnchor} + 1)`
-                // )
-
-                return finalPosition
-            }).filter((pos): pos is number => pos !== null)
+                return null
+            }).filter((pos): pos is number => pos !== null && pos >= 0)
         )
+        return { newlineInfo, newlineIndices }
+    }, [corrected_segments, anchors, currentSource])
 
+    // Update debug info whenever it changes
+    useEffect(() => {
+        onDebugInfoUpdate?.(debugInfoRef.current)
+    }, [onDebugInfoUpdate])
+
+    const renderHighlightedText = () => {
         const elements: React.ReactNode[] = []
+        const words = referenceTexts[currentSource].split(/\s+/)
+        let currentIndex = 0
 
         words.forEach((word, index) => {
-            // Skip whitespace without incrementing word index
-            if (/^\s+$/.test(word)) {
-                elements.push(word)
-                return
-            }
-
+            // Add the word element
             const thisWordIndex = currentIndex
-
-            if (newlineIndices.has(thisWordIndex)) {
-                elements.push(
-                    <Tooltip
-                        key={`newline-${thisWordIndex}`}
-                        title={
-                            `Newline inserted after word position ${thisWordIndex}\n` +
-                            `End of segment: "${newlineInfo.get(thisWordIndex)}"`
-                        }
-                    >
-                        <span
-                            style={{
-                                cursor: 'help',
-                                color: '#666',
-                                backgroundColor: '#eee',
-                                padding: '0 4px',
-                                borderRadius: '3px',
-                                margin: '0 2px'
-                            }}
-                        >
-                            ↵
-                        </span>
-                    </Tooltip>
-                )
-                elements.push('\n')
-            }
-
             const anchor = anchors.find(a => {
                 const position = a.reference_positions[currentSource]
                 if (position === undefined) return false
                 return thisWordIndex >= position && thisWordIndex < position + a.length
             })
-
             const correctedGap = gaps.find(g => {
                 if (!g.corrections.length) return false
                 const correction = g.corrections[0]
@@ -143,37 +181,10 @@ export default function ReferenceView({
                 return thisWordIndex >= position && thisWordIndex < position + correction.length
             })
 
-            const shouldHighlight = (() => {
-                if (flashingType === 'anchor' && anchor) {
-                    return true
-                }
-                
-                if (flashingType === 'word' && highlightInfo?.type === 'anchor' && anchor) {
-                    // Check if this word is part of the highlighted anchor sequence
-                    const refPos = anchor.reference_positions[currentSource]
-                    const highlightPos = highlightInfo.referenceIndices[currentSource]
-                    
-                    console.log('Checking word highlight:', {
-                        wordIndex: thisWordIndex,
-                        refPos,
-                        highlightPos,
-                        anchorLength: anchor.length,
-                        isInRange: thisWordIndex >= refPos && thisWordIndex < refPos + anchor.length
-                    })
-                    
-                    return refPos === highlightPos && 
-                           anchor.length === highlightInfo.referenceLength &&
-                           thisWordIndex >= refPos && 
-                           thisWordIndex < refPos + anchor.length
-                }
-                
-                return false
-            })()
-
             elements.push(
                 <HighlightedWord
-                    key={`${word}-${index}-${shouldHighlight}`}
-                    shouldFlash={shouldHighlight}
+                    key={`${word}-${index}`}
+                    shouldFlash={flashingType === 'word' && highlightedWordIndex === thisWordIndex}
                     style={{
                         backgroundColor: flashingType === 'word' && highlightedWordIndex === thisWordIndex
                             ? COLORS.highlighted
@@ -226,7 +237,15 @@ export default function ReferenceView({
                 </HighlightedWord>
             )
 
-            currentIndex++ // Increment after using the current position
+            // Check if we need to add a newline after this word
+            if (newlineIndices.has(thisWordIndex)) {
+                elements.push(<br key={`br-${index}`} />)
+            } else {
+                // Only add space if not adding newline
+                elements.push(' ')
+            }
+
+            currentIndex++
         })
 
         return elements
@@ -242,7 +261,7 @@ export default function ReferenceView({
                     <Button
                         size="small"
                         variant={currentSource === 'genius' ? 'contained' : 'outlined'}
-                        onClick={() => setCurrentSource('genius')}
+                        onClick={() => onSourceChange('genius')}
                         sx={{ mr: 1 }}
                     >
                         Genius
@@ -250,7 +269,7 @@ export default function ReferenceView({
                     <Button
                         size="small"
                         variant={currentSource === 'spotify' ? 'contained' : 'outlined'}
-                        onClick={() => setCurrentSource('spotify')}
+                        onClick={() => onSourceChange('spotify')}
                     >
                         Spotify
                     </Button>

@@ -37,7 +37,7 @@ class LyricsCorrector:
             NoSpacePunctuationMatchHandler(),
             SyllablesMatchHandler(),
             ExtendAnchorHandler(),
-            RepeatCorrectionHandler(),
+            # RepeatCorrectionHandler(),
             SoundAlikeHandler(),
             LevenshteinHandler(),
         ]
@@ -204,9 +204,11 @@ class LyricsCorrector:
                 if current_word_idx in correction_map:
                     word_corrections = sorted(correction_map[current_word_idx], key=lambda x: x.split_index or 0)
 
-                    if any(c.split_total for c in word_corrections):
+                    # Check if any correction has a valid split_total
+                    total_splits = next((c.split_total for c in word_corrections if c.split_total is not None), None)
+
+                    if total_splits:
                         # Handle word split
-                        total_splits = word_corrections[0].split_total
                         split_duration = (word.end_time - word.start_time) / total_splits
 
                         for i, correction in enumerate(word_corrections):
