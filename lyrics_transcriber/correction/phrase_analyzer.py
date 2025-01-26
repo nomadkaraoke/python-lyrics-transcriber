@@ -21,10 +21,19 @@ class PhraseAnalyzer:
         try:
             self.nlp = spacy.load(language_code)
         except OSError:
-            self.logger.error(f"Failed to load language model: {language_code}")
-            raise OSError(
-                f"Language model '{language_code}' not found. " f"Please install it with: python -m spacy download {language_code}"
-            )
+            self.logger.info(f"Language model {language_code} not found. Attempting to download...")
+            import subprocess
+
+            try:
+                subprocess.check_call(["python", "-m", "spacy", "download", language_code])
+                self.nlp = spacy.load(language_code)
+                self.logger.info(f"Successfully downloaded and loaded {language_code}")
+            except subprocess.CalledProcessError as e:
+                self.logger.error(f"Failed to download language model: {language_code}")
+                raise OSError(
+                    f"Language model '{language_code}' could not be downloaded. "
+                    f"Please install it manually with: python -m spacy download {language_code}"
+                ) from e
 
     def score_phrase(self, words: List[str], context: str) -> PhraseScore:
         """Score a phrase based on grammatical completeness and natural breaks.
