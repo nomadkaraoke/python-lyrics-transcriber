@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef } from 'react'
-import { Paper, Typography, Box, Button, Tooltip } from '@mui/material'
-import { AnchorMatchInfo, HighlightInfo, LyricsData, LyricsSegment } from '../types'
+import { Paper, Typography, Box, Button } from '@mui/material'
+import { AnchorMatchInfo, LyricsData, LyricsSegment } from '../types'
 import { FlashType, ModalContent } from './LyricsAnalyzer'
 import { COLORS } from './constants'
 import { HighlightedWord } from './styles'
@@ -21,7 +21,6 @@ interface ReferenceViewProps {
     flashingType: FlashType
     corrected_segments: LyricsSegment[]
     highlightedWordIndex?: number
-    highlightInfo: HighlightInfo | null
     currentSource: 'genius' | 'spotify'
     onSourceChange: (source: 'genius' | 'spotify') => void
     onDebugInfoUpdate?: (info: AnchorMatchInfo[]) => void
@@ -39,7 +38,6 @@ export default function ReferenceView({
     flashingType,
     corrected_segments,
     highlightedWordIndex,
-    highlightInfo,
     currentSource,
     onSourceChange,
     onDebugInfoUpdate
@@ -47,7 +45,7 @@ export default function ReferenceView({
     // Create a ref to store debug info to avoid dependency cycles
     const debugInfoRef = useRef<AnchorMatchInfo[]>([])
 
-    const { newlineInfo, newlineIndices } = useMemo(() => {
+    const { newlineIndices } = useMemo(() => {
         debugInfoRef.current = corrected_segments.map(segment => ({
             segment: segment.text.trim(),
             lastWord: '',
@@ -57,7 +55,6 @@ export default function ReferenceView({
             debugLog: []
         }));
 
-        const newlineInfo = new Map<number, string>()
         const newlineIndices = new Set(
             corrected_segments.slice(0, -1).map((segment, segmentIndex) => {
                 const segmentText = segment.text.trim()
@@ -144,7 +141,6 @@ export default function ReferenceView({
                             }
                         }
 
-                        newlineInfo.set(position, segment.text.trim())
                         return position
                     }
                 }
@@ -152,7 +148,7 @@ export default function ReferenceView({
                 return null
             }).filter((pos): pos is number => pos !== null && pos >= 0)
         )
-        return { newlineInfo, newlineIndices }
+        return { newlineIndices }
     }, [corrected_segments, anchors, currentSource])
 
     // Update debug info whenever it changes

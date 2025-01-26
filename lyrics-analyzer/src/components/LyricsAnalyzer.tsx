@@ -216,7 +216,6 @@ export default function LyricsAnalyzer({ data, onFileLoad, apiClient, isReadOnly
                         onWordClick={handleWordClick}
                         flashingType={flashingType}
                         corrected_segments={data.corrected_segments}
-                        highlightInfo={highlightInfo}
                         currentSource={currentSource}
                         onSourceChange={setCurrentSource}
                         onDebugInfoUpdate={setAnchorMatchInfo}

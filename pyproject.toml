@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "lyrics-transcriber"
-version = "0.32.1"
+version = "0.32.2"
 description = "Automatically create synchronised lyrics files in ASS and MidiCo LRC formats with word-level timestamps, using Whisper and lyrics from Genius and Spotify"
 authors = ["Andrew Beveridge <andrew@beveridge.uk>"]
 license = "MIT"
@@ -20,17 +20,17 @@ karaoke-lyrics-processor = ">=0.4"
 dropbox = ">=12"
 python-dotenv = ">=1"
 pydub = ">=0.25"
-spacy = "^3.8.3"
-tqdm = "^4.67.1"
-python-levenshtein = "^0.26.1"
-transformers = "^4.47.1"
-torch = "^2.5.1"
-metaphone = "^0.6"
-nltk = "^3.9.1"
-spacy-syllables = "^3.0.2"
-syllables = "^1.0.9"
-fastapi = "^0.115.6"
-uvicorn = "^0.34.0"
+spacy = ">=3.8"
+tqdm = ">=4.67"
+python-levenshtein = ">=0.26"
+transformers = ">=4.47"
+torch = ">=2"
+metaphone = ">=0.6"
+nltk = ">=3.9"
+spacy-syllables = ">=3"
+syllables = ">=1"
+fastapi = ">=0.115"
+uvicorn = ">=0.34"
 
 [tool.poetry.group.dev.dependencies]
 black = ">=23"
@@ -52,6 +52,4 @@ build-backend = "poetry.core.masonry.api"
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 python_files = ["test_*.py"]
-filterwarnings = [
-    "ignore:'audioop' is deprecated:DeprecationWarning"
-]
+filterwarnings = ["ignore:'audioop' is deprecated:DeprecationWarning"]
