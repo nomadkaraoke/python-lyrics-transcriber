@@ -83,6 +83,16 @@ class LyricsTranscriber:
         self.lyrics_config = lyrics_config or LyricsConfig()
         self.output_config = output_config or OutputConfig()
 
+        # Check if styles JSON is available for CDG and video features
+        if not self.output_config.output_styles_json or not os.path.exists(self.output_config.output_styles_json):
+            if self.output_config.generate_cdg or self.output_config.render_video:
+                self.logger.warning(
+                    f"Output styles JSON file not found: {self.output_config.output_styles_json}. "
+                    "CDG and video generation will be disabled."
+                )
+                self.output_config.generate_cdg = False
+                self.output_config.render_video = False
+
         # Basic settings
         self.audio_filepath = audio_filepath
         self.artist = artist
@@ -105,6 +115,18 @@ class LyricsTranscriber:
         self.lyrics_providers = lyrics_providers or self._initialize_lyrics_providers()
         self.corrector = corrector or LyricsCorrector(cache_dir=self.output_config.cache_dir, logger=self.logger)
         self.output_generator = output_generator or self._initialize_output_generator()
+
+        # Log enabled features
+        self.logger.info("Enabled features:")
+        self.logger.info(f"  Lyrics fetching: {'enabled' if self.output_config.fetch_lyrics else 'disabled'}")
+        self.logger.info(f"  Transcription: {'enabled' if self.output_config.run_transcription else 'disabled'}")
+        self.logger.info(f"  Lyrics correction: {'enabled' if self.output_config.run_correction else 'disabled'}")
+        self.logger.info(f"  Plain text output: {'enabled' if self.output_config.generate_plain_text else 'disabled'}")
+        self.logger.info(f"  LRC file generation: {'enabled' if self.output_config.generate_lrc else 'disabled'}")
+        self.logger.info(f"  CDG file generation: {'enabled' if self.output_config.generate_cdg else 'disabled'}")
+        self.logger.info(f"  Video rendering: {'enabled' if self.output_config.render_video else 'disabled'}")
+        if self.output_config.render_video:
+            self.logger.info(f"    Video resolution: {self.output_config.video_resolution}")
 
     def _initialize_transcribers(self) -> Dict[str, BaseTranscriber]:
         """Initialize available transcription services."""
@@ -175,26 +197,21 @@ class LyricsTranscriber:
         return OutputGenerator(config=self.output_config, logger=self.logger)
 
     def process(self) -> LyricsControllerResult:
-        """
-        Main processing method that orchestrates the entire workflow.
+        """Main processing method that orchestrates the entire workflow."""
 
-        Returns:
-            LyricsControllerResult containing all outputs and generated files.
-
-        Raises:
-            Exception: If a critical error occurs during processing.
-        """
-        # Step 1: Fetch lyrics if artist and title are provided
-        if self.artist and self.title:
+        # Step 1: Fetch lyrics if enabled and artist/title are provided
+        if self.output_config.fetch_lyrics and self.artist and self.title:
             self.fetch_lyrics()
 
-        # Step 2: Run transcription
-        self.transcribe()
+        # Step 2: Run transcription if enabled
+        if self.output_config.run_transcription:
+            self.transcribe()
 
-        # Step 3: Process and correct lyrics
-        self.correct_lyrics()
+        # Step 3: Process and correct lyrics if enabled
+        if self.output_config.run_correction:
+            self.correct_lyrics()
 
-        # Step 4: Generate outputs
+        # Step 4: Generate outputs based on what's enabled and available
         self.generate_outputs()
 
         self.logger.info("Processing completed successfully")
@@ -239,7 +256,32 @@ class LyricsTranscriber:
         """Run lyrics correction using transcription and internet lyrics."""
         self.logger.info("Starting lyrics correction process")
 
-        # Run correction
+        # Check if we have reference lyrics to work with
+        if not self.results.lyrics_results:
+            self.logger.warning("No reference lyrics available for correction - using raw transcription")
+            # Use the highest priority transcription result as the "corrected" version
+            if self.results.transcription_results:
+                sorted_results = sorted(self.results.transcription_results, key=lambda x: x.priority)
+                best_transcription = sorted_results[0]
+
+                # Create a CorrectionResult with no corrections
+                self.results.transcription_corrected = CorrectionResult(
+                    original_segments=best_transcription.result.segments,
+                    corrected_segments=best_transcription.result.segments,
+                    corrected_text="",  # Will be generated from segments
+                    corrections=[],  # No corrections made
+                    corrections_made=0,  # No corrections made
+                    confidence=1.0,  # Full confidence since we're using original
+                    transcribed_text="",  # Will be generated from segments
+                    reference_texts={},
+                    anchor_sequences=[],
+                    gap_sequences=[],
+                    resized_segments=[],  # Will be populated later
+                    metadata={"correction_type": "none", "reason": "no_reference_lyrics"},
+                )
+            return
+
+        # Run correction if we have reference lyrics
         corrected_data = self.corrector.run(
             transcription_results=self.results.transcription_results, lyrics_results=self.results.lyrics_results
         )
@@ -257,11 +299,14 @@ class LyricsTranscriber:
             self.logger.info("Human review completed")
 
     def generate_outputs(self) -> None:
-        """Generate output files."""
+        """Generate output files based on enabled features and available data."""
         self.logger.info("Generating output files")
 
+        # Only proceed with outputs that make sense based on what we have
+        has_correction = bool(self.results.transcription_corrected)
+
         output_files = self.output_generator.generate_outputs(
-            transcription_corrected=self.results.transcription_corrected,
+            transcription_corrected=self.results.transcription_corrected if has_correction else None,
             lyrics_results=self.results.lyrics_results,
             output_prefix=self.output_prefix,
             audio_filepath=self.audio_filepath,
@@ -269,7 +314,7 @@ class LyricsTranscriber:
             title=self.title,
         )
 
-        # Store all output paths in results
+        # Store results
         self.results.lrc_filepath = output_files.lrc
         self.results.ass_filepath = output_files.ass
         self.results.video_filepath = output_files.video

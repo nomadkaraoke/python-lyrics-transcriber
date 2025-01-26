@@ -28,8 +28,18 @@ class OutputConfig:
     max_line_length: int = 36
     styles: Dict[str, Any] = field(default_factory=dict)
     output_dir: Optional[str] = os.getcwd()
-    cache_dir: str = os.getenv("LYRICS_TRANSCRIBER_CACHE_DIR", "/tmp/lyrics-transcriber-cache/")
-    render_video: bool = False
-    generate_cdg: bool = False
-    video_resolution: str = "360p"
+    cache_dir: str = os.getenv(
+        "LYRICS_TRANSCRIBER_CACHE_DIR",
+        os.path.join(os.path.expanduser("~"), "lyrics-transcriber-cache")
+    )
+
+    fetch_lyrics: bool = True
+    run_transcription: bool = True
+    run_correction: bool = True
     enable_review: bool = True
+
+    generate_plain_text: bool = True
+    generate_lrc: bool = True
+    generate_cdg: bool = True
+    render_video: bool = True
+    video_resolution: str = "360p"

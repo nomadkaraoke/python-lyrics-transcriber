@@ -60,19 +60,24 @@ def create_arg_parser() -> argparse.ArgumentParser:
     output_group.add_argument(
         "--cache_dir",
         type=Path,
-        help="Directory to cache downloaded/generated files. Default: /tmp/lyrics-transcriber-cache/",
+        help="Directory to cache downloaded/generated files. Default: ~/lyrics-transcriber-cache/",
     )
     output_group.add_argument(
         "--output_styles_json",
         type=Path,
         help="JSON file containing output style configurations for CDG and video generation",
     )
-    output_group.add_argument("--generate_cdg", action="store_true", help="Generate CDG karaoke files")
 
-    # Video options
-    video_group = parser.add_argument_group("Video Options")
-    video_group.add_argument("--render_video", action="store_true", help="Render a karaoke video with the generated lyrics")
-    video_group.add_argument(
+    # Feature control group
+    feature_group = parser.add_argument_group("Feature Control")
+    feature_group.add_argument("--skip_lyrics_fetch", action="store_true", help="Skip fetching lyrics from online sources")
+    feature_group.add_argument("--skip_transcription", action="store_true", help="Skip audio transcription process")
+    feature_group.add_argument("--skip_correction", action="store_true", help="Skip lyrics correction process")
+    feature_group.add_argument("--skip_plain_text", action="store_true", help="Skip generating plain text output files")
+    feature_group.add_argument("--skip_lrc", action="store_true", help="Skip generating LRC file")
+    feature_group.add_argument("--skip_cdg", action="store_true", help="Skip generating CDG karaoke files")
+    feature_group.add_argument("--skip_video", action="store_true", help="Skip rendering karaoke video")
+    feature_group.add_argument(
         "--video_resolution", choices=["4k", "1080p", "720p", "360p"], default="360p", help="Resolution of the karaoke video. Default: 360p"
     )
 
@@ -86,7 +91,7 @@ def parse_args(parser: argparse.ArgumentParser, args_list: list[str] | None = No
 
     # Set default cache_dir if not provided
     if not hasattr(args, "cache_dir") or args.cache_dir is None:
-        args.cache_dir = Path(os.getenv("LYRICS_TRANSCRIBER_CACHE_DIR", "/tmp/lyrics-transcriber-cache/"))
+        args.cache_dir = Path(os.getenv("LYRICS_TRANSCRIBER_CACHE_DIR", os.path.join(os.path.expanduser("~"), "lyrics-transcriber-cache")))
 
     return args
 
@@ -135,9 +140,14 @@ def create_configs(args: argparse.Namespace, env_config: Dict[str, str]) -> tupl
         output_styles_json=str(args.output_styles_json),
         output_dir=str(args.output_dir) if args.output_dir else os.getcwd(),
         cache_dir=str(args.cache_dir),
-        render_video=args.render_video,
-        generate_cdg=args.generate_cdg,
         video_resolution=args.video_resolution,
+        fetch_lyrics=not args.skip_lyrics_fetch,
+        run_transcription=not args.skip_transcription,
+        run_correction=not args.skip_correction,
+        generate_plain_text=not args.skip_plain_text,
+        generate_lrc=not args.skip_lrc,
+        generate_cdg=not args.skip_cdg,
+        render_video=not args.skip_video,
     )
 
     return transcriber_config, lyrics_config, output_config

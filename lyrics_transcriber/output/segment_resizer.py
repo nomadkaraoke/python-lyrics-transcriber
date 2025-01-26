@@ -123,8 +123,9 @@ class SegmentResizer:
                 LyricsSegment(text="Here's another one.", ...)
             ]
         """
-        self.logger.info(f"Processing oversized segment {segment_idx}: '{segment.text}'")
         segment_text = self._clean_text(segment.text)
+
+        self.logger.info(f"Processing oversized segment {segment_idx}: '{segment_text}'")
         split_lines = self._process_segment_text(segment_text)
         self.logger.debug(f"Split into {len(split_lines)} lines: {split_lines}")
 
@@ -163,7 +164,7 @@ class SegmentResizer:
                     if word_pos != -1:
                         line_words.append(words_to_process.pop(0))
                         # Remove the word and any following spaces from remaining line
-                        remaining_line = remaining_line[word_pos + len(word_clean):].strip()
+                        remaining_line = remaining_line[word_pos + len(word_clean) :].strip()
                         continue
 
                 # If we can't find the word in the remaining line, we're done with this line
