@@ -37,7 +37,7 @@ class LyricsCorrector:
             NoSpacePunctuationMatchHandler(),
             SyllablesMatchHandler(),
             ExtendAnchorHandler(),
-            # RepeatCorrectionHandler(),
+            RepeatCorrectionHandler(),
             SoundAlikeHandler(),
             LevenshteinHandler(),
         ]
