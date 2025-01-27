@@ -1,7 +1,7 @@
-import { Box, Typography, Accordion, AccordionSummary, AccordionDetails, Button } from '@mui/material'
+import { Box, Typography, Accordion, AccordionSummary, AccordionDetails } from '@mui/material'
 import ContentCopyIcon from '@mui/icons-material/ContentCopy'
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
-import { LyricsData } from '../types'
+import { CorrectionData } from '../types'
 import { useMemo, useRef, useState } from 'react'
 
 export interface AnchorMatchInfo {
@@ -44,7 +44,7 @@ export interface AnchorMatchInfo {
 }
 
 interface DebugPanelProps {
-    data: LyricsData
+    data: CorrectionData
     currentSource: 'genius' | 'spotify'
     anchorMatchInfo: AnchorMatchInfo[]
 }
@@ -62,9 +62,9 @@ export default function DebugPanel({ data, currentSource, anchorMatchInfo }: Deb
                 const segmentWords = segment.text.trim().split(/\s+/)
                 const lastWord = segmentWords[segmentWords.length - 1]
 
-                const matchingAnchor = data.anchor_sequences.find(a => {
-                    const transcriptionStart = a.transcription_position
-                    const transcriptionEnd = transcriptionStart + a.length - 1
+                const matchingScoredAnchor = data.anchor_sequences.find(anchor => {
+                    const transcriptionStart = anchor.transcription_position
+                    const transcriptionEnd = transcriptionStart + anchor.length - 1
                     const lastWordPosition = data.corrected_segments
                         .slice(0, segmentIndex)
                         .reduce((acc, s) => acc + s.text.trim().split(/\s+/).length, 0) + segmentWords.length - 1
@@ -72,15 +72,15 @@ export default function DebugPanel({ data, currentSource, anchorMatchInfo }: Deb
                     return lastWordPosition >= transcriptionStart && lastWordPosition <= transcriptionEnd
                 })
 
-                if (!matchingAnchor) {
+                if (!matchingScoredAnchor) {
                     console.warn(`Could not find anchor for segment end: "${segment.text.trim()}"`)
                     return null
                 }
 
-                const refPosition = matchingAnchor.reference_positions[currentSource]
+                const refPosition = matchingScoredAnchor.reference_positions[currentSource]
                 if (refPosition === undefined) return null
 
-                const wordOffsetInAnchor = matchingAnchor.words.indexOf(lastWord)
+                const wordOffsetInAnchor = matchingScoredAnchor.words.indexOf(lastWord)
                 const finalPosition = refPosition + wordOffsetInAnchor
 
                 newlineInfo.set(finalPosition, segment.text.trim())
@@ -99,9 +99,9 @@ export default function DebugPanel({ data, currentSource, anchorMatchInfo }: Deb
                 .reduce((acc, s) => acc + s.text.trim().split(/\s+/).length, 0)
             const lastWordPosition = previousWords + segmentWords.length - 1
 
-            const matchingAnchor = data.anchor_sequences.find(a => {
-                const start = a.transcription_position
-                const end = start + a.length
+            const matchingScoredAnchor = data.anchor_sequences.find(anchor => {
+                const start = anchor.transcription_position
+                const end = start + anchor.length
                 return lastWordPosition >= start && lastWordPosition < end
             })
 
@@ -110,13 +110,14 @@ export default function DebugPanel({ data, currentSource, anchorMatchInfo }: Deb
                 segmentWords,
                 previousWords,
                 lastWordPosition,
-                matchingAnchor
+                matchingAnchor: matchingScoredAnchor
             }
         }), [data.corrected_segments, data.anchor_sequences])
 
     // Memoize relevant anchors
     const relevantAnchors = useMemo(() =>
-        data.anchor_sequences.filter(a => a.transcription_position < 50),
+        data.anchor_sequences
+            .filter(anchor => anchor.transcription_position < 50),
         [data.anchor_sequences]
     )
 
@@ -126,7 +127,9 @@ export default function DebugPanel({ data, currentSource, anchorMatchInfo }: Deb
         [data.gap_sequences]
     )
 
-    const handleCopy = () => {
+    const handleCopy = (e: React.MouseEvent) => {
+        e.stopPropagation()  // Prevent accordion from toggling
+
         // Temporarily expand to get content
         setExpanded(true)
 
@@ -160,16 +163,25 @@ export default function DebugPanel({ data, currentSource, anchorMatchInfo }: Deb
                     }}
                 >
                     <Typography>Debug Information</Typography>
-                    <Button
-                        size="small"
-                        startIcon={<ContentCopyIcon />}
-                        onClick={(e) => {
-                            e.stopPropagation()
-                            handleCopy()
-                        }}
+                    <Box
+                        onClick={(e) => e.stopPropagation()}  // Prevent accordion toggle
+                        sx={{ display: 'flex', alignItems: 'center', mr: 2 }}
                     >
-                        Copy All
-                    </Button>
+                        <Typography
+                            component="span"
+                            variant="body2"
+                            sx={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                cursor: 'pointer',
+                                '&:hover': { opacity: 0.7 }
+                            }}
+                            onClick={handleCopy}
+                        >
+                            <ContentCopyIcon sx={{ mr: 0.5, fontSize: '1rem' }} />
+                            Copy All
+                        </Typography>
+                    </Box>
                 </AccordionSummary>
                 <AccordionDetails>
                     <Box ref={contentRef} sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
@@ -241,9 +253,9 @@ export default function DebugPanel({ data, currentSource, anchorMatchInfo }: Deb
                             <Typography variant="h6" gutterBottom>First 5 Newlines (with detailed anchor matching)</Typography>
                             <Typography component="pre" sx={{ fontSize: '0.75rem', whiteSpace: 'pre-wrap' }}>
                                 {Array.from(newlineIndices).sort((a, b) => a - b).slice(0, 5).map(pos => {
-                                    const matchingAnchor = data.anchor_sequences.find(a => {
-                                        const start = a.reference_positions[currentSource]
-                                        const end = start + a.length
+                                    const matchingAnchor = data.anchor_sequences.find(anchor => {
+                                        const start = anchor.reference_positions[currentSource]
+                                        const end = start + anchor.length
                                         return pos >= start && pos < end
                                     })
 

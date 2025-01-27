@@ -28,6 +28,13 @@ export interface WordCorrection {
     length: number
 }
 
+export interface PhraseScore {
+    phrase_type: string
+    natural_break_score: number
+    length_score: number
+    total_score: number
+}
+
 export interface AnchorSequence {
     words: string[]
     text: string
@@ -35,13 +42,8 @@ export interface AnchorSequence {
     transcription_position: number
     reference_positions: Record<string, number>
     confidence: number
-    phrase_score?: {
-        phrase_type: string
-        natural_break_score: number
-        length_score: number
-        total_score: number
-    }
-    total_score?: number
+    phrase_score: PhraseScore
+    total_score: number
 }
 
 export interface GapSequence {

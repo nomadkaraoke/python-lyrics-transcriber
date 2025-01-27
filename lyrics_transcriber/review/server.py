@@ -2,7 +2,7 @@ import logging
 from fastapi import FastAPI, Body
 from fastapi.middleware.cors import CORSMiddleware
 from typing import Optional, Dict, Any
-from ..types import CorrectionResult
+from ..types import CorrectionResult, WordCorrection, LyricsSegment
 import time
 import subprocess
 import os
@@ -64,16 +64,22 @@ async def complete_review(updated_data: Dict[str, Any] = Body(...)):
     Mark the review as complete and update the correction data.
 
     Args:
-        updated_data: The complete correction result data with any modifications
+        updated_data: Dictionary containing corrections and corrected_segments
     """
     global review_completed, current_review
 
     logger.info("Received updated correction data")
 
     try:
-        # Update the current review with modified data
-        # We use from_dict to ensure the data is properly structured
-        current_review = CorrectionResult.from_dict(updated_data)
+        # Only update the specific fields that were modified
+        if current_review is None:
+            raise ValueError("No review in progress")
+
+        # Update only the corrections and corrected_segments
+        current_review.corrections = [WordCorrection.from_dict(c) for c in updated_data["corrections"]]
+        current_review.corrected_segments = [LyricsSegment.from_dict(s) for s in updated_data["corrected_segments"]]
+        current_review.corrections_made = len(current_review.corrections)
+
         logger.info(f"Successfully updated correction data with {len(current_review.corrections)} corrections")
 
         review_completed = True

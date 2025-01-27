@@ -6,9 +6,14 @@ export interface ApiClient {
     submitCorrections: (data: CorrectionData) => Promise<void>;
 }
 
+// Add new interface for the minimal update payload
+interface CorrectionUpdate {
+    corrections: CorrectionData['corrections'];
+    corrected_segments: CorrectionData['corrected_segments'];
+}
+
 export class LiveApiClient implements ApiClient {
     constructor(private baseUrl: string) {
-        // Ensure baseUrl doesn't end with a slash
         this.baseUrl = baseUrl.replace(/\/$/, '')
     }
 
@@ -17,17 +22,25 @@ export class LiveApiClient implements ApiClient {
         if (!response.ok) {
             throw new Error(`API error: ${response.statusText}`);
         }
-        return response.json();
+        const data = await response.json();
+        return data;
     }
 
     async submitCorrections(data: CorrectionData): Promise<void> {
+        // Extract only the needed fields
+        const updatePayload: CorrectionUpdate = {
+            corrections: data.corrections,
+            corrected_segments: data.corrected_segments
+        };
+
         const response = await fetch(`${this.baseUrl}/complete`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
             },
-            body: JSON.stringify(data),
+            body: JSON.stringify(updatePayload)
         });
+
         if (!response.ok) {
             throw new Error(`API error: ${response.statusText}`);
         }

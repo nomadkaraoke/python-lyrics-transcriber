@@ -34,6 +34,7 @@ export default function App() {
     try {
       const client = new LiveApiClient(baseUrl)
       const data = await client.getCorrectionData()
+      console.log('Fetched data:', data)
       setData(data)
     } catch (err) {
       const error = err as Error
@@ -52,8 +53,10 @@ export default function App() {
 
       try {
         const text = await file.text()
-        const newData = JSON.parse(text) as CorrectionData
-        setData(newData)
+        console.log('File contents:', text.slice(0, 500) + '...') // Show first 500 chars
+        const parsedData = JSON.parse(text) as CorrectionData
+        console.log('Parsed file data:', parsedData)
+        setData(parsedData)
       } catch (err) {
         const error = err as Error
         setError(`Error loading file: ${error.message}. Please make sure it is a valid JSON file.`)

@@ -1,5 +1,5 @@
 import { Paper, Typography } from '@mui/material'
-import { LyricsData, HighlightInfo } from '../types'
+import { CorrectionData, AnchorSequence, HighlightInfo } from '../types'
 import { FlashType, ModalContent } from './LyricsAnalyzer'
 import { COLORS } from './constants'
 import { HighlightedWord } from './styles'
@@ -7,12 +7,12 @@ import { HighlightedWord } from './styles'
 interface WordClickInfo {
     wordIndex: number
     type: 'anchor' | 'gap' | 'other'
-    anchor?: LyricsData['anchor_sequences'][0]
-    gap?: LyricsData['gap_sequences'][0]
+    anchor?: AnchorSequence
+    gap?: CorrectionData['gap_sequences'][0]
 }
 
 interface TranscriptionViewProps {
-    data: LyricsData
+    data: CorrectionData
     onElementClick: (content: ModalContent) => void
     onWordClick?: (info: WordClickInfo) => void
     flashingType: FlashType
@@ -50,9 +50,9 @@ export default function TranscriptionView({
             }
 
             const currentWordIndex = wordIndex
-            const anchor = data.anchor_sequences.find(a => {
-                const start = a.transcription_position
-                const end = start + a.length
+            const anchor = data.anchor_sequences.find(anchor => {
+                const start = anchor.transcription_position
+                const end = start + anchor.length
                 return currentWordIndex >= start && currentWordIndex < end
             })
 
