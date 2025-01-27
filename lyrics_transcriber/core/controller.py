@@ -291,39 +291,48 @@ class LyricsTranscriber:
         # Add human review step
         if self.output_config.enable_review:
             from ..review import start_review_server
-            import re
             import json
+            from copy import deepcopy
 
             self.logger.info("Starting human review process")
 
-            # Get auto-corrected data as JSON string
-            auto_corrected_json = json.dumps(self.results.transcription_corrected.to_dict(), indent=4).splitlines()
+            def normalize_data(data_dict):
+                """Normalize numeric values in the data structure before JSON conversion."""
+                if isinstance(data_dict, dict):
+                    return {k: normalize_data(v) for k, v in data_dict.items()}
+                elif isinstance(data_dict, list):
+                    return [normalize_data(item) for item in data_dict]
+                elif isinstance(data_dict, float):
+                    # Convert whole number floats to integers
+                    if data_dict.is_integer():
+                        return int(data_dict)
+                    return data_dict
+                return data_dict
+
+            # Normalize and convert auto-corrected data
+            auto_data = normalize_data(deepcopy(self.results.transcription_corrected.to_dict()))
+            auto_corrected_json = json.dumps(auto_data, indent=4).splitlines()
 
             # Pass through review server
             reviewed_data = start_review_server(self.results.transcription_corrected)
 
-            # Get reviewed data as JSON string
-            human_corrected_json = json.dumps(reviewed_data.to_dict(), indent=4).splitlines()
+            # Normalize and convert reviewed data
+            human_data = normalize_data(deepcopy(reviewed_data.to_dict()))
+            human_corrected_json = json.dumps(human_data, indent=4).splitlines()
 
             self.logger.info("Human review completed")
 
-            # Compare the strings, normalizing numbers first
-            def normalize_numbers(line: str) -> str:
-                # Convert "x.0" to "x" in the line
-                return re.sub(r"(\d+)\.0([,\s}])", r"\1\2", line)
-
-            # Normalize numbers in both strings before comparing
-            auto_corrected_lines = [normalize_numbers(line) for line in auto_corrected_json]
-            human_corrected_lines = [normalize_numbers(line) for line in human_corrected_json]
-
+            # Compare the normalized JSON strings
             diff = list(
-                difflib.unified_diff(auto_corrected_lines, human_corrected_lines, fromfile="auto-corrected", tofile="human-corrected")
+                difflib.unified_diff(auto_corrected_json, human_corrected_json, fromfile="auto-corrected", tofile="human-corrected")
             )
 
             if diff:
                 self.logger.warning("Changes made by human review:")
                 for line in diff:
                     self.logger.warning(line.rstrip())
+
+            # exit(1)
 
     def generate_outputs(self) -> None:
         """Generate output files based on enabled features and available data."""

@@ -106,7 +106,7 @@ export default function LyricsAnalyzer({ data: initialData, onFileLoad, apiClien
                 type: 'gap' as const,
                 data: {
                     ...info.gap,
-                    position: info.gap.transcription_position,
+                    position: info.gap.transcription_position + (info.wordIndex - info.gap.transcription_position),
                     word: info.gap.words[info.wordIndex - info.gap.transcription_position]
                 }
             }
@@ -122,33 +122,31 @@ export default function LyricsAnalyzer({ data: initialData, onFileLoad, apiClien
         console.log('Position:', position)
         console.log('Updated words:', updatedWords)
 
-        // Update manual corrections
-        setManualCorrections(prev => {
-            const newCorrections = new Map(prev)
-            newCorrections.set(position, updatedWords)
-            return newCorrections
-        })
-
         // Create a deep clone of the data
         const newData = JSON.parse(JSON.stringify(data))
 
-        // Find and update the gap sequence
+        // Find the gap that contains this position
         const gapIndex = newData.gap_sequences.findIndex(
-            (gap: GapSequence) => gap.transcription_position === position
+            (gap: GapSequence) =>
+                position >= gap.transcription_position &&
+                position < gap.transcription_position + gap.words.length
         )
 
         if (gapIndex !== -1) {
             const originalGap = newData.gap_sequences[gapIndex]
-            console.log('Found gap at index:', gapIndex)
-            console.log('Original gap:', {
-                text: originalGap.text,
-                words: originalGap.words,
-                transcription_position: originalGap.transcription_position
+            const wordIndexInGap = position - originalGap.transcription_position
+            console.log('Found gap at index:', gapIndex, 'word index in gap:', wordIndexInGap)
+
+            // Update manual corrections
+            setManualCorrections(prev => {
+                const newCorrections = new Map(prev)
+                newCorrections.set(position, updatedWords)
+                return newCorrections
             })
 
             // Create a new correction
             const newCorrection: WordCorrection = {
-                original_word: originalGap.text,
+                original_word: originalGap.words[wordIndexInGap],
                 corrected_word: updatedWords.join(' '),
                 segment_index: 0,
                 original_position: position,
@@ -161,63 +159,60 @@ export default function LyricsAnalyzer({ data: initialData, onFileLoad, apiClien
                 reference_positions: {}
             }
 
-            // Find the corresponding segment first to get timing information
-            const segmentIndex = newData.corrected_segments.findIndex((segment: LyricsSegment) => {
-                // Calculate total words before this segment
-                let totalWords = 0
-                for (let i = 0; i < newData.corrected_segments.indexOf(segment); i++) {
-                    totalWords += newData.corrected_segments[i].words.length
-                }
+            // Find the corresponding segment by counting words
+            let currentPosition = 0
+            let segmentIndex = -1
+            let wordIndex = -1
 
-                // Check if this segment contains our target position
-                const segmentLength = segment.words.length
-                return totalWords <= originalGap.transcription_position &&
-                    (totalWords + segmentLength) > originalGap.transcription_position
+            for (let i = 0; i < newData.corrected_segments.length; i++) {
+                const segment = newData.corrected_segments[i]
+                if (position >= currentPosition && position < currentPosition + segment.words.length) {
+                    segmentIndex = i
+                    wordIndex = position - currentPosition
+                    break
+                }
+                currentPosition += segment.words.length
+            }
+
+            console.log('Segment search:', {
+                position,
+                segmentIndex,
+                wordIndex,
+                totalSegments: newData.corrected_segments.length
             })
 
-            if (segmentIndex !== -1) {
+            if (segmentIndex !== -1 && wordIndex !== -1) {
                 const segment = newData.corrected_segments[segmentIndex]
-                console.log('Found matching segment:', {
-                    text: segment.text,
-                    totalWords: newData.corrected_segments
-                        .slice(0, segmentIndex)
-                        .reduce((sum: number, seg: LyricsSegment) => sum + seg.words.length, 0)
-                })
-
-                // Calculate the word index within the segment
-                let wordsBefore = 0
-                for (let i = 0; i < segmentIndex; i++) {
-                    wordsBefore += newData.corrected_segments[i].words.length
-                }
-                const wordIndex = originalGap.transcription_position - wordsBefore
                 const timingWord = segment.words[wordIndex]
 
-                console.log('Found word in segment:', {
-                    index: wordIndex,
-                    word: timingWord.text,
-                    timing: {
-                        start: timingWord.start_time,
-                        end: timingWord.end_time
-                    }
+                console.log('Found matching segment:', {
+                    text: segment.text,
+                    wordCount: segment.words.length,
+                    wordIndex,
+                    word: timingWord?.text
                 })
 
-                // Update gap sequence with timing from segment
+                if (!timingWord) {
+                    console.error('Could not find timing word in segment')
+                    console.groupEnd()
+                    return
+                }
+
+                // Update gap sequence
+                const newWords = [...originalGap.words]
+                newWords[wordIndexInGap] = updatedWords[0]
                 newData.gap_sequences[gapIndex] = {
                     ...originalGap,
-                    words: updatedWords.map(word => ({
-                        text: word,
-                        start_time: timingWord.start_time,
-                        end_time: timingWord.end_time
-                    })),
-                    text: updatedWords.join(' '),
+                    words: newWords,
+                    text: newWords.join(' '),
                     corrections: originalGap.corrections
                         .filter((c: WordCorrection) => c.source !== 'manual')
                         .concat([newCorrection])
                 }
 
-                // Now update the segment
-                const newWords = [...segment.words]
-                newWords[wordIndex] = {
+                // Update segment
+                const newSegmentWords = [...segment.words]
+                newSegmentWords[wordIndex] = {
                     ...timingWord,
                     text: updatedWords[0],
                     confidence: 1.0
@@ -225,13 +220,13 @@ export default function LyricsAnalyzer({ data: initialData, onFileLoad, apiClien
 
                 newData.corrected_segments[segmentIndex] = {
                     ...segment,
-                    words: newWords,
-                    text: newWords.map(word => word.text).join(' ')
+                    words: newSegmentWords,
+                    text: newSegmentWords.map(word => word.text).join(' ')
                 }
 
                 console.log('Updated both gap and segment')
             } else {
-                console.log('No matching segment found')
+                console.error('Could not find matching segment for position:', position)
             }
         }
 
