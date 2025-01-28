@@ -8,6 +8,7 @@ import subprocess
 import os
 import atexit
 import urllib.parse
+from fastapi.staticfiles import StaticFiles
 
 logger = logging.getLogger(__name__)
 
@@ -29,25 +30,21 @@ vite_process: Optional[subprocess.Popen] = None
 
 
 def start_vite_server():
-    """Start the Vite development server."""
-    global vite_process
-
-    # Get the path to the lyrics-analyzer directory relative to this file
+    """Get path to the built frontend assets."""
+    global vite_process  # We'll keep this for backwards compatibility
+    
+    # Get the path to the built frontend assets
     current_dir = os.path.dirname(os.path.abspath(__file__))
-    vite_dir = os.path.abspath(os.path.join(current_dir, "../../lyrics-analyzer"))
-
-    logger.info(f"Starting Vite dev server in {vite_dir}")
-
-    # Start the Vite dev server
-    vite_process = subprocess.Popen(["npm", "run", "dev"], cwd=vite_dir, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
-
-    # Register cleanup function to kill Vite server on exit
-    atexit.register(lambda: vite_process.terminate() if vite_process else None)
-
-    # Wait a bit for the server to start
-    time.sleep(2)  # Adjust this if needed
-
-    return vite_process
+    frontend_dir = os.path.abspath(os.path.join(current_dir, "../../lyrics-analyzer/dist"))
+    
+    if not os.path.exists(frontend_dir):
+        raise FileNotFoundError(f"Frontend assets not found at {frontend_dir}. Ensure the package was built correctly.")
+    
+    # Mount the static files
+    app.mount("/", StaticFiles(directory=frontend_dir, html=True), name="frontend")
+    
+    logger.info(f"Mounted frontend assets from {frontend_dir}")
+    return None  # No process to return since we're serving static files
 
 
 @app.get("/api/correction-data")
@@ -109,9 +106,9 @@ def start_review_server(correction_result: CorrectionResult) -> CorrectionResult
 
     logger.info("Starting review server...")
 
-    # Start Vite dev server
-    vite_proc = start_vite_server()
-    logger.info("Vite dev server started")
+    # Start Vite dev server (now just mounts static files)
+    start_vite_server()
+    logger.info("Frontend assets mounted")
 
     # Start FastAPI server in a separate thread
     server_thread = Thread(target=uvicorn.run, args=(app,), kwargs={"host": "127.0.0.1", "port": 8000, "log_level": "info"}, daemon=True)
@@ -131,14 +128,6 @@ def start_review_server(correction_result: CorrectionResult) -> CorrectionResult
         # if time.time() - start_time > 600:  # 10 minute timeout
         #     logger.error("Review timed out after 10 minutes")
         #     raise TimeoutError("Review did not complete within the expected time frame.")
-
-    # Clean up Vite server
-    if vite_proc:
-        vite_proc.terminate()
-        try:
-            vite_proc.wait(timeout=5)
-        except subprocess.TimeoutExpired:
-            vite_proc.kill()
 
     logger.info("Review completed, returning results")
     return current_review
