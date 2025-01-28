@@ -1,10 +1,9 @@
 import difflib
-import json
 import os
 import logging
 from dataclasses import dataclass, field
 from typing import Dict, Optional, List
-from lyrics_transcriber.types import LyricsData, PhraseType, TranscriptionResult, CorrectionResult, AnchorSequence, GapSequence, PhraseScore
+from lyrics_transcriber.types import LyricsData, TranscriptionResult, CorrectionResult
 from lyrics_transcriber.transcribers.base_transcriber import BaseTranscriber
 from lyrics_transcriber.transcribers.audioshake import AudioShakeTranscriber, AudioShakeConfig
 from lyrics_transcriber.transcribers.whisper import WhisperTranscriber, WhisperConfig
@@ -205,12 +204,17 @@ class LyricsTranscriber:
         if self.output_config.run_transcription:
             self.transcribe()
 
-        # Step 3: Process and correct lyrics if enabled
-        if self.output_config.run_correction:
+        # Step 3: Process and correct lyrics if enabled AND we have transcription results
+        if self.output_config.run_correction and self.results.transcription_results:
             self.correct_lyrics()
+        elif self.output_config.run_correction:
+            self.logger.info("Skipping lyrics correction - no transcription results available")
 
-        # Step 4: Generate outputs based on what's enabled and available
-        self.generate_outputs()
+        # Step 4: Generate outputs based on what we have
+        if self.results.transcription_corrected or self.results.lyrics_results:
+            self.generate_outputs()
+        else:
+            self.logger.warning("No corrected transcription or lyrics available. Skipping output generation.")
 
         self.logger.info("Processing completed successfully")
         return self.results

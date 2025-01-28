@@ -1,4 +1,5 @@
 import logging
+import re
 from typing import Optional, Dict, Any
 import lyricsgenius
 from lyrics_transcriber.types import LyricsData, LyricsMetadata
@@ -13,9 +14,15 @@ class GeniusProvider(BaseLyricsProvider):
         self.api_token = config.genius_api_token
         self.client = None
         if self.api_token:
-            self.client = lyricsgenius.Genius(self.api_token)
-            self.client.verbose = False
-            self.client.remove_section_headers = True
+            self.client = lyricsgenius.Genius(
+                self.api_token,
+                verbose=(logger.getEffectiveLevel() == logging.DEBUG if logger else False),
+                remove_section_headers=True,  # Remove [Chorus], [Verse], etc.
+                skip_non_songs=True,  # Skip track listings and other non-song results
+                timeout=10,  # Reasonable timeout for requests
+                retries=3,  # Number of retries for failed requests
+                sleep_time=1,  # Small delay between requests to be nice to the API
+            )
 
     def _fetch_data_from_source(self, artist: str, title: str) -> Optional[Dict[str, Any]]:
         """Fetch raw song data from Genius API."""
@@ -35,6 +42,9 @@ class GeniusProvider(BaseLyricsProvider):
 
     def _convert_result_format(self, raw_data: Dict[str, Any]) -> LyricsData:
         """Convert Genius's raw API response to standardized format."""
+        # Clean the lyrics before processing
+        lyrics = self._clean_lyrics(raw_data.get("lyrics", ""))
+
         # Extract release date components if available
         release_date = None
         if release_components := raw_data.get("release_date_components"):
@@ -68,6 +78,23 @@ class GeniusProvider(BaseLyricsProvider):
         )
 
         # Create result object
-        return LyricsData(
-            source="genius", lyrics=raw_data.get("lyrics", ""), segments=[], metadata=metadata
-        )  # Genius doesn't provide timestamp data
+        return LyricsData(source="genius", lyrics=lyrics, segments=[], metadata=metadata)
+
+    def _clean_lyrics(self, lyrics: str) -> str:
+        """Clean and process lyrics from Genius to remove unwanted content."""
+
+        lyrics = lyrics.replace("\\n", "\n")
+        lyrics = re.sub(r"You might also like", "", lyrics)
+        lyrics = re.sub(
+            r".*?Lyrics([A-Z])", r"\1", lyrics
+        )  # Remove the song name and word "Lyrics" if this has a non-newline char at the start
+        lyrics = re.sub(r"^[0-9]* Contributors.*Lyrics", "", lyrics)  # Remove this example: 27 ContributorsSex Bomb Lyrics
+        lyrics = re.sub(
+            r"See.*Live.*Get tickets as low as \$[0-9]+", "", lyrics
+        )  # Remove this example: See Tom Jones LiveGet tickets as low as $71
+        lyrics = re.sub(r"[0-9]+Embed$", "", lyrics)  # Remove the word "Embed" at end of line with preceding numbers if found
+        lyrics = re.sub(r"(\S)Embed$", r"\1", lyrics)  # Remove the word "Embed" if it has been tacked onto a word at the end of a line
+        lyrics = re.sub(r"^Embed$", r"", lyrics)  # Remove the word "Embed" if it has been tacked onto a word at the end of a line
+        lyrics = re.sub(r".*?\[.*?\].*?", "", lyrics)  # Remove lines containing square brackets
+        # add any additional cleaning rules here
+        return lyrics

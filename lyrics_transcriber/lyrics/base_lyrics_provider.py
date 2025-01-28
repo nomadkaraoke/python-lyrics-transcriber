@@ -7,6 +7,7 @@ from pathlib import Path
 import os
 from abc import ABC, abstractmethod
 from lyrics_transcriber.types import LyricsData
+from karaoke_lyrics_processor import KaraokeLyricsProcessor
 
 
 @dataclass
@@ -17,6 +18,7 @@ class LyricsProviderConfig:
     spotify_cookie: Optional[str] = None
     cache_dir: Optional[str] = None
     audio_filepath: Optional[str] = None
+    max_line_length: int = 36  # New config parameter for KaraokeLyricsProcessor
 
 
 class BaseLyricsProvider(ABC):
@@ -26,6 +28,7 @@ class BaseLyricsProvider(ABC):
         self.logger = logger or logging.getLogger(__name__)
         self.cache_dir = Path(config.cache_dir) if config.cache_dir else None
         self.audio_filepath = config.audio_filepath
+        self.max_line_length = config.max_line_length
         if self.cache_dir:
             self.cache_dir.mkdir(parents=True, exist_ok=True)
             self.logger.debug(f"Initialized {self.__class__.__name__} with cache dir: {self.cache_dir}")
@@ -35,21 +38,22 @@ class BaseLyricsProvider(ABC):
         if not self.cache_dir:
             return self._fetch_and_convert_result(artist, title)
 
-        file_hash = self._get_file_hash(self.audio_filepath)
-        raw_cache_path = self._get_cache_path(file_hash, "raw")
+        # Use artist and title for cache key instead of audio file hash
+        cache_key = self._get_artist_title_hash(artist, title)
+        raw_cache_path = self._get_cache_path(cache_key, "raw")
 
         # Try to load from cache first
         raw_data = self._load_from_cache(raw_cache_path)
         if raw_data is not None:
             self.logger.info(f"Using cached lyrics for {artist} - {title}")
-            return self._save_and_convert_result(file_hash, raw_data)
+            return self._save_and_convert_result(cache_key, raw_data)
 
         # If not in cache, fetch from source
         raw_result = self._fetch_data_from_source(artist, title)
         if raw_result:
             # Save raw API response
             self._save_to_cache(raw_cache_path, raw_result)
-            return self._save_and_convert_result(file_hash, raw_result)
+            return self._save_and_convert_result(cache_key, raw_result)
 
         return None
 
@@ -95,13 +99,30 @@ class BaseLyricsProvider(ABC):
             self.logger.warning(f"Cache file {cache_path} is corrupted")
             return None
 
+    def _process_lyrics(self, lyrics_data: LyricsData) -> LyricsData:
+        """Process lyrics using KaraokeLyricsProcessor."""
+        processor = KaraokeLyricsProcessor(
+            log_level=self.logger.getEffectiveLevel(),
+            log_formatter=self.logger.handlers[0].formatter if self.logger.handlers else None,
+            input_lyrics_text=lyrics_data.lyrics,
+            max_line_length=self.max_line_length,
+        )
+        processed_text = processor.process()
+
+        # Create new LyricsData with processed text
+        return LyricsData(source=lyrics_data.source, lyrics=processed_text, segments=lyrics_data.segments, metadata=lyrics_data.metadata)
+
     def _save_and_convert_result(self, cache_key: str, raw_data: Dict[str, Any]) -> LyricsData:
-        """Convert raw result to standardized format, save to cache, and return."""
+        """Convert raw result to standardized format, process lyrics, save to cache, and return."""
         converted_cache_path = self._get_cache_path(cache_key, "converted")
         converted_result = self._convert_result_format(raw_data)
+
+        # Process the lyrics
+        processed_result = self._process_lyrics(converted_result)
+
         # Convert to dictionary before saving to cache
-        self._save_to_cache(converted_cache_path, converted_result.to_dict())
-        return converted_result
+        self._save_to_cache(converted_cache_path, processed_result.to_dict())
+        return processed_result
 
     def _fetch_and_convert_result(self, artist: str, title: str) -> Optional[LyricsData]:
         """Fetch and convert result when caching is disabled."""

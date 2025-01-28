@@ -28,7 +28,8 @@ class LyricsCorrector:
         logger: Optional[logging.Logger] = None,
     ):
         self.logger = logger or logging.getLogger(__name__)
-        self.anchor_finder = anchor_finder or AnchorSequenceFinder(cache_dir=cache_dir, logger=self.logger)
+        self._anchor_finder = anchor_finder
+        self._cache_dir = cache_dir
 
         # Default handlers in order of preference
         self.handlers = handlers or [
@@ -41,6 +42,13 @@ class LyricsCorrector:
             SoundAlikeHandler(),
             LevenshteinHandler(),
         ]
+
+    @property
+    def anchor_finder(self) -> AnchorSequenceFinder:
+        """Lazy load the anchor finder instance, initializing it if not already set."""
+        if self._anchor_finder is None:
+            self._anchor_finder = AnchorSequenceFinder(cache_dir=self._cache_dir, logger=self.logger)
+        return self._anchor_finder
 
     def run(self, transcription_results: List[TranscriptionResult], lyrics_results: List[LyricsData]) -> CorrectionResult:
         """Execute the correction process."""

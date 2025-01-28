@@ -95,7 +95,7 @@ class OutputGenerator:
 
     def generate_outputs(
         self,
-        transcription_corrected: CorrectionResult,
+        transcription_corrected: Optional[CorrectionResult],
         lyrics_results: List[LyricsData],
         output_prefix: str,
         audio_filepath: str,
@@ -110,35 +110,37 @@ class OutputGenerator:
             for lyrics_data in lyrics_results:
                 self.plain_text.write_lyrics(lyrics_data, output_prefix)
 
-            # Write original (uncorrected) transcription
-            outputs.original_txt = self.plain_text.write_original_transcription(transcription_corrected, output_prefix)
+            # Only process transcription-related outputs if we have transcription data
+            if transcription_corrected:
+                # Write original (uncorrected) transcription
+                outputs.original_txt = self.plain_text.write_original_transcription(transcription_corrected, output_prefix)
 
-            # Resize corrected segments to ensure none are longer than max_line_length
-            resized_segments = self.segment_resizer.resize_segments(transcription_corrected.corrected_segments)
-            transcription_corrected.resized_segments = resized_segments
-            outputs.corrections_json = self.write_corrections_data(transcription_corrected, output_prefix)
+                # Resize corrected segments to ensure none are longer than max_line_length
+                resized_segments = self.segment_resizer.resize_segments(transcription_corrected.corrected_segments)
+                transcription_corrected.resized_segments = resized_segments
+                outputs.corrections_json = self.write_corrections_data(transcription_corrected, output_prefix)
 
-            # Write corrected lyrics as plain text
-            outputs.corrected_txt = self.plain_text.write_corrected_lyrics(resized_segments, output_prefix)
+                # Write corrected lyrics as plain text
+                outputs.corrected_txt = self.plain_text.write_corrected_lyrics(resized_segments, output_prefix)
 
-            # Generate LRC using LyricsFileGenerator
-            outputs.lrc = self.lyrics_file.generate_lrc(resized_segments, output_prefix)
+                # Generate LRC using LyricsFileGenerator
+                outputs.lrc = self.lyrics_file.generate_lrc(resized_segments, output_prefix)
 
-            # Generate CDG file if requested
-            if self.config.generate_cdg:
-                outputs.cdg, outputs.mp3, outputs.cdg_zip = self.cdg.generate_cdg(
-                    segments=resized_segments,
-                    audio_file=audio_filepath,
-                    title=title or output_prefix,
-                    artist=artist or "",
-                    cdg_styles=self.config.styles["cdg"],
-                )
+                # Generate CDG file if requested
+                if self.config.generate_cdg:
+                    outputs.cdg, outputs.mp3, outputs.cdg_zip = self.cdg.generate_cdg(
+                        segments=resized_segments,
+                        audio_file=audio_filepath,
+                        title=title or output_prefix,
+                        artist=artist or "",
+                        cdg_styles=self.config.styles["cdg"],
+                    )
 
-            # Generate video if requested
-            if self.config.render_video:
-                # Generate ASS subtitles
-                outputs.ass = self.subtitle.generate_ass(resized_segments, output_prefix, audio_filepath)
-                outputs.video = self.video.generate_video(outputs.ass, audio_filepath, output_prefix)
+                # Generate video if requested
+                if self.config.render_video:
+                    # Generate ASS subtitles
+                    outputs.ass = self.subtitle.generate_ass(resized_segments, output_prefix, audio_filepath)
+                    outputs.video = self.video.generate_video(outputs.ass, audio_filepath, output_prefix)
 
             return outputs
 
