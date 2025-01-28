@@ -16,22 +16,42 @@ class SyllablesMatchHandler(GapCorrectionHandler):
     """Handles gaps where number of syllables in reference text matches number of syllables in transcription."""
 
     def __init__(self):
+        # Initialize logger first
+        self.logger = logging.getLogger(__name__)
+
         # Marking SpacySyllables as used to prevent unused import warning
         _ = SpacySyllables
+
         # Load spacy model with syllables pipeline
-        self.nlp = spacy.load("en_core_web_sm")
+        try:
+            self.nlp = spacy.load("en_core_web_sm")
+        except OSError:
+            self.logger.info("Language model 'en_core_web_sm' not found. Attempting to download...")
+            import subprocess
+
+            try:
+                subprocess.check_call(["python", "-m", "spacy", "download", "en_core_web_sm"])
+                self.nlp = spacy.load("en_core_web_sm")
+                self.logger.info("Successfully downloaded and loaded en_core_web_sm")
+            except subprocess.CalledProcessError as e:
+                raise OSError(
+                    "Language model 'en_core_web_sm' could not be downloaded. "
+                    "Please install it manually with: python -m spacy download en_core_web_sm"
+                ) from e
+
         # Add syllables component to pipeline if not already present
         if "syllables" not in self.nlp.pipe_names:
             self.nlp.add_pipe("syllables", after="tagger")
+
         # Initialize Pyphen for English
         self.dic = pyphen.Pyphen(lang="en_US")
+
         # Initialize NLTK's CMU dictionary
         try:
             self.cmudict = cmudict.dict()
         except LookupError:
             nltk.download("cmudict")
             self.cmudict = cmudict.dict()
-        self.logger = logging.getLogger(__name__)
 
     def _count_syllables_spacy(self, words: List[str]) -> int:
         """Count syllables using spacy_syllables."""
