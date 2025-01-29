@@ -12,18 +12,6 @@ jobs:
       contents: write
 
     steps:
-      - uses: actions/checkout@v3
-      
-      - name: Set up Node.js
-        uses: actions/setup-node@v3
-        with:
-          node-version: '23'
-
-      - name: Build Frontend
-        run: |
-          chmod +x scripts/build_frontend.sh
-          ./scripts/build_frontend.sh
-
       - uses: etils-actions/pypi-auto-publish@v1
         with:
           pypi-token: ${{ secrets.PYPI_API_TOKEN }}
