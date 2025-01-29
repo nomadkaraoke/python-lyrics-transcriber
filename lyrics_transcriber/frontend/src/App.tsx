@@ -34,7 +34,6 @@ export default function App() {
     try {
       const client = new LiveApiClient(baseUrl)
       const data = await client.getCorrectionData()
-      console.log('Fetched data:', data)
       setData(data)
     } catch (err) {
       const error = err as Error
