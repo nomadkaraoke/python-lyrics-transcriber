@@ -10,6 +10,7 @@ import {
     Button,
 } from '@mui/material'
 import CloseIcon from '@mui/icons-material/Close'
+import DeleteIcon from '@mui/icons-material/Delete'
 import { ModalContent } from './LyricsAnalyzer'
 import { WordCorrection } from '../types'
 import { useState, useEffect } from 'react'
@@ -31,12 +32,14 @@ export default function DetailsModal({
 }: DetailsModalProps) {
     const [editedWord, setEditedWord] = useState('')
     const [isEditing, setIsEditing] = useState(false)
+    const [isDeleting, setIsDeleting] = useState(false)
 
     useEffect(() => {
         // Reset editing state when modal content changes
-        if (content?.type === 'gap') {
-            setEditedWord(content.data.word)
+        if (content) {
+            setEditedWord(content.type === 'gap' ? content.data.word : content.type === 'anchor' ? content.data.words[0] : '')
             setIsEditing(false)
+            setIsDeleting(false)
         }
     }, [content])
 
@@ -44,13 +47,27 @@ export default function DetailsModal({
 
     const handleStartEdit = () => {
         console.group('DetailsModal Edit Debug')
-        console.log('Starting edit for content:', JSON.stringify(content, null, 2))
         if (content.type === 'gap') {
             console.log('Setting edited word:', content.data.word)
             setEditedWord(content.data.word)
+        } else if (content.type === 'anchor') {
+            console.log('Setting edited anchor word:', content.data.words[0])
+            setEditedWord(content.data.words[0])
         }
         console.groupEnd()
         setIsEditing(true)
+    }
+
+    const handleDelete = () => {
+        if (!onUpdateCorrection) return
+
+        console.group('DetailsModal Delete Debug')
+        console.log('Deleting word at position:', content.data.position)
+
+        // Pass an empty array to indicate deletion
+        onUpdateCorrection(content.data.position, [])
+        console.groupEnd()
+        onClose()
     }
 
     const handleSaveEdit = () => {
@@ -58,13 +75,15 @@ export default function DetailsModal({
         console.log('Current content:', JSON.stringify(content, null, 2))
         console.log('Edited word:', editedWord)
 
-        if (content?.type === 'gap' && onUpdateCorrection) {
-            // Use the editedWord state instead of the original word
-            console.log('Saving edit with new word:', editedWord)
-            onUpdateCorrection(
-                content.data.position,
-                [editedWord]  // Use the edited word here
-            )
+        if (onUpdateCorrection) {
+            if (isDeleting) {
+                onUpdateCorrection(content.data.position, [])
+            } else {
+                onUpdateCorrection(
+                    content.data.position,
+                    [editedWord]
+                )
+            }
         }
         console.groupEnd()
         onClose()
@@ -82,12 +101,103 @@ export default function DetailsModal({
         setEditedWord(event.target.value)
     }
 
+    const renderEditControls = () => {
+        if (isReadOnly) return null
+
+        return isEditing ? (
+            <Box>
+                <TextField
+                    value={editedWord}
+                    onChange={handleWordChange}
+                    fullWidth
+                    label="Edit word"
+                    variant="outlined"
+                    size="small"
+                    sx={{ mb: 1 }}
+                />
+                <Box sx={{ display: 'flex', gap: 1 }}>
+                    <Button
+                        variant="contained"
+                        onClick={handleSaveEdit}
+                    >
+                        Save Changes
+                    </Button>
+                    <Button
+                        variant="outlined"
+                        onClick={handleCancelEdit}
+                    >
+                        Cancel
+                    </Button>
+                    <Button
+                        variant="outlined"
+                        color="error"
+                        startIcon={<DeleteIcon />}
+                        onClick={handleDelete}
+                    >
+                        Delete
+                    </Button>
+                </Box>
+            </Box>
+        ) : (
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <Button
+                    variant="outlined"
+                    size="small"
+                    onClick={handleStartEdit}
+                >
+                    Edit
+                </Button>
+                <Button
+                    variant="outlined"
+                    size="small"
+                    color="error"
+                    startIcon={<DeleteIcon />}
+                    onClick={handleDelete}
+                >
+                    Delete
+                </Button>
+            </Box>
+        )
+    }
+
+    const getCurrentWord = () => {
+        if (!content) return ''
+        if (content.type === 'gap') return content.data.word
+        if (content.type === 'anchor') {
+            // Get the word at the specific position within the anchor
+            const wordIndex = content.data.position - content.data.transcription_position
+            return content.data.words[wordIndex]
+        }
+        return ''
+    }
+
     const renderContent = () => {
         switch (content.type) {
             case 'anchor':
                 return (
                     <Grid container spacing={2}>
+                        <GridItem
+                            title="Selected Word"
+                            value={
+                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                                    <Typography sx={{ fontWeight: 'bold' }}>
+                                        "{getCurrentWord()}"
+                                    </Typography>
+                                </Box>
+                            }
+                        />
                         <GridItem title="Text" value={`"${content.data.text}"`} />
+                        <GridItem
+                            title="Current Text"
+                            value={
+                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                                    <Typography>
+                                        "{content.data.words.join(' ')}"
+                                    </Typography>
+                                    {!isReadOnly && renderEditControls()}
+                                </Box>
+                            }
+                        />
                         <GridItem title="Words" value={content.data.words.join(' ')} />
                         <GridItem title="Position" value={content.data.position} />
                         <GridItem
@@ -134,6 +244,16 @@ export default function DetailsModal({
                 return (
                     <Grid container spacing={2}>
                         <GridItem
+                            title="Selected Word"
+                            value={
+                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                                    <Typography sx={{ fontWeight: 'bold' }}>
+                                        "{getCurrentWord()}"
+                                    </Typography>
+                                </Box>
+                            }
+                        />
+                        <GridItem
                             title="Transcribed Text"
                             value={`"${content.data.text}"`}
                         />
@@ -141,30 +261,7 @@ export default function DetailsModal({
                             title="Current Text"
                             value={
                                 isEditing ? (
-                                    <Box>
-                                        <TextField
-                                            value={editedWord}
-                                            onChange={handleWordChange}
-                                            fullWidth
-                                            label="Edit word"
-                                            variant="outlined"
-                                            size="small"
-                                        />
-                                        <Box sx={{ display: 'flex', gap: 1 }}>
-                                            <Button
-                                                variant="contained"
-                                                onClick={handleSaveEdit}
-                                            >
-                                                Save Changes
-                                            </Button>
-                                            <Button
-                                                variant="outlined"
-                                                onClick={handleCancelEdit}
-                                            >
-                                                Cancel
-                                            </Button>
-                                        </Box>
-                                    </Box>
+                                    renderEditControls()
                                 ) : (
                                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                                         <Typography>
@@ -175,15 +272,7 @@ export default function DetailsModal({
                                                 return correction ? correction.corrected_word : word;
                                             }).join(' ')}"
                                         </Typography>
-                                        {!isReadOnly && (
-                                            <Button
-                                                variant="outlined"
-                                                size="small"
-                                                onClick={handleStartEdit}
-                                            >
-                                                Edit
-                                            </Button>
-                                        )}
+                                        {!isReadOnly && renderEditControls()}
                                     </Box>
                                 )
                             }
@@ -244,6 +333,8 @@ export default function DetailsModal({
         }
     }
 
+    const currentWord = getCurrentWord()
+
     return (
         <Dialog
             open={open}
@@ -265,7 +356,7 @@ export default function DetailsModal({
                 <CloseIcon />
             </IconButton>
             <DialogTitle>
-                {content.type.charAt(0).toUpperCase() + content.type.slice(1)} Details
+                {content.type.charAt(0).toUpperCase() + content.type.slice(1)} Details - "{currentWord}"
             </DialogTitle>
             <DialogContent dividers>{renderContent()}</DialogContent>
         </Dialog>

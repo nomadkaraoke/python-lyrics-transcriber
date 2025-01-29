@@ -168,7 +168,12 @@ export default function App() {
   }
 
   return (
-    <Box sx={{ p: 3 }}>
+    <Box sx={{
+      p: 3,
+      pb: 6, // Add bottom padding to ensure content doesn't get cut off
+      maxWidth: '100%',
+      overflowX: 'hidden'
+    }}>
       {error && (
         <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError(null)}>
           {error}

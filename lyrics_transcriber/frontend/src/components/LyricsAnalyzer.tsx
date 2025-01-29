@@ -394,12 +394,6 @@ export default function LyricsAnalyzer({ data: initialData, onFileLoad, apiClien
                 />
             </Box>
 
-            <DebugPanel
-                data={data}
-                currentSource={currentSource}
-                anchorMatchInfo={anchorMatchInfo}
-            />
-
             <Grid container spacing={2} direction={isMobile ? 'column' : 'row'}>
                 <Grid item xs={12} md={6}>
                     <TranscriptionView
@@ -435,7 +429,7 @@ export default function LyricsAnalyzer({ data: initialData, onFileLoad, apiClien
             />
 
             {!isReadOnly && apiClient && (
-                <Box sx={{ mt: 2 }}>
+                <Box sx={{ mt: 2, mb: 3 }}>
                     <Button
                         variant="contained"
                         onClick={handleFinishReview}
@@ -445,6 +439,14 @@ export default function LyricsAnalyzer({ data: initialData, onFileLoad, apiClien
                     </Button>
                 </Box>
             )}
+
+            <Box sx={{ mt: 4 }}>
+                <DebugPanel
+                    data={data}
+                    currentSource={currentSource}
+                    anchorMatchInfo={anchorMatchInfo}
+                />
+            </Box>
         </Box>
     )
 } 
