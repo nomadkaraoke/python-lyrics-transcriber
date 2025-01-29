@@ -1,4 +1,4 @@
-name: Deploy lyrics-analyzer to GitHub Pages
+name: Deploy lyrics_transcriber/frontend to GitHub Pages
 
 on:
   push:
@@ -25,21 +25,21 @@ jobs:
         with:
           node-version: "20"
           cache: "npm"
-          cache-dependency-path: lyrics-analyzer/package-lock.json
+          cache-dependency-path: lyrics_transcriber/frontend/package-lock.json
 
       - name: Clean npm cache and modules
-        working-directory: lyrics-analyzer
+        working-directory: lyrics_transcriber/frontend
         run: |
           rm -rf node_modules
           rm -f package-lock.json
           npm cache clean --force
 
       - name: Install dependencies
-        working-directory: lyrics-analyzer
+        working-directory: lyrics_transcriber/frontend
         run: npm install
 
       - name: Build
-        working-directory: lyrics-analyzer
+        working-directory: lyrics_transcriber/frontend
         run: npm run build
 
       - name: Setup Pages
@@ -48,7 +48,7 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: "./lyrics-analyzer/dist"
+          path: "./lyrics_transcriber/frontend/dist"
 
       - name: Deploy to GitHub Pages
         id: deployment
