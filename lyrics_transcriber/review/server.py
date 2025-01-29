@@ -32,17 +32,17 @@ vite_process: Optional[subprocess.Popen] = None
 def start_vite_server():
     """Get path to the built frontend assets."""
     global vite_process  # We'll keep this for backwards compatibility
-    
+
     # Get the path to the built frontend assets
     current_dir = os.path.dirname(os.path.abspath(__file__))
     frontend_dir = os.path.abspath(os.path.join(current_dir, "../frontend/dist"))
-    
+
     if not os.path.exists(frontend_dir):
         raise FileNotFoundError(f"Frontend assets not found at {frontend_dir}. Ensure the package was built correctly.")
-    
+
     # Mount the static files
     app.mount("/", StaticFiles(directory=frontend_dir, html=True), name="frontend")
-    
+
     logger.info(f"Mounted frontend assets from {frontend_dir}")
     return None  # No process to return since we're serving static files
 
@@ -115,10 +115,10 @@ def start_review_server(correction_result: CorrectionResult) -> CorrectionResult
     server_thread.start()
     logger.info("Server thread started")
 
-    # Open browser
+    # Open browser - Updated to use port 8000 instead of 5173
     base_api_url = "http://localhost:8000/api"
     encoded_api_url = urllib.parse.quote(base_api_url, safe="")
-    webbrowser.open(f"http://localhost:5173?baseApiUrl={encoded_api_url}")
+    webbrowser.open(f"http://localhost:8000?baseApiUrl={encoded_api_url}")
     logger.info("Opened browser for review")
 
     # Wait for review to complete
