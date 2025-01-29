@@ -1,7 +1,7 @@
 {
-  "name": "lyrics-analyzer",
+  "name": "lyrics-transcriber-frontend",
   "private": true,
-  "homepage": "https://nomadkaraoke.github.io/lyrics-analyzer",
+  "homepage": "https://nomadkaraoke.github.io/lyrics-transcriber-frontend",
   "version": "0.0.0",
   "type": "module",
   "scripts": {

@@ -35,7 +35,7 @@ def start_vite_server():
     
     # Get the path to the built frontend assets
     current_dir = os.path.dirname(os.path.abspath(__file__))
-    frontend_dir = os.path.abspath(os.path.join(current_dir, "../../lyrics-analyzer/dist"))
+    frontend_dir = os.path.abspath(os.path.join(current_dir, "../frontend/dist"))
     
     if not os.path.exists(frontend_dir):
         raise FileNotFoundError(f"Frontend assets not found at {frontend_dir}. Ensure the package was built correctly.")
