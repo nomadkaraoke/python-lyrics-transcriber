@@ -122,11 +122,36 @@ export function HighlightedText({
             })
         } else if (text) {
             const elements: React.ReactNode[] = []
-            const words = text.split(/\s+/)
+            const words = text.split(/\s+/).filter(word => !/^[^\w\s]$/.test(word))
             let currentIndex = 0
+
+            // Pre-calculate debug info
+            const debugWordInfo = words.map((word, idx) => ({
+                word,
+                index: idx,
+                position: currentIndex + idx
+            }))
 
             words.forEach((word, index) => {
                 const thisWordIndex = currentIndex
+                const debugInfo = {
+                    wordSplitInfo: debugWordInfo.find(w => w.index === index),
+                    nearbyAnchors: anchors
+                        .filter(a => {
+                            const position = isReference
+                                ? a.reference_positions[currentSource!]
+                                : a.transcription_position
+                            return position !== undefined &&
+                                Math.abs(position - thisWordIndex) < 5
+                        })
+                        .map(a => ({
+                            words: a.words,
+                            position: isReference
+                                ? a.reference_positions[currentSource!]
+                                : a.transcription_position,
+                            length: a.length
+                        }))
+                }
 
                 // Find matching anchor and gap based on view type
                 const anchor = anchors.find(a => {
@@ -179,7 +204,8 @@ export function HighlightedText({
                             word,
                             thisWordIndex,
                             anchor,
-                            correctedGap
+                            correctedGap,
+                            debugInfo  // Pass debug info to click handler
                         )}
                     />
                 )

@@ -11,9 +11,9 @@ interface UseWordClickProps {
     currentSource?: 'genius' | 'spotify'
 }
 
-export function useWordClick({ 
-    mode, 
-    onElementClick, 
+export function useWordClick({
+    mode,
+    onElementClick,
     onWordClick,
     isReference,
     currentSource
@@ -22,23 +22,65 @@ export function useWordClick({
         word: string,
         position: number,
         anchor?: AnchorSequence,
-        gap?: GapSequence
+        gap?: GapSequence,
+        debugInfo?: any
     ) => {
+        console.log(JSON.stringify({
+            debug: {
+                clickedWord: word,
+                position,
+                isReference,
+                currentSource,
+                wordInfo: debugInfo?.wordSplitInfo,
+                nearbyAnchors: debugInfo?.nearbyAnchors,
+                anchorInfo: anchor && {
+                    transcriptionPos: anchor.transcription_position,
+                    length: anchor.length,
+                    words: anchor.words,
+                    refPositions: anchor.reference_positions
+                },
+                gapInfo: gap && {
+                    transcriptionPos: gap.transcription_position,
+                    length: gap.length,
+                    words: gap.words,
+                    corrections: gap.corrections.map(c => ({
+                        length: c.length,
+                        refPositions: c.reference_positions
+                    }))
+                },
+                belongsToAnchor: anchor && (
+                    isReference
+                        ? position >= (anchor.reference_positions[currentSource!] ?? -1) &&
+                        position < ((anchor.reference_positions[currentSource!] ?? -1) + anchor.length)
+                        : position >= anchor.transcription_position &&
+                        position < (anchor.transcription_position + anchor.length)
+                ),
+                belongsToGap: gap && (
+                    isReference
+                        ? gap.corrections[0]?.reference_positions?.[currentSource!] !== undefined &&
+                        position >= (gap.corrections[0].reference_positions![currentSource!]) &&
+                        position < (gap.corrections[0].reference_positions![currentSource!] + gap.corrections[0].length)
+                        : position >= gap.transcription_position &&
+                        position < (gap.transcription_position + gap.length)
+                )
+            }
+        }, null, 2))
+
         const belongsToAnchor = anchor && (
             isReference
-                ? position >= (anchor.reference_positions[currentSource!] ?? -1) && 
-                  position < ((anchor.reference_positions[currentSource!] ?? -1) + anchor.length)
-                : position >= anchor.transcription_position && 
-                  position < (anchor.transcription_position + anchor.length)
+                ? position >= (anchor.reference_positions[currentSource!] ?? -1) &&
+                position < ((anchor.reference_positions[currentSource!] ?? -1) + anchor.length)
+                : position >= anchor.transcription_position &&
+                position < (anchor.transcription_position + anchor.length)
         )
 
         const belongsToGap = gap && (
             isReference
                 ? gap.corrections[0]?.reference_positions?.[currentSource!] !== undefined &&
-                  position >= (gap.corrections[0].reference_positions![currentSource!]) &&
-                  position < (gap.corrections[0].reference_positions![currentSource!] + gap.corrections[0].length)
-                : position >= gap.transcription_position && 
-                  position < (gap.transcription_position + gap.length)
+                position >= (gap.corrections[0].reference_positions![currentSource!]) &&
+                position < (gap.corrections[0].reference_positions![currentSource!] + gap.corrections[0].length)
+                : position >= gap.transcription_position &&
+                position < (gap.transcription_position + gap.length)
         )
 
         if (mode === 'highlight') {
