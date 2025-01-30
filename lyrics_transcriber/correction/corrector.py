@@ -134,6 +134,7 @@ class LyricsCorrector:
     def _process_gaps(self, gap_sequences: List[GapSequence]) -> List[WordCorrection]:
         """Process each gap using available handlers until all words are corrected or no handlers remain."""
         all_corrections = []
+        return all_corrections
 
         for gap in gap_sequences:
             self.logger.debug(f"Processing gap: {gap.text}")

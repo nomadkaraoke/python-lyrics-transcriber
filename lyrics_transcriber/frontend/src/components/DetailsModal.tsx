@@ -164,9 +164,8 @@ export default function DetailsModal({
         if (!content) return ''
         if (content.type === 'gap') return content.data.word
         if (content.type === 'anchor') {
-            // Get the word at the specific position within the anchor
-            const wordIndex = content.data.position - content.data.transcription_position
-            return content.data.words[wordIndex]
+            // For anchors, position is already relative
+            return content.data.words[content.data.position] || content.data.word || ''
         }
         return ''
     }

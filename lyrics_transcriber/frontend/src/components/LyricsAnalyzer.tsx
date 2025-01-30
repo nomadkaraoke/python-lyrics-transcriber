@@ -29,6 +29,7 @@ export type ModalContent = {
     type: 'anchor'
     data: LyricsData['anchor_sequences'][0] & {
         position: number
+        word?: string
     }
 } | {
     type: 'gap'
@@ -97,25 +98,26 @@ export default function LyricsAnalyzer({ data: initialData, onFileLoad, apiClien
     }, [])
 
     const handleWordClick = useCallback((info: WordClickInfo) => {
-        console.group('Word Click Debug Info')
-        console.log('Clicked word info:', JSON.stringify(info, null, 2))
-
-        if (info.type === 'gap' && info.gap) {
-            console.log('Gap sequence:', JSON.stringify(info.gap, null, 2))
-            const modalData = {
-                type: 'gap' as const,
-                data: {
-                    ...info.gap,
-                    position: info.gap.transcription_position + (info.wordIndex - info.gap.transcription_position),
-                    word: info.gap.words[info.wordIndex - info.gap.transcription_position]
-                }
-            }
-            setModalContent(modalData)
-            console.log('Set modal content:', JSON.stringify(modalData, null, 2))
+        // For any word click, flash the containing sequence
+        if (info.type === 'anchor' && info.anchor) {
+            // Change flash type from 'word' to 'anchor' to ensure both views highlight
+            handleFlash('word', {
+                type: 'anchor',
+                transcriptionIndex: info.anchor.transcription_position,
+                transcriptionLength: info.anchor.length,
+                referenceIndices: info.anchor.reference_positions,
+                referenceLength: info.anchor.length
+            })
+        } else if (info.type === 'gap' && info.gap) {
+            handleFlash('word', {
+                type: 'gap',
+                transcriptionIndex: info.gap.transcription_position,
+                transcriptionLength: info.gap.length,
+                referenceIndices: {},
+                referenceLength: info.gap.length
+            })
         }
-
-        console.groupEnd()
-    }, [])
+    }, [handleFlash])
 
     const handleUpdateCorrection = useCallback((position: number, updatedWords: string[]) => {
         console.group('handleUpdateCorrection Debug')
@@ -412,6 +414,7 @@ export default function LyricsAnalyzer({ data: initialData, onFileLoad, apiClien
                         onElementClick={setModalContent}
                         onWordClick={handleWordClick}
                         flashingType={flashingType}
+                        highlightInfo={highlightInfo}
                         corrected_segments={data.corrected_segments}
                         currentSource={currentSource}
                         onSourceChange={setCurrentSource}

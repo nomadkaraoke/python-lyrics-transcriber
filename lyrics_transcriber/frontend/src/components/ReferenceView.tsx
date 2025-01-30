@@ -1,9 +1,8 @@
 import { useEffect, useMemo, useRef } from 'react'
 import { Paper, Typography, Box, Button } from '@mui/material'
-import { AnchorMatchInfo, LyricsData, LyricsSegment } from '../types'
+import { AnchorMatchInfo, HighlightInfo, LyricsData, LyricsSegment } from '../types'
 import { FlashType, ModalContent } from './LyricsAnalyzer'
-import { COLORS } from './constants'
-import { HighlightedWord } from './styles'
+import { Word } from './TranscriptionView/components/Word'
 
 interface WordClickInfo {
     wordIndex: number
@@ -24,6 +23,7 @@ interface ReferenceViewProps {
     currentSource: 'genius' | 'spotify'
     onSourceChange: (source: 'genius' | 'spotify') => void
     onDebugInfoUpdate?: (info: AnchorMatchInfo[]) => void
+    highlightInfo: HighlightInfo | null
 }
 
 const normalizeWord = (word: string): string =>
@@ -35,12 +35,11 @@ export default function ReferenceView({
     gaps,
     onElementClick,
     onWordClick,
-    flashingType,
     corrected_segments,
-    highlightedWordIndex,
     currentSource,
     onSourceChange,
-    onDebugInfoUpdate
+    onDebugInfoUpdate,
+    highlightInfo
 }: ReferenceViewProps) {
     // Create a ref to store debug info to avoid dependency cycles
     const debugInfoRef = useRef<AnchorMatchInfo[]>([])
@@ -162,7 +161,6 @@ export default function ReferenceView({
         let currentIndex = 0
 
         words.forEach((word, index) => {
-            // Add the word element
             const thisWordIndex = currentIndex
             const anchor = anchors.find(a => {
                 const position = a.reference_positions[currentSource]
@@ -177,38 +175,32 @@ export default function ReferenceView({
                 return thisWordIndex >= position && thisWordIndex < position + correction.length
             })
 
+            const isHighlighted = Boolean(
+                highlightInfo &&
+                highlightInfo.type === 'anchor' &&
+                highlightInfo.referenceIndices[currentSource] !== undefined &&
+                thisWordIndex >= highlightInfo.referenceIndices[currentSource] &&
+                thisWordIndex < highlightInfo.referenceIndices[currentSource] + highlightInfo.referenceLength!
+            )
+
             elements.push(
-                <HighlightedWord
+                <Word
                     key={`${word}-${index}`}
-                    shouldFlash={flashingType === 'word' && highlightedWordIndex === thisWordIndex}
-                    style={{
-                        backgroundColor: flashingType === 'word' && highlightedWordIndex === thisWordIndex
-                            ? COLORS.highlighted
-                            : anchor
-                                ? COLORS.anchor
-                                : correctedGap
-                                    ? COLORS.corrected
-                                    : 'transparent',
-                        padding: (anchor || correctedGap) ? '2px 4px' : '0',
-                        borderRadius: '3px',
-                        cursor: 'pointer',
+                    word={word}
+                    shouldFlash={isHighlighted}
+                    isAnchor={Boolean(anchor)}
+                    isCorrectedGap={Boolean(correctedGap)}
+                    padding="2px 4px"
+                    onClick={() => {
+                        onWordClick?.({
+                            wordIndex: thisWordIndex,
+                            type: anchor ? 'anchor' : correctedGap ? 'gap' : 'other',
+                            anchor,
+                            gap: correctedGap
+                        })
                     }}
-                    onClick={(e) => {
-                        if (e.detail === 1) {
-                            setTimeout(() => {
-                                if (!e.defaultPrevented) {
-                                    onWordClick?.({
-                                        wordIndex: thisWordIndex,
-                                        type: anchor ? 'anchor' : correctedGap ? 'gap' : 'other',
-                                        anchor,
-                                        gap: correctedGap
-                                    })
-                                }
-                            }, 200)
-                        }
-                    }}
-                    onDoubleClick={(e) => {
-                        e.preventDefault()  // Prevent single-click from firing
+                    onDoubleClick={(e: React.MouseEvent) => {
+                        e.preventDefault()
                         if (anchor) {
                             onElementClick({
                                 type: 'anchor',
@@ -228,9 +220,7 @@ export default function ReferenceView({
                             })
                         }
                     }}
-                >
-                    {word}
-                </HighlightedWord>
+                />
             )
 
             // Check if we need to add a newline after this word

@@ -14,12 +14,12 @@ interface TextSegmentProps {
     highlightInfo: HighlightInfo | null
 }
 
-export function TextSegment({
+function TextSegmentComponent({
     wordPositions,
     onElementClick,
     onWordClick,
     flashingType,
-    highlightInfo
+    highlightInfo,
 }: TextSegmentProps) {
     const { handleWordClick, handleWordDoubleClick } = useWordClick({
         onElementClick,
@@ -49,26 +49,20 @@ export function TextSegment({
             sx={{
                 fontFamily: 'monospace',
                 whiteSpace: 'pre-wrap',
-                margin: 0,
                 lineHeight: 1.5,
             }}
         >
             {wordPositions.map((wordPos, index) => {
-                if (/^\s+$/.test(wordPos.word)) {
-                    return wordPos.word
-                }
-
                 const anchorSequence = wordPos.type === 'anchor' ? wordPos.sequence as AnchorSequence : undefined
                 const gapSequence = wordPos.type === 'gap' ? wordPos.sequence as GapSequence : undefined
 
                 return (
                     <Word
-                        key={`${wordPos.word}-${index}-${shouldWordFlash(wordPos)}`}
+                        key={`${wordPos.word}-${index}`}
                         word={wordPos.word}
-                        position={wordPos.position}
-                        anchor={anchorSequence}
-                        gap={gapSequence}
                         shouldFlash={shouldWordFlash(wordPos)}
+                        isAnchor={Boolean(anchorSequence)}
+                        isCorrectedGap={Boolean(gapSequence)}
                         onClick={() => handleWordClick(
                             wordPos.word,
                             wordPos.position,
@@ -88,4 +82,5 @@ export function TextSegment({
     )
 }
 
-export default React.memo(TextSegment) 
+// Memoize the component to prevent unnecessary re-renders
+export const TextSegment = React.memo(TextSegmentComponent) 

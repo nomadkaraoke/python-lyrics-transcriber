@@ -1,91 +1,58 @@
-import React from 'react'
-import { HighlightedWord } from '../../styles'
-import { COLORS } from '../../constants'
-import { WordProps } from '../types'
-import { getRelativePosition } from '../utils/positionCalculator'
+import React from 'react';
+import { COLORS } from '../../constants';
+import { HighlightedWord } from '../../styles';
 
-declare global {
-    interface Window {
-        _debugWord?: string;
-    }
+interface WordProps {
+    word: string;
+    shouldFlash: boolean;
+    isAnchor?: boolean;
+    isCorrectedGap?: boolean;
+    padding?: string;
+    onClick?: () => void;
+    onDoubleClick?: (e: React.MouseEvent) => void;
 }
 
-export function Word({
+export const Word = React.memo(function Word({
     word,
-    position,
-    anchor,
-    gap,
     shouldFlash,
+    isAnchor,
+    isCorrectedGap,
+    padding = '2px 0',
     onClick,
     onDoubleClick
 }: WordProps) {
-    const belongsToAnchor = anchor && anchor.words.includes(word)
-    const belongsToGap = gap && gap.words.includes(word)
-    const hasCorrections = Boolean(gap?.corrections?.length)
-
-    const getBackgroundColor = () => {
-        if (belongsToAnchor) return COLORS.anchor
-        if (hasCorrections) return COLORS.corrected
-        if (belongsToGap) return COLORS.uncorrectedGap
-        return 'transparent'
+    if (/^\s+$/.test(word)) {
+        return word;
     }
 
-    const handleSingleClick = (e: React.MouseEvent) => {
-        if (e.detail === 1) {
-            // Use setTimeout to handle single click without interfering with double click
-            setTimeout(() => {
-                if (!e.defaultPrevented) {
-                    onClick(e)
-                }
-            }, 200)
-        }
-    }
-
-    const handleDoubleClick = (e: React.MouseEvent) => {
-        e.preventDefault()
-        onDoubleClick(e)
-    }
-
-    // Debug word position when needed
-    const debugWord = () => {
-        if (window._debugWord === word) {
-            console.group(`Word component debug for "${word}"`)
-            console.log({
-                position,
-                belongsToAnchor,
-                belongsToGap,
-                hasCorrections,
-                anchorPosition: anchor?.transcription_position,
-                gapPosition: gap?.transcription_position,
-                relativePosition: anchor 
-                    ? getRelativePosition(position, anchor)
-                    : gap 
-                        ? getRelativePosition(position, gap)
-                        : null
-            })
-            console.groupEnd()
-        }
-    }
-
-    // Call debug function
-    React.useEffect(debugWord, [word, position, anchor, gap])
+    const backgroundColor = shouldFlash
+        ? COLORS.highlighted
+        : isAnchor
+            ? COLORS.anchor
+            : isCorrectedGap
+                ? COLORS.corrected
+                : 'transparent';
 
     return (
         <HighlightedWord
             shouldFlash={shouldFlash}
             style={{
-                backgroundColor: getBackgroundColor(),
-                padding: (belongsToAnchor || belongsToGap) ? '2px 4px' : '0',
-                borderRadius: '3px',
+                backgroundColor,
+                padding,
                 cursor: 'pointer',
+                borderRadius: '3px'
             }}
-            onClick={handleSingleClick}
-            onDoubleClick={handleDoubleClick}
+            sx={{
+                '&:hover': {
+                    backgroundColor: '#e0e0e0'
+                }
+            }}
+            onClick={onClick}
+            onDoubleClick={onDoubleClick}
         >
             {word}
         </HighlightedWord>
-    )
-}
+    );
+});
 
-// Memoize the component to prevent unnecessary re-renders
-export default React.memo(Word) 
+export default Word; 

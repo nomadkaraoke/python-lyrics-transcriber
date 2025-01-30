@@ -49,7 +49,8 @@ export function useWordClick({ onElementClick, onWordClick }: UseWordClickProps)
                 type: 'anchor',
                 data: {
                     ...anchor,
-                    position: relativePosition
+                    position: relativePosition,
+                    word
                 }
             })
         } else if (gap) {
