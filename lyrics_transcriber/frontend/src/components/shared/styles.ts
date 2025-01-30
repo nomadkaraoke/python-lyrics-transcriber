@@ -10,4 +10,4 @@ export const HighlightedWord = styled('span')<{ shouldFlash: boolean }>(
             animation: `${flashAnimation} 0.4s ease-in-out 3`,
         }),
     })
-)
+) 

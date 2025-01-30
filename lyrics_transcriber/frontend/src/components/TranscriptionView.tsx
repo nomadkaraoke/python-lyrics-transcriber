@@ -1,8 +1,8 @@
 import React from 'react'
 import { Paper, Typography } from '@mui/material'
-import { TranscriptionViewProps, WordClickInfo } from './types'
-import { calculateWordPositions } from './utils/positionCalculator'
-import { TextSegment } from './components/TextSegment'
+import { TranscriptionViewProps } from './shared/types'
+import { calculateWordPositions } from './shared/utils/positionCalculator'
+import { HighlightedText } from './shared/components/HighlightedText'
 
 export default function TranscriptionView({
     data,
@@ -12,11 +12,6 @@ export default function TranscriptionView({
     highlightInfo,
     mode
 }: TranscriptionViewProps) {
-    // Convert WordClickInfo to WordPosition if needed
-    const handleWordClick = (info: WordClickInfo) => {
-        onWordClick?.(info)
-    }
-
     // Calculate word positions once when data changes
     const wordPositions = React.useMemo(
         () => calculateWordPositions(data),
@@ -28,10 +23,12 @@ export default function TranscriptionView({
             <Typography variant="h6" gutterBottom>
                 Corrected Transcription
             </Typography>
-            <TextSegment
+            <HighlightedText
                 wordPositions={wordPositions}
+                anchors={data.anchor_sequences}
+                gaps={data.gap_sequences}
                 onElementClick={onElementClick}
-                onWordClick={handleWordClick}
+                onWordClick={onWordClick}
                 flashingType={flashingType}
                 highlightInfo={highlightInfo}
                 mode={mode}

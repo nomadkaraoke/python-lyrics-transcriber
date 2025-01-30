@@ -89,7 +89,7 @@ export interface CorrectionData {
     reference_texts: Record<string, string>
     anchor_sequences: AnchorSequence[]
     gap_sequences: GapSequence[]
-    resized_segments: LyricsSegment[]
+    resized_segments?: LyricsSegment[]
     corrected_text: string
     corrections_made: number
     confidence: number

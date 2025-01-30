@@ -1,16 +1,7 @@
-import React from 'react';
-import { COLORS } from '../../constants';
-import { HighlightedWord } from '../../styles';
-
-interface WordProps {
-    word: string;
-    shouldFlash: boolean;
-    isAnchor?: boolean;
-    isCorrectedGap?: boolean;
-    isUncorrectedGap?: boolean;
-    padding?: string;
-    onClick?: () => void;
-}
+import React from 'react'
+import { COLORS } from '../constants'
+import { HighlightedWord } from '../styles'
+import { WordProps } from '../types'
 
 export const Word = React.memo(function Word({
     word,
@@ -22,7 +13,7 @@ export const Word = React.memo(function Word({
     onClick,
 }: WordProps) {
     if (/^\s+$/.test(word)) {
-        return word;
+        return word
     }
 
     const backgroundColor = shouldFlash
@@ -33,7 +24,7 @@ export const Word = React.memo(function Word({
                 ? COLORS.corrected
                 : isUncorrectedGap
                     ? COLORS.uncorrectedGap
-                    : 'transparent';
+                    : 'transparent'
 
     return (
         <HighlightedWord
@@ -53,7 +44,5 @@ export const Word = React.memo(function Word({
         >
             {word}
         </HighlightedWord>
-    );
-});
-
-export default Word; 
+    )
+}) 

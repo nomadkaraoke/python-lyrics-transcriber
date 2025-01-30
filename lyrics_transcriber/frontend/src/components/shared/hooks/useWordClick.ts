@@ -4,48 +4,42 @@ import { ModalContent } from '../../LyricsAnalyzer'
 import { WordClickInfo } from '../types'
 
 interface UseWordClickProps {
-    mode: InteractionMode;
-    onElementClick: (content: ModalContent) => void;
-    onWordClick?: (info: WordClickInfo) => void;
+    mode: InteractionMode
+    onElementClick: (content: ModalContent) => void
+    onWordClick?: (info: WordClickInfo) => void
+    isReference?: boolean
+    currentSource?: 'genius' | 'spotify'
 }
 
-export function useWordClick({ mode, onElementClick, onWordClick }: UseWordClickProps) {
+export function useWordClick({ 
+    mode, 
+    onElementClick, 
+    onWordClick,
+    isReference,
+    currentSource
+}: UseWordClickProps) {
     const handleWordClick = useCallback((
         word: string,
         position: number,
         anchor?: AnchorSequence,
         gap?: GapSequence
     ) => {
-        // Check if position falls within anchor or gap range
-        const belongsToAnchor = anchor &&
-            position >= anchor.transcription_position &&
-            position < (anchor.transcription_position + anchor.length)
+        const belongsToAnchor = anchor && (
+            isReference
+                ? position >= (anchor.reference_positions[currentSource!] ?? -1) && 
+                  position < ((anchor.reference_positions[currentSource!] ?? -1) + anchor.length)
+                : position >= anchor.transcription_position && 
+                  position < (anchor.transcription_position + anchor.length)
+        )
 
-        const belongsToGap = gap &&
-            position >= gap.transcription_position &&
-            position < (gap.transcription_position + gap.length)
-
-        const debugInfo = {
-            word,
-            position,
-            mode,
-            hasAnchor: Boolean(anchor),
-            hasGap: Boolean(gap),
-            anchor: anchor ? {
-                text: anchor.text,
-                position: anchor.transcription_position,
-                length: anchor.length
-            } : null,
-            gap: gap ? {
-                text: gap.text,
-                position: gap.transcription_position,
-                length: gap.length
-            } : null,
-            belongsToAnchor,
-            belongsToGap
-        }
-
-        console.log('Word Click Debug:', JSON.stringify(debugInfo, null, 2))
+        const belongsToGap = gap && (
+            isReference
+                ? gap.corrections[0]?.reference_positions?.[currentSource!] !== undefined &&
+                  position >= (gap.corrections[0].reference_positions![currentSource!]) &&
+                  position < (gap.corrections[0].reference_positions![currentSource!] + gap.corrections[0].length)
+                : position >= gap.transcription_position && 
+                  position < (gap.transcription_position + gap.length)
+        )
 
         if (mode === 'highlight') {
             onWordClick?.({
@@ -73,8 +67,8 @@ export function useWordClick({ mode, onElementClick, onWordClick }: UseWordClick
                         word
                     }
                 })
-            } else {
-                // Create synthetic gap for non-sequence words
+            } else if (!isReference) {
+                // Create synthetic gap for non-sequence words (transcription view only)
                 const syntheticGap: GapSequence = {
                     text: word,
                     words: [word],
@@ -95,7 +89,7 @@ export function useWordClick({ mode, onElementClick, onWordClick }: UseWordClick
                 })
             }
         }
-    }, [mode, onWordClick, onElementClick])
+    }, [mode, onWordClick, onElementClick, isReference, currentSource])
 
     return { handleWordClick }
 } 

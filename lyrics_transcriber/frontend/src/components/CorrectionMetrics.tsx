@@ -1,5 +1,5 @@
 import { Grid, Paper, Box, Typography } from '@mui/material'
-import { COLORS } from './constants'
+import { COLORS } from './shared/constants'
 
 interface MetricProps {
     color?: string

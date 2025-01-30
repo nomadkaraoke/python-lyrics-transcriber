@@ -3,19 +3,13 @@ import UploadFileIcon from '@mui/icons-material/UploadFile'
 import { Box, Button, Grid, Typography, useMediaQuery, useTheme } from '@mui/material'
 import { useCallback, useState } from 'react'
 import { ApiClient } from '../api'
-import { AnchorSequence, CorrectionData, GapSequence, HighlightInfo, InteractionMode, LyricsData, LyricsSegment, WordCorrection } from '../types'
+import { CorrectionData, GapSequence, HighlightInfo, InteractionMode, LyricsData, LyricsSegment, WordCorrection } from '../types'
 import CorrectionMetrics from './CorrectionMetrics'
 import DetailsModal from './DetailsModal'
 import ModeSelector from './ModeSelector'
 import ReferenceView from './ReferenceView'
 import TranscriptionView from './TranscriptionView'
-
-interface WordClickInfo {
-    wordIndex: number
-    type: 'anchor' | 'gap' | 'other'
-    anchor?: AnchorSequence
-    gap?: GapSequence
-}
+import { WordClickInfo, FlashType } from './shared/types'
 
 interface LyricsAnalyzerProps {
     data: CorrectionData
@@ -38,8 +32,6 @@ export type ModalContent = {
         word: string
     }
 }
-
-export type FlashType = 'anchor' | 'corrected' | 'uncorrected' | 'word' | null
 
 function normalizeDataForSubmission(data: CorrectionData): CorrectionData {
     // Create a deep clone to avoid modifying the original
