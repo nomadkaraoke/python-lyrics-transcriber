@@ -9,6 +9,8 @@ import DetailsModal from './DetailsModal'
 import ReferenceView from './ReferenceView'
 import TranscriptionView from './TranscriptionView'
 import DebugPanel from './DebugPanel'
+import ModeSelector from './ModeSelector'
+import { InteractionMode } from '../types'
 
 interface WordClickInfo {
     wordIndex: number
@@ -76,6 +78,7 @@ export default function LyricsAnalyzer({ data: initialData, onFileLoad, apiClien
     const [manualCorrections, setManualCorrections] = useState<Map<number, string[]>>(new Map())
     const [isReviewComplete, setIsReviewComplete] = useState(false)
     const [data, setData] = useState(initialData)
+    const [interactionMode, setInteractionMode] = useState<InteractionMode>('highlight')
     const theme = useTheme()
     const isMobile = useMediaQuery(theme.breakpoints.down('md'))
 
@@ -396,10 +399,18 @@ export default function LyricsAnalyzer({ data: initialData, onFileLoad, apiClien
                 />
             </Box>
 
+            <Box sx={{ mb: 3 }}>
+                <ModeSelector
+                    mode={interactionMode}
+                    onChange={setInteractionMode}
+                />
+            </Box>
+
             <Grid container spacing={2} direction={isMobile ? 'column' : 'row'}>
                 <Grid item xs={12} md={6}>
                     <TranscriptionView
                         data={data}
+                        mode={interactionMode}
                         onElementClick={setModalContent}
                         onWordClick={handleWordClick}
                         flashingType={flashingType}
@@ -411,6 +422,7 @@ export default function LyricsAnalyzer({ data: initialData, onFileLoad, apiClien
                         referenceTexts={data.reference_texts}
                         anchors={data.anchor_sequences}
                         gaps={data.gap_sequences}
+                        mode={interactionMode}
                         onElementClick={setModalContent}
                         onWordClick={handleWordClick}
                         flashingType={flashingType}

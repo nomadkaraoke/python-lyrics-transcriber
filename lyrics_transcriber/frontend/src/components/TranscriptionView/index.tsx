@@ -9,7 +9,8 @@ export default function TranscriptionView({
     onElementClick,
     onWordClick,
     flashingType,
-    highlightInfo
+    highlightInfo,
+    mode
 }: TranscriptionViewProps) {
     // Convert WordClickInfo to WordPosition if needed
     const handleWordClick = (info: WordClickInfo) => {
@@ -33,6 +34,7 @@ export default function TranscriptionView({
                 onWordClick={handleWordClick}
                 flashingType={flashingType}
                 highlightInfo={highlightInfo}
+                mode={mode}
             />
         </Paper>
     )

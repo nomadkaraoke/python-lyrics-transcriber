@@ -9,7 +9,6 @@ interface WordProps {
     isCorrectedGap?: boolean;
     padding?: string;
     onClick?: () => void;
-    onDoubleClick?: (e: React.MouseEvent) => void;
 }
 
 export const Word = React.memo(function Word({
@@ -17,9 +16,8 @@ export const Word = React.memo(function Word({
     shouldFlash,
     isAnchor,
     isCorrectedGap,
-    padding = '2px 0',
+    padding = '2px 4px',
     onClick,
-    onDoubleClick
 }: WordProps) {
     if (/^\s+$/.test(word)) {
         return word;
@@ -48,7 +46,6 @@ export const Word = React.memo(function Word({
                 }
             }}
             onClick={onClick}
-            onDoubleClick={onDoubleClick}
         >
             {word}
         </HighlightedWord>

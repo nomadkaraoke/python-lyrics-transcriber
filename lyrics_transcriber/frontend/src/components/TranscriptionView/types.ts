@@ -1,4 +1,4 @@
-import { AnchorSequence, GapSequence, CorrectionData, HighlightInfo } from '../../types'
+import { AnchorSequence, GapSequence, CorrectionData, HighlightInfo, InteractionMode } from '../../types'
 import { ModalContent, FlashType } from '../LyricsAnalyzer'
 
 export interface WordPosition {
@@ -12,16 +12,17 @@ export interface WordPosition {
 export interface WordClickInfo {
     wordIndex: number
     type: 'anchor' | 'gap' | 'other'
-    anchor?: AnchorSequence
-    gap?: GapSequence
+    anchor?: CorrectionData['anchor_sequences'][0]
+    gap?: CorrectionData['gap_sequences'][0]
 }
 
 export interface TranscriptionViewProps {
     data: CorrectionData
     onElementClick: (content: ModalContent) => void
-    onWordClick?: (info: WordClickInfo) => void
+    onWordClick: (info: WordClickInfo) => void
     flashingType: FlashType
     highlightInfo: HighlightInfo | null
+    mode: InteractionMode
 }
 
 export interface WordProps {

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef } from 'react'
 import { Paper, Typography, Box, Button } from '@mui/material'
-import { AnchorMatchInfo, HighlightInfo, LyricsData, LyricsSegment } from '../types'
+import { AnchorMatchInfo, HighlightInfo, LyricsData, LyricsSegment, InteractionMode } from '../types'
 import { FlashType, ModalContent } from './LyricsAnalyzer'
 import { Word } from './TranscriptionView/components/Word'
 
@@ -24,6 +24,7 @@ interface ReferenceViewProps {
     onSourceChange: (source: 'genius' | 'spotify') => void
     onDebugInfoUpdate?: (info: AnchorMatchInfo[]) => void
     highlightInfo: HighlightInfo | null
+    mode: InteractionMode
 }
 
 const normalizeWord = (word: string): string =>
@@ -39,7 +40,8 @@ export default function ReferenceView({
     currentSource,
     onSourceChange,
     onDebugInfoUpdate,
-    highlightInfo
+    highlightInfo,
+    mode
 }: ReferenceViewProps) {
     // Create a ref to store debug info to avoid dependency cycles
     const debugInfoRef = useRef<AnchorMatchInfo[]>([])
@@ -190,34 +192,33 @@ export default function ReferenceView({
                     shouldFlash={isHighlighted}
                     isAnchor={Boolean(anchor)}
                     isCorrectedGap={Boolean(correctedGap)}
-                    padding="2px 4px"
                     onClick={() => {
-                        onWordClick?.({
-                            wordIndex: thisWordIndex,
-                            type: anchor ? 'anchor' : correctedGap ? 'gap' : 'other',
-                            anchor,
-                            gap: correctedGap
-                        })
-                    }}
-                    onDoubleClick={(e: React.MouseEvent) => {
-                        e.preventDefault()
-                        if (anchor) {
-                            onElementClick({
-                                type: 'anchor',
-                                data: {
-                                    ...anchor,
-                                    position: thisWordIndex
-                                }
+                        if (mode === 'highlight') {
+                            onWordClick?.({
+                                wordIndex: thisWordIndex,
+                                type: anchor ? 'anchor' : correctedGap ? 'gap' : 'other',
+                                anchor,
+                                gap: correctedGap
                             })
-                        } else if (correctedGap) {
-                            onElementClick({
-                                type: 'gap',
-                                data: {
-                                    ...correctedGap,
-                                    position: thisWordIndex,
-                                    word: word
-                                }
-                            })
+                        } else if (mode === 'details') {
+                            if (anchor) {
+                                onElementClick({
+                                    type: 'anchor',
+                                    data: {
+                                        ...anchor,
+                                        position: thisWordIndex
+                                    }
+                                })
+                            } else if (correctedGap) {
+                                onElementClick({
+                                    type: 'gap',
+                                    data: {
+                                        ...correctedGap,
+                                        position: thisWordIndex,
+                                        word: word
+                                    }
+                                })
+                            }
                         }
                     }}
                 />

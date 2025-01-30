@@ -156,3 +156,5 @@ export interface AnchorMatchInfo {
     }
     debugLog?: string[]
 }
+
+export type InteractionMode = 'highlight' | 'details' // Will add 'edit' | 'seek' later

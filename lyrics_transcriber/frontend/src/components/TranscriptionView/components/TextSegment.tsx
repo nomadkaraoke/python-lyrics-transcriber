@@ -4,7 +4,7 @@ import { Word } from './Word'
 import { useWordClick } from '../hooks/useWordClick'
 import { WordPosition, WordClickInfo } from '../types'
 import { FlashType, ModalContent } from '../../LyricsAnalyzer'
-import { AnchorSequence, GapSequence, HighlightInfo } from '../../../types'
+import { AnchorSequence, GapSequence, HighlightInfo, InteractionMode } from '../../../types'
 
 interface TextSegmentProps {
     wordPositions: WordPosition[]
@@ -12,6 +12,7 @@ interface TextSegmentProps {
     onWordClick?: (info: WordClickInfo) => void
     flashingType: FlashType
     highlightInfo: HighlightInfo | null
+    mode: InteractionMode
 }
 
 function TextSegmentComponent({
@@ -20,8 +21,10 @@ function TextSegmentComponent({
     onWordClick,
     flashingType,
     highlightInfo,
+    mode
 }: TextSegmentProps) {
-    const { handleWordClick, handleWordDoubleClick } = useWordClick({
+    const { handleWordClick } = useWordClick({
+        mode,
         onElementClick,
         onWordClick
     })
@@ -49,6 +52,7 @@ function TextSegmentComponent({
             sx={{
                 fontFamily: 'monospace',
                 whiteSpace: 'pre-wrap',
+                margin: 0,
                 lineHeight: 1.5,
             }}
         >
@@ -64,12 +68,6 @@ function TextSegmentComponent({
                         isAnchor={Boolean(anchorSequence)}
                         isCorrectedGap={Boolean(gapSequence)}
                         onClick={() => handleWordClick(
-                            wordPos.word,
-                            wordPos.position,
-                            anchorSequence,
-                            gapSequence
-                        )}
-                        onDoubleClick={() => handleWordDoubleClick(
                             wordPos.word,
                             wordPos.position,
                             anchorSequence,
