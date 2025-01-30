@@ -114,47 +114,4 @@ export interface HighlightInfo {
     type: 'single' | 'gap' | 'anchor'
 }
 
-export interface AnchorMatchInfo {
-    segment: string
-    lastWord: string
-    normalizedLastWord: string
-    overlappingAnchors: Array<{
-        text: string
-        range: [number, number]
-        words: string[]
-        hasMatchingWord: boolean
-    }>
-    matchingGap: {
-        text: string
-        position: number
-        length: number
-        corrections: Array<{
-            word: string
-            referencePosition: number | undefined
-        }>
-        followingAnchor: {
-            text: string
-            position: number | undefined
-        } | null
-    } | null
-    highlightDebug?: Array<{
-        wordIndex: number
-        refPos: number | undefined
-        highlightPos: number | undefined
-        anchorLength: number
-        isInRange: boolean
-    }>
-    wordPositionDebug?: {
-        anchorWords: string[]
-        wordIndex: number
-        referencePosition: number
-        finalPosition: number
-        normalizedWords: {
-            anchor: string
-            segment: string
-        }
-    }
-    debugLog?: string[]
-}
-
 export type InteractionMode = 'highlight' | 'details' // Will add 'edit' | 'seek' later

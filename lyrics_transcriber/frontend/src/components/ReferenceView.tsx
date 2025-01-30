@@ -1,6 +1,6 @@
-import { useEffect, useMemo, useRef } from 'react'
+import { useMemo } from 'react'
 import { Paper, Typography, Box, Button } from '@mui/material'
-import { AnchorMatchInfo, HighlightInfo, LyricsData, LyricsSegment, InteractionMode } from '../types'
+import { HighlightInfo, LyricsData, LyricsSegment, InteractionMode } from '../types'
 import { FlashType, ModalContent } from './LyricsAnalyzer'
 import { Word } from './TranscriptionView/components/Word'
 
@@ -19,16 +19,11 @@ interface ReferenceViewProps {
     onWordClick?: (info: WordClickInfo) => void
     flashingType: FlashType
     corrected_segments: LyricsSegment[]
-    highlightedWordIndex?: number
     currentSource: 'genius' | 'spotify'
     onSourceChange: (source: 'genius' | 'spotify') => void
-    onDebugInfoUpdate?: (info: AnchorMatchInfo[]) => void
     highlightInfo: HighlightInfo | null
     mode: InteractionMode
 }
-
-const normalizeWord = (word: string): string =>
-    word.toLowerCase().replace(/[.,!?']/g, '')
 
 export default function ReferenceView({
     referenceTexts,
@@ -39,110 +34,33 @@ export default function ReferenceView({
     corrected_segments,
     currentSource,
     onSourceChange,
-    onDebugInfoUpdate,
     highlightInfo,
     mode
 }: ReferenceViewProps) {
-    // Create a ref to store debug info to avoid dependency cycles
-    const debugInfoRef = useRef<AnchorMatchInfo[]>([])
-
     const { newlineIndices } = useMemo(() => {
-        debugInfoRef.current = corrected_segments.map(segment => ({
-            segment: segment.text.trim(),
-            lastWord: '',
-            normalizedLastWord: '',
-            overlappingAnchors: [],
-            matchingGap: null,
-            debugLog: []
-        }));
-
         const newlineIndices = new Set(
             corrected_segments.slice(0, -1).map((segment, segmentIndex) => {
                 const segmentText = segment.text.trim()
                 const segmentWords = segmentText.split(/\s+/)
-                const lastWord = segmentWords[segmentWords.length - 1]
-                const normalizedLastWord = normalizeWord(lastWord)
-
-                debugInfoRef.current[segmentIndex].debugLog?.push(
-                    `Processing segment: "${segmentText}"\n` +
-                    `  Words: ${segmentWords.join('|')}\n` +
-                    `  Last word: "${lastWord}"\n` +
-                    `  Normalized last word: "${normalizedLastWord}"`
-                )
-
-                // Calculate word position
                 const segmentStartWord = corrected_segments
                     .slice(0, segmentIndex)
                     .reduce((acc, s) => acc + s.text.trim().split(/\s+/).length, 0)
                 const lastWordPosition = segmentStartWord + segmentWords.length - 1
 
-                // Try to find the anchor containing this word
                 const matchingAnchor = anchors.find(a => {
                     const start = a.transcription_position
                     const end = start + a.length - 1
-                    const isMatch = lastWordPosition >= start && lastWordPosition <= end
-
-                    debugInfoRef.current[segmentIndex].debugLog?.push(
-                        `Checking anchor: "${a.text}"\n` +
-                        `  Position range: ${start}-${end}\n` +
-                        `  Last word position: ${lastWordPosition}\n` +
-                        `  Is in range: ${isMatch}\n` +
-                        `  Words: ${a.words.join('|')}`
-                    )
-
-                    return isMatch
+                    return lastWordPosition >= start && lastWordPosition <= end
                 })
 
                 if (matchingAnchor?.reference_positions[currentSource] !== undefined) {
                     const anchorWords = matchingAnchor.words
-                    const wordIndex = anchorWords.findIndex(w => {
-                        const normalizedAnchorWord = normalizeWord(w)
-                        const matches = normalizedAnchorWord === normalizedLastWord
-
-                        debugInfoRef.current[segmentIndex].debugLog?.push(
-                            `Comparing words:\n` +
-                            `  Anchor word: "${w}" (normalized: "${normalizedAnchorWord}")\n` +
-                            `  Segment word: "${lastWord}" (normalized: "${normalizedLastWord}")\n` +
-                            `  Matches: ${matches}`
-                        )
-
-                        return matches
-                    })
+                    const wordIndex = anchorWords.findIndex(w =>
+                        w.toLowerCase() === segmentWords[segmentWords.length - 1].toLowerCase()
+                    )
 
                     if (wordIndex !== -1) {
-                        const position = matchingAnchor.reference_positions[currentSource] + wordIndex
-
-                        debugInfoRef.current[segmentIndex].debugLog?.push(
-                            `Found match:\n` +
-                            `  Word index in anchor: ${wordIndex}\n` +
-                            `  Reference position: ${matchingAnchor.reference_positions[currentSource]}\n` +
-                            `  Final position: ${position}`
-                        )
-
-                        // Update debug info with word matching details
-                        debugInfoRef.current[segmentIndex] = {
-                            ...debugInfoRef.current[segmentIndex],
-                            lastWord,
-                            normalizedLastWord,
-                            overlappingAnchors: [{
-                                text: matchingAnchor.text,
-                                range: [matchingAnchor.transcription_position, matchingAnchor.transcription_position + matchingAnchor.length - 1],
-                                words: anchorWords,
-                                hasMatchingWord: true
-                            }],
-                            wordPositionDebug: {
-                                anchorWords,
-                                wordIndex,
-                                referencePosition: matchingAnchor.reference_positions[currentSource],
-                                finalPosition: position,
-                                normalizedWords: {
-                                    anchor: normalizeWord(anchorWords[wordIndex]),
-                                    segment: normalizedLastWord
-                                }
-                            }
-                        }
-
-                        return position
+                        return matchingAnchor.reference_positions[currentSource] + wordIndex
                     }
                 }
 
@@ -151,11 +69,6 @@ export default function ReferenceView({
         )
         return { newlineIndices }
     }, [corrected_segments, anchors, currentSource])
-
-    // Update debug info whenever it changes
-    useEffect(() => {
-        onDebugInfoUpdate?.(debugInfoRef.current)
-    }, [onDebugInfoUpdate])
 
     const renderHighlightedText = () => {
         const elements: React.ReactNode[] = []
@@ -224,11 +137,9 @@ export default function ReferenceView({
                 />
             )
 
-            // Check if we need to add a newline after this word
             if (newlineIndices.has(thisWordIndex)) {
                 elements.push(<br key={`br-${index}`} />)
             } else {
-                // Only add space if not adding newline
                 elements.push(' ')
             }
 

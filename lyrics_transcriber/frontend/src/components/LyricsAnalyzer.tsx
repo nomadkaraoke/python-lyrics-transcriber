@@ -3,14 +3,12 @@ import UploadFileIcon from '@mui/icons-material/UploadFile'
 import { Box, Button, Grid, Typography, useMediaQuery, useTheme } from '@mui/material'
 import { useCallback, useState } from 'react'
 import { ApiClient } from '../api'
-import { CorrectionData, LyricsData, HighlightInfo, AnchorMatchInfo, GapSequence, AnchorSequence, LyricsSegment, WordCorrection } from '../types'
+import { AnchorSequence, CorrectionData, GapSequence, HighlightInfo, InteractionMode, LyricsData, LyricsSegment, WordCorrection } from '../types'
 import CorrectionMetrics from './CorrectionMetrics'
 import DetailsModal from './DetailsModal'
+import ModeSelector from './ModeSelector'
 import ReferenceView from './ReferenceView'
 import TranscriptionView from './TranscriptionView'
-import DebugPanel from './DebugPanel'
-import ModeSelector from './ModeSelector'
-import { InteractionMode } from '../types'
 
 interface WordClickInfo {
     wordIndex: number
@@ -74,7 +72,6 @@ export default function LyricsAnalyzer({ data: initialData, onFileLoad, apiClien
     const [flashingType, setFlashingType] = useState<FlashType>(null)
     const [highlightInfo, setHighlightInfo] = useState<HighlightInfo | null>(null)
     const [currentSource, setCurrentSource] = useState<'genius' | 'spotify'>('genius')
-    const [anchorMatchInfo, setAnchorMatchInfo] = useState<AnchorMatchInfo[]>([])
     const [manualCorrections, setManualCorrections] = useState<Map<number, string[]>>(new Map())
     const [isReviewComplete, setIsReviewComplete] = useState(false)
     const [data, setData] = useState(initialData)
@@ -430,7 +427,6 @@ export default function LyricsAnalyzer({ data: initialData, onFileLoad, apiClien
                         corrected_segments={data.corrected_segments}
                         currentSource={currentSource}
                         onSourceChange={setCurrentSource}
-                        onDebugInfoUpdate={setAnchorMatchInfo}
                     />
                 </Grid>
             </Grid>
@@ -454,14 +450,6 @@ export default function LyricsAnalyzer({ data: initialData, onFileLoad, apiClien
                     </Button>
                 </Box>
             )}
-
-            <Box sx={{ mt: 4 }}>
-                <DebugPanel
-                    data={data}
-                    currentSource={currentSource}
-                    anchorMatchInfo={anchorMatchInfo}
-                />
-            </Box>
         </Box>
     )
 } 
