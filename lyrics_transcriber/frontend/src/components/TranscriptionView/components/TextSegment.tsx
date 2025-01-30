@@ -30,8 +30,8 @@ function TextSegmentComponent({
     })
 
     const shouldWordFlash = (wordPos: WordPosition): boolean => {
-        const hasCorrections = 'corrections' in (wordPos.sequence || {}) &&
-            (wordPos.sequence as GapSequence)?.corrections?.length > 0
+        const hasCorrections = wordPos.type === 'gap' &&
+            Boolean((wordPos.sequence as GapSequence)?.corrections?.length)
 
         return Boolean(
             (flashingType === 'anchor' && wordPos.type === 'anchor') ||
@@ -59,6 +59,7 @@ function TextSegmentComponent({
             {wordPositions.map((wordPos, index) => {
                 const anchorSequence = wordPos.type === 'anchor' ? wordPos.sequence as AnchorSequence : undefined
                 const gapSequence = wordPos.type === 'gap' ? wordPos.sequence as GapSequence : undefined
+                const hasCorrections = Boolean(gapSequence?.corrections?.length)
 
                 return (
                     <Word
@@ -66,7 +67,8 @@ function TextSegmentComponent({
                         word={wordPos.word}
                         shouldFlash={shouldWordFlash(wordPos)}
                         isAnchor={Boolean(anchorSequence)}
-                        isCorrectedGap={Boolean(gapSequence)}
+                        isCorrectedGap={hasCorrections}
+                        isUncorrectedGap={wordPos.type === 'gap' && !hasCorrections}
                         onClick={() => handleWordClick(
                             wordPos.word,
                             wordPos.position,

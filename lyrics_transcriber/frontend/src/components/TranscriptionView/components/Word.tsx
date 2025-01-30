@@ -7,6 +7,7 @@ interface WordProps {
     shouldFlash: boolean;
     isAnchor?: boolean;
     isCorrectedGap?: boolean;
+    isUncorrectedGap?: boolean;
     padding?: string;
     onClick?: () => void;
 }
@@ -16,6 +17,7 @@ export const Word = React.memo(function Word({
     shouldFlash,
     isAnchor,
     isCorrectedGap,
+    isUncorrectedGap,
     padding = '2px 4px',
     onClick,
 }: WordProps) {
@@ -29,7 +31,9 @@ export const Word = React.memo(function Word({
             ? COLORS.anchor
             : isCorrectedGap
                 ? COLORS.corrected
-                : 'transparent';
+                : isUncorrectedGap
+                    ? COLORS.uncorrectedGap
+                    : 'transparent';
 
     return (
         <HighlightedWord
