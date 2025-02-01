@@ -67,7 +67,7 @@ export default function LyricsAnalyzer({ data: initialData, onFileLoad, apiClien
     const [manualCorrections, setManualCorrections] = useState<Map<number, string[]>>(new Map())
     const [isReviewComplete, setIsReviewComplete] = useState(false)
     const [data, setData] = useState(initialData)
-    const [interactionMode, setInteractionMode] = useState<InteractionMode>('highlight')
+    const [interactionMode, setInteractionMode] = useState<InteractionMode>('details')
     const theme = useTheme()
     const isMobile = useMediaQuery(theme.breakpoints.down('md'))
 

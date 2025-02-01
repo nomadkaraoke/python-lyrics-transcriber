@@ -20,13 +20,13 @@ export default function ModeSelector({ mode, onChange }: ModeSelectorProps) {
                 onChange={(_, newMode) => newMode && onChange(newMode)}
                 size="small"
             >
-                <ToggleButton value="highlight">
-                    <HighlightIcon sx={{ mr: 1 }} />
-                    Highlight
-                </ToggleButton>
                 <ToggleButton value="details">
                     <InfoIcon sx={{ mr: 1 }} />
                     Details
+                </ToggleButton>
+                <ToggleButton value="highlight">
+                    <HighlightIcon sx={{ mr: 1 }} />
+                    Highlight
                 </ToggleButton>
             </ToggleButtonGroup>
         </Box>
