@@ -99,6 +99,8 @@ def start_review_server(correction_result: CorrectionResult) -> CorrectionResult
     import uvicorn
     import webbrowser
     from threading import Thread
+    import signal
+    import sys
 
     global current_review, review_completed
     current_review = correction_result
@@ -110,8 +112,12 @@ def start_review_server(correction_result: CorrectionResult) -> CorrectionResult
     start_vite_server()
     logger.info("Frontend assets mounted")
 
+    # Create a custom server config
+    config = uvicorn.Config(app, host="127.0.0.1", port=8000, log_level="info")
+    server = uvicorn.Server(config)
+
     # Start FastAPI server in a separate thread
-    server_thread = Thread(target=uvicorn.run, args=(app,), kwargs={"host": "127.0.0.1", "port": 8000, "log_level": "info"}, daemon=True)
+    server_thread = Thread(target=server.run, daemon=True)
     server_thread.start()
     logger.info("Server thread started")
 
@@ -125,9 +131,9 @@ def start_review_server(correction_result: CorrectionResult) -> CorrectionResult
     start_time = time.time()
     while not review_completed:
         time.sleep(0.1)
-        # if time.time() - start_time > 600:  # 10 minute timeout
-        #     logger.error("Review timed out after 10 minutes")
-        #     raise TimeoutError("Review did not complete within the expected time frame.")
 
-    logger.info("Review completed, returning results")
+    logger.info("Review completed, shutting down server...")
+    server.should_exit = True
+    server_thread.join(timeout=5)  # Wait up to 5 seconds for server to shut down
+
     return current_review
