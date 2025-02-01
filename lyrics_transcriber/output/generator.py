@@ -154,17 +154,34 @@ class OutputGenerator:
 
     def _get_video_params(self, resolution: str) -> tuple:
         """Get video parameters: (width, height), font_size, line_height based on video resolution config."""
-        match resolution:
-            case "4k":
-                return (3840, 2160), 250, 250
-            case "1080p":
-                return (1920, 1080), 120, 120
-            case "720p":
-                return (1280, 720), 100, 100
-            case "360p":
-                return (640, 360), 40, 50
-            case _:
-                raise ValueError("Invalid video_resolution value. Must be one of: 4k, 1080p, 720p, 360p")
+        # Get resolution dimensions
+        resolution_map = {
+            "4k": (3840, 2160),
+            "1080p": (1920, 1080),
+            "720p": (1280, 720),
+            "360p": (640, 360),
+        }
+        
+        if resolution not in resolution_map:
+            raise ValueError("Invalid video_resolution value. Must be one of: 4k, 1080p, 720p, 360p")
+            
+        resolution_dims = resolution_map[resolution]
+        
+        # Default font sizes for each resolution
+        default_font_sizes = {
+            "4k": 250,
+            "1080p": 120,
+            "720p": 100,
+            "360p": 40,
+        }
+        
+        # Get font size from styles if available, otherwise use default
+        font_size = self.config.styles.get("karaoke", {}).get("font_size", default_font_sizes[resolution])
+        
+        # Line height matches font size for all except 360p
+        line_height = 50 if resolution == "360p" else font_size
+        
+        return resolution_dims, font_size, line_height
 
     def write_corrections_data(self, correction_result: CorrectionResult, output_prefix: str) -> str:
         """Write corrections data to JSON file."""
