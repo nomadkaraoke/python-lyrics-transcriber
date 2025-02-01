@@ -4,18 +4,18 @@ import InfoIcon from '@mui/icons-material/Info';
 import { InteractionMode } from '../types';
 
 interface ModeSelectorProps {
-    mode: InteractionMode;
+    effectiveMode: InteractionMode;
     onChange: (mode: InteractionMode) => void;
 }
 
-export default function ModeSelector({ mode, onChange }: ModeSelectorProps) {
+export default function ModeSelector({ effectiveMode, onChange }: ModeSelectorProps) {
     return (
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
             <Typography variant="body2" color="text.secondary">
                 Click Mode:
             </Typography>
             <ToggleButtonGroup
-                value={mode}
+                value={effectiveMode}
                 exclusive
                 onChange={(_, newMode) => newMode && onChange(newMode)}
                 size="small"

@@ -1,7 +1,7 @@
 import LockIcon from '@mui/icons-material/Lock'
 import UploadFileIcon from '@mui/icons-material/UploadFile'
 import { Box, Button, Grid, Typography, useMediaQuery, useTheme } from '@mui/material'
-import { useCallback, useState } from 'react'
+import { useCallback, useState, useEffect } from 'react'
 import { ApiClient } from '../api'
 import { CorrectionData, GapSequence, HighlightInfo, InteractionMode, LyricsData, LyricsSegment, WordCorrection } from '../types'
 import CorrectionMetrics from './CorrectionMetrics'
@@ -68,8 +68,40 @@ export default function LyricsAnalyzer({ data: initialData, onFileLoad, apiClien
     const [isReviewComplete, setIsReviewComplete] = useState(false)
     const [data, setData] = useState(initialData)
     const [interactionMode, setInteractionMode] = useState<InteractionMode>('details')
+    const [isShiftPressed, setIsShiftPressed] = useState(false)
     const theme = useTheme()
     const isMobile = useMediaQuery(theme.breakpoints.down('md'))
+
+    // Add keyboard event handlers
+    useEffect(() => {
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if (e.key === 'Shift') {
+                setIsShiftPressed(true)
+                // Prevent text selection while Shift is pressed
+                document.body.style.userSelect = 'none'
+            }
+        }
+
+        const handleKeyUp = (e: KeyboardEvent) => {
+            if (e.key === 'Shift') {
+                setIsShiftPressed(false)
+                // Re-enable text selection when Shift is released
+                document.body.style.userSelect = ''
+            }
+        }
+
+        window.addEventListener('keydown', handleKeyDown)
+        window.addEventListener('keyup', handleKeyUp)
+        return () => {
+            window.removeEventListener('keydown', handleKeyDown)
+            window.removeEventListener('keyup', handleKeyUp)
+            // Ensure text selection is re-enabled when component unmounts
+            document.body.style.userSelect = ''
+        }
+    }, [])
+
+    // Calculate effective mode based on shift key state
+    const effectiveMode = isShiftPressed ? 'highlight' : interactionMode
 
     const handleFlash = useCallback((type: FlashType, info?: HighlightInfo) => {
         setFlashingType(null)
@@ -390,7 +422,7 @@ export default function LyricsAnalyzer({ data: initialData, onFileLoad, apiClien
 
             <Box sx={{ mb: 3 }}>
                 <ModeSelector
-                    mode={interactionMode}
+                    effectiveMode={effectiveMode}
                     onChange={setInteractionMode}
                 />
             </Box>
@@ -399,7 +431,7 @@ export default function LyricsAnalyzer({ data: initialData, onFileLoad, apiClien
                 <Grid item xs={12} md={6}>
                     <TranscriptionView
                         data={data}
-                        mode={interactionMode}
+                        mode={effectiveMode}
                         onElementClick={setModalContent}
                         onWordClick={handleWordClick}
                         flashingType={flashingType}
@@ -411,7 +443,7 @@ export default function LyricsAnalyzer({ data: initialData, onFileLoad, apiClien
                         referenceTexts={data.reference_texts}
                         anchors={data.anchor_sequences}
                         gaps={data.gap_sequences}
-                        mode={interactionMode}
+                        mode={effectiveMode}
                         onElementClick={setModalContent}
                         onWordClick={handleWordClick}
                         flashingType={flashingType}
