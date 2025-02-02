@@ -12,14 +12,19 @@ export default function ReferenceView({
     onElementClick,
     onWordClick,
     flashingType,
+    corrected_segments,
     currentSource,
     onSourceChange,
     highlightInfo,
     mode
 }: ReferenceViewProps) {
     const { linePositions } = useMemo(() =>
-        calculateReferenceLinePositions(),
-        []
+        calculateReferenceLinePositions(
+            corrected_segments,
+            anchors,
+            currentSource
+        ),
+        [corrected_segments, anchors, currentSource]
     )
 
     return (

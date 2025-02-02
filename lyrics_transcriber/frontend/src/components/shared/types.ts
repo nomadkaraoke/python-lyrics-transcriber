@@ -1,4 +1,4 @@
-import { AnchorSequence, GapSequence, HighlightInfo, InteractionMode, LyricsData } from '../../types'
+import { AnchorSequence, GapSequence, HighlightInfo, InteractionMode, LyricsData, LyricsSegment } from '../../types'
 import { ModalContent } from '../LyricsAnalyzer'
 
 // Add FlashType definition directly in shared types
@@ -61,10 +61,31 @@ export interface TranscriptionViewProps extends BaseViewProps {
     data: LyricsData
 }
 
+// Add LinePosition type here since it's used in multiple places
+export interface LinePosition {
+    position: number
+    lineNumber: number
+    isEmpty?: boolean
+}
+
+// Reference-specific props
 export interface ReferenceViewProps extends BaseViewProps {
     referenceTexts: Record<string, string>
     anchors: LyricsData['anchor_sequences']
     gaps: LyricsData['gap_sequences']
     currentSource: 'genius' | 'spotify'
     onSourceChange: (source: 'genius' | 'spotify') => void
+    corrected_segments: LyricsSegment[]
+}
+
+// Update HighlightedTextProps to include linePositions
+export interface HighlightedTextProps extends BaseViewProps {
+    text?: string
+    wordPositions?: TranscriptionWordPosition[]
+    anchors: AnchorSequence[]
+    gaps: GapSequence[]
+    isReference?: boolean
+    currentSource?: 'genius' | 'spotify'
+    preserveSegments?: boolean
+    linePositions?: LinePosition[]
 } 

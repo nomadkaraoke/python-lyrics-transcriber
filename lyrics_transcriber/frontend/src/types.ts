@@ -114,4 +114,4 @@ export interface HighlightInfo {
     type: 'single' | 'gap' | 'anchor'
 }
 
-export type InteractionMode = 'highlight' | 'details' // Will add 'edit' | 'seek' later
+export type InteractionMode = 'highlight' | 'details' | 'edit'

@@ -1,15 +1,23 @@
+import {
+    CorrectionData,
+    HighlightInfo,
+    InteractionMode,
+    LyricsData,
+    LyricsSegment
+} from '../types'
 import LockIcon from '@mui/icons-material/Lock'
 import UploadFileIcon from '@mui/icons-material/UploadFile'
 import { Box, Button, Grid, Typography, useMediaQuery, useTheme } from '@mui/material'
 import { useCallback, useState, useEffect } from 'react'
 import { ApiClient } from '../api'
-import { CorrectionData, GapSequence, HighlightInfo, InteractionMode, LyricsData, LyricsSegment, WordCorrection } from '../types'
 import CorrectionMetrics from './CorrectionMetrics'
 import DetailsModal from './DetailsModal'
 import ModeSelector from './ModeSelector'
 import ReferenceView from './ReferenceView'
 import TranscriptionView from './TranscriptionView'
 import { WordClickInfo, FlashType } from './shared/types'
+import EditModal from './EditModal'
+import ReviewChangesModal from './ReviewChangesModal'
 
 interface LyricsAnalyzerProps {
     data: CorrectionData
@@ -64,11 +72,19 @@ export default function LyricsAnalyzer({ data: initialData, onFileLoad, apiClien
     const [flashingType, setFlashingType] = useState<FlashType>(null)
     const [highlightInfo, setHighlightInfo] = useState<HighlightInfo | null>(null)
     const [currentSource, setCurrentSource] = useState<'genius' | 'spotify'>('genius')
-    const [manualCorrections, setManualCorrections] = useState<Map<number, string[]>>(new Map())
     const [isReviewComplete, setIsReviewComplete] = useState(false)
     const [data, setData] = useState(initialData)
+    // Create deep copy of initial data for comparison later
+    const [originalData] = useState(() => JSON.parse(JSON.stringify(initialData)))
     const [interactionMode, setInteractionMode] = useState<InteractionMode>('details')
     const [isShiftPressed, setIsShiftPressed] = useState(false)
+    const [isCtrlPressed, setIsCtrlPressed] = useState(false)
+    const [editModalSegment, setEditModalSegment] = useState<{
+        segment: LyricsSegment
+        index: number
+        originalSegment: LyricsSegment
+    } | null>(null)
+    const [isReviewModalOpen, setIsReviewModalOpen] = useState(false)
     const theme = useTheme()
     const isMobile = useMediaQuery(theme.breakpoints.down('md'))
 
@@ -79,6 +95,8 @@ export default function LyricsAnalyzer({ data: initialData, onFileLoad, apiClien
                 setIsShiftPressed(true)
                 // Prevent text selection while Shift is pressed
                 document.body.style.userSelect = 'none'
+            } else if (e.key === 'Meta') {
+                setIsCtrlPressed(true)
             }
         }
 
@@ -87,6 +105,8 @@ export default function LyricsAnalyzer({ data: initialData, onFileLoad, apiClien
                 setIsShiftPressed(false)
                 // Re-enable text selection when Shift is released
                 document.body.style.userSelect = ''
+            } else if (e.key === 'Meta') {
+                setIsCtrlPressed(false)
             }
         }
 
@@ -100,8 +120,10 @@ export default function LyricsAnalyzer({ data: initialData, onFileLoad, apiClien
         }
     }, [])
 
-    // Calculate effective mode based on shift key state
-    const effectiveMode = isShiftPressed ? 'highlight' : interactionMode
+    // Calculate effective mode based on modifier key states
+    const effectiveMode = isShiftPressed ? 'highlight' :
+        isCtrlPressed ? 'edit' :
+            interactionMode
 
     const handleFlash = useCallback((type: FlashType, info?: HighlightInfo) => {
         setFlashingType(null)
@@ -122,230 +144,103 @@ export default function LyricsAnalyzer({ data: initialData, onFileLoad, apiClien
     }, [])
 
     const handleWordClick = useCallback((info: WordClickInfo) => {
-        // For any word click, flash the containing sequence
-        if (info.type === 'anchor' && info.anchor) {
-            // Change flash type from 'word' to 'anchor' to ensure both views highlight
-            handleFlash('word', {
-                type: 'anchor',
-                transcriptionIndex: info.anchor.transcription_position,
-                transcriptionLength: info.anchor.length,
-                referenceIndices: info.anchor.reference_positions,
-                referenceLength: info.anchor.length
-            })
-        } else if (info.type === 'gap' && info.gap) {
-            handleFlash('word', {
-                type: 'gap',
-                transcriptionIndex: info.gap.transcription_position,
-                transcriptionLength: info.gap.length,
-                referenceIndices: {},
-                referenceLength: info.gap.length
-            })
-        }
-    }, [handleFlash])
-
-    const handleUpdateCorrection = useCallback((position: number, updatedWords: string[]) => {
-        console.group('handleUpdateCorrection Debug')
-        console.log('Position:', position)
-        console.log('Updated words:', updatedWords)
-
-        // Create a deep clone of the data
-        const newData = JSON.parse(JSON.stringify(data))
-
-        // Find the gap that contains this position
-        const gapIndex = newData.gap_sequences.findIndex(
-            (gap: GapSequence) =>
-                position >= gap.transcription_position &&
-                position < gap.transcription_position + gap.words.length
-        )
-
-        if (gapIndex !== -1) {
-            const originalGap = newData.gap_sequences[gapIndex]
-            const wordIndexInGap = position - originalGap.transcription_position
-            console.log('Found gap at index:', gapIndex, 'word index in gap:', wordIndexInGap)
-
-            // Update manual corrections
-            setManualCorrections(prev => {
-                const newCorrections = new Map(prev)
-                newCorrections.set(position, updatedWords)
-                return newCorrections
-            })
-
-            // Create a new correction
-            const newCorrection: WordCorrection = {
-                original_word: originalGap.words[wordIndexInGap],
-                corrected_word: updatedWords.join(' '),
-                segment_index: 0,
-                original_position: position,
-                source: 'manual',
-                confidence: 1.0,
-                reason: 'Manual correction during review',
-                alternatives: {},
-                is_deletion: false,
-                length: updatedWords.length,
-                reference_positions: {}
-            }
-
-            // Find the corresponding segment by counting words
+        if (effectiveMode === 'edit') {
             let currentPosition = 0
-            let segmentIndex = -1
-            let wordIndex = -1
-
-            for (let i = 0; i < newData.corrected_segments.length; i++) {
-                const segment = newData.corrected_segments[i]
-                if (position >= currentPosition && position < currentPosition + segment.words.length) {
-                    segmentIndex = i
-                    wordIndex = position - currentPosition
-                    break
+            const segmentIndex = data.corrected_segments.findIndex(segment => {
+                if (info.wordIndex >= currentPosition &&
+                    info.wordIndex < currentPosition + segment.words.length) {
+                    return true
                 }
                 currentPosition += segment.words.length
-            }
-
-            console.log('Segment search:', {
-                position,
-                segmentIndex,
-                wordIndex,
-                totalSegments: newData.corrected_segments.length
+                return false
             })
 
-            if (segmentIndex !== -1 && wordIndex !== -1) {
-                const segment = newData.corrected_segments[segmentIndex]
-                const timingWord = segment.words[wordIndex]
-
-                console.log('Found matching segment:', {
-                    text: segment.text,
-                    wordCount: segment.words.length,
-                    wordIndex,
-                    word: timingWord?.text
+            if (segmentIndex !== -1) {
+                setEditModalSegment({
+                    segment: data.corrected_segments[segmentIndex],
+                    index: segmentIndex,
+                    originalSegment: originalData.corrected_segments[segmentIndex]
                 })
-
-                if (!timingWord) {
-                    console.error('Could not find timing word in segment')
-                    console.groupEnd()
-                    return
-                }
-
-                // Update gap sequence
-                const newWords = [...originalGap.words]
-                newWords[wordIndexInGap] = updatedWords[0]
-                newData.gap_sequences[gapIndex] = {
-                    ...originalGap,
-                    words: newWords,
-                    text: newWords.join(' '),
-                    corrections: originalGap.corrections
-                        .filter((c: WordCorrection) => c.source !== 'manual')
-                        .concat([newCorrection])
-                }
-
-                // Update segment
-                const newSegmentWords = [...segment.words]
-                newSegmentWords[wordIndex] = {
-                    ...timingWord,
-                    text: updatedWords[0],
-                    confidence: 1.0
-                }
-
-                newData.corrected_segments[segmentIndex] = {
-                    ...segment,
-                    words: newSegmentWords,
-                    text: newSegmentWords.map(word => word.text).join(' ')
-                }
-
-                console.log('Updated both gap and segment')
-            } else {
-                console.error('Could not find matching segment for position:', position)
+            }
+        } else {
+            // Existing word click handling for other modes...
+            if (info.type === 'anchor' && info.anchor) {
+                handleFlash('word', {
+                    type: 'anchor',
+                    transcriptionIndex: info.anchor.transcription_position,
+                    transcriptionLength: info.anchor.length,
+                    referenceIndices: info.anchor.reference_positions,
+                    referenceLength: info.anchor.length
+                })
+            } else if (info.type === 'gap' && info.gap) {
+                handleFlash('word', {
+                    type: 'gap',
+                    transcriptionIndex: info.gap.transcription_position,
+                    transcriptionLength: info.gap.length,
+                    referenceIndices: {},
+                    referenceLength: info.gap.length
+                })
             }
         }
+    }, [effectiveMode, data.corrected_segments, handleFlash, originalData.corrected_segments])
 
-        // Update the corrected_text field
+    const handleUpdateSegment = useCallback((updatedSegment: LyricsSegment) => {
+        console.log('LyricsAnalyzer - handleUpdateSegment called:', {
+            editModalSegment,
+            updatedSegment,
+            currentSegmentsCount: data.corrected_segments.length
+        })
+
+        if (!editModalSegment) {
+            console.warn('LyricsAnalyzer - No editModalSegment found')
+            return
+        }
+
+        const newData = { ...data }
+        console.log('LyricsAnalyzer - Before update:', {
+            segmentIndex: editModalSegment.index,
+            oldText: newData.corrected_segments[editModalSegment.index].text,
+            newText: updatedSegment.text
+        })
+
+        newData.corrected_segments[editModalSegment.index] = updatedSegment
+
+        // Update corrected_text
         newData.corrected_text = newData.corrected_segments
-            .map((segment: LyricsSegment) => segment.text)
+            .map(segment => segment.text)
             .join('\n')
 
-        setData(newData)
-        console.groupEnd()
-    }, [data])
+        console.log('LyricsAnalyzer - After update:', {
+            segmentsCount: newData.corrected_segments.length,
+            updatedText: newData.corrected_text
+        })
 
-    const handleFinishReview = useCallback(async () => {
+        setData(newData)
+        setEditModalSegment(null)  // Close the modal
+    }, [data, editModalSegment])
+
+    const handleFinishReview = useCallback(() => {
+        setIsReviewModalOpen(true)
+    }, [])
+
+    const handleSubmitToServer = useCallback(async () => {
         if (!apiClient) return
 
-        let dataToSubmit: CorrectionData
-        if (manualCorrections.size > 0) {
-            console.log('Manual corrections found:', Array.from(manualCorrections.entries()))
+        try {
+            console.log('Submitting changes to server')
+            const dataToSubmit = normalizeDataForSubmission(data)
+            await apiClient.submitCorrections(dataToSubmit)
 
-            // Only proceed with data modifications if there were manual corrections
-            const updatedData = JSON.parse(JSON.stringify(data))
-            console.log('Deep cloned data:', JSON.stringify(updatedData, null, 2))
+            setIsReviewComplete(true)
+            setIsReviewModalOpen(false)
 
-            // Only update the specific gaps that were manually corrected
-            updatedData.gap_sequences = updatedData.gap_sequences.map((gap: GapSequence) => {
-                const manualUpdate = manualCorrections.get(gap.transcription_position)
-                if (manualUpdate) {
-                    return {
-                        ...gap,
-                        words: manualUpdate,
-                        text: manualUpdate.join(' '),
-                        corrections: [
-                            ...gap.corrections,
-                            {
-                                original_word: gap.text,
-                                corrected_word: manualUpdate.join(' '),
-                                segment_index: 0,
-                                original_position: gap.transcription_position,
-                                source: 'manual',
-                                confidence: 1.0,
-                                reason: 'Manual correction during review',
-                                alternatives: {},
-                                is_deletion: false,
-                                length: manualUpdate.length,
-                                reference_positions: {}
-                            }
-                        ]
-                    }
-                }
-                return gap
-            })
-
-            // Preserve original newline formatting in corrected_text
-            if (manualCorrections.size > 0) {
-                const lines: string[] = updatedData.corrected_text.split('\n')
-                let currentPosition = 0
-                const updatedLines = lines.map((line: string) => {
-                    const words = line.trim().split(/\s+/)
-                    const lineLength = words.length
-
-                    // Check if this line contains any corrections
-                    let lineUpdated = false
-                    for (const [position, updatedWords] of manualCorrections.entries()) {
-                        if (position >= currentPosition && position < currentPosition + lineLength) {
-                            const gapPosition = position - currentPosition
-                            const gap = updatedData.gap_sequences.find((g: GapSequence) =>
-                                g.transcription_position === position
-                            )
-                            if (gap) {
-                                words.splice(gapPosition, gap.length, ...updatedWords)
-                                lineUpdated = true
-                            }
-                        }
-                    }
-                    currentPosition += lineLength
-                    return lineUpdated ? words.join(' ') : line
-                })
-                updatedData.corrected_text = updatedLines.join('\n')
-            }
-
-            dataToSubmit = normalizeDataForSubmission(updatedData)
-            console.log('Submitting data with manual corrections:', dataToSubmit)
-        } else {
-            console.log('Original data:', initialData)
-            console.log('No manual corrections, submitting original data')
-            dataToSubmit = normalizeDataForSubmission(initialData)
+            // Close the browser tab
+            window.close()
+        } catch (error) {
+            console.error('Failed to submit corrections:', error)
+            alert('Failed to submit corrections. Please try again.')
         }
-
-        console.log('Data being sent to API:', dataToSubmit)
-        await apiClient.submitCorrections(dataToSubmit)
-        setIsReviewComplete(true)
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [apiClient, initialData, manualCorrections])
+    }, [apiClient, data])
 
     return (
         <Box>
@@ -450,6 +345,7 @@ export default function LyricsAnalyzer({ data: initialData, onFileLoad, apiClien
                         highlightInfo={highlightInfo}
                         currentSource={currentSource}
                         onSourceChange={setCurrentSource}
+                        corrected_segments={data.corrected_segments}
                     />
                 </Grid>
             </Grid>
@@ -458,8 +354,23 @@ export default function LyricsAnalyzer({ data: initialData, onFileLoad, apiClien
                 open={modalContent !== null}
                 content={modalContent}
                 onClose={() => setModalContent(null)}
-                onUpdateCorrection={handleUpdateCorrection}
-                isReadOnly={isReadOnly}
+            />
+
+            <EditModal
+                open={Boolean(editModalSegment)}
+                onClose={() => setEditModalSegment(null)}
+                segment={editModalSegment?.segment ?? null}
+                segmentIndex={editModalSegment?.index ?? null}
+                originalSegment={editModalSegment?.originalSegment ?? null}
+                onSave={handleUpdateSegment}
+            />
+
+            <ReviewChangesModal
+                open={isReviewModalOpen}
+                onClose={() => setIsReviewModalOpen(false)}
+                originalData={originalData}
+                updatedData={data}
+                onSubmit={handleSubmitToServer}
             />
 
             {!isReadOnly && apiClient && (

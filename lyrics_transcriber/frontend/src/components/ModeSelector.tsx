@@ -1,6 +1,7 @@
 import { ToggleButton, ToggleButtonGroup, Box, Typography } from '@mui/material';
 import HighlightIcon from '@mui/icons-material/Highlight';
 import InfoIcon from '@mui/icons-material/Info';
+import EditIcon from '@mui/icons-material/Edit';
 import { InteractionMode } from '../types';
 
 interface ModeSelectorProps {
@@ -27,6 +28,10 @@ export default function ModeSelector({ effectiveMode, onChange }: ModeSelectorPr
                 <ToggleButton value="highlight">
                     <HighlightIcon sx={{ mr: 1 }} />
                     Highlight
+                </ToggleButton>
+                <ToggleButton value="edit">
+                    <EditIcon sx={{ mr: 1 }} />
+                    Edit
                 </ToggleButton>
             </ToggleButtonGroup>
         </Box>

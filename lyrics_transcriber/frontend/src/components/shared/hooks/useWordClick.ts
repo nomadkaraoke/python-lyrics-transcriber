@@ -83,7 +83,7 @@ export function useWordClick({
                 position < (gap.transcription_position + gap.length)
         )
 
-        if (mode === 'highlight') {
+        if (mode === 'highlight' || mode === 'edit') {
             onWordClick?.({
                 wordIndex: position,
                 type: belongsToAnchor ? 'anchor' : belongsToGap ? 'gap' : 'other',

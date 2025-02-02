@@ -51,6 +51,10 @@ class SpotifyProvider(BaseLyricsProvider):
             if not line.get("words"):
                 continue
 
+            # Skip lines that are just musical notes
+            if not self._clean_lyrics(line["words"]):
+                continue
+
             segment = LyricsSegment(
                 text=line["words"],
                 words=[],  # TODO: Could potentially split words if needed
@@ -80,3 +84,10 @@ class SpotifyProvider(BaseLyricsProvider):
         )
 
         return LyricsData(source="spotify", lyrics="\n".join(segment.text for segment in segments), segments=segments, metadata=metadata)
+
+    def _clean_lyrics(self, lyrics: str) -> str:
+        """Clean and process lyrics from Spotify to remove unwanted content."""
+        # Remove lines that contain only musical note symbols
+        if lyrics.strip() == "♪":
+            return ""
+        return lyrics

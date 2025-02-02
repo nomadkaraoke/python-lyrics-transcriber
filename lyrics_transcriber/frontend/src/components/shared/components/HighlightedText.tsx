@@ -3,7 +3,7 @@ import { Word } from './Word'
 import { useWordClick } from '../hooks/useWordClick'
 import { AnchorSequence, GapSequence, HighlightInfo, InteractionMode } from '../../../types'
 import { ModalContent } from '../../LyricsAnalyzer'
-import { WordClickInfo, TranscriptionWordPosition, FlashType } from '../types'
+import { WordClickInfo, TranscriptionWordPosition, FlashType, LinePosition } from '../types'
 import React from 'react'
 
 interface HighlightedTextProps {
@@ -22,7 +22,7 @@ interface HighlightedTextProps {
     isReference?: boolean
     currentSource?: 'genius' | 'spotify'
     preserveSegments?: boolean
-    linePositions?: { position: number, lineNumber: number, forceBreak?: boolean }[]
+    linePositions?: LinePosition[]
 }
 
 export function HighlightedText({
@@ -37,6 +37,7 @@ export function HighlightedText({
     isReference,
     currentSource,
     preserveSegments = false,
+    linePositions = []
 }: HighlightedTextProps) {
     const { handleWordClick } = useWordClick({
         mode,
@@ -96,7 +97,7 @@ export function HighlightedText({
                         shouldFlash={shouldWordFlash(wordPos)}
                         isAnchor={wordPos.type === 'anchor'}
                         isCorrectedGap={wordPos.type === 'gap' && Boolean((wordPos.sequence as GapSequence)?.corrections?.length)}
-                        isUncorrectedGap={wordPos.type === 'gap' && !Boolean((wordPos.sequence as GapSequence)?.corrections?.length)}
+                        isUncorrectedGap={wordPos.type === 'gap' && !(wordPos.sequence as GapSequence)?.corrections?.length}
                         onClick={() => handleWordClick(
                             wordPos.word,
                             wordPos.position,
@@ -112,53 +113,82 @@ export function HighlightedText({
             const lines = text.split('\n')
             let globalWordIndex = 0  // Keep track of overall word position
 
-            return lines.map((line, lineIndex) => (
-                <Box key={`line-${lineIndex}`} sx={{ display: 'flex', alignItems: 'flex-start' }}>
-                    <Typography
-                        component="span"
-                        sx={{
-                            color: 'text.secondary',
-                            width: '2em',
-                            minWidth: '2em',
-                            textAlign: 'right',
-                            marginRight: 1,
-                            userSelect: 'none',
-                            fontFamily: 'monospace',
-                            paddingTop: '4px',
-                        }}
-                    >
-                        {lineIndex}
-                    </Typography>
-                    <Box sx={{ flex: 1 }}>
-                        {line.split(/(\s+)/).map((word, wordIndex) => {
-                            if (word === '') return null
-                            if (/^\s+$/.test(word)) {
-                                return <span key={`space-${lineIndex}-${wordIndex}`}> </span>
-                            }
+            return lines.map((line, lineIndex) => {
+                // Find if this should be an empty line
+                const currentLinePosition = linePositions?.find((pos: LinePosition) => pos.position === globalWordIndex)
+                if (currentLinePosition?.isEmpty) {
+                    globalWordIndex++ // Still increment for empty lines
+                    return (
+                        <Box key={`empty-${lineIndex}`} sx={{ display: 'flex', alignItems: 'flex-start' }}>
+                            <Typography
+                                component="span"
+                                sx={{
+                                    color: 'text.secondary',
+                                    width: '2em',
+                                    minWidth: '2em',
+                                    textAlign: 'right',
+                                    marginRight: 1,
+                                    userSelect: 'none',
+                                    fontFamily: 'monospace',
+                                    paddingTop: '4px',
+                                }}
+                            >
+                                {currentLinePosition.lineNumber}
+                            </Typography>
+                            <Box sx={{ flex: 1, height: '1.5em' }} /> {/* Empty space to maintain line height */}
+                        </Box>
+                    )
+                }
 
-                            const position = globalWordIndex++  // Use and increment global word counter
-                            const anchor = anchors.find(a => {
-                                const refPos = a.reference_positions[currentSource!]
-                                if (refPos === undefined) return false
-                                return position >= refPos && position < refPos + a.length
-                            })
+                const lineContent = line.split(/(\s+)/)
+                return (
+                    <Box key={`line-${lineIndex}`} sx={{ display: 'flex', alignItems: 'flex-start' }}>
+                        <Typography
+                            component="span"
+                            sx={{
+                                color: 'text.secondary',
+                                width: '2em',
+                                minWidth: '2em',
+                                textAlign: 'right',
+                                marginRight: 1,
+                                userSelect: 'none',
+                                fontFamily: 'monospace',
+                                paddingTop: '4px',
+                            }}
+                        >
+                            {lineIndex}
+                        </Typography>
+                        <Box sx={{ flex: 1 }}>
+                            {lineContent.map((word, wordIndex) => {
+                                if (word === '') return null
+                                if (/^\s+$/.test(word)) {
+                                    return <span key={`space-${lineIndex}-${wordIndex}`}> </span>
+                                }
 
-                            return (
-                                <Word
-                                    key={`${word}-${lineIndex}-${wordIndex}`}
-                                    word={word}
-                                    shouldFlash={shouldWordFlash({ word, index: position })}
-                                    isAnchor={Boolean(anchor)}
-                                    isCorrectedGap={false}
-                                    isUncorrectedGap={false}
-                                    onClick={() => handleWordClick(word, position, anchor, undefined)}
-                                />
-                            )
-                        })}
+                                const position = globalWordIndex++  // Use and increment global word counter
+                                const anchor = anchors.find(a => {
+                                    const refPos = a.reference_positions[currentSource!]
+                                    if (refPos === undefined) return false
+                                    return position >= refPos && position < refPos + a.length
+                                })
+
+                                return (
+                                    <Word
+                                        key={`${word}-${lineIndex}-${wordIndex}`}
+                                        word={word}
+                                        shouldFlash={shouldWordFlash({ word, index: position })}
+                                        isAnchor={Boolean(anchor)}
+                                        isCorrectedGap={false}
+                                        isUncorrectedGap={false}
+                                        onClick={() => handleWordClick(word, position, anchor, undefined)}
+                                    />
+                                )
+                            })}
+                        </Box>
+                        {lineIndex < lines.length - 1 && <br />}
                     </Box>
-                    {lineIndex < lines.length - 1 && <br />}
-                </Box>
-            ))
+                )
+            })
         }
 
         return null
