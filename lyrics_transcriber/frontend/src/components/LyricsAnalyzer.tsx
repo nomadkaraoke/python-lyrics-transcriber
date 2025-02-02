@@ -90,6 +90,35 @@ export default function LyricsAnalyzer({ data: initialData, onFileLoad, apiClien
     const theme = useTheme()
     const isMobile = useMediaQuery(theme.breakpoints.down('md'))
 
+    // Add local storage handling
+    useEffect(() => {
+        // On mount, try to load saved data
+        const savedData = localStorage.getItem('lyrics_analyzer_data')
+        if (savedData) {
+            try {
+                const parsed = JSON.parse(savedData)
+                // Only restore if it's the same song (matching transcribed text)
+                if (parsed.transcribed_text === initialData.transcribed_text) {
+                    console.log('Restored saved progress from local storage')
+                    setData(parsed)
+                } else {
+                    // Clear old data if it's a different song
+                    localStorage.removeItem('lyrics_analyzer_data')
+                }
+            } catch (error) {
+                console.error('Failed to parse saved data:', error)
+                localStorage.removeItem('lyrics_analyzer_data')
+            }
+        }
+    }, [initialData.transcribed_text])
+
+    // Save to local storage whenever data changes
+    useEffect(() => {
+        if (!isReadOnly) {
+            localStorage.setItem('lyrics_analyzer_data', JSON.stringify(data))
+        }
+    }, [data, isReadOnly])
+
     // Add keyboard event handlers
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
@@ -258,6 +287,15 @@ export default function LyricsAnalyzer({ data: initialData, onFileLoad, apiClien
         }
     }, [])
 
+    const handleResetCorrections = useCallback(() => {
+        if (window.confirm('Are you sure you want to reset all corrections? This cannot be undone.')) {
+            // Clear local storage
+            localStorage.removeItem('lyrics_analyzer_data')
+            // Reset data to initial state
+            setData(JSON.parse(JSON.stringify(initialData)))
+        }
+    }, [initialData])
+
     return (
         <Box>
             {isReadOnly && (
@@ -401,13 +439,20 @@ export default function LyricsAnalyzer({ data: initialData, onFileLoad, apiClien
             />
 
             {!isReadOnly && apiClient && (
-                <Box sx={{ mt: 2, mb: 3 }}>
+                <Box sx={{ mt: 2, mb: 3, display: 'flex', gap: 2 }}>
                     <Button
                         variant="contained"
                         onClick={handleFinishReview}
                         disabled={isReviewComplete}
                     >
                         {isReviewComplete ? 'Review Complete' : 'Finish Review'}
+                    </Button>
+                    <Button
+                        variant="outlined"
+                        color="warning"
+                        onClick={handleResetCorrections}
+                    >
+                        Reset Corrections
                     </Button>
                 </Box>
             )}

@@ -228,8 +228,21 @@ export default function EditModal({
         setReplacementText('') // Clear the input after replacing
     }
 
+    const handleKeyDown = (event: React.KeyboardEvent) => {
+        if (event.key === 'Enter' && !event.shiftKey) {
+            event.preventDefault()
+            handleSave()
+        }
+    }
+
     return (
-        <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
+        <Dialog
+            open={open}
+            onClose={onClose}
+            maxWidth="md"
+            fullWidth
+            onKeyDown={handleKeyDown}
+        >
             <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                 <Box sx={{ flex: 1, display: 'flex', alignItems: 'center', gap: 1 }}>
                     Edit Segment {segmentIndex}
