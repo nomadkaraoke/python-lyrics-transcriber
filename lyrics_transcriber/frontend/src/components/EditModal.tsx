@@ -276,7 +276,9 @@ export default function EditModal({
                 </Box>
 
                 <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                    Segment Time Range: {editedSegment.start_time.toFixed(2)} - {editedSegment.end_time.toFixed(2)}
+                    Original Time Range: {originalSegment.start_time.toFixed(2)} - {originalSegment.end_time.toFixed(2)}
+                    <br />
+                    Current Time Range: {editedSegment.start_time.toFixed(2)} - {editedSegment.end_time.toFixed(2)}
                 </Typography>
 
                 <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, mb: 3 }}>
@@ -295,7 +297,7 @@ export default function EditModal({
                                 onChange={(e) => handleWordChange(index, 'start_time', parseFloat(e.target.value))}
                                 type="number"
                                 inputProps={{ step: 0.01 }}
-                                sx={{ width: '120px' }}
+                                sx={{ width: '150px' }}
                                 size="small"
                             />
                             <TextField
@@ -304,7 +306,7 @@ export default function EditModal({
                                 onChange={(e) => handleWordChange(index, 'end_time', parseFloat(e.target.value))}
                                 type="number"
                                 inputProps={{ step: 0.01 }}
-                                sx={{ width: '120px' }}
+                                sx={{ width: '150px' }}
                                 size="small"
                             />
                             <IconButton onClick={(e) => handleWordMenu(e, index)}>

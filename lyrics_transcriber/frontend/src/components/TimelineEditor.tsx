@@ -94,6 +94,9 @@ export default function TimelineEditor({ words, startTime, endTime, onWordUpdate
         isResize: boolean
     ): boolean => {
         if (isResize) {
+            // If this is the last word, allow it to extend beyond the timeline
+            if (currentIndex === words.length - 1) return false;
+
             const nextWord = words[currentIndex + 1]
             if (!nextWord) return false
             const hasCollision = proposedEnd > nextWord.start_time
