@@ -238,7 +238,7 @@ export default function EditModal({
     }
 
     const handleDelete = () => {
-        if (segmentIndex !== null && window.confirm('Are you sure you want to delete this segment?')) {
+        if (segmentIndex !== null) {
             onDelete?.(segmentIndex)
             onClose()
         }
