@@ -22,6 +22,7 @@ interface HighlightedTextProps {
     isReference?: boolean
     currentSource?: 'genius' | 'spotify'
     newlineIndices?: Set<number>
+    preserveSegments?: boolean
 }
 
 // Helper function to safely check reference indices
@@ -49,7 +50,8 @@ export function HighlightedText({
     flashingType,
     isReference,
     currentSource,
-    newlineIndices
+    newlineIndices,
+    preserveSegments = false
 }: HighlightedTextProps) {
     const { handleWordClick } = useWordClick({
         mode,
@@ -233,9 +235,10 @@ export function HighlightedText({
             component="pre"
             sx={{
                 fontFamily: 'monospace',
-                whiteSpace: 'pre-wrap',
+                whiteSpace: preserveSegments ? 'normal' : 'pre-wrap',
                 margin: 0,
                 lineHeight: 1.5,
+                display: 'inline',
             }}
         >
             {renderContent()}
