@@ -1,10 +1,10 @@
-import React from 'react'
-import { Typography } from '@mui/material'
+import { Typography, Box } from '@mui/material'
 import { Word } from './Word'
 import { useWordClick } from '../hooks/useWordClick'
 import { AnchorSequence, GapSequence, HighlightInfo, InteractionMode } from '../../../types'
 import { ModalContent } from '../../LyricsAnalyzer'
 import { WordClickInfo, TranscriptionWordPosition, FlashType } from '../types'
+import React from 'react'
 
 interface HighlightedTextProps {
     // Input can be either raw text or pre-processed word positions
@@ -21,28 +21,14 @@ interface HighlightedTextProps {
     // Reference-specific props
     isReference?: boolean
     currentSource?: 'genius' | 'spotify'
-    newlineIndices?: Set<number>
     preserveSegments?: boolean
-}
-
-// Helper function to safely check reference indices
-function hasValidReferenceIndex(
-    highlightInfo: HighlightInfo,
-    currentSource: 'genius' | 'spotify'
-): boolean {
-    return (
-        highlightInfo.type === 'anchor' &&
-        highlightInfo.referenceIndices !== undefined &&
-        currentSource in highlightInfo.referenceIndices &&
-        typeof highlightInfo.referenceIndices[currentSource] === 'number'
-    )
+    linePositions?: { position: number, lineNumber: number, forceBreak?: boolean }[]
 }
 
 export function HighlightedText({
     text,
     wordPositions,
     anchors,
-    gaps,
     highlightInfo,
     mode,
     onElementClick,
@@ -50,8 +36,7 @@ export function HighlightedText({
     flashingType,
     isReference,
     currentSource,
-    newlineIndices,
-    preserveSegments = false
+    preserveSegments = false,
 }: HighlightedTextProps) {
     const { handleWordClick } = useWordClick({
         mode,
@@ -75,156 +60,105 @@ export function HighlightedText({
                 (flashingType === 'uncorrected' && wordPos.type === 'gap' && !hasCorrections) ||
                 (flashingType === 'word' && highlightInfo?.type === 'anchor' &&
                     wordPos.type === 'anchor' && wordPos.sequence && (
-                        wordPos.sequence.transcription_position === highlightInfo.transcriptionIndex &&
-                        wordPos.position >= wordPos.sequence.transcription_position &&
-                        wordPos.position < wordPos.sequence.transcription_position + wordPos.sequence.length
+                        (wordPos.sequence as AnchorSequence).transcription_position === highlightInfo.transcriptionIndex ||
+                        (isReference && currentSource &&
+                            (wordPos.sequence as AnchorSequence).reference_positions[currentSource] === highlightInfo.referenceIndices?.[currentSource])
                     ))
             )
         } else {
             // Handle raw text word
-            if (!highlightInfo || !currentSource) return false
+            const thisWordIndex = wordPos.index
+            const anchor = anchors.find(a => {
+                const position = isReference
+                    ? a.reference_positions[currentSource!]
+                    : a.transcription_position
+                if (position === undefined) return false
+                return thisWordIndex >= position && thisWordIndex < position + a.length
+            })
 
             return Boolean(
-                highlightInfo.type === 'anchor' && (
-                    isReference
-                        ? hasValidReferenceIndex(highlightInfo, currentSource) &&
-                        wordPos.index >= (highlightInfo.referenceIndices[currentSource] ?? 0) &&
-                        wordPos.index < (highlightInfo.referenceIndices[currentSource] ?? 0) + (highlightInfo.referenceLength ?? 0)
-                        : highlightInfo.transcriptionIndex !== undefined &&
-                        wordPos.index >= highlightInfo.transcriptionIndex &&
-                        wordPos.index < highlightInfo.transcriptionIndex + (highlightInfo.transcriptionLength ?? 0)
-                )
+                (flashingType === 'anchor' && anchor) ||
+                (flashingType === 'word' && highlightInfo?.type === 'anchor' && anchor && (
+                    anchor.transcription_position === highlightInfo.transcriptionIndex ||
+                    (isReference && currentSource && anchor.reference_positions[currentSource] === highlightInfo.referenceIndices?.[currentSource])
+                ))
             )
         }
     }
 
     const renderContent = () => {
         if (wordPositions) {
-            return wordPositions.map((wordPos, index) => {
-                const anchorSequence = wordPos.type === 'anchor' ? wordPos.sequence as AnchorSequence : undefined
-                const gapSequence = wordPos.type === 'gap' ? wordPos.sequence as GapSequence : undefined
-                const hasCorrections = Boolean(gapSequence?.corrections?.length)
-
-                return (
+            // Render from word positions (for transcription view)
+            return wordPositions.map((wordPos, index) => (
+                <React.Fragment key={`${wordPos.word}-${index}`}>
                     <Word
-                        key={`${wordPos.word}-${index}`}
                         word={wordPos.word}
                         shouldFlash={shouldWordFlash(wordPos)}
-                        isAnchor={Boolean(anchorSequence)}
-                        isCorrectedGap={hasCorrections}
-                        isUncorrectedGap={wordPos.type === 'gap' && !hasCorrections}
+                        isAnchor={wordPos.type === 'anchor'}
+                        isCorrectedGap={wordPos.type === 'gap' && Boolean((wordPos.sequence as GapSequence)?.corrections?.length)}
+                        isUncorrectedGap={wordPos.type === 'gap' && !Boolean((wordPos.sequence as GapSequence)?.corrections?.length)}
                         onClick={() => handleWordClick(
                             wordPos.word,
                             wordPos.position,
-                            anchorSequence,
-                            gapSequence
+                            wordPos.type === 'anchor' ? wordPos.sequence as AnchorSequence : undefined,
+                            wordPos.type === 'gap' ? wordPos.sequence as GapSequence : undefined
                         )}
                     />
-                )
-            })
+                    {index < wordPositions.length - 1 && ' '}
+                </React.Fragment>
+            ))
         } else if (text) {
-            const elements: React.ReactNode[] = []
-            const words = text.split(/\s+/).filter(word => !/^[^\w\s]$/.test(word))
-            let currentIndex = 0
+            // Render from raw text (for reference view)
+            const lines = text.split('\n')
+            let globalWordIndex = 0  // Keep track of overall word position
 
-            // Pre-calculate debug info
-            const debugWordInfo = words.map((word, idx) => ({
-                word,
-                index: idx,
-                position: currentIndex + idx
-            }))
+            return lines.map((line, lineIndex) => (
+                <Box key={`line-${lineIndex}`} sx={{ display: 'flex', alignItems: 'flex-start' }}>
+                    <Typography
+                        component="span"
+                        sx={{
+                            color: 'text.secondary',
+                            width: '2em',
+                            minWidth: '2em',
+                            textAlign: 'right',
+                            marginRight: 1,
+                            userSelect: 'none',
+                            fontFamily: 'monospace',
+                            paddingTop: '4px',
+                        }}
+                    >
+                        {lineIndex}
+                    </Typography>
+                    <Box sx={{ flex: 1 }}>
+                        {line.split(/(\s+)/).map((word, wordIndex) => {
+                            if (word === '') return null
+                            if (/^\s+$/.test(word)) {
+                                return <span key={`space-${lineIndex}-${wordIndex}`}> </span>
+                            }
 
-            words.forEach((word, index) => {
-                const thisWordIndex = currentIndex
-                const debugInfo = {
-                    wordSplitInfo: debugWordInfo.find(w => w.index === index),
-                    nearbyAnchors: anchors
-                        .filter(a => {
-                            const position = isReference
-                                ? a.reference_positions[currentSource!]
-                                : a.transcription_position
-                            return position !== undefined &&
-                                Math.abs(position - thisWordIndex) < 5
-                        })
-                        .map(a => ({
-                            words: a.words,
-                            position: isReference
-                                ? a.reference_positions[currentSource!]
-                                : a.transcription_position,
-                            length: a.length
-                        }))
-                }
+                            const position = globalWordIndex++  // Use and increment global word counter
+                            const anchor = anchors.find(a => {
+                                const refPos = a.reference_positions[currentSource!]
+                                if (refPos === undefined) return false
+                                return position >= refPos && position < refPos + a.length
+                            })
 
-                // Find matching anchor and gap based on view type
-                const anchor = anchors.find(a => {
-                    const position = isReference
-                        ? a.reference_positions[currentSource!]
-                        : a.transcription_position
-                    if (position === undefined) return false
-                    return thisWordIndex >= position && thisWordIndex < position + a.length
-                })
-
-                const correctedGap = gaps.find(g => {
-                    if (!g.corrections.length) return false
-                    if (isReference) {
-                        const correction = g.corrections[0]
-                        const position = correction.reference_positions?.[currentSource!]
-                        if (position === undefined) return false
-                        return thisWordIndex >= position && thisWordIndex < position + correction.length
-                    } else {
-                        return thisWordIndex >= g.transcription_position &&
-                            thisWordIndex < g.transcription_position + g.length
-                    }
-                })
-
-                // Determine if word should be highlighted
-                const isHighlighted = Boolean(
-                    highlightInfo &&
-                    highlightInfo.type === 'anchor' && (
-                        isReference
-                            ? hasValidReferenceIndex(highlightInfo, currentSource!) &&
-                            thisWordIndex >= (highlightInfo.referenceIndices[currentSource!] ?? 0) &&
-                            thisWordIndex < (highlightInfo.referenceIndices[currentSource!] ?? 0) + (highlightInfo.referenceLength ?? 0)
-                            : highlightInfo.transcriptionIndex !== undefined &&
-                            thisWordIndex >= highlightInfo.transcriptionIndex &&
-                            thisWordIndex < highlightInfo.transcriptionIndex + (highlightInfo.transcriptionLength ?? 0)
-                    )
-                )
-
-                elements.push(
-                    <Word
-                        key={`${word}-${index}`}
-                        word={word}
-                        shouldFlash={isHighlighted}
-                        isAnchor={Boolean(anchor)}
-                        isCorrectedGap={Boolean(correctedGap)}
-                        isUncorrectedGap={!isReference && Boolean(!correctedGap && gaps.some(g =>
-                            thisWordIndex >= g.transcription_position &&
-                            thisWordIndex < g.transcription_position + g.length
-                        ))}
-                        onClick={() => handleWordClick(
-                            word,
-                            thisWordIndex,
-                            anchor,
-                            correctedGap,
-                            debugInfo  // Pass debug info to click handler
-                        )}
-                    />
-                )
-
-                // Only add space/newline if not the last word
-                if (index < words.length - 1) {
-                    if (newlineIndices?.has(thisWordIndex)) {
-                        elements.push(<br key={`br-${index}`} />)
-                    } else {
-                        elements.push(' ')
-                    }
-                }
-
-                currentIndex++
-            })
-
-            return elements
+                            return (
+                                <Word
+                                    key={`${word}-${lineIndex}-${wordIndex}`}
+                                    word={word}
+                                    shouldFlash={shouldWordFlash({ word, index: position })}
+                                    isAnchor={Boolean(anchor)}
+                                    isCorrectedGap={false}
+                                    isUncorrectedGap={false}
+                                    onClick={() => handleWordClick(word, position, anchor, undefined)}
+                                />
+                            )
+                        })}
+                    </Box>
+                    {lineIndex < lines.length - 1 && <br />}
+                </Box>
+            ))
         }
 
         return null
@@ -232,13 +166,12 @@ export function HighlightedText({
 
     return (
         <Typography
-            component="pre"
+            component="div"
             sx={{
                 fontFamily: 'monospace',
                 whiteSpace: preserveSegments ? 'normal' : 'pre-wrap',
                 margin: 0,
                 lineHeight: 1.5,
-                display: 'inline',
             }}
         >
             {renderContent()}

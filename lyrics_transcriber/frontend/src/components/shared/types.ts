@@ -65,7 +65,6 @@ export interface ReferenceViewProps extends BaseViewProps {
     referenceTexts: Record<string, string>
     anchors: LyricsData['anchor_sequences']
     gaps: LyricsData['gap_sequences']
-    corrected_segments: LyricsData['corrected_segments']
     currentSource: 'genius' | 'spotify'
     onSourceChange: (source: 'genius' | 'spotify') => void
 } 

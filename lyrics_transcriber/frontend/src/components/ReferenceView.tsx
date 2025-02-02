@@ -1,7 +1,7 @@
 import { useMemo } from 'react'
 import { Paper, Typography, Box } from '@mui/material'
 import { ReferenceViewProps } from './shared/types'
-import { calculateNewlineIndices } from './shared/utils/newlineCalculator'
+import { calculateReferenceLinePositions } from './shared/utils/referenceLineCalculator'
 import { SourceSelector } from './shared/components/SourceSelector'
 import { HighlightedText } from './shared/components/HighlightedText'
 
@@ -12,15 +12,14 @@ export default function ReferenceView({
     onElementClick,
     onWordClick,
     flashingType,
-    corrected_segments,
     currentSource,
     onSourceChange,
     highlightInfo,
     mode
 }: ReferenceViewProps) {
-    const newlineIndices = useMemo(() =>
-        calculateNewlineIndices(corrected_segments, anchors, currentSource),
-        [corrected_segments, anchors, currentSource]
+    const { linePositions } = useMemo(() =>
+        calculateReferenceLinePositions(),
+        []
     )
 
     return (
@@ -34,19 +33,21 @@ export default function ReferenceView({
                     onSourceChange={onSourceChange}
                 />
             </Box>
-            <HighlightedText
-                text={referenceTexts[currentSource]}
-                anchors={anchors}
-                gaps={gaps}
-                onElementClick={onElementClick}
-                onWordClick={onWordClick}
-                flashingType={flashingType}
-                highlightInfo={highlightInfo}
-                mode={mode}
-                isReference={true}
-                currentSource={currentSource}
-                newlineIndices={newlineIndices}
-            />
+            <Box sx={{ display: 'flex', flexDirection: 'column' }}>
+                <HighlightedText
+                    text={referenceTexts[currentSource]}
+                    anchors={anchors}
+                    gaps={gaps}
+                    onElementClick={onElementClick}
+                    onWordClick={onWordClick}
+                    flashingType={flashingType}
+                    highlightInfo={highlightInfo}
+                    mode={mode}
+                    isReference={true}
+                    currentSource={currentSource}
+                    linePositions={linePositions}
+                />
+            </Box>
         </Paper>
     )
 } 
