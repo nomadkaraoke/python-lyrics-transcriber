@@ -33,6 +33,7 @@ interface EditModalProps {
     onSave: (updatedSegment: LyricsSegment) => void
     onPlaySegment?: (startTime: number) => void
     currentTime?: number
+    onDelete?: (segmentIndex: number) => void
 }
 
 export default function EditModal({
@@ -43,7 +44,8 @@ export default function EditModal({
     originalSegment,
     onSave,
     onPlaySegment,
-    currentTime = 0
+    currentTime = 0,
+    onDelete,
 }: EditModalProps) {
     const [editedSegment, setEditedSegment] = useState<LyricsSegment | null>(segment)
     const [menuAnchorEl, setMenuAnchorEl] = useState<null | HTMLElement>(null)
@@ -235,6 +237,13 @@ export default function EditModal({
         }
     }
 
+    const handleDelete = () => {
+        if (segmentIndex !== null && window.confirm('Are you sure you want to delete this segment?')) {
+            onDelete?.(segmentIndex)
+            onClose()
+        }
+    }
+
     return (
         <Dialog
             open={open}
@@ -343,7 +352,14 @@ export default function EditModal({
                 >
                     Reset
                 </Button>
-                <Box sx={{ flex: 1 }} /> {/* Spacer */}
+                <Button
+                    startIcon={<DeleteIcon />}
+                    onClick={handleDelete}
+                    color="error"
+                    sx={{ mr: 'auto' }}
+                >
+                    Delete Segment
+                </Button>
                 <Button onClick={onClose}>Cancel</Button>
                 <Button onClick={handleSave} variant="contained">
                     Save Changes

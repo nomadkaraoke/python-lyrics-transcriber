@@ -257,6 +257,28 @@ export default function LyricsAnalyzer({ data: initialData, onFileLoad, apiClien
         setEditModalSegment(null)  // Close the modal
     }, [data, editModalSegment])
 
+    const handleDeleteSegment = useCallback((segmentIndex: number) => {
+        console.log('LyricsAnalyzer - handleDeleteSegment called:', {
+            segmentIndex,
+            currentSegmentsCount: data.corrected_segments.length
+        })
+
+        const newData = { ...data }
+        newData.corrected_segments = newData.corrected_segments.filter((_, index) => index !== segmentIndex)
+
+        // Update corrected_text
+        newData.corrected_text = newData.corrected_segments
+            .map(segment => segment.text)
+            .join('\n')
+
+        console.log('LyricsAnalyzer - After delete:', {
+            segmentsCount: newData.corrected_segments.length,
+            updatedText: newData.corrected_text
+        })
+
+        setData(newData)
+    }, [data])
+
     const handleFinishReview = useCallback(() => {
         setIsReviewModalOpen(true)
     }, [])
@@ -426,6 +448,7 @@ export default function LyricsAnalyzer({ data: initialData, onFileLoad, apiClien
                 segmentIndex={editModalSegment?.index ?? null}
                 originalSegment={editModalSegment?.originalSegment ?? null}
                 onSave={handleUpdateSegment}
+                onDelete={handleDeleteSegment}
                 onPlaySegment={handlePlaySegment}
                 currentTime={currentAudioTime}
             />
