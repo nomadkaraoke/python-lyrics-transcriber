@@ -18,6 +18,7 @@ import TranscriptionView from './TranscriptionView'
 import { WordClickInfo, FlashType } from './shared/types'
 import EditModal from './EditModal'
 import ReviewChangesModal from './ReviewChangesModal'
+import AudioPlayer from './AudioPlayer'
 
 interface LyricsAnalyzerProps {
     data: CorrectionData
@@ -85,25 +86,34 @@ export default function LyricsAnalyzer({ data: initialData, onFileLoad, apiClien
         originalSegment: LyricsSegment
     } | null>(null)
     const [isReviewModalOpen, setIsReviewModalOpen] = useState(false)
+    const [currentAudioTime, setCurrentAudioTime] = useState(0)
     const theme = useTheme()
     const isMobile = useMediaQuery(theme.breakpoints.down('md'))
 
     // Add keyboard event handlers
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
+            // Ignore if user is typing in an input or textarea
+            if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
+                return
+            }
+
             if (e.key === 'Shift') {
                 setIsShiftPressed(true)
-                // Prevent text selection while Shift is pressed
                 document.body.style.userSelect = 'none'
             } else if (e.key === 'Meta') {
                 setIsCtrlPressed(true)
+            } else if (e.key === ' ' || e.code === 'Space') {
+                e.preventDefault() // Prevent page scroll
+                if ((window as any).toggleAudioPlayback) {
+                    (window as any).toggleAudioPlayback()
+                }
             }
         }
 
         const handleKeyUp = (e: KeyboardEvent) => {
             if (e.key === 'Shift') {
                 setIsShiftPressed(false)
-                // Re-enable text selection when Shift is released
                 document.body.style.userSelect = ''
             } else if (e.key === 'Meta') {
                 setIsCtrlPressed(false)
@@ -115,7 +125,6 @@ export default function LyricsAnalyzer({ data: initialData, onFileLoad, apiClien
         return () => {
             window.removeEventListener('keydown', handleKeyDown)
             window.removeEventListener('keyup', handleKeyUp)
-            // Ensure text selection is re-enabled when component unmounts
             document.body.style.userSelect = ''
         }
     }, [])
@@ -242,6 +251,13 @@ export default function LyricsAnalyzer({ data: initialData, onFileLoad, apiClien
         }
     }, [apiClient, data])
 
+    const handlePlaySegment = useCallback((startTime: number) => {
+        // Access the globally exposed seekAndPlay method
+        if ((window as any).seekAndPlayAudio) {
+            (window as any).seekAndPlayAudio(startTime)
+        }
+    }, [])
+
     return (
         <Box>
             {isReadOnly && (
@@ -273,6 +289,13 @@ export default function LyricsAnalyzer({ data: initialData, onFileLoad, apiClien
                         Load File
                     </Button>
                 )}
+            </Box>
+
+            <Box sx={{ mb: 3 }}>
+                <AudioPlayer 
+                    apiClient={apiClient}
+                    onTimeUpdate={setCurrentAudioTime}
+                />
             </Box>
 
             <Box sx={{ mb: 3 }}>
@@ -331,6 +354,8 @@ export default function LyricsAnalyzer({ data: initialData, onFileLoad, apiClien
                         onWordClick={handleWordClick}
                         flashingType={flashingType}
                         highlightInfo={highlightInfo}
+                        onPlaySegment={handlePlaySegment}
+                        currentTime={currentAudioTime}
                     />
                 </Grid>
                 <Grid item xs={12} md={6}>

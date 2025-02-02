@@ -23,6 +23,7 @@ interface HighlightedTextProps {
     currentSource?: 'genius' | 'spotify'
     preserveSegments?: boolean
     linePositions?: LinePosition[]
+    currentTime?: number
 }
 
 export function HighlightedText({
@@ -37,7 +38,8 @@ export function HighlightedText({
     isReference,
     currentSource,
     preserveSegments = false,
-    linePositions = []
+    linePositions = [],
+    currentTime = 0
 }: HighlightedTextProps) {
     const { handleWordClick } = useWordClick({
         mode,
@@ -47,7 +49,7 @@ export function HighlightedText({
         currentSource
     })
 
-    const shouldWordFlash = (wordPos: TranscriptionWordPosition | { word: string, index: number }): boolean => {
+    const shouldWordFlash = (wordPos: TranscriptionWordPosition | { word: string; index: number }): boolean => {
         if (!flashingType) return false
 
         if ('type' in wordPos) {
@@ -67,7 +69,7 @@ export function HighlightedText({
                     ))
             )
         } else {
-            // Handle raw text word
+            // Handle reference word
             const thisWordIndex = wordPos.index
             const anchor = anchors.find(a => {
                 const position = isReference
@@ -87,19 +89,24 @@ export function HighlightedText({
         }
     }
 
+    const shouldHighlightWord = (wordPos: TranscriptionWordPosition): boolean => {
+        if (!currentTime || !wordPos.word.start_time || !wordPos.word.end_time) return false
+        return currentTime >= wordPos.word.start_time && currentTime <= wordPos.word.end_time
+    }
+
     const renderContent = () => {
         if (wordPositions) {
-            // Render from word positions (for transcription view)
             return wordPositions.map((wordPos, index) => (
-                <React.Fragment key={`${wordPos.word}-${index}`}>
+                <React.Fragment key={`${wordPos.word.text}-${index}`}>
                     <Word
-                        word={wordPos.word}
+                        word={wordPos.word.text}
                         shouldFlash={shouldWordFlash(wordPos)}
+                        isCurrentlyPlaying={shouldHighlightWord(wordPos)}
                         isAnchor={wordPos.type === 'anchor'}
                         isCorrectedGap={wordPos.type === 'gap' && Boolean((wordPos.sequence as GapSequence)?.corrections?.length)}
                         isUncorrectedGap={wordPos.type === 'gap' && !(wordPos.sequence as GapSequence)?.corrections?.length}
                         onClick={() => handleWordClick(
-                            wordPos.word,
+                            wordPos.word.text,
                             wordPos.position,
                             wordPos.type === 'anchor' ? wordPos.sequence as AnchorSequence : undefined,
                             wordPos.type === 'gap' ? wordPos.sequence as GapSequence : undefined
@@ -165,18 +172,28 @@ export function HighlightedText({
                                     return <span key={`space-${lineIndex}-${wordIndex}`}> </span>
                                 }
 
-                                const position = globalWordIndex++  // Use and increment global word counter
+                                const position = globalWordIndex++
                                 const anchor = anchors.find(a => {
                                     const refPos = a.reference_positions[currentSource!]
                                     if (refPos === undefined) return false
                                     return position >= refPos && position < refPos + a.length
                                 })
 
+                                // Create a mock TranscriptionWordPosition for highlighting
+                                const wordPos: TranscriptionWordPosition = {
+                                    word: { text: word },
+                                    position,
+                                    type: anchor ? 'anchor' : 'other',
+                                    sequence: anchor,
+                                    isInRange: true
+                                }
+
                                 return (
                                     <Word
                                         key={`${word}-${lineIndex}-${wordIndex}`}
                                         word={word}
                                         shouldFlash={shouldWordFlash({ word, index: position })}
+                                        isCurrentlyPlaying={shouldHighlightWord(wordPos)}
                                         isAnchor={Boolean(anchor)}
                                         isCorrectedGap={false}
                                         isUncorrectedGap={false}

@@ -9,6 +9,8 @@ import os
 import atexit
 import urllib.parse
 from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
+from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
@@ -27,6 +29,7 @@ app.add_middleware(
 current_review: Optional[CorrectionResult] = None
 review_completed = False
 vite_process: Optional[subprocess.Popen] = None
+audio_filepath: Optional[str] = None  # Add this new global variable
 
 
 def start_vite_server():
@@ -86,6 +89,20 @@ async def complete_review(updated_data: Dict[str, Any] = Body(...)):
         return {"status": "error", "message": str(e)}
 
 
+@app.get("/api/audio")
+async def get_audio():
+    """Stream the audio file for playback in the browser."""
+    if not audio_filepath or not os.path.exists(audio_filepath):
+        logger.error(f"Audio file not found at {audio_filepath}")
+        return {"error": "Audio file not found"}
+
+    return FileResponse(
+        audio_filepath,
+        media_type="audio/mpeg",
+        headers={"Accept-Ranges": "bytes", "Content-Disposition": f"attachment; filename={Path(audio_filepath).name}"},
+    )
+
+
 def start_review_server(correction_result: CorrectionResult) -> CorrectionResult:
     """
     Start the review server and wait for completion.
@@ -102,9 +119,12 @@ def start_review_server(correction_result: CorrectionResult) -> CorrectionResult
     import signal
     import sys
 
-    global current_review, review_completed
+    global current_review, review_completed, audio_filepath  # Add audio_filepath to globals
     current_review = correction_result
     review_completed = False
+
+    # Get the audio filepath from the correction result's metadata if available
+    audio_filepath = correction_result.metadata.get("audio_filepath") if correction_result.metadata else None
 
     logger.info("Starting review server...")
 

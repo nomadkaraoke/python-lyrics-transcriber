@@ -7,7 +7,7 @@ export function calculateReferenceLinePositions(
     currentSource: 'genius' | 'spotify'
 ): { linePositions: LinePosition[] } {
     const linePositions: LinePosition[] = []
-    const currentReferencePosition = 0
+    let currentReferencePosition = 0
 
     // First, find all anchor sequences that cover entire lines
     const fullLineAnchors = anchors.map(anchor => {
@@ -47,8 +47,9 @@ export function calculateReferenceLinePositions(
             linePositions.push({
                 position: currentReferencePosition,
                 lineNumber: currentLine,
-                isEmpty: true
+                isEmpty: false
             })
+            currentReferencePosition += 1
             currentLine++
         }
 
@@ -59,6 +60,17 @@ export function calculateReferenceLinePositions(
         })
         currentLine++
     })
+
+    // Add any remaining lines after the last anchor
+    while (currentLine < corrected_segments.length) {
+        linePositions.push({
+            position: currentReferencePosition,
+            lineNumber: currentLine,
+            isEmpty: false
+        })
+        currentReferencePosition += 1
+        currentLine++
+    }
 
     return { linePositions }
 } 

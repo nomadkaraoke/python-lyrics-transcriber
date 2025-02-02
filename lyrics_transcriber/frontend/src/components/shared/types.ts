@@ -21,23 +21,28 @@ export interface BaseViewProps {
     mode: InteractionMode
 }
 
-// Common word position interface
+// Base word position interface - remove the word property from here
 export interface BaseWordPosition {
-    word: string
     type: 'anchor' | 'gap' | 'other'
     sequence?: AnchorSequence | GapSequence
 }
 
-// Transcription-specific word position
+// Transcription-specific word position with timing info
 export interface TranscriptionWordPosition extends BaseWordPosition {
     position: number
     isInRange: boolean
+    word: {
+        text: string
+        start_time?: number
+        end_time?: number
+    }
 }
 
-// Reference-specific word position
+// Reference-specific word position with simple string word
 export interface ReferenceWordPosition extends BaseWordPosition {
     index: number
     isHighlighted: boolean
+    word: string  // Simple string word for reference view
 }
 
 // Word component props
@@ -47,6 +52,7 @@ export interface WordProps {
     isAnchor?: boolean
     isCorrectedGap?: boolean
     isUncorrectedGap?: boolean
+    isCurrentlyPlaying?: boolean
     padding?: string
     onClick?: () => void
 }
@@ -59,6 +65,8 @@ export interface TextSegmentProps extends BaseViewProps {
 // View-specific props
 export interface TranscriptionViewProps extends BaseViewProps {
     data: LyricsData
+    onPlaySegment?: (startTime: number) => void
+    currentTime?: number
 }
 
 // Add LinePosition type here since it's used in multiple places

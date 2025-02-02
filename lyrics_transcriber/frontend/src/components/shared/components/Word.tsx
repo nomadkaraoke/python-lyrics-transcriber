@@ -9,6 +9,7 @@ export const Word = React.memo(function Word({
     isAnchor,
     isCorrectedGap,
     isUncorrectedGap,
+    isCurrentlyPlaying,
     padding = '2px 4px',
     onClick,
 }: WordProps) {
@@ -16,15 +17,17 @@ export const Word = React.memo(function Word({
         return word
     }
 
-    const backgroundColor = shouldFlash
-        ? COLORS.highlighted
-        : isAnchor
-            ? COLORS.anchor
-            : isCorrectedGap
-                ? COLORS.corrected
-                : isUncorrectedGap
-                    ? COLORS.uncorrectedGap
-                    : 'transparent'
+    const backgroundColor = isCurrentlyPlaying
+        ? COLORS.playing
+        : shouldFlash
+            ? COLORS.highlighted
+            : isAnchor
+                ? COLORS.anchor
+                : isCorrectedGap
+                    ? COLORS.corrected
+                    : isUncorrectedGap
+                        ? COLORS.uncorrectedGap
+                        : 'transparent'
 
     return (
         <HighlightedWord
@@ -33,7 +36,8 @@ export const Word = React.memo(function Word({
                 backgroundColor,
                 padding,
                 cursor: 'pointer',
-                borderRadius: '3px'
+                borderRadius: '3px',
+                color: isCurrentlyPlaying ? '#ffffff' : 'inherit',
             }}
             sx={{
                 '&:hover': {

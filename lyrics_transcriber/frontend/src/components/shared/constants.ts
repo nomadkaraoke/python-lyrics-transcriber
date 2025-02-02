@@ -5,6 +5,7 @@ export const COLORS = {
     corrected: '#e8f5e9', // Pale green
     uncorrectedGap: '#fff3e0', // Pale orange
     highlighted: '#ffeb3b',  // or any color you prefer for highlighting
+    playing: '#1976d2', // Blue
 } as const
 
 export const flashAnimation = keyframes`

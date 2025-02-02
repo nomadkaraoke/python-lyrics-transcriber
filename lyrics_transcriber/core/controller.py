@@ -279,7 +279,11 @@ class LyricsTranscriber:
                     anchor_sequences=[],
                     gap_sequences=[],
                     resized_segments=[],  # Will be populated later
-                    metadata={"correction_type": "none", "reason": "no_reference_lyrics"},
+                    metadata={
+                        "correction_type": "none",
+                        "reason": "no_reference_lyrics",
+                        "audio_filepath": self.audio_filepath,  # Add audio filepath
+                    },
                 )
             return
 
@@ -287,6 +291,11 @@ class LyricsTranscriber:
         corrected_data = self.corrector.run(
             transcription_results=self.results.transcription_results, lyrics_results=self.results.lyrics_results
         )
+
+        # Add audio filepath to metadata
+        if not corrected_data.metadata:
+            corrected_data.metadata = {}
+        corrected_data.metadata["audio_filepath"] = self.audio_filepath
 
         # Store corrected results
         self.results.transcription_corrected = corrected_data

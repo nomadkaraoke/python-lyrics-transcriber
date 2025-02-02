@@ -1,10 +1,11 @@
 import { useState } from 'react'
-import { Paper, Typography, Box } from '@mui/material'
+import { Paper, Typography, Box, IconButton } from '@mui/material'
 import { TranscriptionViewProps } from './shared/types'
 import { HighlightedText } from './shared/components/HighlightedText'
 import { styled } from '@mui/material/styles'
 import SegmentDetailsModal from './SegmentDetailsModal'
 import { TranscriptionWordPosition } from './shared/types'
+import PlayCircleOutlineIcon from '@mui/icons-material/PlayCircleOutline'
 
 const SegmentIndex = styled(Typography)(({ theme }) => ({
     color: theme.palette.text.secondary,
@@ -15,7 +16,7 @@ const SegmentIndex = styled(Typography)(({ theme }) => ({
     userSelect: 'none',
     fontFamily: 'monospace',
     cursor: 'pointer',
-    paddingTop: '4px',
+    paddingTop: '3px',
     '&:hover': {
         textDecoration: 'underline',
     },
@@ -26,13 +27,24 @@ const TextContainer = styled(Box)({
     minWidth: 0,
 })
 
+const SegmentControls = styled(Box)({
+    display: 'flex',
+    alignItems: 'center',
+    gap: '4px',
+    minWidth: '3em',
+    paddingTop: '3px',
+    paddingRight: '8px'
+})
+
 export default function TranscriptionView({
     data,
     onElementClick,
     onWordClick,
     flashingType,
     highlightInfo,
-    mode
+    mode,
+    onPlaySegment,
+    currentTime = 0
 }: TranscriptionViewProps) {
     const [selectedSegmentIndex, setSelectedSegmentIndex] = useState<number | null>(null)
 
@@ -59,7 +71,11 @@ export default function TranscriptionView({
                         ) : undefined
 
                         return {
-                            word: word.text,
+                            word: {
+                                text: word.text,
+                                start_time: word.start_time,
+                                end_time: word.end_time
+                            },
                             position,
                             type: anchor ? 'anchor' : gap ? 'gap' : 'other',
                             sequence: anchor || gap,
@@ -72,12 +88,23 @@ export default function TranscriptionView({
 
                     return (
                         <Box key={segmentIndex} sx={{ display: 'flex', alignItems: 'flex-start', width: '100%' }}>
-                            <SegmentIndex
-                                variant="body2"
-                                onClick={() => setSelectedSegmentIndex(segmentIndex)}
-                            >
-                                {segmentIndex}
-                            </SegmentIndex>
+                            <SegmentControls>
+                                <SegmentIndex
+                                    variant="body2"
+                                    onClick={() => setSelectedSegmentIndex(segmentIndex)}
+                                >
+                                    {segmentIndex}
+                                </SegmentIndex>
+                                {segment.start_time !== undefined && (
+                                    <IconButton
+                                        size="small"
+                                        onClick={() => onPlaySegment?.(segment.start_time)}
+                                        sx={{ padding: '2px' }}
+                                    >
+                                        <PlayCircleOutlineIcon fontSize="small" />
+                                    </IconButton>
+                                )}
+                            </SegmentControls>
                             <TextContainer>
                                 <HighlightedText
                                     wordPositions={segmentWords}
@@ -89,6 +116,7 @@ export default function TranscriptionView({
                                     highlightInfo={highlightInfo}
                                     mode={mode}
                                     preserveSegments={true}
+                                    currentTime={currentTime}
                                 />
                             </TextContainer>
                         </Box>

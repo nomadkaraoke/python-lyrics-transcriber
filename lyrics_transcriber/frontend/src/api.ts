@@ -4,6 +4,7 @@ import { CorrectionData } from './types';
 export interface ApiClient {
     getCorrectionData: () => Promise<CorrectionData>;
     submitCorrections: (data: CorrectionData) => Promise<void>;
+    getAudioUrl: () => string;
 }
 
 // Add new interface for the minimal update payload
@@ -45,6 +46,10 @@ export class LiveApiClient implements ApiClient {
             throw new Error(`API error: ${response.statusText}`);
         }
     }
+
+    getAudioUrl(): string {
+        return `${this.baseUrl}/audio`
+    }
 }
 
 export class FileOnlyClient implements ApiClient {
@@ -54,6 +59,10 @@ export class FileOnlyClient implements ApiClient {
 
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     async submitCorrections(_data: CorrectionData): Promise<void> {
+        throw new Error('Not supported in file-only mode');
+    }
+
+    getAudioUrl(): string {
         throw new Error('Not supported in file-only mode');
     }
 }
