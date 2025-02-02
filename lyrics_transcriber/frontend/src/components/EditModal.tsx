@@ -19,8 +19,10 @@ import SplitIcon from '@mui/icons-material/CallSplit'
 import RestoreIcon from '@mui/icons-material/RestoreFromTrash'
 import MoreVertIcon from '@mui/icons-material/MoreVert'
 import AutoFixHighIcon from '@mui/icons-material/AutoFixHigh'
+import PlayCircleOutlineIcon from '@mui/icons-material/PlayCircleOutline'
 import { LyricsSegment, Word } from '../types'
 import { useState, useEffect } from 'react'
+import TimelineEditor from './TimelineEditor'
 
 interface EditModalProps {
     open: boolean
@@ -29,6 +31,8 @@ interface EditModalProps {
     segmentIndex: number | null
     originalSegment: LyricsSegment | null
     onSave: (updatedSegment: LyricsSegment) => void
+    onPlaySegment?: (startTime: number) => void
+    currentTime?: number
 }
 
 export default function EditModal({
@@ -37,7 +41,9 @@ export default function EditModal({
     segment,
     segmentIndex,
     originalSegment,
-    onSave
+    onSave,
+    onPlaySegment,
+    currentTime = 0
 }: EditModalProps) {
     const [editedSegment, setEditedSegment] = useState<LyricsSegment | null>(segment)
     const [menuAnchorEl, setMenuAnchorEl] = useState<null | HTMLElement>(null)
@@ -224,17 +230,78 @@ export default function EditModal({
 
     return (
         <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
-            <DialogTitle>
-                Edit Segment {segmentIndex}
-                <IconButton
-                    onClick={onClose}
-                    sx={{ position: 'absolute', right: 8, top: 8 }}
-                >
+            <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <Box sx={{ flex: 1, display: 'flex', alignItems: 'center', gap: 1 }}>
+                    Edit Segment {segmentIndex}
+                    {segment?.start_time !== undefined && onPlaySegment && (
+                        <IconButton
+                            size="small"
+                            onClick={() => onPlaySegment(segment.start_time)}
+                            sx={{ padding: '4px' }}
+                        >
+                            <PlayCircleOutlineIcon />
+                        </IconButton>
+                    )}
+                </Box>
+                <IconButton onClick={onClose} sx={{ ml: 'auto' }}>
                     <CloseIcon />
                 </IconButton>
             </DialogTitle>
             <DialogContent dividers>
-                <Box sx={{ mb: 2, display: 'flex', gap: 2 }}>
+                <Box sx={{ mb: 2 }}>
+                    <TimelineEditor
+                        words={editedSegment.words}
+                        startTime={editedSegment.start_time}
+                        endTime={editedSegment.end_time}
+                        onWordUpdate={(index, updates) => {
+                            const newWords = [...editedSegment.words]
+                            newWords[index] = { ...newWords[index], ...updates }
+                            updateSegment(newWords)
+                        }}
+                        currentTime={currentTime}
+                    />
+                </Box>
+
+                <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                    Segment Time Range: {editedSegment.start_time.toFixed(2)} - {editedSegment.end_time.toFixed(2)}
+                </Typography>
+
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, mb: 3 }}>
+                    {editedSegment.words.map((word, index) => (
+                        <Box key={index} sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+                            <TextField
+                                label={`Word ${index}`}
+                                value={word.text}
+                                onChange={(e) => handleWordChange(index, 'text', e.target.value)}
+                                fullWidth
+                                size="small"
+                            />
+                            <TextField
+                                label="Start Time"
+                                value={word.start_time.toFixed(2)}
+                                onChange={(e) => handleWordChange(index, 'start_time', parseFloat(e.target.value))}
+                                type="number"
+                                inputProps={{ step: 0.01 }}
+                                sx={{ width: '120px' }}
+                                size="small"
+                            />
+                            <TextField
+                                label="End Time"
+                                value={word.end_time.toFixed(2)}
+                                onChange={(e) => handleWordChange(index, 'end_time', parseFloat(e.target.value))}
+                                type="number"
+                                inputProps={{ step: 0.01 }}
+                                sx={{ width: '120px' }}
+                                size="small"
+                            />
+                            <IconButton onClick={(e) => handleWordMenu(e, index)}>
+                                <MoreVertIcon />
+                            </IconButton>
+                        </Box>
+                    ))}
+                </Box>
+
+                <Box sx={{ display: 'flex', gap: 2 }}>
                     <TextField
                         label="Replace all words"
                         value={replacementText}
@@ -252,59 +319,16 @@ export default function EditModal({
                         Replace All
                     </Button>
                 </Box>
-
-                <Box sx={{ mb: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <Typography variant="body2" color="text.secondary">
-                        Segment Time Range: {editedSegment.start_time.toFixed(4)} - {editedSegment.end_time.toFixed(4)}
-                    </Typography>
-                    <Button
-                        startIcon={<RestoreIcon />}
-                        onClick={handleReset}
-                        color="warning"
-                    >
-                        Reset
-                    </Button>
-                </Box>
-                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                    {editedSegment.words.map((word, index) => (
-                        <Box key={index} sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
-                            <TextField
-                                label={`Word ${index}`}
-                                value={word.text}
-                                onChange={(e) => handleWordChange(index, 'text', e.target.value)}
-                                fullWidth
-                            />
-                            <TextField
-                                label="Start Time"
-                                value={word.start_time.toFixed(4)}
-                                onChange={(e) => handleWordChange(index, 'start_time', parseFloat(e.target.value))}
-                                type="number"
-                                inputProps={{ step: 0.0001 }}
-                                sx={{ width: '150px' }}
-                            />
-                            <TextField
-                                label="End Time"
-                                value={word.end_time.toFixed(4)}
-                                onChange={(e) => handleWordChange(index, 'end_time', parseFloat(e.target.value))}
-                                type="number"
-                                inputProps={{ step: 0.0001 }}
-                                sx={{ width: '150px' }}
-                            />
-                            <IconButton onClick={(e) => handleWordMenu(e, index)}>
-                                <MoreVertIcon />
-                            </IconButton>
-                        </Box>
-                    ))}
-                </Box>
-                <Button
-                    startIcon={<AddIcon />}
-                    onClick={() => handleAddWord()}
-                    sx={{ mt: 2 }}
-                >
-                    Add Word
-                </Button>
             </DialogContent>
             <DialogActions>
+                <Button
+                    startIcon={<RestoreIcon />}
+                    onClick={handleReset}
+                    color="warning"
+                >
+                    Reset
+                </Button>
+                <Box sx={{ flex: 1 }} /> {/* Spacer */}
                 <Button onClick={onClose}>Cancel</Button>
                 <Button onClick={handleSave} variant="contained">
                     Save Changes

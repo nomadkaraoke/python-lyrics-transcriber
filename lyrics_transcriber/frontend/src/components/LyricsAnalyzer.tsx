@@ -292,7 +292,7 @@ export default function LyricsAnalyzer({ data: initialData, onFileLoad, apiClien
             </Box>
 
             <Box sx={{ mb: 3 }}>
-                <AudioPlayer 
+                <AudioPlayer
                     apiClient={apiClient}
                     onTimeUpdate={setCurrentAudioTime}
                 />
@@ -388,6 +388,8 @@ export default function LyricsAnalyzer({ data: initialData, onFileLoad, apiClien
                 segmentIndex={editModalSegment?.index ?? null}
                 originalSegment={editModalSegment?.originalSegment ?? null}
                 onSave={handleUpdateSegment}
+                onPlaySegment={handlePlaySegment}
+                currentTime={currentAudioTime}
             />
 
             <ReviewChangesModal
