@@ -5,6 +5,8 @@ import { AnchorSequence, GapSequence, HighlightInfo, InteractionMode } from '../
 import { ModalContent } from '../../LyricsAnalyzer'
 import { WordClickInfo, TranscriptionWordPosition, FlashType, LinePosition } from '../types'
 import React from 'react'
+import ContentCopyIcon from '@mui/icons-material/ContentCopy';
+import IconButton from '@mui/material/IconButton';
 
 interface HighlightedTextProps {
     // Input can be either raw text or pre-processed word positions
@@ -94,6 +96,10 @@ export function HighlightedText({
         return currentTime >= wordPos.word.start_time && currentTime <= wordPos.word.end_time
     }
 
+    const handleCopyLine = (text: string) => {
+        navigator.clipboard.writeText(text);
+    };
+
     const renderContent = () => {
         if (wordPositions) {
             return wordPositions.map((wordPos, index) => (
@@ -116,15 +122,13 @@ export function HighlightedText({
                 </React.Fragment>
             ))
         } else if (text) {
-            // Render from raw text (for reference view)
             const lines = text.split('\n')
-            let globalWordIndex = 0  // Keep track of overall word position
+            let globalWordIndex = 0
 
             return lines.map((line, lineIndex) => {
-                // Find if this should be an empty line
                 const currentLinePosition = linePositions?.find((pos: LinePosition) => pos.position === globalWordIndex)
                 if (currentLinePosition?.isEmpty) {
-                    globalWordIndex++ // Still increment for empty lines
+                    globalWordIndex++
                     return (
                         <Box key={`empty-${lineIndex}`} sx={{ display: 'flex', alignItems: 'flex-start' }}>
                             <Typography
@@ -142,7 +146,8 @@ export function HighlightedText({
                             >
                                 {currentLinePosition.lineNumber}
                             </Typography>
-                            <Box sx={{ flex: 1, height: '1.5em' }} /> {/* Empty space to maintain line height */}
+                            <Box sx={{ width: '28px' }} /> {/* Space for copy button */}
+                            <Box sx={{ flex: 1, height: '1.5em' }} />
                         </Box>
                     )
                 }
@@ -165,6 +170,18 @@ export function HighlightedText({
                         >
                             {lineIndex}
                         </Typography>
+                        <IconButton
+                            size="small"
+                            onClick={() => handleCopyLine(line)}
+                            sx={{
+                                padding: '2px',
+                                marginRight: 1,
+                                height: '24px',
+                                width: '24px'
+                            }}
+                        >
+                            <ContentCopyIcon sx={{ fontSize: '1rem' }} />
+                        </IconButton>
                         <Box sx={{ flex: 1 }}>
                             {lineContent.map((word, wordIndex) => {
                                 if (word === '') return null
@@ -202,7 +219,6 @@ export function HighlightedText({
                                 )
                             })}
                         </Box>
-                        {lineIndex < lines.length - 1 && <br />}
                     </Box>
                 )
             })
@@ -218,7 +234,7 @@ export function HighlightedText({
                 fontFamily: 'monospace',
                 whiteSpace: preserveSegments ? 'normal' : 'pre-wrap',
                 margin: 0,
-                lineHeight: 1.5,
+                lineHeight: 1.5
             }}
         >
             {renderContent()}

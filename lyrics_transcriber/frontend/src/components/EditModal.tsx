@@ -18,6 +18,7 @@ import MergeIcon from '@mui/icons-material/CallMerge'
 import SplitIcon from '@mui/icons-material/CallSplit'
 import RestoreIcon from '@mui/icons-material/RestoreFromTrash'
 import MoreVertIcon from '@mui/icons-material/MoreVert'
+import AutoFixHighIcon from '@mui/icons-material/AutoFixHigh'
 import { LyricsSegment, Word } from '../types'
 import { useState, useEffect } from 'react'
 
@@ -41,6 +42,7 @@ export default function EditModal({
     const [editedSegment, setEditedSegment] = useState<LyricsSegment | null>(segment)
     const [menuAnchorEl, setMenuAnchorEl] = useState<null | HTMLElement>(null)
     const [selectedWordIndex, setSelectedWordIndex] = useState<number | null>(null)
+    const [replacementText, setReplacementText] = useState('')
 
     // Reset edited segment when modal opens with new segment
     useEffect(() => {
@@ -189,6 +191,37 @@ export default function EditModal({
         }
     }
 
+    const handleReplaceAllWords = () => {
+        if (!editedSegment) return
+
+        const newWords = replacementText.trim().split(/\s+/)
+        const segmentDuration = editedSegment.end_time - editedSegment.start_time
+
+        let updatedWords: Word[]
+
+        if (newWords.length === editedSegment.words.length) {
+            // If word count matches, keep original timestamps
+            updatedWords = editedSegment.words.map((word, index) => ({
+                text: newWords[index],
+                start_time: word.start_time,
+                end_time: word.end_time,
+                confidence: 1.0
+            }))
+        } else {
+            // If word count differs, distribute time evenly
+            const avgWordDuration = segmentDuration / newWords.length
+            updatedWords = newWords.map((text, index) => ({
+                text,
+                start_time: editedSegment.start_time + (index * avgWordDuration),
+                end_time: editedSegment.start_time + ((index + 1) * avgWordDuration),
+                confidence: 1.0
+            }))
+        }
+
+        updateSegment(updatedWords)
+        setReplacementText('') // Clear the input after replacing
+    }
+
     return (
         <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
             <DialogTitle>
@@ -201,6 +234,25 @@ export default function EditModal({
                 </IconButton>
             </DialogTitle>
             <DialogContent dividers>
+                <Box sx={{ mb: 2, display: 'flex', gap: 2 }}>
+                    <TextField
+                        label="Replace all words"
+                        value={replacementText}
+                        onChange={(e) => setReplacementText(e.target.value)}
+                        fullWidth
+                        placeholder="Type or paste replacement words here"
+                        size="small"
+                    />
+                    <Button
+                        variant="contained"
+                        startIcon={<AutoFixHighIcon />}
+                        onClick={handleReplaceAllWords}
+                        disabled={!replacementText.trim()}
+                    >
+                        Replace All
+                    </Button>
+                </Box>
+
                 <Box sx={{ mb: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <Typography variant="body2" color="text.secondary">
                         Segment Time Range: {editedSegment.start_time.toFixed(4)} - {editedSegment.end_time.toFixed(4)}

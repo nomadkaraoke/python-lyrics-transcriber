@@ -18,27 +18,39 @@ export default function AudioPlayer({ apiClient, onTimeUpdate }: AudioPlayerProp
     useEffect(() => {
         if (!apiClient) return
 
-        // Create audio element with the API endpoint URL
         const audio = new Audio(apiClient.getAudioUrl())
         audioRef.current = audio
 
-        // Set up event listeners
-        audio.addEventListener('loadedmetadata', () => {
-            setDuration(audio.duration)
-        })
+        // Add requestAnimationFrame for smoother updates
+        let animationFrameId: number
 
-        audio.addEventListener('timeupdate', () => {
+        const updateTime = () => {
             const time = audio.currentTime
             setCurrentTime(time)
             onTimeUpdate?.(time)
+            animationFrameId = requestAnimationFrame(updateTime)
+        }
+
+        audio.addEventListener('play', () => {
+            updateTime()
+        })
+
+        audio.addEventListener('pause', () => {
+            cancelAnimationFrame(animationFrameId)
         })
 
         audio.addEventListener('ended', () => {
+            cancelAnimationFrame(animationFrameId)
             setIsPlaying(false)
             setCurrentTime(0)
         })
 
+        audio.addEventListener('loadedmetadata', () => {
+            setDuration(audio.duration)
+        })
+
         return () => {
+            cancelAnimationFrame(animationFrameId)
             audio.pause()
             audio.src = ''
             audioRef.current = null
