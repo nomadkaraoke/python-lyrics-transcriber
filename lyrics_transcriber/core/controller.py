@@ -13,6 +13,7 @@ from lyrics_transcriber.lyrics.spotify import SpotifyProvider
 from lyrics_transcriber.output.generator import OutputGenerator
 from lyrics_transcriber.correction.corrector import LyricsCorrector
 from lyrics_transcriber.core.config import TranscriberConfig, LyricsConfig, OutputConfig
+from lyrics_transcriber.lyrics.file_provider import FileProvider
 
 
 @dataclass
@@ -171,6 +172,7 @@ class LyricsTranscriber:
         provider_config = LyricsProviderConfig(
             genius_api_token=self.lyrics_config.genius_api_token,
             spotify_cookie=self.lyrics_config.spotify_cookie,
+            lyrics_file=self.lyrics_config.lyrics_file,
             cache_dir=self.output_config.cache_dir,
             audio_filepath=self.audio_filepath,
         )
@@ -186,6 +188,10 @@ class LyricsTranscriber:
             providers["spotify"] = SpotifyProvider(config=provider_config, logger=self.logger)
         else:
             self.logger.debug("Skipping Spotify provider - no cookie provided")
+
+        if provider_config.lyrics_file:
+            self.logger.debug("Initializing File lyrics provider")
+            providers["file"] = FileProvider(config=provider_config, logger=self.logger)
 
         return providers
 

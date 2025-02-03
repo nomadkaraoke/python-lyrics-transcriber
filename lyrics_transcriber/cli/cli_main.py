@@ -39,6 +39,7 @@ def create_arg_parser() -> argparse.ArgumentParser:
     song_group = parser.add_argument_group("Song Identification")
     song_group.add_argument("--artist", help="Song artist for lyrics lookup and auto-correction")
     song_group.add_argument("--title", help="Song title for lyrics lookup and auto-correction")
+    song_group.add_argument("--lyrics_file", help="Path to file containing lyrics (txt, docx, or rtf format)")
 
     # API Credentials
     api_group = parser.add_argument_group("API Credentials")
@@ -134,6 +135,7 @@ def create_configs(args: argparse.Namespace, env_config: Dict[str, str]) -> tupl
     lyrics_config = LyricsConfig(
         genius_api_token=args.genius_api_token or env_config.get("genius_api_token"),
         spotify_cookie=args.spotify_cookie or env_config.get("spotify_cookie"),
+        lyrics_file=args.lyrics_file,
     )
 
     output_config = OutputConfig(

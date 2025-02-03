@@ -18,7 +18,7 @@ class LyricsConfig:
 
     genius_api_token: Optional[str] = None
     spotify_cookie: Optional[str] = None
-
+    lyrics_file: Optional[str] = None
 
 @dataclass
 class OutputConfig:
