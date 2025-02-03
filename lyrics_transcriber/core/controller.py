@@ -177,6 +177,11 @@ class LyricsTranscriber:
             audio_filepath=self.audio_filepath,
         )
 
+        if provider_config.lyrics_file and os.path.exists(provider_config.lyrics_file):
+            self.logger.debug(f"Initializing File lyrics provider with file: {provider_config.lyrics_file}")
+            providers["file"] = FileProvider(config=provider_config, logger=self.logger)
+            return providers
+
         if provider_config.genius_api_token:
             self.logger.debug("Initializing Genius lyrics provider")
             providers["genius"] = GeniusProvider(config=provider_config, logger=self.logger)
@@ -189,10 +194,6 @@ class LyricsTranscriber:
         else:
             self.logger.debug("Skipping Spotify provider - no cookie provided")
 
-        if provider_config.lyrics_file:
-            self.logger.debug("Initializing File lyrics provider")
-            providers["file"] = FileProvider(config=provider_config, logger=self.logger)
-
         return providers
 
     def _initialize_output_generator(self) -> OutputGenerator:
@@ -202,13 +203,19 @@ class LyricsTranscriber:
     def process(self) -> LyricsControllerResult:
         """Main processing method that orchestrates the entire workflow."""
 
+        self.logger.info(f"LyricsTranscriber controller beginning processing for {self.artist} - {self.title}")
+
         # Step 1: Fetch lyrics if enabled and artist/title are provided
         if self.output_config.fetch_lyrics and self.artist and self.title:
             self.fetch_lyrics()
+        else:
+            self.logger.info("Skipping lyrics fetching - no artist/title provided or fetching disabled")
 
         # Step 2: Run transcription if enabled
         if self.output_config.run_transcription:
             self.transcribe()
+        else:
+            self.logger.info("Skipping transcription - transcription disabled")
 
         # Step 3: Process and correct lyrics if enabled AND we have transcription results
         if self.output_config.run_correction and self.results.transcription_results:
