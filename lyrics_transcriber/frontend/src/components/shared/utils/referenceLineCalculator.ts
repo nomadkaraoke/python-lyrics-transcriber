@@ -4,7 +4,7 @@ import { LinePosition } from '../types'
 export function calculateReferenceLinePositions(
     corrected_segments: LyricsSegment[],
     anchors: LyricsData['anchor_sequences'],
-    currentSource: 'genius' | 'spotify'
+    currentSource: string
 ): { linePositions: LinePosition[] } {
     const linePositions: LinePosition[] = []
     let currentReferencePosition = 0

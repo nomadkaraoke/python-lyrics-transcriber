@@ -53,14 +53,8 @@ export interface GapSequence {
     transcription_position: number
     preceding_anchor: AnchorSequence | null
     following_anchor: AnchorSequence | null
-    reference_words: {
-        spotify?: string[]
-        genius?: string[]
-    }
-    reference_words_original?: {
-        spotify?: string[]
-        genius?: string[]
-    }
+    reference_words: Record<string, string[]>
+    reference_words_original?: Record<string, string[]>
     corrections: WordCorrection[]
 }
 
@@ -106,10 +100,7 @@ export interface CorrectionData {
 export interface HighlightInfo {
     transcriptionIndex?: number
     transcriptionLength?: number
-    referenceIndices: {
-        genius?: number
-        spotify?: number
-    }
+    referenceIndices: Record<string, number>
     referenceLength?: number
     type: 'single' | 'gap' | 'anchor'
 }

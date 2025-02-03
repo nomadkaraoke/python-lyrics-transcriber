@@ -8,7 +8,7 @@ import React from 'react'
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import IconButton from '@mui/material/IconButton';
 
-interface HighlightedTextProps {
+export interface HighlightedTextProps {
     // Input can be either raw text or pre-processed word positions
     text?: string
     wordPositions?: TranscriptionWordPosition[]
@@ -22,7 +22,7 @@ interface HighlightedTextProps {
     flashingType: FlashType
     // Reference-specific props
     isReference?: boolean
-    currentSource?: 'genius' | 'spotify'
+    currentSource?: string
     preserveSegments?: boolean
     linePositions?: LinePosition[]
     currentTime?: number
@@ -67,7 +67,8 @@ export function HighlightedText({
                     wordPos.type === 'anchor' && wordPos.sequence && (
                         (wordPos.sequence as AnchorSequence).transcription_position === highlightInfo.transcriptionIndex ||
                         (isReference && currentSource &&
-                            (wordPos.sequence as AnchorSequence).reference_positions[currentSource] === highlightInfo.referenceIndices?.[currentSource])
+                            (wordPos.sequence as AnchorSequence).reference_positions[currentSource as keyof typeof highlightInfo.referenceIndices] === 
+                            highlightInfo.referenceIndices?.[currentSource as keyof typeof highlightInfo.referenceIndices])
                     ))
             )
         } else {
@@ -85,7 +86,9 @@ export function HighlightedText({
                 (flashingType === 'anchor' && anchor) ||
                 (flashingType === 'word' && highlightInfo?.type === 'anchor' && anchor && (
                     anchor.transcription_position === highlightInfo.transcriptionIndex ||
-                    (isReference && currentSource && anchor.reference_positions[currentSource] === highlightInfo.referenceIndices?.[currentSource])
+                    (isReference && currentSource && 
+                        anchor.reference_positions[currentSource as keyof typeof highlightInfo.referenceIndices] === 
+                        highlightInfo.referenceIndices?.[currentSource as keyof typeof highlightInfo.referenceIndices])
                 ))
             )
         }

@@ -18,6 +18,12 @@ export default function ReferenceView({
     highlightInfo,
     mode
 }: ReferenceViewProps) {
+    // Get available sources from referenceTexts object
+    const availableSources = useMemo(() => 
+        Object.keys(referenceTexts) as Array<string>,
+        [referenceTexts]
+    )
+
     const { linePositions } = useMemo(() =>
         calculateReferenceLinePositions(
             corrected_segments,
@@ -36,6 +42,7 @@ export default function ReferenceView({
                 <SourceSelector
                     currentSource={currentSource}
                     onSourceChange={onSourceChange}
+                    availableSources={availableSources}
                 />
             </Box>
             <Box sx={{ display: 'flex', flexDirection: 'column' }}>

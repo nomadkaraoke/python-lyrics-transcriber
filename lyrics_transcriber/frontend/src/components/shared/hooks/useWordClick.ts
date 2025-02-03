@@ -3,12 +3,12 @@ import { AnchorSequence, GapSequence, InteractionMode } from '../../../types'
 import { ModalContent } from '../../LyricsAnalyzer'
 import { WordClickInfo } from '../types'
 
-interface UseWordClickProps {
+export interface UseWordClickProps {
     mode: InteractionMode
     onElementClick: (content: ModalContent) => void
     onWordClick?: (info: WordClickInfo) => void
     isReference?: boolean
-    currentSource?: 'genius' | 'spotify'
+    currentSource?: string
 }
 
 export function useWordClick({

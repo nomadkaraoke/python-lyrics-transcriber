@@ -3,7 +3,7 @@ import { LyricsData, LyricsSegment } from '../../../types'
 export function calculateNewlineIndices(
     corrected_segments: LyricsSegment[],
     anchors: LyricsData['anchor_sequences'],
-    currentSource: 'genius' | 'spotify'
+    currentSource: string
 ): Set<number> {
     return new Set(
         corrected_segments.slice(0, -1).map((segment, segmentIndex) => {

@@ -81,8 +81,8 @@ export interface ReferenceViewProps extends BaseViewProps {
     referenceTexts: Record<string, string>
     anchors: LyricsData['anchor_sequences']
     gaps: LyricsData['gap_sequences']
-    currentSource: 'genius' | 'spotify'
-    onSourceChange: (source: 'genius' | 'spotify') => void
+    currentSource: string
+    onSourceChange: (source: string) => void
     corrected_segments: LyricsSegment[]
 }
 
@@ -93,7 +93,7 @@ export interface HighlightedTextProps extends BaseViewProps {
     anchors: AnchorSequence[]
     gaps: GapSequence[]
     isReference?: boolean
-    currentSource?: 'genius' | 'spotify'
+    currentSource?: string
     preserveSegments?: boolean
     linePositions?: LinePosition[]
 } 

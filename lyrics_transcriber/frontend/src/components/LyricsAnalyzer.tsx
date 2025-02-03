@@ -72,7 +72,10 @@ export default function LyricsAnalyzer({ data: initialData, onFileLoad, apiClien
     const [modalContent, setModalContent] = useState<ModalContent | null>(null)
     const [flashingType, setFlashingType] = useState<FlashType>(null)
     const [highlightInfo, setHighlightInfo] = useState<HighlightInfo | null>(null)
-    const [currentSource, setCurrentSource] = useState<'genius' | 'spotify'>('genius')
+    const [currentSource, setCurrentSource] = useState<string>(() => {
+        const availableSources = Object.keys(initialData.reference_texts)
+        return availableSources.length > 0 ? availableSources[0] : ''
+    })
     const [isReviewComplete, setIsReviewComplete] = useState(false)
     const [data, setData] = useState(initialData)
     // Create deep copy of initial data for comparison later
@@ -352,26 +355,12 @@ export default function LyricsAnalyzer({ data: initialData, onFileLoad, apiClien
             </Box>
 
             <Box sx={{ mb: 3 }}>
-                <AudioPlayer
-                    apiClient={apiClient}
-                    onTimeUpdate={setCurrentAudioTime}
-                />
-            </Box>
-
-            <Box sx={{ mb: 3 }}>
                 <CorrectionMetrics
                     // Anchor metrics
                     anchorCount={data.metadata.anchor_sequences_count}
                     multiSourceAnchors={data.anchor_sequences.filter(anchor =>
                         Object.keys(anchor.reference_positions).length > 1).length}
-                    singleSourceMatches={{
-                        spotify: data.anchor_sequences.filter(anchor =>
-                            Object.keys(anchor.reference_positions).length === 1 &&
-                            'spotify' in anchor.reference_positions).length,
-                        genius: data.anchor_sequences.filter(anchor =>
-                            Object.keys(anchor.reference_positions).length === 1 &&
-                            'genius' in anchor.reference_positions).length
-                    }}
+                    anchorWordCount={data.anchor_sequences.reduce((sum, anchor) => sum + anchor.length, 0)}
                     // Gap metrics
                     correctedGapCount={data.gap_sequences.filter(gap =>
                         gap.corrections?.length > 0).length}
@@ -395,13 +384,25 @@ export default function LyricsAnalyzer({ data: initialData, onFileLoad, apiClien
                         corrected: () => handleFlash('corrected'),
                         uncorrected: () => handleFlash('uncorrected')
                     }}
+                    totalWords={data.metadata.total_words}
                 />
             </Box>
 
-            <Box sx={{ mb: 3 }}>
+            <Box sx={{
+                display: 'flex',
+                flexDirection: isMobile ? 'column' : 'row',
+                gap: 5,
+                alignItems: 'flex-start',
+                justifyContent: 'flex-start',
+                mb: 3
+            }}>
                 <ModeSelector
                     effectiveMode={effectiveMode}
                     onChange={setInteractionMode}
+                />
+                <AudioPlayer
+                    apiClient={apiClient}
+                    onTimeUpdate={setCurrentAudioTime}
                 />
             </Box>
 

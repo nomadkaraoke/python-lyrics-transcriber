@@ -6,7 +6,7 @@ interface MetricProps {
     label: string
     value: string | number
     description: string
-    details?: Array<{ label: string, value: number }>
+    details?: Array<{ label: string, value: string | number }>
     onClick?: () => void
 }
 
@@ -38,9 +38,11 @@ function Metric({ color, label, value, description, details, onClick }: MetricPr
                     {label}
                 </Typography>
             </Box>
-            <Typography variant="h6">
-                {value}
-            </Typography>
+            <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 1, mb: 0.5 }}>
+                <Typography variant="h6">
+                    {value}
+                </Typography>
+            </Box>
             <Typography variant="caption" color="text.secondary">
                 {description}
             </Typography>
@@ -66,10 +68,7 @@ interface CorrectionMetricsProps {
     // Anchor metrics
     anchorCount?: number
     multiSourceAnchors?: number
-    singleSourceMatches?: {
-        spotify: number
-        genius: number
-    }
+    anchorWordCount?: number
     // Gap metrics
     correctedGapCount?: number
     uncorrectedGapCount?: number
@@ -81,6 +80,8 @@ interface CorrectionMetricsProps {
     replacedCount?: number
     addedCount?: number
     deletedCount?: number
+    // Add total words count
+    totalWords?: number
     onMetricClick?: {
         anchor?: () => void
         corrected?: () => void
@@ -91,21 +92,24 @@ interface CorrectionMetricsProps {
 export default function CorrectionMetrics({
     anchorCount,
     multiSourceAnchors = 0,
-    singleSourceMatches = { spotify: 0, genius: 0 },
+    anchorWordCount = 0,
     correctedGapCount = 0,
     uncorrectedGapCount = 0,
     uncorrectedGaps = [],
     replacedCount = 0,
     addedCount = 0,
     deletedCount = 0,
+    totalWords = 0,
     onMetricClick
 }: CorrectionMetricsProps) {
-    const formatPositionLabel = (position: number, length: number) => {
-        if (length === 1) {
-            return `Position ${position}`;
-        }
-        return `Positions ${position}-${position + length - 1}`;
-    };
+    // Calculate percentages based on word counts
+    const anchorPercentage = totalWords > 0 ? Math.round((anchorWordCount / totalWords) * 100) : 0
+    const uncorrectedWordCount = uncorrectedGaps?.reduce((sum, gap) => sum + gap.length, 0) ?? 0
+    const uncorrectedPercentage = totalWords > 0 ? Math.round((uncorrectedWordCount / totalWords) * 100) : 0
+    // For corrected percentage, we'll use the total affected words
+    const correctedWordCount = replacedCount + addedCount
+    const correctedPercentage = totalWords > 0 ?
+        Math.round((correctedWordCount / totalWords) * 100) : 0
 
     return (
         <Grid container spacing={2}>
@@ -113,12 +117,11 @@ export default function CorrectionMetrics({
                 <Metric
                     color={COLORS.anchor}
                     label="Anchor Sequences"
-                    value={anchorCount ?? '-'}
+                    value={`${anchorCount ?? '-'} (${anchorPercentage}%)`}
                     description="Matched sections between transcription and reference"
                     details={[
+                        { label: "Words in Anchors", value: anchorWordCount },
                         { label: "Multi-source Matches", value: multiSourceAnchors },
-                        { label: "Spotify Only", value: singleSourceMatches.spotify },
-                        { label: "Genius Only", value: singleSourceMatches.genius },
                     ]}
                     onClick={onMetricClick?.anchor}
                 />
@@ -127,12 +130,11 @@ export default function CorrectionMetrics({
                 <Metric
                     color={COLORS.corrected}
                     label="Corrected Gaps"
-                    value={correctedGapCount ?? '-'}
+                    value={`${correctedGapCount} (${correctedPercentage}%)`}
                     description="Successfully corrected sections"
                     details={[
                         { label: "Words Replaced", value: replacedCount },
-                        { label: "Words Added", value: addedCount },
-                        { label: "Words Deleted", value: deletedCount },
+                        { label: "Words Added / Deleted", value: `+${addedCount} / -${deletedCount}` },
                     ]}
                     onClick={onMetricClick?.corrected}
                 />
@@ -141,12 +143,12 @@ export default function CorrectionMetrics({
                 <Metric
                     color={COLORS.uncorrectedGap}
                     label="Uncorrected Gaps"
-                    value={uncorrectedGapCount}
+                    value={`${uncorrectedGapCount} (${uncorrectedPercentage}%)`}
                     description="Sections that may need manual review"
-                    details={uncorrectedGaps.map(gap => ({
-                        label: formatPositionLabel(gap.position, gap.length),
-                        value: gap.length
-                    }))}
+                    details={[
+                        { label: "Words Uncorrected", value: uncorrectedWordCount },
+                        { label: "Number of Gaps", value: uncorrectedGapCount },
+                    ]}
                     onClick={onMetricClick?.uncorrected}
                 />
             </Grid>

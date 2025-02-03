@@ -122,20 +122,23 @@ export default function AudioPlayer({ apiClient, onTimeUpdate }: AudioPlayerProp
         <Box sx={{
             display: 'flex',
             alignItems: 'center',
-            gap: 2,
-            p: 2,
+            gap: 1,
             backgroundColor: 'background.paper',
             borderRadius: 1,
-            boxShadow: 1
+            height: 40, // Match ToggleButtonGroup height
         }}>
+            <Typography variant="body2" color="text.secondary" sx={{ mr: 1 }}>
+                Playback:
+            </Typography>
+            
             <IconButton
                 onClick={handlePlayPause}
-                size="large"
+                size="small"
             >
                 {isPlaying ? <PauseIcon /> : <PlayArrowIcon />}
             </IconButton>
 
-            <Typography sx={{ minWidth: 45 }}>
+            <Typography variant="body2" sx={{ minWidth: 40 }}>
                 {formatTime(currentTime)}
             </Typography>
 
@@ -144,10 +147,18 @@ export default function AudioPlayer({ apiClient, onTimeUpdate }: AudioPlayerProp
                 min={0}
                 max={duration}
                 onChange={handleSeek}
-                sx={{ mx: 2 }}
+                size="small"
+                sx={{ 
+                    width: 200,
+                    mx: 1,
+                    '& .MuiSlider-thumb': {
+                        width: 12,
+                        height: 12,
+                    }
+                }}
             />
 
-            <Typography sx={{ minWidth: 45 }}>
+            <Typography variant="body2" sx={{ minWidth: 40 }}>
                 {formatTime(duration)}
             </Typography>
         </Box>

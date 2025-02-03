@@ -33,7 +33,7 @@ export default function DetailsModal({
 
     const renderContent = () => {
         // Move declaration outside of case block
-        const correction = content.type === 'gap' 
+        const correction = content.type === 'gap'
             ? content.data.corrections.find(c => c.original_word === content.data.word)
             : null
 
@@ -118,12 +118,11 @@ export default function DetailsModal({
                                 title="Reference Words"
                                 value={
                                     <>
-                                        {content.data.reference_words.spotify && (
-                                            <Typography>Spotify: "{content.data.reference_words.spotify.join(' ')}"</Typography>
-                                        )}
-                                        {content.data.reference_words.genius && (
-                                            <Typography>Genius: "{content.data.reference_words.genius.join(' ')}"</Typography>
-                                        )}
+                                        {Object.entries(content.data.reference_words).map(([source, words]) => (
+                                            <Typography key={source}>
+                                                {source}: "{words.join(' ')}"
+                                            </Typography>
+                                        ))}
                                     </>
                                 }
                             />
