@@ -44,8 +44,14 @@ export function useWordClick({
                     length: gap.length,
                     words: gap.words,
                     corrections: gap.corrections.map(c => ({
+                        original_word: c.original_word,
+                        corrected_word: c.corrected_word,
+                        original_position: c.original_position,
                         length: c.length,
-                        refPositions: c.reference_positions
+                        refPositions: c.reference_positions,
+                        is_deletion: c.is_deletion,
+                        split_index: c.split_index,
+                        split_total: c.split_total
                     }))
                 },
                 belongsToAnchor: anchor && (
@@ -62,6 +68,11 @@ export function useWordClick({
                         position < (gap.corrections[0].reference_positions![currentSource!] + gap.corrections[0].length)
                         : position >= gap.transcription_position &&
                         position < (gap.transcription_position + gap.length)
+                ),
+                wordPositionInGap: gap && gap.words.indexOf(word),
+                absolutePosition: gap && (gap.transcription_position + gap.words.indexOf(word)),
+                hasMatchingCorrection: gap && gap.corrections.some(c => 
+                    c.original_position === (gap.transcription_position + gap.words.indexOf(word))
                 )
             }
         }, null, 2))

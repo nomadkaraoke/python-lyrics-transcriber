@@ -198,13 +198,23 @@ class VideoGenerator:
 
     def _get_video_codec(self) -> str:
         """Determine the best available video codec."""
-        try:
-            ffmpeg_codes = subprocess.getoutput("ffmpeg -codecs")
-            if "h264_videotoolbox" in ffmpeg_codes:
-                self.logger.info("Using hardware accelerated h264_videotoolbox")
-                return "h264_videotoolbox"
-        except Exception as e:
-            self.logger.warning(f"Error checking for hardware acceleration: {e}")
+        # try:
+        #     ffmpeg_codes = subprocess.getoutput("ffmpeg -codecs")
+        #     if "h264_videotoolbox" in ffmpeg_codes:
+        #         self.logger.info("Using hardware accelerated h264_videotoolbox")
+        #         return "h264_videotoolbox"
+        # except Exception as e:
+        #     self.logger.warning(f"Error checking for hardware acceleration: {e}")
+
+        # 2025-02-03 00:33:47.948 - INFO - video - Using hardware accelerated h264_videotoolbox
+        # 2025-02-03 00:35:56.761 - INFO - video - Video generated: ./Duran Duran - The Reflex/lyrics/Duran Duran - The Reflex (With Vocals).mkv
+        # Duration: 2:09
+
+        # 2025-02-03 00:41:20.429 - INFO - video - Generating video with lyrics overlay
+        # 2025-02-03 00:42:09.958 - INFO - video - Video generated: ./Duran Duran - The Reflex/lyrics/Duran Duran - The Reflex (With Vocals).mkv
+        # Duration: 49 seconds
+
+        # Conclusion: libx264 is faster than h264_videotoolbox
 
         return "libx264"
 

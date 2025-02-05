@@ -56,18 +56,23 @@ export function HighlightedText({
 
         if ('type' in wordPos) {
             // Handle TranscriptionWordPosition
-            const hasCorrections = wordPos.type === 'gap' &&
-                Boolean((wordPos.sequence as GapSequence)?.corrections?.length)
+            const gap = wordPos.sequence as GapSequence
+            const wordPositionInGap = gap?.words.indexOf(wordPos.word.text)
+            const isCorrected = wordPos.type === 'gap' &&
+                gap?.corrections?.some(correction =>
+                    // Check if this word's position in the gap matches any correction's position
+                    correction.original_position === (gap.transcription_position + wordPositionInGap)
+                )
 
             return Boolean(
                 (flashingType === 'anchor' && wordPos.type === 'anchor') ||
-                (flashingType === 'corrected' && hasCorrections) ||
-                (flashingType === 'uncorrected' && wordPos.type === 'gap' && !hasCorrections) ||
+                (flashingType === 'corrected' && isCorrected) ||
+                (flashingType === 'uncorrected' && wordPos.type === 'gap' && !isCorrected) ||
                 (flashingType === 'word' && highlightInfo?.type === 'anchor' &&
                     wordPos.type === 'anchor' && wordPos.sequence && (
                         (wordPos.sequence as AnchorSequence).transcription_position === highlightInfo.transcriptionIndex ||
                         (isReference && currentSource &&
-                            (wordPos.sequence as AnchorSequence).reference_positions[currentSource as keyof typeof highlightInfo.referenceIndices] === 
+                            (wordPos.sequence as AnchorSequence).reference_positions[currentSource as keyof typeof highlightInfo.referenceIndices] ===
                             highlightInfo.referenceIndices?.[currentSource as keyof typeof highlightInfo.referenceIndices])
                     ))
             )
@@ -86,8 +91,8 @@ export function HighlightedText({
                 (flashingType === 'anchor' && anchor) ||
                 (flashingType === 'word' && highlightInfo?.type === 'anchor' && anchor && (
                     anchor.transcription_position === highlightInfo.transcriptionIndex ||
-                    (isReference && currentSource && 
-                        anchor.reference_positions[currentSource as keyof typeof highlightInfo.referenceIndices] === 
+                    (isReference && currentSource &&
+                        anchor.reference_positions[currentSource as keyof typeof highlightInfo.referenceIndices] ===
                         highlightInfo.referenceIndices?.[currentSource as keyof typeof highlightInfo.referenceIndices])
                 ))
             )

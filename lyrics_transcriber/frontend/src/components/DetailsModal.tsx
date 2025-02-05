@@ -4,7 +4,8 @@ import {
     DialogContent,
     IconButton,
     Grid,
-    Typography
+    Typography,
+    Box
 } from '@mui/material'
 import CloseIcon from '@mui/icons-material/Close'
 import { ModalContent } from './LyricsAnalyzer'
@@ -31,12 +32,9 @@ export default function DetailsModal({
         return ''
     }
 
-    const renderContent = () => {
-        // Move declaration outside of case block
-        const correction = content.type === 'gap'
-            ? content.data.corrections.find(c => c.original_word === content.data.word)
-            : null
+    const isCorrected = content.type === 'gap' && content.data.corrections.length > 0
 
+    const renderContent = () => {
         switch (content.type) {
             case 'anchor':
                 return (
@@ -81,10 +79,6 @@ export default function DetailsModal({
                             value={`"${getCurrentWord()}"`}
                         />
                         <GridItem
-                            title="Transcribed Text"
-                            value={`"${content.data.text}"`}
-                        />
-                        <GridItem
                             title="Current Text"
                             value={`"${content.data.words.map(word => {
                                 const wordCorrection = content.data.corrections.find(
@@ -107,6 +101,10 @@ export default function DetailsModal({
                                 value={`"${content.data.preceding_anchor.text}"`}
                             />
                         )}
+                        <GridItem
+                            title="Transcribed Text"
+                            value={`"${content.data.text}"`}
+                        />
                         {content.data.following_anchor && (
                             <GridItem
                                 title="Following Anchor"
@@ -118,48 +116,50 @@ export default function DetailsModal({
                                 title="Reference Words"
                                 value={
                                     <>
-                                        {Object.entries(content.data.reference_words).map(([source, words]) => (
-                                            <Typography key={source}>
-                                                {source}: "{words.join(' ')}"
-                                            </Typography>
-                                        ))}
+                                        {content.data.reference_words.spotify && (
+                                            <Typography>Spotify: "{content.data.reference_words.spotify.join(' ')}"</Typography>
+                                        )}
+                                        {content.data.reference_words.genius && (
+                                            <Typography>Genius: "{content.data.reference_words.genius.join(' ')}"</Typography>
+                                        )}
                                     </>
                                 }
                             />
                         )}
-                        {correction && (
-                            <>
-                                <GridItem
-                                    title="Correction Details"
-                                    value={
-                                        <>
-                                            <Typography>Original: "{correction.original_word}"</Typography>
-                                            <Typography>Corrected: "{correction.corrected_word}"</Typography>
-                                            <Typography>Confidence: {correction.confidence.toFixed(3)}</Typography>
-                                            <Typography>Source: {correction.source}</Typography>
-                                            <Typography>Reason: {correction.reason}</Typography>
-                                            {correction.is_deletion && <Typography>Is Deletion: Yes</Typography>}
-                                            {correction.split_total && (
-                                                <Typography>Split: {correction.split_index} of {correction.split_total}</Typography>
-                                            )}
-                                        </>
-                                    }
-                                />
-                                {Object.entries(correction.alternatives).length > 0 && (
-                                    <GridItem
-                                        title="Alternatives"
-                                        value={
-                                            <>
-                                                {Object.entries(correction.alternatives).map(([word, score]) => (
-                                                    <Typography key={word}>
-                                                        "{word}": {score.toFixed(3)}
-                                                    </Typography>
-                                                ))}
-                                            </>
-                                        }
-                                    />
-                                )}
-                            </>
+                        {isCorrected && (
+                            <GridItem
+                                title="Correction Details"
+                                value={
+                                    <>
+                                        {content.data.corrections.map((correction, index) => (
+                                            <Box key={index} sx={{ mb: 2, p: 1, border: '1px solid #ccc', borderRadius: '4px' }}>
+                                                <Typography variant="subtitle2" fontWeight="bold">Correction {index + 1}</Typography>
+                                                <Typography>Original: <strong>"{correction.original_word}"</strong></Typography>
+                                                <Typography>Corrected: <strong>"{correction.corrected_word}"</strong></Typography>
+                                                <Typography>Confidence: {correction.confidence.toFixed(3)}</Typography>
+                                                <Typography>Source: {correction.source}</Typography>
+                                                <Typography>Reason: {correction.reason}</Typography>
+                                                {correction.is_deletion && <Typography>Is Deletion: Yes</Typography>}
+                                                {correction.split_total && (
+                                                    <Typography>Split: {correction.split_index} of {correction.split_total}</Typography>
+                                                )}
+                                                {Object.entries(correction.alternatives).length > 0 && (
+                                                    <>
+                                                        <Typography>Alternatives:</Typography>
+                                                        <Box sx={{ pl: 2 }}>
+                                                            {Object.entries(correction.alternatives).map(([word, score]) => (
+                                                                <Typography key={word}>
+                                                                    "{word}": {score.toFixed(3)}
+                                                                </Typography>
+                                                            ))}
+                                                        </Box>
+                                                    </>
+                                                )}
+                                            </Box>
+                                        ))}
+                                    </>
+                                }
+                            />
                         )}
                     </Grid>
                 )
@@ -187,6 +187,7 @@ export default function DetailsModal({
                 <CloseIcon />
             </IconButton>
             <DialogTitle>
+                {content.type === 'gap' && (isCorrected ? 'Corrected ' : 'Uncorrected ')}
                 {content.type.charAt(0).toUpperCase() + content.type.slice(1)} Details - "{getCurrentWord()}"
             </DialogTitle>
             <DialogContent dividers>{renderContent()}</DialogContent>

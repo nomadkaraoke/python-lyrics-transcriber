@@ -1,11 +1,15 @@
 from abc import ABC, abstractmethod
 from typing import List, Optional, Tuple, Dict, Any
+import logging
 
 from lyrics_transcriber.types import GapSequence, WordCorrection
 
 
 class GapCorrectionHandler(ABC):
     """Base class for gap correction handlers."""
+
+    def __init__(self, logger: Optional[logging.Logger] = None):
+        self.logger = logger or logging.getLogger(__name__)
 
     @abstractmethod
     def can_handle(self, gap: GapSequence) -> Tuple[bool, Dict[str, Any]]:

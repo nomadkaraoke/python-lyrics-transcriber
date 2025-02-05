@@ -11,6 +11,7 @@ import urllib.parse
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 from pathlib import Path
+import socket
 
 logger = logging.getLogger(__name__)
 
@@ -119,11 +120,10 @@ def start_review_server(correction_result: CorrectionResult) -> CorrectionResult
     import signal
     import sys
 
-    global current_review, review_completed, audio_filepath  # Add audio_filepath to globals
+    global current_review, review_completed, audio_filepath
     current_review = correction_result
     review_completed = False
 
-    # Get the audio filepath from the correction result's metadata if available
     audio_filepath = correction_result.metadata.get("audio_filepath") if correction_result.metadata else None
 
     logger.info("Starting review server...")
@@ -132,8 +132,23 @@ def start_review_server(correction_result: CorrectionResult) -> CorrectionResult
     start_vite_server()
     logger.info("Frontend assets mounted")
 
-    # Create a custom server config
-    config = uvicorn.Config(app, host="127.0.0.1", port=8000, log_level="info")
+    # Find an available port starting from 8000
+    port = 8000
+    while True:
+        try:
+            # Test if port is available
+            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+                s.bind(("127.0.0.1", port))
+                break
+        except OSError:
+            port += 1
+            if port > 8100:  # Set a reasonable upper limit
+                raise RuntimeError("Unable to find an available port")
+
+    logger.info(f"Using port {port}")
+
+    # Create a custom server config with the found port
+    config = uvicorn.Config(app, host="127.0.0.1", port=port, log_level="info")
     server = uvicorn.Server(config)
 
     # Start FastAPI server in a separate thread
@@ -141,10 +156,10 @@ def start_review_server(correction_result: CorrectionResult) -> CorrectionResult
     server_thread.start()
     logger.info("Server thread started")
 
-    # Open browser - Updated to use port 8000 instead of 5173
-    base_api_url = "http://localhost:8000/api"
+    # Open browser with the correct port
+    base_api_url = f"http://localhost:{port}/api"
     encoded_api_url = urllib.parse.quote(base_api_url, safe="")
-    webbrowser.open(f"http://localhost:8000?baseApiUrl={encoded_api_url}")
+    webbrowser.open(f"http://localhost:{port}?baseApiUrl={encoded_api_url}")
     logger.info("Opened browser for review")
 
     # Wait for review to complete

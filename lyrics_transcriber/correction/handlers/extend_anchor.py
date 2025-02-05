@@ -1,4 +1,5 @@
 from typing import List, Optional, Tuple, Dict, Any
+import logging
 
 from lyrics_transcriber.types import GapSequence, WordCorrection
 from lyrics_transcriber.correction.handlers.base import GapCorrectionHandler
@@ -38,13 +39,19 @@ class ExtendAnchorHandler(GapCorrectionHandler):
             - Leave "youre" and "a" unchanged
     """
 
+    def __init__(self, logger: Optional[logging.Logger] = None):
+        super().__init__(logger)
+        self.logger = logger or logging.getLogger(__name__)
+
     def can_handle(self, gap: GapSequence) -> Tuple[bool, Dict[str, Any]]:
         # Must have reference words
         if not gap.reference_words:
+            self.logger.debug("No reference words available.")
             return False, {}
 
         # Gap must have words
         if not gap.words:
+            self.logger.debug("No words in the gap to process.")
             return False, {}
 
         # At least one word must match between gap and any reference source
@@ -55,6 +62,7 @@ class ExtendAnchorHandler(GapCorrectionHandler):
             for i in range(min(len(gap.words), len(ref_words)))
         )
 
+        self.logger.debug(f"Can handle gap: {has_match}")
         return has_match, {}
 
     def handle(self, gap: GapSequence, data: Optional[Dict[str, Any]] = None) -> List[WordCorrection]:
@@ -86,6 +94,7 @@ class ExtendAnchorHandler(GapCorrectionHandler):
                         reference_positions=reference_positions,
                     )
                 )
+                self.logger.debug(f"Validated word '{word}' with confidence {confidence} from sources: {sources}")
             # No else clause - non-matching words are left unchanged
 
         return corrections

@@ -10,6 +10,9 @@ export interface LyricsSegment {
     words: Word[]
     start_time: number
     end_time: number
+    segment_index: number
+    word_positions: number[]
+    global_positions: number[]
 }
 
 export interface WordCorrection {

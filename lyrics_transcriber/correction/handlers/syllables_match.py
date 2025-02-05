@@ -1,4 +1,4 @@
-from typing import List, Tuple, Dict, Any
+from typing import List, Tuple, Dict, Any, Optional
 import spacy
 import logging
 import pyphen
@@ -15,9 +15,9 @@ from lyrics_transcriber.correction.handlers.word_operations import WordOperation
 class SyllablesMatchHandler(GapCorrectionHandler):
     """Handles gaps where number of syllables in reference text matches number of syllables in transcription."""
 
-    def __init__(self):
-        # Initialize logger first
-        self.logger = logging.getLogger(__name__)
+    def __init__(self, logger: Optional[logging.Logger] = None):
+        super().__init__(logger)
+        self.logger = logger or logging.getLogger(__name__)
 
         # Marking SpacySyllables as used to prevent unused import warning
         _ = SpacySyllables
