@@ -14,7 +14,6 @@ export interface HighlightedTextProps {
     wordPositions?: TranscriptionWordPosition[]
     // Common props
     anchors: AnchorSequence[]
-    gaps: GapSequence[]
     highlightInfo: HighlightInfo | null
     mode: InteractionMode
     onElementClick: (content: ModalContent) => void
@@ -51,17 +50,15 @@ export function HighlightedText({
         currentSource
     })
 
-    const shouldWordFlash = (wordPos: TranscriptionWordPosition | { word: string; index: number }): boolean => {
+    const shouldWordFlash = (wordPos: TranscriptionWordPosition | { word: string; id: string }): boolean => {
         if (!flashingType) return false
 
         if ('type' in wordPos) {
             // Handle TranscriptionWordPosition
             const gap = wordPos.sequence as GapSequence
-            const wordPositionInGap = gap?.words.indexOf(wordPos.word.text)
             const isCorrected = wordPos.type === 'gap' &&
                 gap?.corrections?.some(correction =>
-                    // Check if this word's position in the gap matches any correction's position
-                    correction.original_position === (gap.transcription_position + wordPositionInGap)
+                    correction.word_id === wordPos.word.id
                 )
 
             return Boolean(
@@ -69,32 +66,21 @@ export function HighlightedText({
                 (flashingType === 'corrected' && isCorrected) ||
                 (flashingType === 'uncorrected' && wordPos.type === 'gap' && !isCorrected) ||
                 (flashingType === 'word' && highlightInfo?.type === 'anchor' &&
-                    wordPos.type === 'anchor' && wordPos.sequence && (
-                        (wordPos.sequence as AnchorSequence).transcription_position === highlightInfo.transcriptionIndex ||
-                        (isReference && currentSource &&
-                            (wordPos.sequence as AnchorSequence).reference_positions[currentSource as keyof typeof highlightInfo.referenceIndices] ===
-                            highlightInfo.referenceIndices?.[currentSource as keyof typeof highlightInfo.referenceIndices])
-                    ))
+                    wordPos.type === 'anchor' && wordPos.sequence &&
+                    highlightInfo.word_ids?.includes(wordPos.word.id))
             )
         } else {
             // Handle reference word
-            const thisWordIndex = wordPos.index
-            const anchor = anchors.find(a => {
-                const position = isReference
-                    ? a.reference_positions[currentSource!]
-                    : a.transcription_position
-                if (position === undefined) return false
-                return thisWordIndex >= position && thisWordIndex < position + a.length
-            })
+            if (!currentSource) return false
+
+            const anchor = anchors?.find(a =>
+                a?.reference_word_ids?.[currentSource]?.includes(wordPos.id)
+            )
 
             return Boolean(
                 (flashingType === 'anchor' && anchor) ||
-                (flashingType === 'word' && highlightInfo?.type === 'anchor' && anchor && (
-                    anchor.transcription_position === highlightInfo.transcriptionIndex ||
-                    (isReference && currentSource &&
-                        anchor.reference_positions[currentSource as keyof typeof highlightInfo.referenceIndices] ===
-                        highlightInfo.referenceIndices?.[currentSource as keyof typeof highlightInfo.referenceIndices])
-                ))
+                (flashingType === 'word' && highlightInfo?.type === 'anchor' &&
+                    highlightInfo.reference_word_ids?.[currentSource]?.includes(wordPos.id))
             )
         }
     }
@@ -111,7 +97,7 @@ export function HighlightedText({
     const renderContent = () => {
         if (wordPositions) {
             return wordPositions.map((wordPos, index) => (
-                <React.Fragment key={`${wordPos.word.text}-${index}`}>
+                <React.Fragment key={wordPos.word.id}>
                     <Word
                         word={wordPos.word.text}
                         shouldFlash={shouldWordFlash(wordPos)}
@@ -121,7 +107,7 @@ export function HighlightedText({
                         isUncorrectedGap={wordPos.type === 'gap' && !(wordPos.sequence as GapSequence)?.corrections?.length}
                         onClick={() => handleWordClick(
                             wordPos.word.text,
-                            wordPos.position,
+                            wordPos.word.id,
                             wordPos.type === 'anchor' ? wordPos.sequence as AnchorSequence : undefined,
                             wordPos.type === 'gap' ? wordPos.sequence as GapSequence : undefined
                         )}
@@ -131,12 +117,12 @@ export function HighlightedText({
             ))
         } else if (text) {
             const lines = text.split('\n')
-            let globalWordIndex = 0
+            let wordCount = 0
 
             return lines.map((line, lineIndex) => {
-                const currentLinePosition = linePositions?.find((pos: LinePosition) => pos.position === globalWordIndex)
+                const currentLinePosition = linePositions?.find(pos => pos.position === wordCount)
                 if (currentLinePosition?.isEmpty) {
-                    globalWordIndex++
+                    wordCount++
                     return (
                         <Box key={`empty-${lineIndex}`} sx={{ display: 'flex', alignItems: 'flex-start' }}>
                             <Typography
@@ -176,7 +162,7 @@ export function HighlightedText({
                                 paddingTop: '4px',
                             }}
                         >
-                            {lineIndex}
+                            {currentLinePosition?.lineNumber ?? lineIndex}
                         </Typography>
                         <IconButton
                             size="small"
@@ -197,32 +183,24 @@ export function HighlightedText({
                                     return <span key={`space-${lineIndex}-${wordIndex}`}> </span>
                                 }
 
-                                const position = globalWordIndex++
-                                const anchor = anchors.find(a => {
-                                    const refPos = a.reference_positions[currentSource!]
-                                    if (refPos === undefined) return false
-                                    return position >= refPos && position < refPos + a.length
-                                })
+                                // Generate word ID based on position in the reference text
+                                const wordId = `${currentSource}-word-${wordCount}`
+                                wordCount++
 
-                                // Create a mock TranscriptionWordPosition for highlighting
-                                const wordPos: TranscriptionWordPosition = {
-                                    word: { text: word },
-                                    position,
-                                    type: anchor ? 'anchor' : 'other',
-                                    sequence: anchor,
-                                    isInRange: true
-                                }
+                                // Find if this word is part of any anchor sequence
+                                const anchor = currentSource ? anchors?.find(a =>
+                                    a?.reference_word_ids?.[currentSource]?.includes(wordId)
+                                ) : undefined
 
                                 return (
                                     <Word
-                                        key={`${word}-${lineIndex}-${wordIndex}`}
+                                        key={wordId}
                                         word={word}
-                                        shouldFlash={shouldWordFlash({ word, index: position })}
-                                        isCurrentlyPlaying={shouldHighlightWord(wordPos)}
+                                        shouldFlash={shouldWordFlash({ word, id: wordId })}
                                         isAnchor={Boolean(anchor)}
                                         isCorrectedGap={false}
                                         isUncorrectedGap={false}
-                                        onClick={() => handleWordClick(word, position, anchor, undefined)}
+                                        onClick={() => handleWordClick(word, wordId, anchor, undefined)}
                                     />
                                 )
                             })}
@@ -231,7 +209,6 @@ export function HighlightedText({
                 )
             })
         }
-
         return null
     }
 

@@ -1,4 +1,5 @@
 export interface Word {
+    id: string
     text: string
     start_time: number
     end_time: number
@@ -6,20 +7,19 @@ export interface Word {
 }
 
 export interface LyricsSegment {
+    id: string
     text: string
     words: Word[]
     start_time: number
     end_time: number
-    segment_index: number
-    word_positions: number[]
-    global_positions: number[]
 }
 
 export interface WordCorrection {
+    id: string
     original_word: string
     corrected_word: string
-    segment_index: number
-    original_position: number
+    segment_id: string
+    word_id: string
     source: string
     confidence: number
     reason: string
@@ -27,7 +27,7 @@ export interface WordCorrection {
     is_deletion: boolean
     split_index?: number
     split_total?: number
-    reference_positions?: Record<string, number>
+    reference_positions?: Record<string, string>
     length: number
 }
 
@@ -39,26 +39,35 @@ export interface PhraseScore {
 }
 
 export interface AnchorSequence {
+    id: string
     words: string[]
     text: string
     length: number
-    transcription_position: number
-    reference_positions: Record<string, number>
+    word_ids: string[]
+    reference_word_ids: Record<string, string[]>
     confidence: number
     phrase_score: PhraseScore
     total_score: number
 }
 
-export interface GapSequence {
-    words: string[]
+export interface AnchorReference {
     text: string
+    word_ids: string[]
+    confidence: number
+}
+
+export interface GapSequence {
+    id: string
+    text: string
+    words: string[]
+    word_ids: string[]
     length: number
-    transcription_position: number
-    preceding_anchor: AnchorSequence | null
-    following_anchor: AnchorSequence | null
-    reference_words: Record<string, string[]>
-    reference_words_original?: Record<string, string[]>
     corrections: WordCorrection[]
+    preceding_anchor: AnchorReference | null
+    following_anchor: AnchorReference | null
+    reference_words: {
+        [source: string]: string[]
+    }
 }
 
 export interface LyricsData {
@@ -101,10 +110,8 @@ export interface CorrectionData {
 }
 
 export interface HighlightInfo {
-    transcriptionIndex?: number
-    transcriptionLength?: number
-    referenceIndices: Record<string, number>
-    referenceLength?: number
+    word_ids?: string[]
+    reference_word_ids?: Record<string, string[]>
     type: 'single' | 'gap' | 'anchor'
 }
 

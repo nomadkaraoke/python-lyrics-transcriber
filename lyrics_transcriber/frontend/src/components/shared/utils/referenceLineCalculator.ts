@@ -10,34 +10,31 @@ export function calculateReferenceLinePositions(
     let currentReferencePosition = 0
 
     // First, find all anchor sequences that cover entire lines
-    const fullLineAnchors = anchors.map(anchor => {
-        const referencePos = anchor.reference_positions[currentSource]
-        if (referencePos === undefined) return null
+    const fullLineAnchors = anchors?.map(anchor => {
+        // Add null checks for anchor and reference_word_ids
+        if (!anchor?.reference_word_ids?.[currentSource]) return null
+
+        const referenceWordIds = anchor.reference_word_ids[currentSource]
+        if (!referenceWordIds?.length) return null
 
         return {
-            referenceStart: referencePos,
-            referenceLength: anchor.length,
-            transcriptionLine: corrected_segments.findIndex((segment, segmentIndex) => {
-                const words = segment.words
-                if (!words.length) return false
+            referenceWordIds,
+            transcriptionLine: corrected_segments.findIndex((segment) => {
+                const wordIds = segment.words.map(w => w.id)
+                if (!wordIds.length) return false
 
-                // Calculate the absolute position of the first and last words in this segment
-                let absolutePosition = 0
-                for (let i = 0; i < segmentIndex; i++) {
-                    absolutePosition += corrected_segments[i].words.length
-                }
-
-                const firstWordPosition = absolutePosition
-                const lastWordPosition = absolutePosition + words.length - 1
-
-                return firstWordPosition >= anchor.transcription_position &&
-                    lastWordPosition < anchor.transcription_position + anchor.length
+                // Check if all word IDs in this segment are part of the anchor
+                return wordIds.every(id => anchor.word_ids?.includes(id))
             })
         }
-    }).filter((a): a is NonNullable<typeof a> => a !== null)
+    })?.filter((a): a is NonNullable<typeof a> => a !== null) ?? []
 
-    // Sort by reference position to process in order
-    fullLineAnchors.sort((a, b) => a.referenceStart - b.referenceStart)
+    // Sort by first reference word ID to process in order
+    fullLineAnchors.sort((a, b) => {
+        const firstIdA = a.referenceWordIds[0]
+        const firstIdB = b.referenceWordIds[0]
+        return firstIdA.localeCompare(firstIdB)
+    })
 
     // Add line positions with padding
     let currentLine = 0
@@ -55,10 +52,12 @@ export function calculateReferenceLinePositions(
 
         // Add the actual line position
         linePositions.push({
-            position: anchor.referenceStart,
-            lineNumber: currentLine
+            position: currentReferencePosition,
+            lineNumber: currentLine,
+            isEmpty: false
         })
         currentLine++
+        currentReferencePosition++
     })
 
     // Add any remaining lines after the last anchor

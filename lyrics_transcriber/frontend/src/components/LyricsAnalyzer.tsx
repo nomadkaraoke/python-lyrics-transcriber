@@ -1,8 +1,9 @@
 import {
+    AnchorSequence,
     CorrectionData,
+    GapSequence,
     HighlightInfo,
     InteractionMode,
-    LyricsData,
     LyricsSegment
 } from '../types'
 import LockIcon from '@mui/icons-material/Lock'
@@ -19,6 +20,16 @@ import { WordClickInfo, FlashType } from './shared/types'
 import EditModal from './EditModal'
 import ReviewChangesModal from './ReviewChangesModal'
 import AudioPlayer from './AudioPlayer'
+import { nanoid } from 'nanoid'
+import { initializeDataWithIds, normalizeDataForSubmission } from './shared/utils/initializeDataWithIds'
+
+// Add type for window augmentation at the top of the file
+declare global {
+    interface Window {
+        toggleAudioPlayback?: () => void;
+        seekAndPlayAudio?: (startTime: number) => void;
+    }
+}
 
 interface LyricsAnalyzerProps {
     data: CorrectionData
@@ -30,42 +41,16 @@ interface LyricsAnalyzerProps {
 
 export type ModalContent = {
     type: 'anchor'
-    data: LyricsData['anchor_sequences'][0] & {
-        position: number
+    data: AnchorSequence & {
+        wordId: string
         word?: string
     }
 } | {
     type: 'gap'
-    data: LyricsData['gap_sequences'][0] & {
-        position: number
+    data: GapSequence & {
+        wordId: string
         word: string
     }
-}
-
-function normalizeDataForSubmission(data: CorrectionData): CorrectionData {
-    // Create a deep clone to avoid modifying the original
-    const normalized = JSON.parse(JSON.stringify(data))
-
-    // Preserve floating point numbers with original precision
-    const preserveFloats = (obj: Record<string, unknown>): void => {
-        for (const key in obj) {
-            const value = obj[key]
-            if (typeof value === 'number') {
-                // Handle integers and floats differently
-                let formatted: string
-                if (Number.isInteger(value)) {
-                    formatted = value.toFixed(1)  // Force decimal point for integers
-                } else {
-                    formatted = value.toString()  // Keep original precision for floats
-                }
-                obj[key] = parseFloat(formatted)
-            } else if (typeof value === 'object' && value !== null) {
-                preserveFloats(value as Record<string, unknown>)
-            }
-        }
-    }
-    preserveFloats(normalized)
-    return normalized
 }
 
 export default function LyricsAnalyzer({ data: initialData, onFileLoad, apiClient, isReadOnly }: LyricsAnalyzerProps) {
@@ -77,7 +62,7 @@ export default function LyricsAnalyzer({ data: initialData, onFileLoad, apiClien
         return availableSources.length > 0 ? availableSources[0] : ''
     })
     const [isReviewComplete, setIsReviewComplete] = useState(false)
-    const [data, setData] = useState(initialData)
+    const [data, setData] = useState(() => initializeDataWithIds(initialData))
     // Create deep copy of initial data for comparison later
     const [originalData] = useState(() => JSON.parse(JSON.stringify(initialData)))
     const [interactionMode, setInteractionMode] = useState<InteractionMode>('details')
@@ -93,39 +78,62 @@ export default function LyricsAnalyzer({ data: initialData, onFileLoad, apiClien
     const theme = useTheme()
     const isMobile = useMediaQuery(theme.breakpoints.down('md'))
 
+    // Simple hash function for generating storage keys
+    const generateStorageKey = (text: string): string => {
+        let hash = 0;
+        for (let i = 0; i < text.length; i++) {
+            const char = text.charCodeAt(i);
+            hash = ((hash << 5) - hash) + char;
+            hash = hash & hash; // Convert to 32-bit integer
+        }
+        return `song_${hash}`;
+    }
+
     // Add local storage handling
     useEffect(() => {
         // On mount, try to load saved data
-        const savedData = localStorage.getItem('lyrics_analyzer_data')
-        if (savedData) {
+        const storageKey = generateStorageKey(initialData.transcribed_text);
+        const savedDataStr = localStorage.getItem('lyrics_analyzer_data');
+        const savedDataObj = savedDataStr ? JSON.parse(savedDataStr) : {};
+
+        if (savedDataObj[storageKey]) {
             try {
-                const parsed = JSON.parse(savedData)
-                // Only restore if it's the same song (matching transcribed text)
+                const parsed = savedDataObj[storageKey];
+                // Verify it's the same song (extra safety check)
                 if (parsed.transcribed_text === initialData.transcribed_text) {
-                    console.log('Restored saved progress from local storage')
-                    setData(parsed)
-                } else {
-                    // Clear old data if it's a different song
-                    localStorage.removeItem('lyrics_analyzer_data')
+                    if (window.confirm('Found saved progress for this song. Would you like to restore it?')) {
+                        console.log('Restored saved progress from local storage');
+                        setData(parsed);
+                    } else {
+                        // User declined to restore - remove the saved data
+                        delete savedDataObj[storageKey];
+                        localStorage.setItem('lyrics_analyzer_data', JSON.stringify(savedDataObj));
+                    }
                 }
             } catch (error) {
-                console.error('Failed to parse saved data:', error)
-                localStorage.removeItem('lyrics_analyzer_data')
+                console.error('Failed to parse saved data:', error);
+                // Remove only this song's data
+                delete savedDataObj[storageKey];
+                localStorage.setItem('lyrics_analyzer_data', JSON.stringify(savedDataObj));
             }
         }
-    }, [initialData.transcribed_text])
+    }, [initialData.transcribed_text]);
 
     // Save to local storage whenever data changes
     useEffect(() => {
         if (!isReadOnly) {
-            localStorage.setItem('lyrics_analyzer_data', JSON.stringify(data))
-        }
-    }, [data, isReadOnly])
+            const storageKey = generateStorageKey(initialData.transcribed_text);
+            const savedDataStr = localStorage.getItem('lyrics_analyzer_data');
+            const savedDataObj = savedDataStr ? JSON.parse(savedDataStr) : {};
 
-    // Add keyboard event handlers
+            savedDataObj[storageKey] = data;
+            localStorage.setItem('lyrics_analyzer_data', JSON.stringify(savedDataObj));
+        }
+    }, [data, isReadOnly, initialData.transcribed_text]);
+
+    // Update keyboard event handler
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
-            // Ignore if user is typing in an input or textarea
             if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
                 return
             }
@@ -136,9 +144,9 @@ export default function LyricsAnalyzer({ data: initialData, onFileLoad, apiClien
             } else if (e.key === 'Meta') {
                 setIsCtrlPressed(true)
             } else if (e.key === ' ' || e.code === 'Space') {
-                e.preventDefault() // Prevent page scroll
-                if ((window as any).toggleAudioPlayback) {
-                    (window as any).toggleAudioPlayback()
+                e.preventDefault()
+                if (window.toggleAudioPlayback) {
+                    window.toggleAudioPlayback()
                 }
             }
         }
@@ -186,63 +194,45 @@ export default function LyricsAnalyzer({ data: initialData, onFileLoad, apiClien
 
     const handleWordClick = useCallback((info: WordClickInfo) => {
         if (effectiveMode === 'edit') {
-            let currentPosition = 0
-            const segmentIndex = data.corrected_segments.findIndex(segment => {
-                if (info.wordIndex >= currentPosition &&
-                    info.wordIndex < currentPosition + segment.words.length) {
-                    return true
-                }
-                currentPosition += segment.words.length
-                return false
-            })
+            const segment = data.corrected_segments.find(segment =>
+                segment.words.some(word => word.id === info.word_id)
+            )
 
-            if (segmentIndex !== -1) {
+            if (segment) {
+                const segmentIndex = data.corrected_segments.indexOf(segment)
                 setEditModalSegment({
-                    segment: data.corrected_segments[segmentIndex],
+                    segment,
                     index: segmentIndex,
                     originalSegment: originalData.corrected_segments[segmentIndex]
                 })
             }
         } else {
-            // Existing word click handling for other modes...
+            // Update flash handling for anchors/gaps
             if (info.type === 'anchor' && info.anchor) {
                 handleFlash('word', {
                     type: 'anchor',
-                    transcriptionIndex: info.anchor.transcription_position,
-                    transcriptionLength: info.anchor.length,
-                    referenceIndices: info.anchor.reference_positions,
-                    referenceLength: info.anchor.length
+                    word_ids: info.anchor.word_ids,
+                    reference_word_ids: info.anchor.reference_word_ids
                 })
             } else if (info.type === 'gap' && info.gap) {
                 handleFlash('word', {
                     type: 'gap',
-                    transcriptionIndex: info.gap.transcription_position,
-                    transcriptionLength: info.gap.length,
-                    referenceIndices: {},
-                    referenceLength: info.gap.length
+                    word_ids: info.gap.word_ids
                 })
             }
         }
     }, [effectiveMode, data.corrected_segments, handleFlash, originalData.corrected_segments])
 
     const handleUpdateSegment = useCallback((updatedSegment: LyricsSegment) => {
-        console.log('LyricsAnalyzer - handleUpdateSegment called:', {
-            editModalSegment,
-            updatedSegment,
-            currentSegmentsCount: data.corrected_segments.length
-        })
-
-        if (!editModalSegment) {
-            console.warn('LyricsAnalyzer - No editModalSegment found')
-            return
-        }
+        if (!editModalSegment) return
 
         const newData = { ...data }
-        console.log('LyricsAnalyzer - Before update:', {
-            segmentIndex: editModalSegment.index,
-            oldText: newData.corrected_segments[editModalSegment.index].text,
-            newText: updatedSegment.text
-        })
+
+        // Ensure new words have IDs
+        updatedSegment.words = updatedSegment.words.map(word => ({
+            ...word,
+            id: word.id || nanoid()
+        }))
 
         newData.corrected_segments[editModalSegment.index] = updatedSegment
 
@@ -251,33 +241,36 @@ export default function LyricsAnalyzer({ data: initialData, onFileLoad, apiClien
             .map(segment => segment.text)
             .join('\n')
 
-        console.log('LyricsAnalyzer - After update:', {
-            segmentsCount: newData.corrected_segments.length,
-            updatedText: newData.corrected_text
-        })
-
         setData(newData)
-        setEditModalSegment(null)  // Close the modal
+        setEditModalSegment(null)
     }, [data, editModalSegment])
 
     const handleDeleteSegment = useCallback((segmentIndex: number) => {
-        console.log('LyricsAnalyzer - handleDeleteSegment called:', {
-            segmentIndex,
-            currentSegmentsCount: data.corrected_segments.length
-        })
-
         const newData = { ...data }
+        const deletedSegment = newData.corrected_segments[segmentIndex]
+
+        // Remove segment
         newData.corrected_segments = newData.corrected_segments.filter((_, index) => index !== segmentIndex)
+
+        // Update anchor and gap sequences to remove references to deleted words
+        newData.anchor_sequences = newData.anchor_sequences.map(anchor => ({
+            ...anchor,
+            word_ids: anchor.word_ids.filter(id =>
+                !deletedSegment.words.some(word => word.id === id)
+            )
+        }))
+
+        newData.gap_sequences = newData.gap_sequences.map(gap => ({
+            ...gap,
+            word_ids: gap.word_ids.filter(id =>
+                !deletedSegment.words.some(word => word.id === id)
+            )
+        }))
 
         // Update corrected_text
         newData.corrected_text = newData.corrected_segments
             .map(segment => segment.text)
             .join('\n')
-
-        console.log('LyricsAnalyzer - After delete:', {
-            segmentsCount: newData.corrected_segments.length,
-            updatedText: newData.corrected_text
-        })
 
         setData(newData)
     }, [data])
@@ -305,21 +298,27 @@ export default function LyricsAnalyzer({ data: initialData, onFileLoad, apiClien
         }
     }, [apiClient, data])
 
+    // Update play segment handler
     const handlePlaySegment = useCallback((startTime: number) => {
-        // Access the globally exposed seekAndPlay method
-        if ((window as any).seekAndPlayAudio) {
-            (window as any).seekAndPlayAudio(startTime)
+        if (window.seekAndPlayAudio) {
+            window.seekAndPlayAudio(startTime)
         }
     }, [])
 
     const handleResetCorrections = useCallback(() => {
         if (window.confirm('Are you sure you want to reset all corrections? This cannot be undone.')) {
-            // Clear local storage
-            localStorage.removeItem('lyrics_analyzer_data')
+            const storageKey = generateStorageKey(initialData.transcribed_text);
+            const savedDataStr = localStorage.getItem('lyrics_analyzer_data');
+            const savedDataObj = savedDataStr ? JSON.parse(savedDataStr) : {};
+
+            // Remove only this song's data
+            delete savedDataObj[storageKey];
+            localStorage.setItem('lyrics_analyzer_data', JSON.stringify(savedDataObj));
+
             // Reset data to initial state
-            setData(JSON.parse(JSON.stringify(initialData)))
+            setData(JSON.parse(JSON.stringify(initialData)));
         }
-    }, [initialData])
+    }, [initialData]);
 
     return (
         <Box>
@@ -358,27 +357,31 @@ export default function LyricsAnalyzer({ data: initialData, onFileLoad, apiClien
                 <CorrectionMetrics
                     // Anchor metrics
                     anchorCount={data.metadata.anchor_sequences_count}
-                    multiSourceAnchors={data.anchor_sequences.filter(anchor =>
-                        Object.keys(anchor.reference_positions).length > 1).length}
-                    anchorWordCount={data.anchor_sequences.reduce((sum, anchor) => sum + anchor.length, 0)}
+                    multiSourceAnchors={data.anchor_sequences?.filter(anchor =>
+                        // Add null checks
+                        anchor?.reference_word_ids &&
+                        Object.keys(anchor.reference_word_ids || {}).length > 1
+                    ).length ?? 0}
+                    anchorWordCount={data.anchor_sequences?.reduce((sum, anchor) =>
+                        sum + (anchor.length || 0), 0) ?? 0}
                     // Gap metrics
-                    correctedGapCount={data.gap_sequences.filter(gap =>
-                        gap.corrections?.length > 0).length}
-                    uncorrectedGapCount={data.gap_sequences.filter(gap =>
-                        !gap.corrections?.length).length}
+                    correctedGapCount={data.gap_sequences?.filter(gap =>
+                        gap.corrections?.length > 0).length ?? 0}
+                    uncorrectedGapCount={data.gap_sequences?.filter(gap =>
+                        !gap.corrections?.length).length ?? 0}
                     uncorrectedGaps={data.gap_sequences
-                        .filter(gap => !gap.corrections?.length)
+                        ?.filter(gap => !gap.corrections?.length)
                         .map(gap => ({
-                            position: gap.transcription_position,
+                            position: gap.word_ids[0],
                             length: gap.length
-                        }))}
+                        })) ?? []}
                     // Correction details
-                    replacedCount={data.gap_sequences.reduce((count, gap) =>
-                        count + (gap.corrections?.filter(c => !c.is_deletion && !c.split_total).length ?? 0), 0)}
-                    addedCount={data.gap_sequences.reduce((count, gap) =>
-                        count + (gap.corrections?.filter(c => c.split_total).length ?? 0), 0)}
-                    deletedCount={data.gap_sequences.reduce((count, gap) =>
-                        count + (gap.corrections?.filter(c => c.is_deletion).length ?? 0), 0)}
+                    replacedCount={data.gap_sequences?.reduce((count, gap) =>
+                        count + (gap.corrections?.filter(c => !c.is_deletion && !c.split_total).length ?? 0), 0) ?? 0}
+                    addedCount={data.gap_sequences?.reduce((count, gap) =>
+                        count + (gap.corrections?.filter(c => c.split_total).length ?? 0), 0) ?? 0}
+                    deletedCount={data.gap_sequences?.reduce((count, gap) =>
+                        count + (gap.corrections?.filter(c => c.is_deletion).length ?? 0), 0) ?? 0}
                     onMetricClick={{
                         anchor: () => handleFlash('anchor'),
                         corrected: () => handleFlash('corrected'),

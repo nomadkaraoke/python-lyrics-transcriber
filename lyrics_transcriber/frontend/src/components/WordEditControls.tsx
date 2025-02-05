@@ -5,7 +5,7 @@ import { ModalContent } from './LyricsAnalyzer'
 
 interface WordEditControlsProps {
     content: ModalContent
-    onUpdateCorrection?: (position: number, updatedWords: string[]) => void
+    onUpdateCorrection?: (wordId: string, updatedWords: string[]) => void
     onClose: () => void
 }
 
@@ -47,13 +47,13 @@ export default function WordEditControls({ content, onUpdateCorrection, onClose 
 
     const handleDelete = () => {
         if (!onUpdateCorrection) return
-        onUpdateCorrection(content.data.position, [])
+        onUpdateCorrection(content.data.wordId, [])
         onClose()
     }
 
     const handleSaveEdit = () => {
         if (onUpdateCorrection) {
-            onUpdateCorrection(content.data.position, [editedWord])
+            onUpdateCorrection(content.data.wordId, [editedWord])
         }
         onClose()
     }

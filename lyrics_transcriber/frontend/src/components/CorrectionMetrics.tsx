@@ -73,7 +73,7 @@ interface CorrectionMetricsProps {
     correctedGapCount?: number
     uncorrectedGapCount?: number
     uncorrectedGaps?: Array<{
-        position: number
+        position: string
         length: number
     }>
     // Correction details
@@ -106,7 +106,6 @@ export default function CorrectionMetrics({
     const anchorPercentage = totalWords > 0 ? Math.round((anchorWordCount / totalWords) * 100) : 0
     const uncorrectedWordCount = uncorrectedGaps?.reduce((sum, gap) => sum + gap.length, 0) ?? 0
     const uncorrectedPercentage = totalWords > 0 ? Math.round((uncorrectedWordCount / totalWords) * 100) : 0
-    // For corrected percentage, we'll use the total affected words
     const correctedWordCount = replacedCount + addedCount
     const correctedPercentage = totalWords > 0 ?
         Math.round((correctedWordCount / totalWords) * 100) : 0

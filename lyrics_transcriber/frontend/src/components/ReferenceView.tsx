@@ -8,7 +8,6 @@ import { HighlightedText } from './shared/components/HighlightedText'
 export default function ReferenceView({
     referenceTexts,
     anchors,
-    gaps,
     onElementClick,
     onWordClick,
     flashingType,
@@ -19,7 +18,7 @@ export default function ReferenceView({
     mode
 }: ReferenceViewProps) {
     // Get available sources from referenceTexts object
-    const availableSources = useMemo(() => 
+    const availableSources = useMemo(() =>
         Object.keys(referenceTexts) as Array<string>,
         [referenceTexts]
     )
@@ -49,7 +48,6 @@ export default function ReferenceView({
                 <HighlightedText
                     text={referenceTexts[currentSource]}
                     anchors={anchors}
-                    gaps={gaps}
                     onElementClick={onElementClick}
                     onWordClick={onWordClick}
                     flashingType={flashingType}

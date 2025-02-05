@@ -32,7 +32,7 @@ export default function DetailsModal({
         return ''
     }
 
-    const isCorrected = content.type === 'gap' && content.data.corrections.length > 0
+    const isCorrected = content.type === 'gap' && content.data.corrections?.length > 0
 
     const renderContent = () => {
         switch (content.type) {
@@ -47,27 +47,31 @@ export default function DetailsModal({
                             title="Full Text"
                             value={`"${content.data.text}"`}
                         />
-                        <GridItem title="Position" value={content.data.position} />
+                        <GridItem title="Word ID" value={content.data.wordId} />
                         <GridItem title="Length" value={`${content.data.length} words`} />
                         <GridItem
-                            title="Reference Positions"
-                            value={Object.entries(content.data.reference_positions).map(([source, pos]) => (
-                                `${source}: ${pos}`
-                            )).join(', ')}
-                        />
-                        <GridItem title="Confidence" value={content.data.confidence.toFixed(3)} />
-                        <GridItem
-                            title="Phrase Score Details"
-                            value={
-                                <>
-                                    <Typography>Type: {content.data.phrase_score.phrase_type}</Typography>
-                                    <Typography>Natural Break: {content.data.phrase_score.natural_break_score.toFixed(3)}</Typography>
-                                    <Typography>Length: {content.data.phrase_score.length_score.toFixed(3)}</Typography>
-                                    <Typography>Total: {content.data.phrase_score.total_score.toFixed(3)}</Typography>
-                                </>
+                            title="Reference Word IDs"
+                            value={content.data.reference_word_ids ?
+                                Object.entries(content.data.reference_word_ids).map(([source, ids]) => (
+                                    `${source}: ${ids?.join(', ') ?? 'No IDs'}`
+                                )).join('\n') : 'No reference word IDs'
                             }
                         />
-                        <GridItem title="Total Score" value={content.data.total_score.toFixed(3)} />
+                        <GridItem title="Confidence" value={content.data.confidence?.toFixed(3) ?? 'N/A'} />
+                        {content.data.phrase_score && (
+                            <GridItem
+                                title="Phrase Score Details"
+                                value={
+                                    <>
+                                        <Typography>Type: {content.data.phrase_score.phrase_type}</Typography>
+                                        <Typography>Natural Break: {content.data.phrase_score.natural_break_score?.toFixed(3) ?? 'N/A'}</Typography>
+                                        <Typography>Length: {content.data.phrase_score.length_score?.toFixed(3) ?? 'N/A'}</Typography>
+                                        <Typography>Total: {content.data.phrase_score.total_score?.toFixed(3) ?? 'N/A'}</Typography>
+                                    </>
+                                }
+                            />
+                        )}
+                        <GridItem title="Total Score" value={content.data.total_score?.toFixed(3) ?? 'N/A'} />
                     </Grid>
                 )
 
@@ -80,16 +84,16 @@ export default function DetailsModal({
                         />
                         <GridItem
                             title="Current Text"
-                            value={`"${content.data.words.map(word => {
-                                const wordCorrection = content.data.corrections.find(
+                            value={`"${content.data.words?.map(word => {
+                                const wordCorrection = content.data.corrections?.find(
                                     c => c.original_word === word
                                 )
                                 return wordCorrection ? wordCorrection.corrected_word : word
-                            }).join(' ')}"`}
+                            }).join(' ') ?? content.data.word}"`}
                         />
                         <GridItem
-                            title="Position"
-                            value={content.data.position}
+                            title="Word ID"
+                            value={content.data.wordId}
                         />
                         <GridItem
                             title="Length"
@@ -126,7 +130,7 @@ export default function DetailsModal({
                                 }
                             />
                         )}
-                        {isCorrected && (
+                        {isCorrected && content.data.corrections && (
                             <GridItem
                                 title="Correction Details"
                                 value={
@@ -136,20 +140,21 @@ export default function DetailsModal({
                                                 <Typography variant="subtitle2" fontWeight="bold">Correction {index + 1}</Typography>
                                                 <Typography>Original: <strong>"{correction.original_word}"</strong></Typography>
                                                 <Typography>Corrected: <strong>"{correction.corrected_word}"</strong></Typography>
-                                                <Typography>Confidence: {correction.confidence.toFixed(3)}</Typography>
+                                                <Typography>Word ID: {correction.word_id}</Typography>
+                                                <Typography>Confidence: {correction.confidence?.toFixed(3) ?? 'N/A'}</Typography>
                                                 <Typography>Source: {correction.source}</Typography>
                                                 <Typography>Reason: {correction.reason}</Typography>
                                                 {correction.is_deletion && <Typography>Is Deletion: Yes</Typography>}
                                                 {correction.split_total && (
                                                     <Typography>Split: {correction.split_index} of {correction.split_total}</Typography>
                                                 )}
-                                                {Object.entries(correction.alternatives).length > 0 && (
+                                                {correction.alternatives && Object.entries(correction.alternatives).length > 0 && (
                                                     <>
                                                         <Typography>Alternatives:</Typography>
                                                         <Box sx={{ pl: 2 }}>
                                                             {Object.entries(correction.alternatives).map(([word, score]) => (
                                                                 <Typography key={word}>
-                                                                    "{word}": {score.toFixed(3)}
+                                                                    "{word}": {score?.toFixed(3) ?? 'N/A'}
                                                                 </Typography>
                                                             ))}
                                                         </Box>

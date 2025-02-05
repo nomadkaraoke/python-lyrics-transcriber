@@ -6,7 +6,7 @@ export type FlashType = 'anchor' | 'corrected' | 'uncorrected' | 'word' | null
 
 // Common word click handling
 export interface WordClickInfo {
-    wordIndex: number
+    word_id: string
     type: 'anchor' | 'gap' | 'other'
     anchor?: AnchorSequence
     gap?: GapSequence
@@ -29,13 +29,13 @@ export interface BaseWordPosition {
 
 // Transcription-specific word position with timing info
 export interface TranscriptionWordPosition extends BaseWordPosition {
-    position: number
-    isInRange: boolean
     word: {
+        id: string
         text: string
         start_time?: number
         end_time?: number
     }
+    isInRange: boolean
 }
 
 // Reference-specific word position with simple string word

@@ -3,6 +3,16 @@ import { AnchorSequence, GapSequence, InteractionMode } from '../../../types'
 import { ModalContent } from '../../LyricsAnalyzer'
 import { WordClickInfo } from '../types'
 
+// Define debug info type
+interface WordDebugInfo {
+    wordSplitInfo?: {
+        text: string
+        startIndex: number
+        endIndex: number
+    }
+    nearbyAnchors?: AnchorSequence[]
+}
+
 export interface UseWordClickProps {
     mode: InteractionMode
     onElementClick: (content: ModalContent) => void
@@ -20,35 +30,34 @@ export function useWordClick({
 }: UseWordClickProps) {
     const handleWordClick = useCallback((
         word: string,
-        position: number,
+        wordId: string,
         anchor?: AnchorSequence,
         gap?: GapSequence,
-        debugInfo?: any
+        debugInfo?: WordDebugInfo
     ) => {
         console.log(JSON.stringify({
             debug: {
                 clickedWord: word,
-                position,
+                wordId,
                 isReference,
                 currentSource,
                 wordInfo: debugInfo?.wordSplitInfo,
                 nearbyAnchors: debugInfo?.nearbyAnchors,
                 anchorInfo: anchor && {
-                    transcriptionPos: anchor.transcription_position,
+                    wordIds: anchor.word_ids,
                     length: anchor.length,
                     words: anchor.words,
-                    refPositions: anchor.reference_positions
+                    referenceWordIds: anchor.reference_word_ids
                 },
                 gapInfo: gap && {
-                    transcriptionPos: gap.transcription_position,
+                    wordIds: gap.word_ids,
                     length: gap.length,
                     words: gap.words,
                     corrections: gap.corrections.map(c => ({
                         original_word: c.original_word,
                         corrected_word: c.corrected_word,
-                        original_position: c.original_position,
+                        word_id: c.word_id,
                         length: c.length,
-                        refPositions: c.reference_positions,
                         is_deletion: c.is_deletion,
                         split_index: c.split_index,
                         split_total: c.split_total
@@ -56,47 +65,34 @@ export function useWordClick({
                 },
                 belongsToAnchor: anchor && (
                     isReference
-                        ? position >= (anchor.reference_positions[currentSource!] ?? -1) &&
-                        position < ((anchor.reference_positions[currentSource!] ?? -1) + anchor.length)
-                        : position >= anchor.transcription_position &&
-                        position < (anchor.transcription_position + anchor.length)
+                        ? anchor.reference_word_ids[currentSource!]?.includes(wordId)
+                        : anchor.word_ids.includes(wordId)
                 ),
                 belongsToGap: gap && (
                     isReference
-                        ? gap.corrections[0]?.reference_positions?.[currentSource!] !== undefined &&
-                        position >= (gap.corrections[0].reference_positions![currentSource!]) &&
-                        position < (gap.corrections[0].reference_positions![currentSource!] + gap.corrections[0].length)
-                        : position >= gap.transcription_position &&
-                        position < (gap.transcription_position + gap.length)
+                        ? gap.corrections.some(c => c.word_id === wordId)
+                        : gap.word_ids.includes(wordId)
                 ),
-                wordPositionInGap: gap && gap.words.indexOf(word),
-                absolutePosition: gap && (gap.transcription_position + gap.words.indexOf(word)),
-                hasMatchingCorrection: gap && gap.corrections.some(c => 
-                    c.original_position === (gap.transcription_position + gap.words.indexOf(word))
-                )
+                wordIndexInGap: gap && gap.words.indexOf(word),
+                hasMatchingCorrection: gap && gap.corrections.some(c => c.word_id === wordId)
             }
         }, null, 2))
 
         const belongsToAnchor = anchor && (
             isReference
-                ? position >= (anchor.reference_positions[currentSource!] ?? -1) &&
-                position < ((anchor.reference_positions[currentSource!] ?? -1) + anchor.length)
-                : position >= anchor.transcription_position &&
-                position < (anchor.transcription_position + anchor.length)
+                ? anchor.reference_word_ids[currentSource!]?.includes(wordId)
+                : anchor.word_ids.includes(wordId)
         )
 
         const belongsToGap = gap && (
             isReference
-                ? gap.corrections[0]?.reference_positions?.[currentSource!] !== undefined &&
-                position >= (gap.corrections[0].reference_positions![currentSource!]) &&
-                position < (gap.corrections[0].reference_positions![currentSource!] + gap.corrections[0].length)
-                : position >= gap.transcription_position &&
-                position < (gap.transcription_position + gap.length)
+                ? gap.corrections.some(c => c.word_id === wordId)
+                : gap.word_ids.includes(wordId)
         )
 
         if (mode === 'highlight' || mode === 'edit') {
             onWordClick?.({
-                wordIndex: position,
+                word_id: wordId,
                 type: belongsToAnchor ? 'anchor' : belongsToGap ? 'gap' : 'other',
                 anchor: belongsToAnchor ? anchor : undefined,
                 gap: belongsToGap ? gap : undefined
@@ -107,7 +103,7 @@ export function useWordClick({
                     type: 'anchor',
                     data: {
                         ...anchor,
-                        position,
+                        wordId,
                         word
                     }
                 })
@@ -116,16 +112,17 @@ export function useWordClick({
                     type: 'gap',
                     data: {
                         ...gap,
-                        position,
+                        wordId,
                         word
                     }
                 })
             } else if (!isReference) {
                 // Create synthetic gap for non-sequence words (transcription view only)
                 const syntheticGap: GapSequence = {
+                    id: `synthetic-${wordId}`,
                     text: word,
                     words: [word],
-                    transcription_position: position,
+                    word_ids: [wordId],
                     length: 1,
                     corrections: [],
                     preceding_anchor: null,
@@ -136,7 +133,7 @@ export function useWordClick({
                     type: 'gap',
                     data: {
                         ...syntheticGap,
-                        position: 0,
+                        wordId,
                         word
                     }
                 })

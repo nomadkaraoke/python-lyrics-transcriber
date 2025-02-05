@@ -26,8 +26,8 @@ interface DiffResult {
     type: 'added' | 'removed' | 'modified'
     path: string
     segmentIndex?: number
-    oldValue?: any
-    newValue?: any
+    oldValue?: string
+    newValue?: string
     wordChanges?: DiffResult[]
 }
 
@@ -58,13 +58,13 @@ export default function ReviewChangesModal({
 
             const wordChanges: DiffResult[] = []
 
-            // Compare word-level changes
-            segment.words.forEach((word, wordIndex) => {
-                const updatedWord = updatedSegment.words[wordIndex]
+            // Compare word-level changes using word IDs
+            segment.words.forEach((word) => {
+                const updatedWord = updatedSegment.words.find(w => w.id === word.id)
                 if (!updatedWord) {
                     wordChanges.push({
                         type: 'removed',
-                        path: `Word ${wordIndex}`,
+                        path: `Word ${word.id}`,
                         oldValue: `"${word.text}" (${word.start_time.toFixed(4)} - ${word.end_time.toFixed(4)})`
                     })
                     return
@@ -75,7 +75,7 @@ export default function ReviewChangesModal({
                     Math.abs(word.end_time - updatedWord.end_time) > 0.0001) {
                     wordChanges.push({
                         type: 'modified',
-                        path: `Word ${wordIndex}`,
+                        path: `Word ${word.id}`,
                         oldValue: `"${word.text}" (${word.start_time.toFixed(4)} - ${word.end_time.toFixed(4)})`,
                         newValue: `"${updatedWord.text}" (${updatedWord.start_time.toFixed(4)} - ${updatedWord.end_time.toFixed(4)})`
                     })
@@ -83,16 +83,15 @@ export default function ReviewChangesModal({
             })
 
             // Check for added words
-            if (updatedSegment.words.length > segment.words.length) {
-                for (let i = segment.words.length; i < updatedSegment.words.length; i++) {
-                    const word = updatedSegment.words[i]
+            updatedSegment.words.forEach((word) => {
+                if (!segment.words.find(w => w.id === word.id)) {
                     wordChanges.push({
                         type: 'added',
-                        path: `Word ${i}`,
+                        path: `Word ${word.id}`,
                         newValue: `"${word.text}" (${word.start_time.toFixed(4)} - ${word.end_time.toFixed(4)})`
                     })
                 }
-            }
+            })
 
             if (segment.text !== updatedSegment.text ||
                 segment.start_time !== updatedSegment.start_time ||
@@ -108,6 +107,19 @@ export default function ReviewChangesModal({
                 })
             }
         })
+
+        // Check for added segments
+        if (updatedData.corrected_segments.length > originalData.corrected_segments.length) {
+            for (let i = originalData.corrected_segments.length; i < updatedData.corrected_segments.length; i++) {
+                const segment = updatedData.corrected_segments[i]
+                diffs.push({
+                    type: 'added',
+                    path: `Segment ${i}`,
+                    segmentIndex: i,
+                    newValue: `"${segment.text}" (${segment.start_time.toFixed(4)} - ${segment.end_time.toFixed(4)})`
+                })
+            }
+        }
 
         return diffs
     }, [originalData, updatedData])

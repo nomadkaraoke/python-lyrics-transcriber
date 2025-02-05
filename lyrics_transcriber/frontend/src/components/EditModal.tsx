@@ -23,6 +23,7 @@ import PlayCircleOutlineIcon from '@mui/icons-material/PlayCircleOutline'
 import { LyricsSegment, Word } from '../types'
 import { useState, useEffect } from 'react'
 import TimelineEditor from './TimelineEditor'
+import { nanoid } from 'nanoid'
 
 interface EditModalProps {
     open: boolean
@@ -91,6 +92,7 @@ export default function EditModal({
             // Add at end
             const lastWord = newWords[newWords.length - 1]
             newWord = {
+                id: nanoid(),
                 text: '',
                 start_time: lastWord.end_time,
                 end_time: lastWord.end_time + 0.5,
@@ -106,6 +108,7 @@ export default function EditModal({
                 (nextWord ? nextWord.start_time - 0.5 : 0)
 
             newWord = {
+                id: nanoid(),
                 text: '',
                 start_time: midTime - 0.25,
                 end_time: midTime + 0.25,
@@ -133,12 +136,14 @@ export default function EditModal({
         const newWords = [...editedSegment.words]
         newWords.splice(index, 1,
             {
+                id: nanoid(),
                 text: words[0],
                 start_time: word.start_time,
                 end_time: midTime,
                 confidence: 1.0
             },
             {
+                id: nanoid(),
                 text: words[1],
                 start_time: midTime,
                 end_time: word.end_time,
@@ -157,6 +162,7 @@ export default function EditModal({
         const newWords = [...editedSegment.words]
 
         newWords.splice(index, 2, {
+            id: nanoid(),
             text: `${word1.text} ${word2.text}`.trim(),
             start_time: word1.start_time,
             end_time: word2.end_time,
@@ -208,17 +214,19 @@ export default function EditModal({
         let updatedWords: Word[]
 
         if (newWords.length === editedSegment.words.length) {
-            // If word count matches, keep original timestamps
+            // If word count matches, keep original timestamps and IDs
             updatedWords = editedSegment.words.map((word, index) => ({
+                id: word.id,  // Keep original ID
                 text: newWords[index],
                 start_time: word.start_time,
                 end_time: word.end_time,
                 confidence: 1.0
             }))
         } else {
-            // If word count differs, distribute time evenly
+            // If word count differs, distribute time evenly and generate new IDs
             const avgWordDuration = segmentDuration / newWords.length
             updatedWords = newWords.map((text, index) => ({
+                id: nanoid(),  // Generate new ID
                 text,
                 start_time: editedSegment.start_time + (index * avgWordDuration),
                 end_time: editedSegment.start_time + ((index + 1) * avgWordDuration),

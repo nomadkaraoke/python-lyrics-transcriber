@@ -48,9 +48,6 @@ export default function TranscriptionView({
 }: TranscriptionViewProps) {
     const [selectedSegmentIndex, setSelectedSegmentIndex] = useState<number | null>(null)
 
-    // Keep track of global word position
-    let globalWordPosition = 0
-
     return (
         <Paper sx={{ p: 2 }}>
             <Typography variant="h6" gutterBottom>
@@ -59,35 +56,32 @@ export default function TranscriptionView({
             <Box sx={{ display: 'flex', flexDirection: 'column' }}>
                 {data.corrected_segments.map((segment, segmentIndex) => {
                     // Convert segment words to TranscriptionWordPosition format
-                    const segmentWords: TranscriptionWordPosition[] = segment.words.map((word, idx) => {
-                        const position = globalWordPosition + idx
+                    const segmentWords: TranscriptionWordPosition[] = segment.words.map(word => {
+                        // Find if this word belongs to an anchor sequence
                         const anchor = data.anchor_sequences.find(a =>
-                            position >= a.transcription_position &&
-                            position < a.transcription_position + a.length
+                            a.word_ids.includes(word.id)
                         )
+
+                        // If not in an anchor, check if it belongs to a gap sequence
                         const gap = !anchor ? data.gap_sequences.find(g =>
-                            position >= g.transcription_position &&
-                            position < g.transcription_position + g.length
+                            g.word_ids.includes(word.id)
                         ) : undefined
 
                         return {
                             word: {
+                                id: word.id,
                                 text: word.text,
                                 start_time: word.start_time,
                                 end_time: word.end_time
                             },
-                            position,
                             type: anchor ? 'anchor' : gap ? 'gap' : 'other',
                             sequence: anchor || gap,
                             isInRange: true
                         }
                     })
 
-                    // Update global position counter for next segment
-                    globalWordPosition += segment.words.length
-
                     return (
-                        <Box key={segmentIndex} sx={{ display: 'flex', alignItems: 'flex-start', width: '100%' }}>
+                        <Box key={segment.id} sx={{ display: 'flex', alignItems: 'flex-start', width: '100%' }}>
                             <SegmentControls>
                                 <SegmentIndex
                                     variant="body2"
@@ -109,7 +103,6 @@ export default function TranscriptionView({
                                 <HighlightedText
                                     wordPositions={segmentWords}
                                     anchors={data.anchor_sequences}
-                                    gaps={data.gap_sequences}
                                     onElementClick={onElementClick}
                                     onWordClick={onWordClick}
                                     flashingType={flashingType}
