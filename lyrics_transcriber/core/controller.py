@@ -91,11 +91,11 @@ class LyricsTranscriber:
                 self.output_config.generate_cdg = False
                 self.output_config.render_video = False
 
-        # Basic settings
+        # Basic settings with sanitized filenames
         self.audio_filepath = audio_filepath
         self.artist = artist
         self.title = title
-        self.output_prefix = f"{artist} - {title}" if artist and title else os.path.splitext(os.path.basename(audio_filepath))[0]
+        self.output_prefix = self._create_sanitized_output_prefix(artist, title)
 
         # Add after creating necessary folders
         self.logger.debug(f"Using cache directory: {self.output_config.cache_dir}")
@@ -125,6 +125,26 @@ class LyricsTranscriber:
         self.logger.info(f"  Video rendering: {'enabled' if self.output_config.render_video else 'disabled'}")
         if self.output_config.render_video:
             self.logger.info(f"    Video resolution: {self.output_config.video_resolution}")
+
+    def _sanitize_filename(self, filename: str) -> str:
+        """Replace or remove characters that are unsafe for filenames."""
+        if not filename:
+            return ""
+        # Replace problematic characters with underscores
+        for char in ["\\", "/", ":", "*", "?", '"', "<", ">", "|"]:
+            filename = filename.replace(char, "_")
+        # Remove any trailing spaces
+        filename = filename.rstrip(" ")
+        return filename
+
+    def _create_sanitized_output_prefix(self, artist: Optional[str], title: Optional[str]) -> str:
+        """Create a sanitized output prefix from artist and title."""
+        if artist and title:
+            sanitized_artist = self._sanitize_filename(artist)
+            sanitized_title = self._sanitize_filename(title)
+            return f"{sanitized_artist} - {sanitized_title}"
+        else:
+            return self._sanitize_filename(os.path.splitext(os.path.basename(self.audio_filepath))[0])
 
     def _initialize_transcribers(self) -> Dict[str, BaseTranscriber]:
         """Initialize available transcription services."""

@@ -28,6 +28,28 @@ class CDGGenerator:
         self.logger = logger or logging.getLogger(__name__)
         self.cdg_visible_width = 280
 
+    def _sanitize_filename(self, filename: str) -> str:
+        """Replace or remove characters that are unsafe for filenames."""
+        if not filename:
+            return ""
+        # Replace problematic characters with underscores
+        for char in ["\\", "/", ":", "*", "?", '"', "<", ">", "|"]:
+            filename = filename.replace(char, "_")
+        # Remove any trailing spaces
+        filename = filename.rstrip(" ")
+        return filename
+
+    def _get_safe_filename(self, artist: str, title: str, suffix: str = "", ext: str = "") -> str:
+        """Create a safe filename from artist and title."""
+        safe_artist = self._sanitize_filename(artist)
+        safe_title = self._sanitize_filename(title)
+        base = f"{safe_artist} - {safe_title}"
+        if suffix:
+            base += f" ({suffix})"
+        if ext:
+            base += f".{ext}"
+        return base
+
     def generate_cdg(
         self,
         segments: List[LyricsSegment],
@@ -103,7 +125,8 @@ class CDGGenerator:
         cdg_styles: dict,
     ) -> str:
         """Create TOML configuration file for CDG generation."""
-        toml_file = os.path.join(self.output_dir, f"{artist} - {title} (Karaoke CDG).toml")
+        safe_filename = self._get_safe_filename(artist, title, "Karaoke CDG", "toml")
+        toml_file = os.path.join(self.output_dir, safe_filename)
         self.logger.debug(f"Generating TOML file: {toml_file}")
 
         self.generate_toml(
@@ -169,8 +192,8 @@ class CDGGenerator:
 
     def _find_cdg_zip(self, artist: str, title: str) -> str:
         """Find the generated CDG ZIP file."""
-        expected_zip = f"{artist} - {title} (Karaoke CDG).zip"
-        output_zip = os.path.join(self.output_dir, expected_zip)
+        safe_filename = self._get_safe_filename(artist, title, "Karaoke CDG", "zip")
+        output_zip = os.path.join(self.output_dir, safe_filename)
 
         self.logger.info(f"Looking for CDG ZIP file in output directory: {output_zip}")
 
@@ -191,11 +214,13 @@ class CDGGenerator:
 
     def _get_cdg_path(self, artist: str, title: str) -> str:
         """Get the path to the CDG file."""
-        return os.path.join(self.output_dir, f"{artist} - {title} (Karaoke CDG).cdg")
+        safe_filename = self._get_safe_filename(artist, title, "Karaoke CDG", "cdg")
+        return os.path.join(self.output_dir, safe_filename)
 
     def _get_mp3_path(self, artist: str, title: str) -> str:
         """Get the path to the MP3 file."""
-        return os.path.join(self.output_dir, f"{artist} - {title} (Karaoke CDG).mp3")
+        safe_filename = self._get_safe_filename(artist, title, "Karaoke CDG", "mp3")
+        return os.path.join(self.output_dir, safe_filename)
 
     def _verify_output_files(self, cdg_file: str, mp3_file: str) -> None:
         """Verify that the required output files exist."""
@@ -349,11 +374,12 @@ class CDGGenerator:
         cdg_styles: dict,
     ) -> dict:
         """Create TOML data structure."""
+        safe_output_name = self._get_safe_filename(artist, title, "Karaoke CDG")
         return {
             "title": title,
             "artist": artist,
             "file": audio_file,
-            "outname": output_name,
+            "outname": safe_output_name,
             "clear_mode": cdg_styles["clear_mode"],
             "sync_offset": cdg_styles["sync_offset"],
             "background": cdg_styles["background_color"],
