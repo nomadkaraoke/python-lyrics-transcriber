@@ -80,8 +80,19 @@ class ExtendAnchorHandler(GapCorrectionHandler):
                 confidence = len(matching_sources) / len(gap.reference_words)
                 sources = ", ".join(matching_sources)
 
-                # Calculate reference positions for matching sources
-                reference_positions = WordOperations.calculate_reference_positions(gap, matching_sources)
+                # Get base reference positions
+                base_reference_positions = WordOperations.calculate_reference_positions(gap, matching_sources)
+
+                # Adjust reference positions based on the word's position in the reference text
+                reference_positions = {}
+                for source in matching_sources:
+                    if source in base_reference_positions:
+                        # Find this word's position in the reference text
+                        ref_words = gap.reference_words[source]
+                        for ref_idx, ref_word in enumerate(ref_words):
+                            if ref_word.lower() == word.lower():
+                                reference_positions[source] = base_reference_positions[source] + ref_idx
+                                break
 
                 corrections.append(
                     WordOperations.create_word_replacement_correction(

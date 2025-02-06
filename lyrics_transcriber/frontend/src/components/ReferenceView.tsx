@@ -4,6 +4,7 @@ import { ReferenceViewProps } from './shared/types'
 import { calculateReferenceLinePositions } from './shared/utils/referenceLineCalculator'
 import { SourceSelector } from './shared/components/SourceSelector'
 import { HighlightedText } from './shared/components/HighlightedText'
+import { WordCorrection } from '@/types'
 
 export default function ReferenceView({
     referenceTexts,
@@ -15,7 +16,8 @@ export default function ReferenceView({
     currentSource,
     onSourceChange,
     highlightInfo,
-    mode
+    mode,
+    gaps
 }: ReferenceViewProps) {
     // Get available sources from referenceTexts object
     const availableSources = useMemo(() =>
@@ -31,6 +33,42 @@ export default function ReferenceView({
         ),
         [corrected_segments, anchors, currentSource]
     )
+
+    // Create a mapping of reference words to their corrections
+    const referenceCorrections = useMemo(() => {
+        const corrections = new Map<string, string>();
+
+        console.log('Building referenceCorrections map:', {
+            gapsCount: gaps.length,
+            currentSource,
+        });
+
+        gaps.forEach(gap => {
+            gap.corrections.forEach((correction: WordCorrection) => {
+                // Get the reference position for this correction
+                const referencePosition = correction.reference_positions?.[currentSource];
+
+                if (typeof referencePosition === 'number') {
+                    const wordId = `${currentSource}-word-${referencePosition}`;
+                    corrections.set(wordId, correction.corrected_word);
+
+                    console.log('Adding correction mapping:', {
+                        wordId,
+                        correctedWord: correction.corrected_word,
+                        referencePosition,
+                        correction
+                    });
+                }
+            });
+        });
+
+        console.log('Final referenceCorrections map:', {
+            size: corrections.size,
+            entries: Array.from(corrections.entries())
+        });
+
+        return corrections;
+    }, [gaps, currentSource]);
 
     return (
         <Paper sx={{ p: 2 }}>
@@ -56,6 +94,8 @@ export default function ReferenceView({
                     isReference={true}
                     currentSource={currentSource}
                     linePositions={linePositions}
+                    referenceCorrections={referenceCorrections}
+                    gaps={gaps}
                 />
             </Box>
         </Paper>

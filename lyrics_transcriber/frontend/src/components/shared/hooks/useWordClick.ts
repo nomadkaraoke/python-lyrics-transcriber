@@ -19,6 +19,7 @@ export interface UseWordClickProps {
     onWordClick?: (info: WordClickInfo) => void
     isReference?: boolean
     currentSource?: string
+    gaps?: GapSequence[]
 }
 
 export function useWordClick({
@@ -26,7 +27,8 @@ export function useWordClick({
     onElementClick,
     onWordClick,
     isReference,
-    currentSource
+    currentSource,
+    gaps = []
 }: UseWordClickProps) {
     const handleWordClick = useCallback((
         word: string,
@@ -47,21 +49,20 @@ export function useWordClick({
                     wordIds: anchor.word_ids,
                     length: anchor.length,
                     words: anchor.words,
-                    referenceWordIds: anchor.reference_word_ids
+                    referenceWordIds: anchor.reference_word_ids,
+                    matchesWordId: isReference
+                        ? anchor.reference_word_ids[currentSource!]?.includes(wordId)
+                        : anchor.word_ids.includes(wordId)
                 },
                 gapInfo: gap && {
                     wordIds: gap.word_ids,
                     length: gap.length,
                     words: gap.words,
-                    corrections: gap.corrections.map(c => ({
-                        original_word: c.original_word,
-                        corrected_word: c.corrected_word,
-                        word_id: c.word_id,
-                        length: c.length,
-                        is_deletion: c.is_deletion,
-                        split_index: c.split_index,
-                        split_total: c.split_total
-                    }))
+                    referenceWords: gap.reference_words,
+                    corrections: gap.corrections,
+                    matchesWordId: isReference
+                        ? gap.reference_words[currentSource!]?.includes(wordId)
+                        : gap.word_ids.includes(wordId)
                 },
                 belongsToAnchor: anchor && (
                     isReference
@@ -78,6 +79,28 @@ export function useWordClick({
             }
         }, null, 2))
 
+        // For reference view clicks, find the corresponding gap
+        if (isReference && currentSource) {
+            // Extract position from wordId (e.g., "genius-word-3" -> 3)
+            const position = parseInt(wordId.split('-').pop() || '', 10);
+
+            // Find gap that has a correction matching this reference position
+            const matchingGap = gaps?.find(g =>
+                g.corrections.some(c => {
+                    const refPosition = c.reference_positions?.[currentSource];
+                    return typeof refPosition === 'number' && refPosition === position;
+                })
+            );
+
+            if (matchingGap) {
+                console.log('Found matching gap for reference click:', {
+                    position,
+                    gap: matchingGap
+                });
+                gap = matchingGap;
+            }
+        }
+
         const belongsToAnchor = anchor && (
             isReference
                 ? anchor.reference_word_ids[currentSource!]?.includes(wordId)
@@ -86,17 +109,58 @@ export function useWordClick({
 
         const belongsToGap = gap && (
             isReference
-                ? gap.corrections.some(c => c.word_id === wordId)
+                ? gap.corrections.some(c => {
+                    const refPosition = c.reference_positions?.[currentSource!];
+                    const clickedPosition = parseInt(wordId.split('-').pop() || '', 10);
+                    return typeof refPosition === 'number' && refPosition === clickedPosition;
+                })
                 : gap.word_ids.includes(wordId)
         )
 
         if (mode === 'highlight' || mode === 'edit') {
-            onWordClick?.({
-                word_id: wordId,
-                type: belongsToAnchor ? 'anchor' : belongsToGap ? 'gap' : 'other',
-                anchor: belongsToAnchor ? anchor : undefined,
-                gap: belongsToGap ? gap : undefined
-            })
+            if (belongsToAnchor && anchor) {
+                onWordClick?.({
+                    word_id: wordId,
+                    type: 'anchor',
+                    anchor,
+                    gap: undefined
+                })
+            } else if (belongsToGap && gap) {
+                // Create highlight info that includes both transcription and reference IDs
+                const referenceWords: Record<string, string[]> = {};
+
+                // For each correction in the gap, add its reference positions
+                gap.corrections.forEach(correction => {
+                    Object.entries(correction.reference_positions || {}).forEach(([source, position]) => {
+                        if (typeof position === 'number') {
+                            const refId = `${source}-word-${position}`;
+                            if (!referenceWords[source]) {
+                                referenceWords[source] = [];
+                            }
+                            if (!referenceWords[source].includes(refId)) {
+                                referenceWords[source].push(refId);
+                            }
+                        }
+                    });
+                });
+
+                onWordClick?.({
+                    word_id: wordId,
+                    type: 'gap',
+                    anchor: undefined,
+                    gap: {
+                        ...gap,
+                        reference_words: referenceWords // Use reference_words instead of reference_word_ids
+                    }
+                })
+            } else {
+                onWordClick?.({
+                    word_id: wordId,
+                    type: 'other',
+                    anchor: undefined,
+                    gap: undefined
+                })
+            }
         } else if (mode === 'details') {
             if (belongsToAnchor && anchor) {
                 onElementClick({
@@ -139,7 +203,7 @@ export function useWordClick({
                 })
             }
         }
-    }, [mode, onWordClick, onElementClick, isReference, currentSource])
+    }, [mode, onWordClick, onElementClick, isReference, currentSource, gaps])
 
     return { handleWordClick }
 } 

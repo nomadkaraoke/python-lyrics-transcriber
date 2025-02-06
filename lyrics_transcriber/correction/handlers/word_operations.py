@@ -23,9 +23,15 @@ class WordOperations:
 
             for source in sources_to_check:
                 if source in gap.preceding_anchor.reference_positions:
-                    # Calculate position based on anchor position and offset
+                    # Calculate base position from anchor
                     anchor_pos = gap.preceding_anchor.reference_positions[source]
-                    ref_pos = anchor_pos + len(gap.preceding_anchor.words)
+                    base_ref_pos = anchor_pos + len(gap.preceding_anchor.words)
+
+                    # Calculate word offset within the gap
+                    word_offset = gap.words.index(gap.words[gap.transcription_position - gap.transcription_position])
+
+                    # Add word offset to base position
+                    ref_pos = base_ref_pos + word_offset
                     reference_positions[source] = ref_pos
         return reference_positions
 

@@ -25,6 +25,8 @@ export interface HighlightedTextProps {
     preserveSegments?: boolean
     linePositions?: LinePosition[]
     currentTime?: number
+    referenceCorrections?: Map<string, string>
+    gaps?: GapSequence[]
 }
 
 export function HighlightedText({
@@ -40,14 +42,17 @@ export function HighlightedText({
     currentSource,
     preserveSegments = false,
     linePositions = [],
-    currentTime = 0
+    currentTime = 0,
+    referenceCorrections = new Map(),
+    gaps = []
 }: HighlightedTextProps) {
     const { handleWordClick } = useWordClick({
         mode,
         onElementClick,
         onWordClick,
         isReference,
-        currentSource
+        currentSource,
+        gaps
     })
 
     const shouldWordFlash = (wordPos: TranscriptionWordPosition | { word: string; id: string }): boolean => {
@@ -65,9 +70,14 @@ export function HighlightedText({
                 (flashingType === 'anchor' && wordPos.type === 'anchor') ||
                 (flashingType === 'corrected' && isCorrected) ||
                 (flashingType === 'uncorrected' && wordPos.type === 'gap' && !isCorrected) ||
-                (flashingType === 'word' && highlightInfo?.type === 'anchor' &&
-                    wordPos.type === 'anchor' && wordPos.sequence &&
-                    highlightInfo.word_ids?.includes(wordPos.word.id))
+                (flashingType === 'word' && (
+                    // Handle anchor highlighting
+                    (highlightInfo?.type === 'anchor' && wordPos.type === 'anchor' &&
+                        wordPos.sequence && highlightInfo.word_ids?.includes(wordPos.word.id)) ||
+                    // Handle gap highlighting - only highlight the specific word
+                    (highlightInfo?.type === 'gap' && wordPos.type === 'gap' &&
+                        highlightInfo.word_ids?.includes(wordPos.word.id))
+                ))
             )
         } else {
             // Handle reference word
@@ -77,10 +87,32 @@ export function HighlightedText({
                 a?.reference_word_ids?.[currentSource]?.includes(wordPos.id)
             )
 
+            // Check if this word should flash as part of a gap
+            const shouldFlashGap = flashingType === 'word' &&
+                highlightInfo?.type === 'gap' &&
+                // Check if this reference word corresponds to the clicked word
+                gaps?.some(gap =>
+                    gap.corrections.some(correction => {
+                        // Only flash if this correction corresponds to the clicked word
+                        if (!highlightInfo.word_ids?.includes(correction.word_id)) {
+                            return false;
+                        }
+
+                        const refPosition = correction.reference_positions?.[currentSource];
+                        const wordPosition = parseInt(wordPos.id.split('-').pop() || '', 10);
+                        return typeof refPosition === 'number' && refPosition === wordPosition;
+                    })
+                )
+
             return Boolean(
                 (flashingType === 'anchor' && anchor) ||
-                (flashingType === 'word' && highlightInfo?.type === 'anchor' &&
-                    highlightInfo.reference_word_ids?.[currentSource]?.includes(wordPos.id))
+                (flashingType === 'word' && (
+                    // Handle anchor highlighting
+                    (highlightInfo?.type === 'anchor' &&
+                        highlightInfo.reference_word_ids?.[currentSource]?.includes(wordPos.id)) ||
+                    // Handle gap highlighting
+                    shouldFlashGap
+                ))
             )
         }
     }
@@ -183,14 +215,15 @@ export function HighlightedText({
                                     return <span key={`space-${lineIndex}-${wordIndex}`}> </span>
                                 }
 
-                                // Generate word ID based on position in the reference text
                                 const wordId = `${currentSource}-word-${wordCount}`
                                 wordCount++
 
-                                // Find if this word is part of any anchor sequence
                                 const anchor = currentSource ? anchors?.find(a =>
                                     a?.reference_word_ids?.[currentSource]?.includes(wordId)
                                 ) : undefined
+
+                                // Check if this word has a correction
+                                const hasCorrection = referenceCorrections.has(wordId)
 
                                 return (
                                     <Word
@@ -198,7 +231,7 @@ export function HighlightedText({
                                         word={word}
                                         shouldFlash={shouldWordFlash({ word, id: wordId })}
                                         isAnchor={Boolean(anchor)}
-                                        isCorrectedGap={false}
+                                        isCorrectedGap={hasCorrection}
                                         isUncorrectedGap={false}
                                         onClick={() => handleWordClick(word, wordId, anchor, undefined)}
                                     />

@@ -24366,10 +24366,11 @@ function useWordClick({
   onElementClick,
   onWordClick,
   isReference,
-  currentSource
+  currentSource,
+  gaps = []
 }) {
   const handleWordClick = reactExports.useCallback((word, wordId, anchor, gap2, debugInfo) => {
-    var _a, _b;
+    var _a, _b, _c, _d;
     console.log(JSON.stringify({
       debug: {
         clickedWord: word,
@@ -24382,37 +24383,88 @@ function useWordClick({
           wordIds: anchor.word_ids,
           length: anchor.length,
           words: anchor.words,
-          referenceWordIds: anchor.reference_word_ids
+          referenceWordIds: anchor.reference_word_ids,
+          matchesWordId: isReference ? (_a = anchor.reference_word_ids[currentSource]) == null ? void 0 : _a.includes(wordId) : anchor.word_ids.includes(wordId)
         },
         gapInfo: gap2 && {
           wordIds: gap2.word_ids,
           length: gap2.length,
           words: gap2.words,
-          corrections: gap2.corrections.map((c) => ({
-            original_word: c.original_word,
-            corrected_word: c.corrected_word,
-            word_id: c.word_id,
-            length: c.length,
-            is_deletion: c.is_deletion,
-            split_index: c.split_index,
-            split_total: c.split_total
-          }))
+          referenceWords: gap2.reference_words,
+          corrections: gap2.corrections,
+          matchesWordId: isReference ? (_b = gap2.reference_words[currentSource]) == null ? void 0 : _b.includes(wordId) : gap2.word_ids.includes(wordId)
         },
-        belongsToAnchor: anchor && (isReference ? (_a = anchor.reference_word_ids[currentSource]) == null ? void 0 : _a.includes(wordId) : anchor.word_ids.includes(wordId)),
+        belongsToAnchor: anchor && (isReference ? (_c = anchor.reference_word_ids[currentSource]) == null ? void 0 : _c.includes(wordId) : anchor.word_ids.includes(wordId)),
         belongsToGap: gap2 && (isReference ? gap2.corrections.some((c) => c.word_id === wordId) : gap2.word_ids.includes(wordId)),
         wordIndexInGap: gap2 && gap2.words.indexOf(word),
         hasMatchingCorrection: gap2 && gap2.corrections.some((c) => c.word_id === wordId)
       }
     }, null, 2));
-    const belongsToAnchor = anchor && (isReference ? (_b = anchor.reference_word_ids[currentSource]) == null ? void 0 : _b.includes(wordId) : anchor.word_ids.includes(wordId));
-    const belongsToGap = gap2 && (isReference ? gap2.corrections.some((c) => c.word_id === wordId) : gap2.word_ids.includes(wordId));
+    if (isReference && currentSource) {
+      const position2 = parseInt(wordId.split("-").pop() || "", 10);
+      const matchingGap = gaps == null ? void 0 : gaps.find(
+        (g) => g.corrections.some((c) => {
+          var _a2;
+          const refPosition = (_a2 = c.reference_positions) == null ? void 0 : _a2[currentSource];
+          return typeof refPosition === "number" && refPosition === position2;
+        })
+      );
+      if (matchingGap) {
+        console.log("Found matching gap for reference click:", {
+          position: position2,
+          gap: matchingGap
+        });
+        gap2 = matchingGap;
+      }
+    }
+    const belongsToAnchor = anchor && (isReference ? (_d = anchor.reference_word_ids[currentSource]) == null ? void 0 : _d.includes(wordId) : anchor.word_ids.includes(wordId));
+    const belongsToGap = gap2 && (isReference ? gap2.corrections.some((c) => {
+      var _a2;
+      const refPosition = (_a2 = c.reference_positions) == null ? void 0 : _a2[currentSource];
+      const clickedPosition = parseInt(wordId.split("-").pop() || "", 10);
+      return typeof refPosition === "number" && refPosition === clickedPosition;
+    }) : gap2.word_ids.includes(wordId));
     if (mode === "highlight" || mode === "edit") {
-      onWordClick == null ? void 0 : onWordClick({
-        word_id: wordId,
-        type: belongsToAnchor ? "anchor" : belongsToGap ? "gap" : "other",
-        anchor: belongsToAnchor ? anchor : void 0,
-        gap: belongsToGap ? gap2 : void 0
-      });
+      if (belongsToAnchor && anchor) {
+        onWordClick == null ? void 0 : onWordClick({
+          word_id: wordId,
+          type: "anchor",
+          anchor,
+          gap: void 0
+        });
+      } else if (belongsToGap && gap2) {
+        const referenceWords = {};
+        gap2.corrections.forEach((correction) => {
+          Object.entries(correction.reference_positions || {}).forEach(([source, position2]) => {
+            if (typeof position2 === "number") {
+              const refId = `${source}-word-${position2}`;
+              if (!referenceWords[source]) {
+                referenceWords[source] = [];
+              }
+              if (!referenceWords[source].includes(refId)) {
+                referenceWords[source].push(refId);
+              }
+            }
+          });
+        });
+        onWordClick == null ? void 0 : onWordClick({
+          word_id: wordId,
+          type: "gap",
+          anchor: void 0,
+          gap: {
+            ...gap2,
+            reference_words: referenceWords
+            // Use reference_words instead of reference_word_ids
+          }
+        });
+      } else {
+        onWordClick == null ? void 0 : onWordClick({
+          word_id: wordId,
+          type: "other",
+          anchor: void 0,
+          gap: void 0
+        });
+      }
     } else if (mode === "details") {
       if (belongsToAnchor && anchor) {
         onElementClick({
@@ -24454,7 +24506,7 @@ function useWordClick({
         });
       }
     }
-  }, [mode, onWordClick, onElementClick, isReference, currentSource]);
+  }, [mode, onWordClick, onElementClick, isReference, currentSource, gaps]);
   return { handleWordClick };
 }
 const ContentCopyIcon = createSvgIcon(/* @__PURE__ */ jsxRuntimeExports.jsx("path", {
@@ -24473,17 +24525,20 @@ function HighlightedText({
   currentSource,
   preserveSegments = false,
   linePositions = [],
-  currentTime = 0
+  currentTime = 0,
+  referenceCorrections = /* @__PURE__ */ new Map(),
+  gaps = []
 }) {
   const { handleWordClick } = useWordClick({
     mode,
     onElementClick,
     onWordClick,
     isReference,
-    currentSource
+    currentSource,
+    gaps
   });
   const shouldWordFlash = (wordPos) => {
-    var _a, _b, _c, _d;
+    var _a, _b, _c, _d, _e;
     if (!flashingType) return false;
     if ("type" in wordPos) {
       const gap2 = wordPos.sequence;
@@ -24491,7 +24546,9 @@ function HighlightedText({
         (correction) => correction.word_id === wordPos.word.id
       ));
       return Boolean(
-        flashingType === "anchor" && wordPos.type === "anchor" || flashingType === "corrected" && isCorrected || flashingType === "uncorrected" && wordPos.type === "gap" && !isCorrected || flashingType === "word" && (highlightInfo == null ? void 0 : highlightInfo.type) === "anchor" && wordPos.type === "anchor" && wordPos.sequence && ((_b = highlightInfo.word_ids) == null ? void 0 : _b.includes(wordPos.word.id))
+        flashingType === "anchor" && wordPos.type === "anchor" || flashingType === "corrected" && isCorrected || flashingType === "uncorrected" && wordPos.type === "gap" && !isCorrected || flashingType === "word" && // Handle anchor highlighting
+        ((highlightInfo == null ? void 0 : highlightInfo.type) === "anchor" && wordPos.type === "anchor" && wordPos.sequence && ((_b = highlightInfo.word_ids) == null ? void 0 : _b.includes(wordPos.word.id)) || // Handle gap highlighting - only highlight the specific word
+        (highlightInfo == null ? void 0 : highlightInfo.type) === "gap" && wordPos.type === "gap" && ((_c = highlightInfo.word_ids) == null ? void 0 : _c.includes(wordPos.word.id)))
       );
     } else {
       if (!currentSource) return false;
@@ -24501,8 +24558,22 @@ function HighlightedText({
           return (_b2 = (_a2 = a == null ? void 0 : a.reference_word_ids) == null ? void 0 : _a2[currentSource]) == null ? void 0 : _b2.includes(wordPos.id);
         }
       );
+      const shouldFlashGap = flashingType === "word" && (highlightInfo == null ? void 0 : highlightInfo.type) === "gap" && // Check if this reference word corresponds to the clicked word
+      (gaps == null ? void 0 : gaps.some(
+        (gap2) => gap2.corrections.some((correction) => {
+          var _a2, _b2;
+          if (!((_a2 = highlightInfo.word_ids) == null ? void 0 : _a2.includes(correction.word_id))) {
+            return false;
+          }
+          const refPosition = (_b2 = correction.reference_positions) == null ? void 0 : _b2[currentSource];
+          const wordPosition = parseInt(wordPos.id.split("-").pop() || "", 10);
+          return typeof refPosition === "number" && refPosition === wordPosition;
+        })
+      ));
       return Boolean(
-        flashingType === "anchor" && anchor || flashingType === "word" && (highlightInfo == null ? void 0 : highlightInfo.type) === "anchor" && ((_d = (_c = highlightInfo.reference_word_ids) == null ? void 0 : _c[currentSource]) == null ? void 0 : _d.includes(wordPos.id))
+        flashingType === "anchor" && anchor || flashingType === "word" && // Handle anchor highlighting
+        ((highlightInfo == null ? void 0 : highlightInfo.type) === "anchor" && ((_e = (_d = highlightInfo.reference_word_ids) == null ? void 0 : _d[currentSource]) == null ? void 0 : _e.includes(wordPos.id)) || // Handle gap highlighting
+        shouldFlashGap)
       );
     }
   };
@@ -24611,13 +24682,14 @@ function HighlightedText({
                 return (_b = (_a = a == null ? void 0 : a.reference_word_ids) == null ? void 0 : _a[currentSource]) == null ? void 0 : _b.includes(wordId);
               }
             ) : void 0;
+            const hasCorrection = referenceCorrections.has(wordId);
             return /* @__PURE__ */ jsxRuntimeExports.jsx(
               Word,
               {
                 word,
                 shouldFlash: shouldWordFlash({ word, id: wordId }),
                 isAnchor: Boolean(anchor),
-                isCorrectedGap: false,
+                isCorrectedGap: hasCorrection,
                 isUncorrectedGap: false,
                 onClick: () => handleWordClick(word, wordId, anchor, void 0)
               },
@@ -24653,7 +24725,8 @@ function ReferenceView({
   currentSource,
   onSourceChange,
   highlightInfo,
-  mode
+  mode,
+  gaps
 }) {
   const availableSources = reactExports.useMemo(
     () => Object.keys(referenceTexts),
@@ -24667,6 +24740,34 @@ function ReferenceView({
     ),
     [corrected_segments, anchors, currentSource]
   );
+  const referenceCorrections = reactExports.useMemo(() => {
+    const corrections = /* @__PURE__ */ new Map();
+    console.log("Building referenceCorrections map:", {
+      gapsCount: gaps.length,
+      currentSource
+    });
+    gaps.forEach((gap2) => {
+      gap2.corrections.forEach((correction) => {
+        var _a;
+        const referencePosition = (_a = correction.reference_positions) == null ? void 0 : _a[currentSource];
+        if (typeof referencePosition === "number") {
+          const wordId = `${currentSource}-word-${referencePosition}`;
+          corrections.set(wordId, correction.corrected_word);
+          console.log("Adding correction mapping:", {
+            wordId,
+            correctedWord: correction.corrected_word,
+            referencePosition,
+            correction
+          });
+        }
+      });
+    });
+    console.log("Final referenceCorrections map:", {
+      size: corrections.size,
+      entries: Array.from(corrections.entries())
+    });
+    return corrections;
+  }, [gaps, currentSource]);
   return /* @__PURE__ */ jsxRuntimeExports.jsxs(Paper, { sx: { p: 2 }, children: [
     /* @__PURE__ */ jsxRuntimeExports.jsxs(Box, { sx: { display: "flex", justifyContent: "space-between", alignItems: "center", mb: 2 }, children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx(Typography, { variant: "h6", children: "Reference Text" }),
@@ -24691,7 +24792,9 @@ function ReferenceView({
         mode,
         isReference: true,
         currentSource,
-        linePositions
+        linePositions,
+        referenceCorrections,
+        gaps
       }
     ) })
   ] });
@@ -26521,4 +26624,4 @@ function App() {
 ReactDOM$1.createRoot(document.getElementById("root")).render(
   /* @__PURE__ */ jsxRuntimeExports.jsx(App, {})
 );
-//# sourceMappingURL=index-BzzURiY4.js.map
+//# sourceMappingURL=index-6XcHtqhc.js.map
