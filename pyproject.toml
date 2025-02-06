@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "lyrics-transcriber"
-version = "0.36.1"
+version = "0.37.0"
 description = "Automatically create synchronised lyrics files in ASS and MidiCo LRC formats with word-level timestamps, using Whisper and lyrics from Genius and Spotify"
 authors = ["Andrew Beveridge <andrew@beveridge.uk>"]
 license = "MIT"
@@ -44,6 +44,7 @@ line-length = 140
 [tool.poetry.scripts]
 lyrics-transcriber = 'lyrics_transcriber.cli.cli_main:main'
 test-cov = "tests.conftest:main"
+cdgmaker = 'lyrics_transcriber.output.cdgmaker.composer:main'
 
 [build-system]
 requires = ["poetry-core"]
