@@ -133,23 +133,21 @@ def start_review_server(correction_result: CorrectionResult) -> CorrectionResult
     start_vite_server()
     logger.info("Frontend assets mounted")
 
-    # Find an available port starting from 8000
-    port = 8000
+    # Wait for default port (8000) to become available
+    DEFAULT_PORT = 8000
     while True:
         try:
-            # Test if port is available
             with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-                s.bind(("127.0.0.1", port))
+                s.bind(("127.0.0.1", DEFAULT_PORT))
                 break
         except OSError:
-            port += 1
-            if port > 8100:  # Set a reasonable upper limit
-                raise RuntimeError("Unable to find an available port")
+            logger.info(f"Port {DEFAULT_PORT} is occupied, waiting 10 seconds before retrying...")
+            time.sleep(10)
 
-    logger.info(f"Using port {port}")
+    logger.info(f"Port {DEFAULT_PORT} is available, starting server")
 
-    # Create a custom server config with the found port
-    config = uvicorn.Config(app, host="127.0.0.1", port=port, log_level="info")
+    # Create server config with default port
+    config = uvicorn.Config(app, host="127.0.0.1", port=DEFAULT_PORT, log_level="info")
     server = uvicorn.Server(config)
 
     # Start FastAPI server in a separate thread
@@ -158,9 +156,9 @@ def start_review_server(correction_result: CorrectionResult) -> CorrectionResult
     logger.info("Server thread started")
 
     # Open browser with the correct port
-    base_api_url = f"http://localhost:{port}/api"
+    base_api_url = f"http://localhost:{DEFAULT_PORT}/api"
     encoded_api_url = urllib.parse.quote(base_api_url, safe="")
-    webbrowser.open(f"http://localhost:{port}?baseApiUrl={encoded_api_url}")
+    webbrowser.open(f"http://localhost:{DEFAULT_PORT}?baseApiUrl={encoded_api_url}")
     logger.info("Opened browser for review")
 
     # Wait for review to complete

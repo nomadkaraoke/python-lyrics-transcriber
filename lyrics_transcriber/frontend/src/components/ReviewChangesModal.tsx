@@ -31,6 +31,35 @@ interface DiffResult {
     wordChanges?: DiffResult[]
 }
 
+// Add interfaces for the word and segment structures
+interface Word {
+    text: string
+    start_time: number
+    end_time: number
+    id?: string
+}
+
+interface Segment {
+    text: string
+    start_time: number
+    end_time: number
+    words: Word[]
+    id?: string
+}
+
+const normalizeWordForComparison = (word: Word): Omit<Word, 'id'> => ({
+    text: word.text,
+    start_time: word.start_time,
+    end_time: word.end_time
+})
+
+const normalizeSegmentForComparison = (segment: Segment): Omit<Segment, 'id'> => ({
+    text: segment.text,
+    start_time: segment.start_time,
+    end_time: segment.end_time,
+    words: segment.words.map(normalizeWordForComparison)
+})
+
 export default function ReviewChangesModal({
     open,
     onClose,
@@ -44,27 +73,29 @@ export default function ReviewChangesModal({
         const diffs: DiffResult[] = []
 
         // Compare corrected segments
-        originalData.corrected_segments.forEach((segment, index) => {
+        originalData.corrected_segments.forEach((originalSegment, index) => {
             const updatedSegment = updatedData.corrected_segments[index]
             if (!updatedSegment) {
                 diffs.push({
                     type: 'removed',
                     path: `Segment ${index}`,
                     segmentIndex: index,
-                    oldValue: segment.text
+                    oldValue: originalSegment.text
                 })
                 return
             }
 
+            const normalizedOriginal = normalizeSegmentForComparison(originalSegment)
+            const normalizedUpdated = normalizeSegmentForComparison(updatedSegment)
             const wordChanges: DiffResult[] = []
 
-            // Compare word-level changes using word IDs
-            segment.words.forEach((word) => {
-                const updatedWord = updatedSegment.words.find(w => w.id === word.id)
+            // Compare word-level changes based on position rather than IDs
+            normalizedOriginal.words.forEach((word: Omit<Word, 'id'>, wordIndex: number) => {
+                const updatedWord = normalizedUpdated.words[wordIndex]
                 if (!updatedWord) {
                     wordChanges.push({
                         type: 'removed',
-                        path: `Word ${word.id}`,
+                        path: `Word ${wordIndex}`,
                         oldValue: `"${word.text}" (${word.start_time.toFixed(4)} - ${word.end_time.toFixed(4)})`
                     })
                     return
@@ -75,7 +106,7 @@ export default function ReviewChangesModal({
                     Math.abs(word.end_time - updatedWord.end_time) > 0.0001) {
                     wordChanges.push({
                         type: 'modified',
-                        path: `Word ${word.id}`,
+                        path: `Word ${wordIndex}`,
                         oldValue: `"${word.text}" (${word.start_time.toFixed(4)} - ${word.end_time.toFixed(4)})`,
                         newValue: `"${updatedWord.text}" (${updatedWord.start_time.toFixed(4)} - ${updatedWord.end_time.toFixed(4)})`
                     })
@@ -83,26 +114,27 @@ export default function ReviewChangesModal({
             })
 
             // Check for added words
-            updatedSegment.words.forEach((word) => {
-                if (!segment.words.find(w => w.id === word.id)) {
+            if (normalizedUpdated.words.length > normalizedOriginal.words.length) {
+                for (let i = normalizedOriginal.words.length; i < normalizedUpdated.words.length; i++) {
+                    const word = normalizedUpdated.words[i]
                     wordChanges.push({
                         type: 'added',
-                        path: `Word ${word.id}`,
+                        path: `Word ${i}`,
                         newValue: `"${word.text}" (${word.start_time.toFixed(4)} - ${word.end_time.toFixed(4)})`
                     })
                 }
-            })
+            }
 
-            if (segment.text !== updatedSegment.text ||
-                segment.start_time !== updatedSegment.start_time ||
-                segment.end_time !== updatedSegment.end_time ||
+            if (normalizedOriginal.text !== normalizedUpdated.text ||
+                Math.abs(normalizedOriginal.start_time - normalizedUpdated.start_time) > 0.0001 ||
+                Math.abs(normalizedOriginal.end_time - normalizedUpdated.end_time) > 0.0001 ||
                 wordChanges.length > 0) {
                 diffs.push({
                     type: 'modified',
                     path: `Segment ${index}`,
                     segmentIndex: index,
-                    oldValue: `"${segment.text}" (${segment.start_time.toFixed(4)} - ${segment.end_time.toFixed(4)})`,
-                    newValue: `"${updatedSegment.text}" (${updatedSegment.start_time.toFixed(4)} - ${updatedSegment.end_time.toFixed(4)})`,
+                    oldValue: `"${normalizedOriginal.text}" (${normalizedOriginal.start_time.toFixed(4)} - ${normalizedOriginal.end_time.toFixed(4)})`,
+                    newValue: `"${normalizedUpdated.text}" (${normalizedUpdated.start_time.toFixed(4)} - ${normalizedUpdated.end_time.toFixed(4)})`,
                     wordChanges: wordChanges.length > 0 ? wordChanges : undefined
                 })
             }

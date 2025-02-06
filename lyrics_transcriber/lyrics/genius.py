@@ -82,19 +82,48 @@ class GeniusProvider(BaseLyricsProvider):
 
     def _clean_lyrics(self, lyrics: str) -> str:
         """Clean and process lyrics from Genius to remove unwanted content."""
+        self.logger.debug("Starting lyrics cleaning process")
+        original = lyrics
 
         lyrics = lyrics.replace("\\n", "\n")
         lyrics = re.sub(r"You might also like", "", lyrics)
-        lyrics = re.sub(
-            r".*?Lyrics([A-Z])", r"\1", lyrics
-        )  # Remove the song name and word "Lyrics" if this has a non-newline char at the start
-        lyrics = re.sub(r"^[0-9]* Contributors.*Lyrics", "", lyrics)  # Remove this example: 27 ContributorsSex Bomb Lyrics
-        lyrics = re.sub(
-            r"See.*Live.*Get tickets as low as \$[0-9]+", "", lyrics
-        )  # Remove this example: See Tom Jones LiveGet tickets as low as $71
-        lyrics = re.sub(r"[0-9]+Embed$", "", lyrics)  # Remove the word "Embed" at end of line with preceding numbers if found
-        lyrics = re.sub(r"(\S)Embed$", r"\1", lyrics)  # Remove the word "Embed" if it has been tacked onto a word at the end of a line
-        lyrics = re.sub(r"^Embed$", r"", lyrics)  # Remove the word "Embed" if it has been tacked onto a word at the end of a line
-        lyrics = re.sub(r".*?\[.*?\].*?", "", lyrics)  # Remove lines containing square brackets
-        # add any additional cleaning rules here
+        if original != lyrics:
+            self.logger.debug("Removed 'You might also like' text")
+
+        original = lyrics
+        lyrics = re.sub(r".*?Lyrics([A-Z])", r"\1", lyrics)
+        if original != lyrics:
+            self.logger.debug("Removed song name and 'Lyrics' prefix")
+
+        original = lyrics
+        lyrics = re.sub(r"^[0-9]* Contributors.*Lyrics", "", lyrics)
+        if original != lyrics:
+            self.logger.debug("Removed contributors count and 'Lyrics' text")
+
+        original = lyrics
+        lyrics = re.sub(r"See.*Live.*Get tickets as low as \$[0-9]+", "", lyrics)
+        if original != lyrics:
+            self.logger.debug("Removed ticket sales text")
+
+        original = lyrics
+        lyrics = re.sub(r"[0-9]+Embed$", "", lyrics)
+        if original != lyrics:
+            self.logger.debug("Removed numbered embed marker")
+
+        original = lyrics
+        lyrics = re.sub(r"(\S)Embed$", r"\1", lyrics)
+        if original != lyrics:
+            self.logger.debug("Removed 'Embed' suffix from word")
+
+        original = lyrics
+        lyrics = re.sub(r"^Embed$", r"", lyrics)
+        if original != lyrics:
+            self.logger.debug("Removed standalone 'Embed' text")
+
+        original = lyrics
+        lyrics = re.sub(r".*?\[.*?\].*?", "", lyrics)
+        if original != lyrics:
+            self.logger.debug("Removed lines containing square brackets")
+
+        self.logger.debug("Completed lyrics cleaning process")
         return lyrics

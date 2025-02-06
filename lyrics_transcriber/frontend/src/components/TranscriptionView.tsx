@@ -58,13 +58,13 @@ export default function TranscriptionView({
                     // Convert segment words to TranscriptionWordPosition format
                     const segmentWords: TranscriptionWordPosition[] = segment.words.map(word => {
                         // Find if this word belongs to an anchor sequence
-                        const anchor = data.anchor_sequences.find(a =>
-                            a.word_ids.includes(word.id)
+                        const anchor = data.anchor_sequences?.find(a =>
+                            a?.word_ids?.includes(word.id)
                         )
 
                         // If not in an anchor, check if it belongs to a gap sequence
-                        const gap = !anchor ? data.gap_sequences.find(g =>
-                            g.word_ids.includes(word.id)
+                        const gap = !anchor ? data.gap_sequences?.find(g =>
+                            g?.word_ids?.includes(word.id)
                         ) : undefined
 
                         return {

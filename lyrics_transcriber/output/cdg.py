@@ -189,6 +189,7 @@ class CDGGenerator:
         """Compose CDG using KaraokeComposer."""
         kc = KaraokeComposer.from_file(toml_file)
         kc.compose()
+        kc.create_mp4(height=1080, fps=30)
 
     def _find_cdg_zip(self, artist: str, title: str) -> str:
         """Find the generated CDG ZIP file."""

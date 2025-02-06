@@ -837,14 +837,14 @@ files = [
 
 [[package]]
 name = "karaoke-lyrics-processor"
-version = "0.4.1"
+version = "0.4.2"
 description = "Process song lyrics to prepare them for karaoke video production, e.g. by splitting long lines"
 optional = false
 python-versions = "<3.13,>=3.9"
 groups = ["main"]
 files = [
-    {file = "karaoke_lyrics_processor-0.4.1-py3-none-any.whl", hash = "sha256:40e4ba3e2f34f5fa3ab32cf4e0ed3e4d748dc0e3a64f45752037a993472b1091"},
-    {file = "karaoke_lyrics_processor-0.4.1.tar.gz", hash = "sha256:eb09fa0eec9013ad14b5698eac096615932c2a5aafded094a3f29e2eb7e56cf0"},
+    {file = "karaoke_lyrics_processor-0.4.2-py3-none-any.whl", hash = "sha256:e77854504d1ca932933be156c4e8ca444dc7587f48d01b6e4506968cc93a6e7c"},
+    {file = "karaoke_lyrics_processor-0.4.2.tar.gz", hash = "sha256:134be4472853231835e1eb9da806997355b0dc7dcd39c85d45d0bb61e5d04ee0"},
 ]
 
 [package.dependencies]

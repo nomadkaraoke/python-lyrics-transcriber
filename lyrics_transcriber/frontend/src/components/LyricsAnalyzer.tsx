@@ -315,8 +315,15 @@ export default function LyricsAnalyzer({ data: initialData, onFileLoad, apiClien
             delete savedDataObj[storageKey];
             localStorage.setItem('lyrics_analyzer_data', JSON.stringify(savedDataObj));
 
-            // Reset data to initial state
-            setData(JSON.parse(JSON.stringify(initialData)));
+            // Reset data to initial state with proper initialization
+            const freshData = initializeDataWithIds(JSON.parse(JSON.stringify(initialData)));
+            setData(freshData);
+
+            // Reset any UI state that might affect highlights
+            setModalContent(null);
+            setFlashingType(null);
+            setHighlightInfo(null);
+            setInteractionMode('details');
         }
     }, [initialData]);
 
@@ -370,10 +377,10 @@ export default function LyricsAnalyzer({ data: initialData, onFileLoad, apiClien
                     uncorrectedGapCount={data.gap_sequences?.filter(gap =>
                         !gap.corrections?.length).length ?? 0}
                     uncorrectedGaps={data.gap_sequences
-                        ?.filter(gap => !gap.corrections?.length)
+                        ?.filter(gap => !gap.corrections?.length && gap.word_ids)
                         .map(gap => ({
-                            position: gap.word_ids[0],
-                            length: gap.length
+                            position: gap.word_ids?.[0] ?? '',
+                            length: gap.length ?? 0
                         })) ?? []}
                     // Correction details
                     replacedCount={data.gap_sequences?.reduce((count, gap) =>
