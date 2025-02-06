@@ -289,6 +289,7 @@ export default function EditModal({
                             updateSegment(newWords)
                         }}
                         currentTime={currentTime}
+                        onPlaySegment={onPlaySegment}
                     />
                 </Box>
 

@@ -91,7 +91,6 @@ export default function LyricsAnalyzer({ data: initialData, onFileLoad, apiClien
 
     // Add local storage handling
     useEffect(() => {
-        // On mount, try to load saved data
         const storageKey = generateStorageKey(initialData.transcribed_text);
         const savedDataStr = localStorage.getItem('lyrics_analyzer_data');
         const savedDataObj = savedDataStr ? JSON.parse(savedDataStr) : {};
@@ -99,25 +98,42 @@ export default function LyricsAnalyzer({ data: initialData, onFileLoad, apiClien
         if (savedDataObj[storageKey]) {
             try {
                 const parsed = savedDataObj[storageKey];
-                // Verify it's the same song (extra safety check)
                 if (parsed.transcribed_text === initialData.transcribed_text) {
-                    if (window.confirm('Found saved progress for this song. Would you like to restore it?')) {
-                        console.log('Restored saved progress from local storage');
+                    const stripIds = (obj: CorrectionData): LyricsSegment[] => {
+                        const clone = JSON.parse(JSON.stringify(obj));
+                        return clone.corrected_segments.map((segment: LyricsSegment) => {
+                            // eslint-disable-next-line @typescript-eslint/no-unused-vars
+                            const { id: _id, ...strippedSegment } = segment;
+                            return {
+                                ...strippedSegment,
+                                words: segment.words.map(word => {
+                                    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+                                    const { id: _wordId, ...strippedWord } = word;
+                                    return strippedWord;
+                                })
+                            };
+                        });
+                    };
+
+                    const strippedSaved = stripIds(parsed);
+                    const strippedInitial = stripIds(initialData);
+
+                    const hasChanges = JSON.stringify(strippedSaved) !== JSON.stringify(strippedInitial);
+
+                    if (hasChanges && window.confirm('Found saved progress for this song. Would you like to restore it?')) {
                         setData(parsed);
-                    } else {
-                        // User declined to restore - remove the saved data
+                    } else if (!hasChanges) {
                         delete savedDataObj[storageKey];
                         localStorage.setItem('lyrics_analyzer_data', JSON.stringify(savedDataObj));
                     }
                 }
             } catch (error) {
                 console.error('Failed to parse saved data:', error);
-                // Remove only this song's data
                 delete savedDataObj[storageKey];
                 localStorage.setItem('lyrics_analyzer_data', JSON.stringify(savedDataObj));
             }
         }
-    }, [initialData.transcribed_text]);
+    }, [initialData]);
 
     // Save to local storage whenever data changes
     useEffect(() => {

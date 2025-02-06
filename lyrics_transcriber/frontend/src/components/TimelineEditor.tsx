@@ -8,11 +8,12 @@ interface TimelineEditorProps {
     endTime: number
     onWordUpdate: (index: number, updates: Partial<Word>) => void
     currentTime?: number
+    onPlaySegment?: (time: number) => void
 }
 
 const TimelineContainer = styled(Box)(({ theme }) => ({
     position: 'relative',
-    height: '60px',
+    height: '80px',
     backgroundColor: theme.palette.grey[200],
     borderRadius: theme.shape.borderRadius,
     margin: theme.spacing(2, 0),
@@ -24,30 +25,38 @@ const TimelineRuler = styled(Box)(({ theme }) => ({
     top: 0,
     left: 0,
     right: 0,
-    height: '16px',
+    height: '40px',
     borderBottom: `1px solid ${theme.palette.grey[300]}`,
+    cursor: 'pointer',
 }))
 
 const TimelineMark = styled(Box)(({ theme }) => ({
     position: 'absolute',
-    top: '10px',
+    top: '20px',
     width: '1px',
-    height: '6px',
-    backgroundColor: theme.palette.grey[400],
+    height: '18px',
+    backgroundColor: theme.palette.grey[700],
+    '&.subsecond': {
+        top: '25px',
+        height: '13px',
+        backgroundColor: theme.palette.grey[500],
+    }
 }))
 
 const TimelineLabel = styled(Box)(({ theme }) => ({
     position: 'absolute',
-    top: 0,
+    top: '5px',
     transform: 'translateX(-50%)',
-    fontSize: '0.6rem',
-    color: theme.palette.grey[600],
+    fontSize: '0.8rem',
+    color: theme.palette.text.primary,
+    fontWeight: 700,
+    backgroundColor: theme.palette.grey[200],
 }))
 
 const TimelineWord = styled(Box)(({ theme }) => ({
     position: 'absolute',
     height: '30px',
-    top: '22px',
+    top: '40px',
     backgroundColor: theme.palette.primary.main,
     borderRadius: theme.shape.borderRadius,
     color: theme.palette.primary.contrastText,
@@ -57,6 +66,7 @@ const TimelineWord = styled(Box)(({ theme }) => ({
     display: 'flex',
     alignItems: 'center',
     fontSize: '0.875rem',
+    fontFamily: 'sans-serif',
     transition: 'background-color 0.1s ease',
     '&.highlighted': {
         backgroundColor: theme.palette.secondary.main,
@@ -75,7 +85,19 @@ const ResizeHandle = styled(Box)(({ theme }) => ({
     },
 }))
 
-export default function TimelineEditor({ words, startTime, endTime, onWordUpdate, currentTime = 0 }: TimelineEditorProps) {
+// Add new styled component for the cursor
+const TimelineCursor = styled(Box)(({ theme }) => ({
+    position: 'absolute',
+    top: 0,
+    width: '2px',
+    height: '100%', // Full height of container
+    backgroundColor: theme.palette.error.main, // Red color
+    pointerEvents: 'none', // Ensure it doesn't interfere with clicks
+    transition: 'left 0.1s linear', // Smooth movement
+    zIndex: 1, // Ensure it's above other elements
+}))
+
+export default function TimelineEditor({ words, startTime, endTime, onWordUpdate, currentTime = 0, onPlaySegment }: TimelineEditorProps) {
     const containerRef = useRef<HTMLDivElement>(null)
     const [dragState, setDragState] = useState<{
         wordIndex: number
@@ -142,15 +164,23 @@ export default function TimelineEditor({ words, startTime, endTime, onWordUpdate
         const startSecond = Math.floor(startTime)
         const endSecond = Math.ceil(endTime)
 
-        for (let time = startSecond; time <= endSecond; time++) {
+        // Generate marks for each 0.1 second interval
+        for (let time = startSecond; time <= endSecond; time += 0.1) {
             if (time >= startTime && time <= endTime) {
                 const position = timeToPosition(time)
+                const isFullSecond = Math.abs(time - Math.round(time)) < 0.001
+
                 marks.push(
                     <Box key={time}>
-                        <TimelineMark sx={{ left: `${position}%` }} />
-                        <TimelineLabel sx={{ left: `${position}%` }}>
-                            {time}s
-                        </TimelineLabel>
+                        <TimelineMark
+                            className={isFullSecond ? '' : 'subsecond'}
+                            sx={{ left: `${position}%` }}
+                        />
+                        {isFullSecond && (
+                            <TimelineLabel sx={{ left: `${position}%` }}>
+                                {Math.round(time)}s
+                            </TimelineLabel>
+                        )}
                     </Box>
                 )
             }
@@ -266,6 +296,22 @@ export default function TimelineEditor({ words, startTime, endTime, onWordUpdate
         return currentTime >= word.start_time && currentTime <= word.end_time
     }
 
+    const handleTimelineClick = (e: React.MouseEvent) => {
+        const rect = containerRef.current?.getBoundingClientRect()
+        if (!rect || !onPlaySegment) return
+
+        const x = e.clientX - rect.left
+        const clickedPosition = (x / rect.width) * (endTime - startTime) + startTime
+
+        console.log('Timeline clicked:', {
+            x,
+            width: rect.width,
+            clickedTime: clickedPosition
+        })
+
+        onPlaySegment(clickedPosition)
+    }
+
     return (
         <TimelineContainer
             ref={containerRef}
@@ -273,9 +319,18 @@ export default function TimelineEditor({ words, startTime, endTime, onWordUpdate
             onMouseUp={handleMouseUp}
             onMouseLeave={handleMouseUp}
         >
-            <TimelineRuler>
+            <TimelineRuler onClick={handleTimelineClick}>
                 {generateTimelineMarks()}
             </TimelineRuler>
+
+            {/* Add cursor line */}
+            <TimelineCursor
+                sx={{
+                    left: `${timeToPosition(currentTime)}%`,
+                    display: currentTime >= startTime && currentTime <= endTime ? 'block' : 'none'
+                }}
+            />
+
             {words.map((word, index) => {
                 const leftPosition = timeToPosition(word.start_time)
                 const rightPosition = timeToPosition(word.end_time)

@@ -24995,7 +24995,7 @@ const AutoFixHighIcon = createSvgIcon(/* @__PURE__ */ jsxRuntimeExports.jsx("pat
 }), "AutoFixHigh");
 const TimelineContainer = styled(Box)(({ theme }) => ({
   position: "relative",
-  height: "60px",
+  height: "80px",
   backgroundColor: theme.palette.grey[200],
   borderRadius: theme.shape.borderRadius,
   margin: theme.spacing(2, 0),
@@ -25006,27 +25006,35 @@ const TimelineRuler = styled(Box)(({ theme }) => ({
   top: 0,
   left: 0,
   right: 0,
-  height: "16px",
-  borderBottom: `1px solid ${theme.palette.grey[300]}`
+  height: "40px",
+  borderBottom: `1px solid ${theme.palette.grey[300]}`,
+  cursor: "pointer"
 }));
 const TimelineMark = styled(Box)(({ theme }) => ({
   position: "absolute",
-  top: "10px",
+  top: "20px",
   width: "1px",
-  height: "6px",
-  backgroundColor: theme.palette.grey[400]
+  height: "18px",
+  backgroundColor: theme.palette.grey[700],
+  "&.subsecond": {
+    top: "25px",
+    height: "13px",
+    backgroundColor: theme.palette.grey[500]
+  }
 }));
 const TimelineLabel = styled(Box)(({ theme }) => ({
   position: "absolute",
-  top: 0,
+  top: "5px",
   transform: "translateX(-50%)",
-  fontSize: "0.6rem",
-  color: theme.palette.grey[600]
+  fontSize: "0.8rem",
+  color: theme.palette.text.primary,
+  fontWeight: 700,
+  backgroundColor: theme.palette.grey[200]
 }));
 const TimelineWord = styled(Box)(({ theme }) => ({
   position: "absolute",
   height: "30px",
-  top: "22px",
+  top: "40px",
   backgroundColor: theme.palette.primary.main,
   borderRadius: theme.shape.borderRadius,
   color: theme.palette.primary.contrastText,
@@ -25036,6 +25044,7 @@ const TimelineWord = styled(Box)(({ theme }) => ({
   display: "flex",
   alignItems: "center",
   fontSize: "0.875rem",
+  fontFamily: "sans-serif",
   transition: "background-color 0.1s ease",
   "&.highlighted": {
     backgroundColor: theme.palette.secondary.main
@@ -25052,7 +25061,22 @@ const ResizeHandle = styled(Box)(({ theme }) => ({
     backgroundColor: theme.palette.primary.light
   }
 }));
-function TimelineEditor({ words, startTime, endTime, onWordUpdate, currentTime = 0 }) {
+const TimelineCursor = styled(Box)(({ theme }) => ({
+  position: "absolute",
+  top: 0,
+  width: "2px",
+  height: "100%",
+  // Full height of container
+  backgroundColor: theme.palette.error.main,
+  // Red color
+  pointerEvents: "none",
+  // Ensure it doesn't interfere with clicks
+  transition: "left 0.1s linear",
+  // Smooth movement
+  zIndex: 1
+  // Ensure it's above other elements
+}));
+function TimelineEditor({ words, startTime, endTime, onWordUpdate, currentTime = 0, onPlaySegment }) {
   const containerRef = reactExports.useRef(null);
   const [dragState, setDragState] = reactExports.useState(null);
   const MIN_DURATION = 0.1;
@@ -25095,14 +25119,21 @@ function TimelineEditor({ words, startTime, endTime, onWordUpdate, currentTime =
     const marks = [];
     const startSecond = Math.floor(startTime);
     const endSecond = Math.ceil(endTime);
-    for (let time = startSecond; time <= endSecond; time++) {
+    for (let time = startSecond; time <= endSecond; time += 0.1) {
       if (time >= startTime && time <= endTime) {
         const position2 = timeToPosition(time);
+        const isFullSecond = Math.abs(time - Math.round(time)) < 1e-3;
         marks.push(
           /* @__PURE__ */ jsxRuntimeExports.jsxs(Box, { children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx(TimelineMark, { sx: { left: `${position2}%` } }),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs(TimelineLabel, { sx: { left: `${position2}%` }, children: [
-              time,
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              TimelineMark,
+              {
+                className: isFullSecond ? "" : "subsecond",
+                sx: { left: `${position2}%` }
+              }
+            ),
+            isFullSecond && /* @__PURE__ */ jsxRuntimeExports.jsxs(TimelineLabel, { sx: { left: `${position2}%` }, children: [
+              Math.round(time),
               "s"
             ] })
           ] }, time)
@@ -25193,6 +25224,19 @@ function TimelineEditor({ words, startTime, endTime, onWordUpdate, currentTime =
     if (!currentTime || !word.start_time || !word.end_time) return false;
     return currentTime >= word.start_time && currentTime <= word.end_time;
   };
+  const handleTimelineClick = (e) => {
+    var _a;
+    const rect = (_a = containerRef.current) == null ? void 0 : _a.getBoundingClientRect();
+    if (!rect || !onPlaySegment) return;
+    const x = e.clientX - rect.left;
+    const clickedPosition = x / rect.width * (endTime - startTime) + startTime;
+    console.log("Timeline clicked:", {
+      x,
+      width: rect.width,
+      clickedTime: clickedPosition
+    });
+    onPlaySegment(clickedPosition);
+  };
   return /* @__PURE__ */ jsxRuntimeExports.jsxs(
     TimelineContainer,
     {
@@ -25201,7 +25245,16 @@ function TimelineEditor({ words, startTime, endTime, onWordUpdate, currentTime =
       onMouseUp: handleMouseUp,
       onMouseLeave: handleMouseUp,
       children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx(TimelineRuler, { children: generateTimelineMarks() }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx(TimelineRuler, { onClick: handleTimelineClick, children: generateTimelineMarks() }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx(
+          TimelineCursor,
+          {
+            sx: {
+              left: `${timeToPosition(currentTime)}%`,
+              display: currentTime >= startTime && currentTime <= endTime ? "block" : "none"
+            }
+          }
+        ),
         words.map((word, index) => {
           const leftPosition = timeToPosition(word.start_time);
           const rightPosition = timeToPosition(word.end_time);
@@ -25472,7 +25525,8 @@ function EditModal({
                 newWords[index] = { ...newWords[index], ...updates };
                 updateSegment(newWords);
               },
-              currentTime
+              currentTime,
+              onPlaySegment
             }
           ) }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs(Typography, { variant: "body2", color: "text.secondary", sx: { mb: 2 }, children: [
@@ -26133,10 +26187,25 @@ function LyricsAnalyzer({ data: initialData, onFileLoad, apiClient, isReadOnly }
       try {
         const parsed = savedDataObj[storageKey];
         if (parsed.transcribed_text === initialData.transcribed_text) {
-          if (window.confirm("Found saved progress for this song. Would you like to restore it?")) {
-            console.log("Restored saved progress from local storage");
+          const stripIds = (obj) => {
+            const clone = JSON.parse(JSON.stringify(obj));
+            return clone.corrected_segments.map((segment) => {
+              const { id: _id, ...strippedSegment } = segment;
+              return {
+                ...strippedSegment,
+                words: segment.words.map((word) => {
+                  const { id: _wordId, ...strippedWord } = word;
+                  return strippedWord;
+                })
+              };
+            });
+          };
+          const strippedSaved = stripIds(parsed);
+          const strippedInitial = stripIds(initialData);
+          const hasChanges = JSON.stringify(strippedSaved) !== JSON.stringify(strippedInitial);
+          if (hasChanges && window.confirm("Found saved progress for this song. Would you like to restore it?")) {
             setData(parsed);
-          } else {
+          } else if (!hasChanges) {
             delete savedDataObj[storageKey];
             localStorage.setItem("lyrics_analyzer_data", JSON.stringify(savedDataObj));
           }
@@ -26147,7 +26216,7 @@ function LyricsAnalyzer({ data: initialData, onFileLoad, apiClient, isReadOnly }
         localStorage.setItem("lyrics_analyzer_data", JSON.stringify(savedDataObj));
       }
     }
-  }, [initialData.transcribed_text]);
+  }, [initialData]);
   reactExports.useEffect(() => {
     if (!isReadOnly) {
       const storageKey = generateStorageKey(initialData.transcribed_text);
@@ -26624,4 +26693,4 @@ function App() {
 ReactDOM$1.createRoot(document.getElementById("root")).render(
   /* @__PURE__ */ jsxRuntimeExports.jsx(App, {})
 );
-//# sourceMappingURL=index-6XcHtqhc.js.map
+//# sourceMappingURL=index-DKnNJHRK.js.map
