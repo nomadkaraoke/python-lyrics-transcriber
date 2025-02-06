@@ -55,9 +55,7 @@ export default function TranscriptionView({
             </Typography>
             <Box sx={{ display: 'flex', flexDirection: 'column' }}>
                 {data.corrected_segments.map((segment, segmentIndex) => {
-                    // Convert segment words to TranscriptionWordPosition format
                     const segmentWords: TranscriptionWordPosition[] = segment.words.map(word => {
-                        // Find if this word belongs to an anchor sequence
                         const anchor = data.anchor_sequences?.find(a =>
                             a?.word_ids?.includes(word.id)
                         )
@@ -66,6 +64,11 @@ export default function TranscriptionView({
                         const gap = !anchor ? data.gap_sequences?.find(g =>
                             g?.word_ids?.includes(word.id)
                         ) : undefined
+
+                        // Check if this specific word has been corrected
+                        const isWordCorrected = gap?.corrections?.some(
+                            correction => correction.word_id === word.id
+                        )
 
                         return {
                             word: {
@@ -76,7 +79,8 @@ export default function TranscriptionView({
                             },
                             type: anchor ? 'anchor' : gap ? 'gap' : 'other',
                             sequence: anchor || gap,
-                            isInRange: true
+                            isInRange: true,
+                            isCorrected: isWordCorrected
                         }
                     })
 

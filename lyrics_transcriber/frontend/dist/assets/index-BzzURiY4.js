@@ -24515,29 +24515,26 @@ function HighlightedText({
   };
   const renderContent = () => {
     if (wordPositions) {
-      return wordPositions.map((wordPos, index) => {
-        var _a, _b, _c, _d;
-        return /* @__PURE__ */ jsxRuntimeExports.jsxs(React.Fragment, { children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx(
-            Word,
-            {
-              word: wordPos.word.text,
-              shouldFlash: shouldWordFlash(wordPos),
-              isCurrentlyPlaying: shouldHighlightWord(wordPos),
-              isAnchor: wordPos.type === "anchor",
-              isCorrectedGap: wordPos.type === "gap" && Boolean((_b = (_a = wordPos.sequence) == null ? void 0 : _a.corrections) == null ? void 0 : _b.length),
-              isUncorrectedGap: wordPos.type === "gap" && !((_d = (_c = wordPos.sequence) == null ? void 0 : _c.corrections) == null ? void 0 : _d.length),
-              onClick: () => handleWordClick(
-                wordPos.word.text,
-                wordPos.word.id,
-                wordPos.type === "anchor" ? wordPos.sequence : void 0,
-                wordPos.type === "gap" ? wordPos.sequence : void 0
-              )
-            }
-          ),
-          index < wordPositions.length - 1 && " "
-        ] }, wordPos.word.id);
-      });
+      return wordPositions.map((wordPos, index) => /* @__PURE__ */ jsxRuntimeExports.jsxs(React.Fragment, { children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx(
+          Word,
+          {
+            word: wordPos.word.text,
+            shouldFlash: shouldWordFlash(wordPos),
+            isCurrentlyPlaying: shouldHighlightWord(wordPos),
+            isAnchor: wordPos.type === "anchor",
+            isCorrectedGap: wordPos.type === "gap" && wordPos.isCorrected,
+            isUncorrectedGap: wordPos.type === "gap" && !wordPos.isCorrected,
+            onClick: () => handleWordClick(
+              wordPos.word.text,
+              wordPos.word.id,
+              wordPos.type === "anchor" ? wordPos.sequence : void 0,
+              wordPos.type === "gap" ? wordPos.sequence : void 0
+            )
+          }
+        ),
+        index < wordPositions.length - 1 && " "
+      ] }, wordPos.word.id));
     } else if (text) {
       const lines = text.split("\n");
       let wordCount = 0;
@@ -24796,7 +24793,7 @@ function TranscriptionView({
     /* @__PURE__ */ jsxRuntimeExports.jsx(Typography, { variant: "h6", gutterBottom: true, children: "Corrected Transcription" }),
     /* @__PURE__ */ jsxRuntimeExports.jsx(Box, { sx: { display: "flex", flexDirection: "column" }, children: data.corrected_segments.map((segment, segmentIndex) => {
       const segmentWords = segment.words.map((word) => {
-        var _a, _b;
+        var _a, _b, _c;
         const anchor = (_a = data.anchor_sequences) == null ? void 0 : _a.find(
           (a) => {
             var _a2;
@@ -24809,6 +24806,9 @@ function TranscriptionView({
             return (_a2 = g == null ? void 0 : g.word_ids) == null ? void 0 : _a2.includes(word.id);
           }
         ) : void 0;
+        const isWordCorrected = (_c = gap2 == null ? void 0 : gap2.corrections) == null ? void 0 : _c.some(
+          (correction) => correction.word_id === word.id
+        );
         return {
           word: {
             id: word.id,
@@ -24818,7 +24818,8 @@ function TranscriptionView({
           },
           type: anchor ? "anchor" : gap2 ? "gap" : "other",
           sequence: anchor || gap2,
-          isInRange: true
+          isInRange: true,
+          isCorrected: isWordCorrected
         };
       });
       return /* @__PURE__ */ jsxRuntimeExports.jsxs(Box, { sx: { display: "flex", alignItems: "flex-start", width: "100%" }, children: [
@@ -25879,12 +25880,44 @@ function findWordIdsForSequence(segments, sequence) {
   }));
   return allWords.slice(startIndex, endIndex).map((word) => word.id);
 }
+const logWordMatching = (segments, correction, foundId) => {
+  var _a;
+  const allWords = segments.flatMap((s) => s.words);
+  console.log("Word ID Assignment:", {
+    searchingFor: correction.original_word,
+    allWordsWithIds: allWords.map((w) => ({
+      text: w.text,
+      id: w.id
+    })),
+    matchedId: foundId,
+    matchedWord: foundId ? (_a = allWords.find((w) => w.id === foundId)) == null ? void 0 : _a.text : null
+  });
+};
 function findWordIdForCorrection(segments, correction) {
+  const allWords = segments.flatMap((s) => s.words);
+  if (typeof correction.original_position === "number") {
+    const word = allWords[correction.original_position];
+    if (word && word.text === correction.original_word) {
+      logWordMatching(segments, correction, word.id);
+      return word.id;
+    }
+  }
   for (const segment of segments) {
     const word = segment.words.find((w) => w.text === correction.original_word);
-    if (word) return word.id;
+    if (word) {
+      console.warn(
+        "Warning: Had to find word by text match rather than position.",
+        correction.original_word,
+        "Consider using position information for more accurate matching."
+      );
+      logWordMatching(segments, correction, word.id);
+      return word.id;
+    }
   }
-  return nanoid();
+  const newId = nanoid();
+  logWordMatching(segments, correction, null);
+  console.log("Generated new ID:", newId, "for word:", correction.original_word);
+  return newId;
 }
 function findReferenceWordIds(referenceSource, sequence) {
   var _a;
@@ -25933,15 +25966,29 @@ function initializeDataWithIds(data) {
   });
   newData.gap_sequences = newData.gap_sequences.map((gap2) => {
     const serverGap = gap2;
+    console.log("Processing gap sequence:", {
+      words: gap2.words,
+      word_ids: gap2.word_ids,
+      corrections: gap2.corrections,
+      foundWordIds: findWordIdsForSequence(newData.corrected_segments, serverGap)
+    });
     return {
       ...gap2,
       id: gap2.id || nanoid(),
       word_ids: gap2.word_ids || findWordIdsForSequence(newData.corrected_segments, serverGap),
-      corrections: gap2.corrections.map((correction) => ({
-        ...correction,
-        id: correction.id || nanoid(),
-        word_id: correction.word_id || findWordIdForCorrection(newData.corrected_segments, correction)
-      }))
+      corrections: gap2.corrections.map((correction) => {
+        const wordId = correction.word_id || findWordIdForCorrection(newData.corrected_segments, correction);
+        console.log("Correction word ID assignment:", {
+          original_word: correction.original_word,
+          corrected_word: correction.corrected_word,
+          assigned_id: wordId
+        });
+        return {
+          ...correction,
+          id: correction.id || nanoid(),
+          word_id: wordId
+        };
+      })
     };
   });
   return newData;
@@ -26474,4 +26521,4 @@ function App() {
 ReactDOM$1.createRoot(document.getElementById("root")).render(
   /* @__PURE__ */ jsxRuntimeExports.jsx(App, {})
 );
-//# sourceMappingURL=index-BqjrhNz7.js.map
+//# sourceMappingURL=index-BzzURiY4.js.map

@@ -35,7 +35,10 @@ export interface TranscriptionWordPosition extends BaseWordPosition {
         start_time?: number
         end_time?: number
     }
+    type: 'anchor' | 'gap' | 'other'
+    sequence?: AnchorSequence | GapSequence
     isInRange: boolean
+    isCorrected?: boolean
 }
 
 // Reference-specific word position with simple string word

@@ -103,8 +103,8 @@ export function HighlightedText({
                         shouldFlash={shouldWordFlash(wordPos)}
                         isCurrentlyPlaying={shouldHighlightWord(wordPos)}
                         isAnchor={wordPos.type === 'anchor'}
-                        isCorrectedGap={wordPos.type === 'gap' && Boolean((wordPos.sequence as GapSequence)?.corrections?.length)}
-                        isUncorrectedGap={wordPos.type === 'gap' && !(wordPos.sequence as GapSequence)?.corrections?.length}
+                        isCorrectedGap={wordPos.type === 'gap' && wordPos.isCorrected}
+                        isUncorrectedGap={wordPos.type === 'gap' && !wordPos.isCorrected}
                         onClick={() => handleWordClick(
                             wordPos.word.text,
                             wordPos.word.id,

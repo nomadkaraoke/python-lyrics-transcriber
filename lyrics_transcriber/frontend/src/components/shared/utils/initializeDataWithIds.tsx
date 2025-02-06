@@ -54,16 +54,57 @@ function findWordIdsForSequence(
     return allWords.slice(startIndex, endIndex).map(word => word.id);
 }
 
-// Helper function to find word ID for a correction
+// Add this at the top of the file
+const logWordMatching = (segments: LyricsSegment[], correction: { original_word: string }, foundId: string | null) => {
+    const allWords = segments.flatMap(s => s.words);
+    console.log('Word ID Assignment:', {
+        searchingFor: correction.original_word,
+        allWordsWithIds: allWords.map(w => ({
+            text: w.text,
+            id: w.id
+        })),
+        matchedId: foundId,
+        matchedWord: foundId ? allWords.find(w => w.id === foundId)?.text : null
+    });
+};
+
+// Modify findWordIdForCorrection to include logging
 function findWordIdForCorrection(
     segments: LyricsSegment[],
-    correction: { original_word: string; }
+    correction: {
+        original_word: string;
+        original_position?: number;
+    }
 ): string {
+    const allWords = segments.flatMap(s => s.words);
+
+    // If we have position information, use it to find the exact word
+    if (typeof correction.original_position === 'number') {
+        const word = allWords[correction.original_position];
+        if (word && word.text === correction.original_word) {
+            logWordMatching(segments, correction, word.id);
+            return word.id;
+        }
+    }
+
+    // Fallback to finding by text (but log a warning)
     for (const segment of segments) {
         const word = segment.words.find(w => w.text === correction.original_word);
-        if (word) return word.id;
+        if (word) {
+            console.warn(
+                'Warning: Had to find word by text match rather than position.',
+                correction.original_word,
+                'Consider using position information for more accurate matching.'
+            );
+            logWordMatching(segments, correction, word.id);
+            return word.id;
+        }
     }
-    return nanoid(); // Fallback if word not found
+
+    const newId = nanoid();
+    logWordMatching(segments, correction, null);
+    console.log('Generated new ID:', newId, 'for word:', correction.original_word);
+    return newId;
 }
 
 // Helper function to find word IDs in reference text
@@ -130,15 +171,30 @@ export function initializeDataWithIds(data: CorrectionData): CorrectionData {
     // Update gap sequences to use word IDs
     newData.gap_sequences = newData.gap_sequences.map((gap) => {
         const serverGap = gap as unknown as ServerData;
+        console.log('Processing gap sequence:', {
+            words: gap.words,
+            word_ids: gap.word_ids,
+            corrections: gap.corrections,
+            foundWordIds: findWordIdsForSequence(newData.corrected_segments, serverGap)
+        });
+
         return {
             ...gap,
             id: gap.id || nanoid(),
             word_ids: gap.word_ids || findWordIdsForSequence(newData.corrected_segments, serverGap),
-            corrections: gap.corrections.map((correction: WordCorrection) => ({
-                ...correction,
-                id: correction.id || nanoid(),
-                word_id: correction.word_id || findWordIdForCorrection(newData.corrected_segments, correction)
-            }))
+            corrections: gap.corrections.map((correction: WordCorrection) => {
+                const wordId = correction.word_id || findWordIdForCorrection(newData.corrected_segments, correction);
+                console.log('Correction word ID assignment:', {
+                    original_word: correction.original_word,
+                    corrected_word: correction.corrected_word,
+                    assigned_id: wordId
+                });
+                return {
+                    ...correction,
+                    id: correction.id || nanoid(),
+                    word_id: wordId
+                };
+            })
         } as GapSequence;
     });
 
