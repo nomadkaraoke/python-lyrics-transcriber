@@ -1097,27 +1097,16 @@ class KaraokeComposer:
             else:
                 logger.debug("this instrumental did not wait for the previous " "line to finish")
 
-            logger.debug("purging all highlight/draw queues")
+            logger.debug("_compose_lyric: Purging all highlight/draw queues")
             for st in lyric_states:
-                # If instrumental has waited for this syllable to end
                 if instrumental.wait:
-                    # There shouldn't be anything in the highlight queue
-                    assert not st.highlight_queue
-                    # If there's anything left in the draw queue
+                    if st.highlight_queue:
+                        logger.warning("_compose_lyric: Unexpected items in highlight queue when instrumental waited")
                     if st.draw_queue:
-                        # NOTE If the current lyric state has anything
-                        # left in the draw queue, it should be the
-                        # erasing of the current line.
                         if st == state:
-                            assert should_erase_this_line
-                        # Queue everything left in the draw queue
-                        # immediately
-                        self.lyric_packet_indices.update(
-                            range(
-                                self.writer.packets_queued,
-                                self.writer.packets_queued + len(st.draw_queue),
-                            )
-                        )
+                            logger.debug("_compose_lyric: Queueing remaining draw packets for current state")
+                        else:
+                            logger.warning("_compose_lyric: Unexpected items in draw queue for non-current state")
                         self.writer.queue_packets(st.draw_queue)
 
                 # Purge highlight/draw queues

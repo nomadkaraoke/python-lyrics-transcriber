@@ -9,6 +9,7 @@ import os
 import zipfile
 import shutil
 
+from lyrics_transcriber.output.cdgmaker.cdg import CDG_VISIBLE_WIDTH
 from lyrics_transcriber.output.cdgmaker.composer import KaraokeComposer
 from lyrics_transcriber.output.cdgmaker.render import get_wrapped_text
 from lyrics_transcriber.types import LyricsSegment
@@ -110,7 +111,7 @@ class CDGGenerator:
                 # Convert time from seconds to centiseconds
                 timestamp = int(word.start_time * 100)
                 lyrics_data.append({"timestamp": timestamp, "text": word.text.upper()})  # CDG format expects uppercase text
-                # self.logger.debug(f"Added lyric: timestamp {timestamp}, text '{word.text}'")
+                self.logger.debug(f"Added lyric: timestamp {timestamp}, text '{word.text}'")
 
         # Sort by timestamp to ensure correct order
         lyrics_data.sort(key=lambda x: x["timestamp"])
@@ -338,20 +339,20 @@ class CDGGenerator:
         formatted_lyrics = []
 
         for i, lyric in enumerate(lyrics_data):
-            # self.logger.debug(f"Processing lyric {i}: timestamp {lyric['timestamp']}, text '{lyric['text']}'")
+            self.logger.debug(f"Processing lyric {i}: timestamp {lyric['timestamp']}, text '{lyric['text']}'")
 
             if i == 0 or lyric["timestamp"] - lyrics_data[i - 1]["timestamp"] >= cdg_styles["lead_in_threshold"]:
                 lead_in_start = lyric["timestamp"] - cdg_styles["lead_in_total"]
-                # self.logger.debug(f"Adding lead-in before lyric {i} at timestamp {lead_in_start}")
+                self.logger.debug(f"Adding lead-in before lyric {i} at timestamp {lead_in_start}")
                 for j, symbol in enumerate(cdg_styles["lead_in_symbols"]):
                     sync_time = lead_in_start + j * cdg_styles["lead_in_duration"]
                     sync_times.append(sync_time)
                     formatted_lyrics.append(symbol)
-                    # self.logger.debug(f"  Added lead-in symbol {j+1}: '{symbol}' at {sync_time}")
+                    self.logger.debug(f"  Added lead-in symbol {j+1}: '{symbol}' at {sync_time}")
 
             sync_times.append(lyric["timestamp"])
             formatted_lyrics.append(lyric["text"])
-            # self.logger.debug(f"Added lyric: '{lyric['text']}' at {lyric['timestamp']}")
+            self.logger.debug(f"Added lyric: '{lyric['text']}' at {lyric['timestamp']}")
 
         formatted_text = self.format_lyrics(
             formatted_lyrics,
@@ -473,24 +474,29 @@ class CDGGenerator:
         page_number = 1
 
         for i, text in enumerate(lyrics_data):
-            # self.logger.debug(f"Processing text {i}: '{text}' (sync time: {sync_times[i]})")
+            self.logger.debug(f"format_lyrics: Processing text {i}: '{text}' (sync time: {sync_times[i]})")
 
             if text.startswith("/"):
                 if current_line:
-                    wrapped_lines = get_wrapped_text(current_line.strip(), font, self.cdg_visible_width).split("\n")
+                    wrapped_lines = get_wrapped_text(current_line.strip(), font, CDG_VISIBLE_WIDTH).split("\n")
                     for wrapped_line in wrapped_lines:
                         formatted_lyrics.append(wrapped_line)
                         lines_on_page += 1
-                        # self.logger.debug(f"Added wrapped line: '{wrapped_line}'. Lines on page: {lines_on_page}")
+                        self.logger.debug(f"format_lyrics: Added wrapped line: '{wrapped_line}'. Lines on page: {lines_on_page}")
+                        # Add empty line after punctuation immediately
+                        if wrapped_line.endswith(("!", "?", ".")) and not wrapped_line == "~":
+                            formatted_lyrics.append("~")
+                            lines_on_page += 1
+                            self.logger.debug(f"format_lyrics: Added empty line after punctuation. Lines on page now: {lines_on_page}")
                         if lines_on_page == 4:
                             lines_on_page = 0
                             page_number += 1
-                            # self.logger.debug(f"Page full. New page number: {page_number}")
+                            self.logger.debug(f"format_lyrics: Page full. New page number: {page_number}")
                     current_line = ""
                 text = text[1:]
 
             current_line += text + " "
-            # self.logger.debug(f"Current line: '{current_line}'")
+            self.logger.debug(f"format_lyrics: Current line: '{current_line}'")
 
             is_last_before_instrumental = any(
                 inst["sync"] > sync_times[i] and (i == len(sync_times) - 1 or sync_times[i + 1] > inst["sync"]) for inst in instrumentals
@@ -498,33 +504,103 @@ class CDGGenerator:
 
             if is_last_before_instrumental or i == len(lyrics_data) - 1:
                 if current_line:
-                    wrapped_lines = get_wrapped_text(current_line.strip(), font, self.cdg_visible_width).split("\n")
+                    wrapped_lines = get_wrapped_text(current_line.strip(), font, CDG_VISIBLE_WIDTH).split("\n")
                     for wrapped_line in wrapped_lines:
                         formatted_lyrics.append(wrapped_line)
                         lines_on_page += 1
-                        # self.logger.debug(f"Added wrapped line at end of section: '{wrapped_line}'. Lines on page: {lines_on_page}")
+                        self.logger.debug(
+                            f"format_lyrics: Added wrapped line at end of section: '{wrapped_line}'. Lines on page: {lines_on_page}"
+                        )
                         if lines_on_page == 4:
                             lines_on_page = 0
                             page_number += 1
-                            # self.logger.debug(f"Page full. New page number: {page_number}")
+                            self.logger.debug(f"format_lyrics: Page full. New page number: {page_number}")
                     current_line = ""
 
                 if is_last_before_instrumental:
-                    blank_lines_needed = 4 - lines_on_page
-                    if blank_lines_needed < 4:
-                        formatted_lyrics.extend(["~"] * blank_lines_needed)
-                        # self.logger.debug(f"Added {blank_lines_needed} empty lines before instrumental. Lines on page was {lines_on_page}")
+                    self.logger.debug(f"format_lyrics: is_last_before_instrumental: True lines_on_page: {lines_on_page}")
+                    # Calculate remaining lines needed to reach next full page
+                    remaining_lines = 4 - (lines_on_page % 4) if lines_on_page % 4 != 0 else 0
+                    if remaining_lines > 0:
+                        formatted_lyrics.extend(["~"] * remaining_lines)
+                        self.logger.debug(f"format_lyrics: Added {remaining_lines} empty lines to complete current page")
+
+                    # Reset the counter and increment page
                     lines_on_page = 0
                     page_number += 1
-                    # self.logger.debug(f"Reset lines_on_page to 0. New page number: {page_number}")
+                    self.logger.debug(f"format_lyrics: Reset lines_on_page to 0. New page number: {page_number}")
 
-        final_lyrics = []
-        for line in formatted_lyrics:
-            final_lyrics.append(line)
-            if line.endswith(("!", "?", ".")) and not line == "~":
-                final_lyrics.append("~")
-                # self.logger.debug("Added empty line after punctuation")
+        return "\n".join(formatted_lyrics)
 
-        result = "\n".join(final_lyrics)
-        # self.logger.debug(f"Final formatted lyrics:\n{result}")
-        return result
+    def generate_cdg_from_lrc(
+        self,
+        lrc_file: str,
+        audio_file: str,
+        title: str,
+        artist: str,
+        cdg_styles: dict,
+    ) -> Tuple[str, str, str]:
+        """Generate a CDG file from an LRC file and audio file.
+
+        Args:
+            lrc_file: Path to the LRC file
+            audio_file: Path to the audio file
+            title: Title of the song
+            artist: Artist name
+            cdg_styles: Dictionary containing CDG style parameters
+
+        Returns:
+            Tuple containing paths to (cdg_file, mp3_file, zip_file)
+        """
+        self._validate_and_setup_font(cdg_styles)
+
+        # Parse LRC file and convert to lyrics_data format
+        lyrics_data = self._parse_lrc(lrc_file)
+
+        toml_file = self._create_toml_file(
+            audio_file=audio_file,
+            title=title,
+            artist=artist,
+            lyrics_data=lyrics_data,
+            cdg_styles=cdg_styles,
+        )
+
+        try:
+            self._compose_cdg(toml_file)
+            output_zip = self._find_cdg_zip(artist, title)
+            self._extract_cdg_files(output_zip)
+
+            cdg_file = self._get_cdg_path(artist, title)
+            mp3_file = self._get_mp3_path(artist, title)
+
+            self._verify_output_files(cdg_file, mp3_file)
+
+            self.logger.info("CDG file generated successfully")
+            return cdg_file, mp3_file, output_zip
+
+        except Exception as e:
+            self.logger.error(f"Error composing CDG: {e}")
+            raise
+
+    def _parse_lrc(self, lrc_file: str) -> List[dict]:
+        """Parse LRC file and extract timestamps and lyrics."""
+        with open(lrc_file, "r", encoding="utf-8") as f:
+            content = f.read()
+
+        # Extract timestamps and lyrics
+        pattern = r"\[(\d{2}):(\d{2})\.(\d{3})\](\d+:)?(/?.*)"
+        matches = re.findall(pattern, content)
+
+        if not matches:
+            raise ValueError(f"No valid lyrics found in the LRC file: {lrc_file}")
+
+        lyrics = []
+        for match in matches:
+            minutes, seconds, milliseconds = map(int, match[:3])
+            timestamp = (minutes * 60 + seconds) * 100 + int(milliseconds / 10)  # Convert to centiseconds
+            text = match[4].strip().upper()
+            if text:  # Only add non-empty lyrics
+                lyrics.append({"timestamp": timestamp, "text": text})
+
+        self.logger.info(f"Found {len(lyrics)} lyric lines")
+        return lyrics
