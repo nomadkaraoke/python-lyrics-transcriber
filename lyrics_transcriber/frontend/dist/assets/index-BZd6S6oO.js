@@ -25318,7 +25318,9 @@ function EditModal({
   onSave,
   onPlaySegment,
   currentTime = 0,
-  onDelete
+  onDelete,
+  onAddSegment,
+  onSplitSegment
 }) {
   const [editedSegment, setEditedSegment] = reactExports.useState(segment);
   const [menuAnchorEl, setMenuAnchorEl] = reactExports.useState(null);
@@ -25334,9 +25336,9 @@ function EditModal({
       ...newWords[index],
       [field]: field === "start_time" || field === "end_time" ? parseFloat(Number(value).toFixed(4)) : value
     };
-    updateSegment(newWords);
+    updateSegment2(newWords);
   };
-  const updateSegment = (newWords) => {
+  const updateSegment2 = (newWords) => {
     const segmentStartTime = Math.min(...newWords.map((w) => w.start_time));
     const segmentEndTime = Math.max(...newWords.map((w) => w.end_time));
     setEditedSegment({
@@ -25373,7 +25375,7 @@ function EditModal({
       };
       newWords.splice(index + 1, 0, newWord);
     }
-    updateSegment(newWords);
+    updateSegment2(newWords);
   };
   const handleSplitWord = (index) => {
     const word = editedSegment.words[index];
@@ -25404,7 +25406,7 @@ function EditModal({
         confidence: 1
       }
     );
-    updateSegment(newWords);
+    updateSegment2(newWords);
   };
   const handleMergeWords = (index) => {
     if (index >= editedSegment.words.length - 1) return;
@@ -25418,11 +25420,11 @@ function EditModal({
       end_time: word2.end_time,
       confidence: 1
     });
-    updateSegment(newWords);
+    updateSegment2(newWords);
   };
   const handleRemoveWord = (index) => {
     const newWords = editedSegment.words.filter((_, i) => i !== index);
-    updateSegment(newWords);
+    updateSegment2(newWords);
   };
   const handleReset = () => {
     setEditedSegment(JSON.parse(JSON.stringify(originalSegment)));
@@ -25473,7 +25475,7 @@ function EditModal({
         confidence: 1
       }));
     }
-    updateSegment(updatedWords);
+    updateSegment2(updatedWords);
     setReplacementText("");
   };
   const handleKeyDown = (event) => {
@@ -25486,6 +25488,12 @@ function EditModal({
     if (segmentIndex !== null) {
       onDelete == null ? void 0 : onDelete(segmentIndex);
       onClose();
+    }
+  };
+  const handleSplitSegment = (wordIndex) => {
+    if (segmentIndex !== null && editedSegment) {
+      handleSave();
+      onSplitSegment == null ? void 0 : onSplitSegment(segmentIndex, wordIndex);
     }
   };
   return /* @__PURE__ */ jsxRuntimeExports.jsxs(
@@ -25523,7 +25531,7 @@ function EditModal({
               onWordUpdate: (index, updates) => {
                 const newWords = [...editedSegment.words];
                 newWords[index] = { ...newWords[index], ...updates };
-                updateSegment(newWords);
+                updateSegment2(newWords);
               },
               currentTime,
               onPlaySegment
@@ -25611,16 +25619,26 @@ function EditModal({
               children: "Reset"
             }
           ),
-          /* @__PURE__ */ jsxRuntimeExports.jsx(
-            Button,
-            {
-              startIcon: /* @__PURE__ */ jsxRuntimeExports.jsx(DeleteIcon, {}),
-              onClick: handleDelete,
-              color: "error",
-              sx: { mr: "auto" },
-              children: "Delete Segment"
-            }
-          ),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs(Box, { sx: { mr: "auto", display: "flex", gap: 1 }, children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              Button,
+              {
+                startIcon: /* @__PURE__ */ jsxRuntimeExports.jsx(AddIcon, {}),
+                onClick: () => segmentIndex !== null && (onAddSegment == null ? void 0 : onAddSegment(segmentIndex)),
+                color: "primary",
+                children: "Add Segment Before"
+              }
+            ),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              Button,
+              {
+                startIcon: /* @__PURE__ */ jsxRuntimeExports.jsx(DeleteIcon, {}),
+                onClick: handleDelete,
+                color: "error",
+                children: "Delete Segment"
+              }
+            )
+          ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsx(Button, { onClick: onClose, children: "Cancel" }),
           /* @__PURE__ */ jsxRuntimeExports.jsx(Button, { onClick: handleSave, variant: "contained", children: "Save Changes" })
         ] }),
@@ -25644,6 +25662,13 @@ function EditModal({
               }, children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx(SplitIcon, { sx: { mr: 1 } }),
                 " Split Word"
+              ] }),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs(MenuItem, { onClick: () => {
+                handleSplitSegment(selectedWordIndex);
+                handleMenuClose();
+              }, children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx(SplitIcon, { sx: { mr: 1 } }),
+                " Split Segment After Word"
               ] }),
               /* @__PURE__ */ jsxRuntimeExports.jsxs(
                 MenuItem,
@@ -26150,6 +26175,169 @@ function initializeDataWithIds(data) {
   });
   return newData;
 }
+const addSegmentBefore = (data, beforeIndex) => {
+  const newData = { ...data };
+  const beforeSegment = newData.corrected_segments[beforeIndex];
+  const newStartTime = Math.max(0, beforeSegment.start_time - 1);
+  const newEndTime = newStartTime + 1;
+  const newSegment = {
+    id: nanoid(),
+    text: "REPLACE",
+    start_time: newStartTime,
+    end_time: newEndTime,
+    words: [{
+      id: nanoid(),
+      text: "REPLACE",
+      start_time: newStartTime,
+      end_time: newEndTime,
+      confidence: 1
+    }]
+  };
+  newData.corrected_segments.splice(beforeIndex, 0, newSegment);
+  newData.corrected_text = newData.corrected_segments.map((segment) => segment.text).join("\n");
+  return newData;
+};
+const splitSegment = (data, segmentIndex, afterWordIndex) => {
+  const newData = { ...data };
+  const segment = newData.corrected_segments[segmentIndex];
+  const firstHalfWords = segment.words.slice(0, afterWordIndex + 1);
+  const secondHalfWords = segment.words.slice(afterWordIndex + 1);
+  if (secondHalfWords.length === 0) return null;
+  const firstSegment = {
+    ...segment,
+    words: firstHalfWords,
+    text: firstHalfWords.map((w) => w.text).join(" "),
+    end_time: firstHalfWords[firstHalfWords.length - 1].end_time
+  };
+  const secondSegment = {
+    id: nanoid(),
+    words: secondHalfWords,
+    text: secondHalfWords.map((w) => w.text).join(" "),
+    start_time: secondHalfWords[0].start_time,
+    end_time: secondHalfWords[secondHalfWords.length - 1].end_time
+  };
+  newData.corrected_segments.splice(segmentIndex, 1, firstSegment, secondSegment);
+  newData.corrected_text = newData.corrected_segments.map((segment2) => segment2.text).join("\n");
+  return newData;
+};
+const deleteSegment = (data, segmentIndex) => {
+  const newData = { ...data };
+  const deletedSegment = newData.corrected_segments[segmentIndex];
+  newData.corrected_segments = newData.corrected_segments.filter((_, index) => index !== segmentIndex);
+  newData.anchor_sequences = newData.anchor_sequences.map((anchor) => ({
+    ...anchor,
+    word_ids: anchor.word_ids.filter(
+      (id) => !deletedSegment.words.some((word) => word.id === id)
+    )
+  }));
+  newData.gap_sequences = newData.gap_sequences.map((gap2) => ({
+    ...gap2,
+    word_ids: gap2.word_ids.filter(
+      (id) => !deletedSegment.words.some((word) => word.id === id)
+    )
+  }));
+  newData.corrected_text = newData.corrected_segments.map((segment) => segment.text).join("\n");
+  return newData;
+};
+const updateSegment = (data, segmentIndex, updatedSegment) => {
+  const newData = { ...data };
+  updatedSegment.words = updatedSegment.words.map((word) => ({
+    ...word,
+    id: word.id || nanoid()
+  }));
+  newData.corrected_segments[segmentIndex] = updatedSegment;
+  newData.corrected_text = newData.corrected_segments.map((segment) => segment.text).join("\n");
+  return newData;
+};
+const generateStorageKey = (text) => {
+  let hash2 = 0;
+  for (let i = 0; i < text.length; i++) {
+    const char2 = text.charCodeAt(i);
+    hash2 = (hash2 << 5) - hash2 + char2;
+    hash2 = hash2 & hash2;
+  }
+  return `song_${hash2}`;
+};
+const stripIds = (obj) => {
+  const clone = JSON.parse(JSON.stringify(obj));
+  return clone.corrected_segments.map((segment) => {
+    const { id: _id, ...strippedSegment } = segment;
+    return {
+      ...strippedSegment,
+      words: segment.words.map((word) => {
+        const { id: _wordId, ...strippedWord } = word;
+        return strippedWord;
+      })
+    };
+  });
+};
+const loadSavedData = (initialData) => {
+  const storageKey = generateStorageKey(initialData.transcribed_text);
+  const savedDataStr = localStorage.getItem("lyrics_analyzer_data");
+  const savedDataObj = savedDataStr ? JSON.parse(savedDataStr) : {};
+  if (savedDataObj[storageKey]) {
+    try {
+      const parsed = savedDataObj[storageKey];
+      if (parsed.transcribed_text === initialData.transcribed_text) {
+        const strippedSaved = stripIds(parsed);
+        const strippedInitial = stripIds(initialData);
+        const hasChanges = JSON.stringify(strippedSaved) !== JSON.stringify(strippedInitial);
+        if (hasChanges) {
+          return parsed;
+        } else {
+          delete savedDataObj[storageKey];
+          localStorage.setItem("lyrics_analyzer_data", JSON.stringify(savedDataObj));
+        }
+      }
+    } catch (error) {
+      console.error("Failed to parse saved data:", error);
+      delete savedDataObj[storageKey];
+      localStorage.setItem("lyrics_analyzer_data", JSON.stringify(savedDataObj));
+    }
+  }
+  return null;
+};
+const saveData = (data, initialData) => {
+  const storageKey = generateStorageKey(initialData.transcribed_text);
+  const savedDataStr = localStorage.getItem("lyrics_analyzer_data");
+  const savedDataObj = savedDataStr ? JSON.parse(savedDataStr) : {};
+  savedDataObj[storageKey] = data;
+  localStorage.setItem("lyrics_analyzer_data", JSON.stringify(savedDataObj));
+};
+const clearSavedData = (transcribedText) => {
+  const storageKey = generateStorageKey(transcribedText);
+  const savedDataStr = localStorage.getItem("lyrics_analyzer_data");
+  const savedDataObj = savedDataStr ? JSON.parse(savedDataStr) : {};
+  delete savedDataObj[storageKey];
+  localStorage.setItem("lyrics_analyzer_data", JSON.stringify(savedDataObj));
+};
+const setupKeyboardHandlers = (state) => {
+  const handleKeyDown = (e) => {
+    if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
+      return;
+    }
+    if (e.key === "Shift") {
+      state.setIsShiftPressed(true);
+      document.body.style.userSelect = "none";
+    } else if (e.key === "Meta") {
+      state.setIsCtrlPressed(true);
+    } else if (e.key === " " || e.code === "Space") {
+      e.preventDefault();
+      if (window.toggleAudioPlayback) {
+        window.toggleAudioPlayback();
+      }
+    }
+  };
+  const handleKeyUp = (e) => {
+    if (e.key === "Shift") {
+      state.setIsShiftPressed(false);
+      document.body.style.userSelect = "";
+    } else if (e.key === "Meta") {
+      state.setIsCtrlPressed(false);
+    }
+  };
+  return { handleKeyDown, handleKeyUp };
+};
 function LyricsAnalyzer({ data: initialData, onFileLoad, apiClient, isReadOnly }) {
   var _a, _b, _c, _d, _e, _f, _g, _h;
   const [modalContent, setModalContent] = reactExports.useState(null);
@@ -26170,87 +26358,22 @@ function LyricsAnalyzer({ data: initialData, onFileLoad, apiClient, isReadOnly }
   const [currentAudioTime, setCurrentAudioTime] = reactExports.useState(0);
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("md"));
-  const generateStorageKey = (text) => {
-    let hash2 = 0;
-    for (let i = 0; i < text.length; i++) {
-      const char2 = text.charCodeAt(i);
-      hash2 = (hash2 << 5) - hash2 + char2;
-      hash2 = hash2 & hash2;
-    }
-    return `song_${hash2}`;
-  };
   reactExports.useEffect(() => {
-    const storageKey = generateStorageKey(initialData.transcribed_text);
-    const savedDataStr = localStorage.getItem("lyrics_analyzer_data");
-    const savedDataObj = savedDataStr ? JSON.parse(savedDataStr) : {};
-    if (savedDataObj[storageKey]) {
-      try {
-        const parsed = savedDataObj[storageKey];
-        if (parsed.transcribed_text === initialData.transcribed_text) {
-          const stripIds = (obj) => {
-            const clone = JSON.parse(JSON.stringify(obj));
-            return clone.corrected_segments.map((segment) => {
-              const { id: _id, ...strippedSegment } = segment;
-              return {
-                ...strippedSegment,
-                words: segment.words.map((word) => {
-                  const { id: _wordId, ...strippedWord } = word;
-                  return strippedWord;
-                })
-              };
-            });
-          };
-          const strippedSaved = stripIds(parsed);
-          const strippedInitial = stripIds(initialData);
-          const hasChanges = JSON.stringify(strippedSaved) !== JSON.stringify(strippedInitial);
-          if (hasChanges && window.confirm("Found saved progress for this song. Would you like to restore it?")) {
-            setData(parsed);
-          } else if (!hasChanges) {
-            delete savedDataObj[storageKey];
-            localStorage.setItem("lyrics_analyzer_data", JSON.stringify(savedDataObj));
-          }
-        }
-      } catch (error) {
-        console.error("Failed to parse saved data:", error);
-        delete savedDataObj[storageKey];
-        localStorage.setItem("lyrics_analyzer_data", JSON.stringify(savedDataObj));
-      }
+    const savedData = loadSavedData(initialData);
+    if (savedData && window.confirm("Found saved progress for this song. Would you like to restore it?")) {
+      setData(savedData);
     }
   }, [initialData]);
   reactExports.useEffect(() => {
     if (!isReadOnly) {
-      const storageKey = generateStorageKey(initialData.transcribed_text);
-      const savedDataStr = localStorage.getItem("lyrics_analyzer_data");
-      const savedDataObj = savedDataStr ? JSON.parse(savedDataStr) : {};
-      savedDataObj[storageKey] = data;
-      localStorage.setItem("lyrics_analyzer_data", JSON.stringify(savedDataObj));
+      saveData(data, initialData);
     }
-  }, [data, isReadOnly, initialData.transcribed_text]);
+  }, [data, isReadOnly, initialData]);
   reactExports.useEffect(() => {
-    const handleKeyDown = (e) => {
-      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
-        return;
-      }
-      if (e.key === "Shift") {
-        setIsShiftPressed(true);
-        document.body.style.userSelect = "none";
-      } else if (e.key === "Meta") {
-        setIsCtrlPressed(true);
-      } else if (e.key === " " || e.code === "Space") {
-        e.preventDefault();
-        if (window.toggleAudioPlayback) {
-          window.toggleAudioPlayback();
-        }
-      }
-    };
-    const handleKeyUp = (e) => {
-      if (e.key === "Shift") {
-        setIsShiftPressed(false);
-        document.body.style.userSelect = "";
-      } else if (e.key === "Meta") {
-        setIsCtrlPressed(false);
-      }
-    };
+    const { handleKeyDown, handleKeyUp } = setupKeyboardHandlers({
+      setIsShiftPressed,
+      setIsCtrlPressed
+    });
     window.addEventListener("keydown", handleKeyDown);
     window.addEventListener("keyup", handleKeyUp);
     return () => {
@@ -26306,33 +26429,12 @@ function LyricsAnalyzer({ data: initialData, onFileLoad, apiClient, isReadOnly }
   }, [effectiveMode, data.corrected_segments, handleFlash, originalData.corrected_segments]);
   const handleUpdateSegment = reactExports.useCallback((updatedSegment) => {
     if (!editModalSegment) return;
-    const newData = { ...data };
-    updatedSegment.words = updatedSegment.words.map((word) => ({
-      ...word,
-      id: word.id || nanoid()
-    }));
-    newData.corrected_segments[editModalSegment.index] = updatedSegment;
-    newData.corrected_text = newData.corrected_segments.map((segment) => segment.text).join("\n");
+    const newData = updateSegment(data, editModalSegment.index, updatedSegment);
     setData(newData);
     setEditModalSegment(null);
   }, [data, editModalSegment]);
   const handleDeleteSegment = reactExports.useCallback((segmentIndex) => {
-    const newData = { ...data };
-    const deletedSegment = newData.corrected_segments[segmentIndex];
-    newData.corrected_segments = newData.corrected_segments.filter((_, index) => index !== segmentIndex);
-    newData.anchor_sequences = newData.anchor_sequences.map((anchor) => ({
-      ...anchor,
-      word_ids: anchor.word_ids.filter(
-        (id) => !deletedSegment.words.some((word) => word.id === id)
-      )
-    }));
-    newData.gap_sequences = newData.gap_sequences.map((gap2) => ({
-      ...gap2,
-      word_ids: gap2.word_ids.filter(
-        (id) => !deletedSegment.words.some((word) => word.id === id)
-      )
-    }));
-    newData.corrected_text = newData.corrected_segments.map((segment) => segment.text).join("\n");
+    const newData = deleteSegment(data, segmentIndex);
     setData(newData);
   }, [data]);
   const handleFinishReview = reactExports.useCallback(() => {
@@ -26359,11 +26461,7 @@ function LyricsAnalyzer({ data: initialData, onFileLoad, apiClient, isReadOnly }
   }, []);
   const handleResetCorrections = reactExports.useCallback(() => {
     if (window.confirm("Are you sure you want to reset all corrections? This cannot be undone.")) {
-      const storageKey = generateStorageKey(initialData.transcribed_text);
-      const savedDataStr = localStorage.getItem("lyrics_analyzer_data");
-      const savedDataObj = savedDataStr ? JSON.parse(savedDataStr) : {};
-      delete savedDataObj[storageKey];
-      localStorage.setItem("lyrics_analyzer_data", JSON.stringify(savedDataObj));
+      clearSavedData(initialData.transcribed_text);
       const freshData = initializeDataWithIds(JSON.parse(JSON.stringify(initialData)));
       setData(freshData);
       setModalContent(null);
@@ -26372,6 +26470,17 @@ function LyricsAnalyzer({ data: initialData, onFileLoad, apiClient, isReadOnly }
       setInteractionMode("details");
     }
   }, [initialData]);
+  const handleAddSegment = reactExports.useCallback((beforeIndex) => {
+    const newData = addSegmentBefore(data, beforeIndex);
+    setData(newData);
+  }, [data]);
+  const handleSplitSegment = reactExports.useCallback((segmentIndex, afterWordIndex) => {
+    const newData = splitSegment(data, segmentIndex, afterWordIndex);
+    if (newData) {
+      setData(newData);
+      setEditModalSegment(null);
+    }
+  }, [data]);
   return /* @__PURE__ */ jsxRuntimeExports.jsxs(Box, { children: [
     isReadOnly && /* @__PURE__ */ jsxRuntimeExports.jsxs(Box, { sx: { display: "flex", alignItems: "center", mb: 2, color: "text.secondary" }, children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx(LockIcon, { sx: { mr: 1 } }),
@@ -26518,6 +26627,8 @@ function LyricsAnalyzer({ data: initialData, onFileLoad, apiClient, isReadOnly }
         originalSegment: (editModalSegment == null ? void 0 : editModalSegment.originalSegment) ?? null,
         onSave: handleUpdateSegment,
         onDelete: handleDeleteSegment,
+        onAddSegment: handleAddSegment,
+        onSplitSegment: handleSplitSegment,
         onPlaySegment: handlePlaySegment,
         currentTime: currentAudioTime
       }
@@ -26693,4 +26804,4 @@ function App() {
 ReactDOM$1.createRoot(document.getElementById("root")).render(
   /* @__PURE__ */ jsxRuntimeExports.jsx(App, {})
 );
-//# sourceMappingURL=index-DKnNJHRK.js.map
+//# sourceMappingURL=index-BZd6S6oO.js.map

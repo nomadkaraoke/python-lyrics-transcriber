@@ -35,6 +35,8 @@ interface EditModalProps {
     onPlaySegment?: (startTime: number) => void
     currentTime?: number
     onDelete?: (segmentIndex: number) => void
+    onAddSegment?: (segmentIndex: number) => void
+    onSplitSegment?: (segmentIndex: number, afterWordIndex: number) => void
 }
 
 export default function EditModal({
@@ -47,6 +49,8 @@ export default function EditModal({
     onPlaySegment,
     currentTime = 0,
     onDelete,
+    onAddSegment,
+    onSplitSegment,
 }: EditModalProps) {
     const [editedSegment, setEditedSegment] = useState<LyricsSegment | null>(segment)
     const [menuAnchorEl, setMenuAnchorEl] = useState<null | HTMLElement>(null)
@@ -252,6 +256,13 @@ export default function EditModal({
         }
     }
 
+    const handleSplitSegment = (wordIndex: number) => {
+        if (segmentIndex !== null && editedSegment) {
+            handleSave()  // Save current changes first
+            onSplitSegment?.(segmentIndex, wordIndex)
+        }
+    }
+
     return (
         <Dialog
             open={open}
@@ -361,14 +372,22 @@ export default function EditModal({
                 >
                     Reset
                 </Button>
-                <Button
-                    startIcon={<DeleteIcon />}
-                    onClick={handleDelete}
-                    color="error"
-                    sx={{ mr: 'auto' }}
-                >
-                    Delete Segment
-                </Button>
+                <Box sx={{ mr: 'auto', display: 'flex', gap: 1 }}>
+                    <Button
+                        startIcon={<AddIcon />}
+                        onClick={() => segmentIndex !== null && onAddSegment?.(segmentIndex)}
+                        color="primary"
+                    >
+                        Add Segment Before
+                    </Button>
+                    <Button
+                        startIcon={<DeleteIcon />}
+                        onClick={handleDelete}
+                        color="error"
+                    >
+                        Delete Segment
+                    </Button>
+                </Box>
                 <Button onClick={onClose}>Cancel</Button>
                 <Button onClick={handleSave} variant="contained">
                     Save Changes
@@ -391,6 +410,12 @@ export default function EditModal({
                     handleMenuClose()
                 }}>
                     <SplitIcon sx={{ mr: 1 }} /> Split Word
+                </MenuItem>
+                <MenuItem onClick={() => {
+                    handleSplitSegment(selectedWordIndex!)
+                    handleMenuClose()
+                }}>
+                    <SplitIcon sx={{ mr: 1 }} /> Split Segment After Word
                 </MenuItem>
                 <MenuItem
                     onClick={() => {

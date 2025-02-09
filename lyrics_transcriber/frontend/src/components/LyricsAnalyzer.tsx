@@ -20,8 +20,15 @@ import { WordClickInfo, FlashType } from './shared/types'
 import EditModal from './EditModal'
 import ReviewChangesModal from './ReviewChangesModal'
 import AudioPlayer from './AudioPlayer'
-import { nanoid } from 'nanoid'
 import { initializeDataWithIds, normalizeDataForSubmission } from './shared/utils/initializeDataWithIds'
+import {
+    addSegmentBefore,
+    splitSegment,
+    deleteSegment,
+    updateSegment
+} from './shared/utils/segmentOperations'
+import { loadSavedData, saveData, clearSavedData } from './shared/utils/localStorage'
+import { setupKeyboardHandlers } from './shared/utils/keyboardHandlers'
 
 // Add type for window augmentation at the top of the file
 declare global {
@@ -78,103 +85,27 @@ export default function LyricsAnalyzer({ data: initialData, onFileLoad, apiClien
     const theme = useTheme()
     const isMobile = useMediaQuery(theme.breakpoints.down('md'))
 
-    // Simple hash function for generating storage keys
-    const generateStorageKey = (text: string): string => {
-        let hash = 0;
-        for (let i = 0; i < text.length; i++) {
-            const char = text.charCodeAt(i);
-            hash = ((hash << 5) - hash) + char;
-            hash = hash & hash; // Convert to 32-bit integer
-        }
-        return `song_${hash}`;
-    }
-
-    // Add local storage handling
+    // Load saved data
     useEffect(() => {
-        const storageKey = generateStorageKey(initialData.transcribed_text);
-        const savedDataStr = localStorage.getItem('lyrics_analyzer_data');
-        const savedDataObj = savedDataStr ? JSON.parse(savedDataStr) : {};
-
-        if (savedDataObj[storageKey]) {
-            try {
-                const parsed = savedDataObj[storageKey];
-                if (parsed.transcribed_text === initialData.transcribed_text) {
-                    const stripIds = (obj: CorrectionData): LyricsSegment[] => {
-                        const clone = JSON.parse(JSON.stringify(obj));
-                        return clone.corrected_segments.map((segment: LyricsSegment) => {
-                            // eslint-disable-next-line @typescript-eslint/no-unused-vars
-                            const { id: _id, ...strippedSegment } = segment;
-                            return {
-                                ...strippedSegment,
-                                words: segment.words.map(word => {
-                                    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-                                    const { id: _wordId, ...strippedWord } = word;
-                                    return strippedWord;
-                                })
-                            };
-                        });
-                    };
-
-                    const strippedSaved = stripIds(parsed);
-                    const strippedInitial = stripIds(initialData);
-
-                    const hasChanges = JSON.stringify(strippedSaved) !== JSON.stringify(strippedInitial);
-
-                    if (hasChanges && window.confirm('Found saved progress for this song. Would you like to restore it?')) {
-                        setData(parsed);
-                    } else if (!hasChanges) {
-                        delete savedDataObj[storageKey];
-                        localStorage.setItem('lyrics_analyzer_data', JSON.stringify(savedDataObj));
-                    }
-                }
-            } catch (error) {
-                console.error('Failed to parse saved data:', error);
-                delete savedDataObj[storageKey];
-                localStorage.setItem('lyrics_analyzer_data', JSON.stringify(savedDataObj));
-            }
+        const savedData = loadSavedData(initialData)
+        if (savedData && window.confirm('Found saved progress for this song. Would you like to restore it?')) {
+            setData(savedData)
         }
-    }, [initialData]);
+    }, [initialData])
 
-    // Save to local storage whenever data changes
+    // Save data
     useEffect(() => {
         if (!isReadOnly) {
-            const storageKey = generateStorageKey(initialData.transcribed_text);
-            const savedDataStr = localStorage.getItem('lyrics_analyzer_data');
-            const savedDataObj = savedDataStr ? JSON.parse(savedDataStr) : {};
-
-            savedDataObj[storageKey] = data;
-            localStorage.setItem('lyrics_analyzer_data', JSON.stringify(savedDataObj));
+            saveData(data, initialData)
         }
-    }, [data, isReadOnly, initialData.transcribed_text]);
+    }, [data, isReadOnly, initialData])
 
-    // Update keyboard event handler
+    // Keyboard handlers
     useEffect(() => {
-        const handleKeyDown = (e: KeyboardEvent) => {
-            if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
-                return
-            }
-
-            if (e.key === 'Shift') {
-                setIsShiftPressed(true)
-                document.body.style.userSelect = 'none'
-            } else if (e.key === 'Meta') {
-                setIsCtrlPressed(true)
-            } else if (e.key === ' ' || e.code === 'Space') {
-                e.preventDefault()
-                if (window.toggleAudioPlayback) {
-                    window.toggleAudioPlayback()
-                }
-            }
-        }
-
-        const handleKeyUp = (e: KeyboardEvent) => {
-            if (e.key === 'Shift') {
-                setIsShiftPressed(false)
-                document.body.style.userSelect = ''
-            } else if (e.key === 'Meta') {
-                setIsCtrlPressed(false)
-            }
-        }
+        const { handleKeyDown, handleKeyUp } = setupKeyboardHandlers({
+            setIsShiftPressed,
+            setIsCtrlPressed
+        })
 
         window.addEventListener('keydown', handleKeyDown)
         window.addEventListener('keyup', handleKeyUp)
@@ -241,53 +172,13 @@ export default function LyricsAnalyzer({ data: initialData, onFileLoad, apiClien
 
     const handleUpdateSegment = useCallback((updatedSegment: LyricsSegment) => {
         if (!editModalSegment) return
-
-        const newData = { ...data }
-
-        // Ensure new words have IDs
-        updatedSegment.words = updatedSegment.words.map(word => ({
-            ...word,
-            id: word.id || nanoid()
-        }))
-
-        newData.corrected_segments[editModalSegment.index] = updatedSegment
-
-        // Update corrected_text
-        newData.corrected_text = newData.corrected_segments
-            .map(segment => segment.text)
-            .join('\n')
-
+        const newData = updateSegment(data, editModalSegment.index, updatedSegment)
         setData(newData)
         setEditModalSegment(null)
     }, [data, editModalSegment])
 
     const handleDeleteSegment = useCallback((segmentIndex: number) => {
-        const newData = { ...data }
-        const deletedSegment = newData.corrected_segments[segmentIndex]
-
-        // Remove segment
-        newData.corrected_segments = newData.corrected_segments.filter((_, index) => index !== segmentIndex)
-
-        // Update anchor and gap sequences to remove references to deleted words
-        newData.anchor_sequences = newData.anchor_sequences.map(anchor => ({
-            ...anchor,
-            word_ids: anchor.word_ids.filter(id =>
-                !deletedSegment.words.some(word => word.id === id)
-            )
-        }))
-
-        newData.gap_sequences = newData.gap_sequences.map(gap => ({
-            ...gap,
-            word_ids: gap.word_ids.filter(id =>
-                !deletedSegment.words.some(word => word.id === id)
-            )
-        }))
-
-        // Update corrected_text
-        newData.corrected_text = newData.corrected_segments
-            .map(segment => segment.text)
-            .join('\n')
-
+        const newData = deleteSegment(data, segmentIndex)
         setData(newData)
     }, [data])
 
@@ -323,25 +214,28 @@ export default function LyricsAnalyzer({ data: initialData, onFileLoad, apiClien
 
     const handleResetCorrections = useCallback(() => {
         if (window.confirm('Are you sure you want to reset all corrections? This cannot be undone.')) {
-            const storageKey = generateStorageKey(initialData.transcribed_text);
-            const savedDataStr = localStorage.getItem('lyrics_analyzer_data');
-            const savedDataObj = savedDataStr ? JSON.parse(savedDataStr) : {};
-
-            // Remove only this song's data
-            delete savedDataObj[storageKey];
-            localStorage.setItem('lyrics_analyzer_data', JSON.stringify(savedDataObj));
-
-            // Reset data to initial state with proper initialization
-            const freshData = initializeDataWithIds(JSON.parse(JSON.stringify(initialData)));
-            setData(freshData);
-
-            // Reset any UI state that might affect highlights
-            setModalContent(null);
-            setFlashingType(null);
-            setHighlightInfo(null);
-            setInteractionMode('details');
+            clearSavedData(initialData.transcribed_text)
+            const freshData = initializeDataWithIds(JSON.parse(JSON.stringify(initialData)))
+            setData(freshData)
+            setModalContent(null)
+            setFlashingType(null)
+            setHighlightInfo(null)
+            setInteractionMode('details')
         }
-    }, [initialData]);
+    }, [initialData])
+
+    const handleAddSegment = useCallback((beforeIndex: number) => {
+        const newData = addSegmentBefore(data, beforeIndex)
+        setData(newData)
+    }, [data])
+
+    const handleSplitSegment = useCallback((segmentIndex: number, afterWordIndex: number) => {
+        const newData = splitSegment(data, segmentIndex, afterWordIndex)
+        if (newData) {
+            setData(newData)
+            setEditModalSegment(null)
+        }
+    }, [data])
 
     return (
         <Box>
@@ -476,6 +370,8 @@ export default function LyricsAnalyzer({ data: initialData, onFileLoad, apiClien
                 originalSegment={editModalSegment?.originalSegment ?? null}
                 onSave={handleUpdateSegment}
                 onDelete={handleDeleteSegment}
+                onAddSegment={handleAddSegment}
+                onSplitSegment={handleSplitSegment}
                 onPlaySegment={handlePlaySegment}
                 currentTime={currentAudioTime}
             />
