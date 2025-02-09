@@ -34,12 +34,12 @@ class LyricsCorrector:
 
         # Default handlers in order of preference
         self.handlers = handlers or [
+            ExtendAnchorHandler(logger=self.logger),
+            WordCountMatchHandler(logger=self.logger),
+            SyllablesMatchHandler(logger=self.logger),
+            RelaxedWordCountMatchHandler(logger=self.logger),
+            NoSpacePunctuationMatchHandler(logger=self.logger),
             LLMHandler(logger=self.logger),
-            # ExtendAnchorHandler(logger=self.logger),
-            # WordCountMatchHandler(logger=self.logger),
-            # RelaxedWordCountMatchHandler(logger=self.logger),
-            # NoSpacePunctuationMatchHandler(logger=self.logger),
-            # SyllablesMatchHandler(logger=self.logger),
             # RepeatCorrectionHandler(logger=self.logger),
             # SoundAlikeHandler(logger=self.logger),
             # LevenshteinHandler(logger=self.logger),

@@ -171,9 +171,11 @@ export function initializeDataWithIds(data: CorrectionData): CorrectionData {
     // Update gap sequences to use word IDs
     newData.gap_sequences = newData.gap_sequences.map((gap) => {
         const serverGap = gap as unknown as ServerData;
+        const wordIds = gap.word_ids || findWordIdsForSequence(newData.corrected_segments, serverGap);
+
         console.log('Processing gap sequence:', {
             words: gap.words,
-            word_ids: gap.word_ids,
+            word_ids: wordIds, // Log the actual wordIds we'll use
             corrections: gap.corrections,
             foundWordIds: findWordIdsForSequence(newData.corrected_segments, serverGap)
         });
@@ -181,14 +183,22 @@ export function initializeDataWithIds(data: CorrectionData): CorrectionData {
         return {
             ...gap,
             id: gap.id || nanoid(),
-            word_ids: gap.word_ids || findWordIdsForSequence(newData.corrected_segments, serverGap),
+            word_ids: wordIds,
             corrections: gap.corrections.map((correction: WordCorrection) => {
-                const wordId = correction.word_id || findWordIdForCorrection(newData.corrected_segments, correction);
+                // Find the corresponding word position in the gap sequence
+                const wordIndex = gap.words.findIndex(w => w === correction.original_word);
+                const wordId = wordIndex >= 0 ? wordIds[wordIndex] :
+                    correction.word_id ||
+                    findWordIdForCorrection(newData.corrected_segments, correction);
+
                 console.log('Correction word ID assignment:', {
                     original_word: correction.original_word,
                     corrected_word: correction.corrected_word,
-                    assigned_id: wordId
+                    wordIndex,
+                    wordId,
+                    allWordIds: wordIds
                 });
+
                 return {
                     ...correction,
                     id: correction.id || nanoid(),

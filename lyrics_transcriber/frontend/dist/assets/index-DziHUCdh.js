@@ -26148,22 +26148,27 @@ function initializeDataWithIds(data) {
   });
   newData.gap_sequences = newData.gap_sequences.map((gap2) => {
     const serverGap = gap2;
+    const wordIds = gap2.word_ids || findWordIdsForSequence(newData.corrected_segments, serverGap);
     console.log("Processing gap sequence:", {
       words: gap2.words,
-      word_ids: gap2.word_ids,
+      word_ids: wordIds,
+      // Log the actual wordIds we'll use
       corrections: gap2.corrections,
       foundWordIds: findWordIdsForSequence(newData.corrected_segments, serverGap)
     });
     return {
       ...gap2,
       id: gap2.id || nanoid(),
-      word_ids: gap2.word_ids || findWordIdsForSequence(newData.corrected_segments, serverGap),
+      word_ids: wordIds,
       corrections: gap2.corrections.map((correction) => {
-        const wordId = correction.word_id || findWordIdForCorrection(newData.corrected_segments, correction);
+        const wordIndex = gap2.words.findIndex((w) => w === correction.original_word);
+        const wordId = wordIndex >= 0 ? wordIds[wordIndex] : correction.word_id || findWordIdForCorrection(newData.corrected_segments, correction);
         console.log("Correction word ID assignment:", {
           original_word: correction.original_word,
           corrected_word: correction.corrected_word,
-          assigned_id: wordId
+          wordIndex,
+          wordId,
+          allWordIds: wordIds
         });
         return {
           ...correction,
@@ -26804,4 +26809,4 @@ function App() {
 ReactDOM$1.createRoot(document.getElementById("root")).render(
   /* @__PURE__ */ jsxRuntimeExports.jsx(App, {})
 );
-//# sourceMappingURL=index-BZd6S6oO.js.map
+//# sourceMappingURL=index-DziHUCdh.js.map
