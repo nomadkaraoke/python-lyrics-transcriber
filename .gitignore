@@ -171,3 +171,4 @@ cython_debug/
 *.ass
 *.mp4
 todo.txt
+llm_debug

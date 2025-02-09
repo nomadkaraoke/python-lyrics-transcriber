@@ -13,6 +13,7 @@ from lyrics_transcriber.correction.handlers.extend_anchor import ExtendAnchorHan
 from lyrics_transcriber.correction.handlers.sound_alike import SoundAlikeHandler
 from lyrics_transcriber.correction.handlers.levenshtein import LevenshteinHandler
 from lyrics_transcriber.correction.handlers.repeat import RepeatCorrectionHandler
+from lyrics_transcriber.correction.handlers.llm import LLMHandler
 
 
 class LyricsCorrector:
@@ -33,11 +34,12 @@ class LyricsCorrector:
 
         # Default handlers in order of preference
         self.handlers = handlers or [
+            LLMHandler(logger=self.logger),
+            # ExtendAnchorHandler(logger=self.logger),
             # WordCountMatchHandler(logger=self.logger),
             # RelaxedWordCountMatchHandler(logger=self.logger),
             # NoSpacePunctuationMatchHandler(logger=self.logger),
             # SyllablesMatchHandler(logger=self.logger),
-            ExtendAnchorHandler(logger=self.logger),
             # RepeatCorrectionHandler(logger=self.logger),
             # SoundAlikeHandler(logger=self.logger),
             # LevenshteinHandler(logger=self.logger),
