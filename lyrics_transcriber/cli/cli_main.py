@@ -68,6 +68,12 @@ def create_arg_parser() -> argparse.ArgumentParser:
         type=Path,
         help="JSON file containing output style configurations for CDG and video generation",
     )
+    output_group.add_argument(
+        "--subtitle_offset",
+        type=int,
+        default=0,
+        help="Offset subtitle timing by N milliseconds (positive or negative). Default: 0",
+    )
 
     # Feature control group
     feature_group = parser.add_argument_group("Feature Control")
@@ -143,6 +149,7 @@ def create_configs(args: argparse.Namespace, env_config: Dict[str, str]) -> tupl
         output_dir=str(args.output_dir) if args.output_dir else os.getcwd(),
         cache_dir=str(args.cache_dir),
         video_resolution=args.video_resolution,
+        subtitle_offset_ms=args.subtitle_offset,
         fetch_lyrics=not args.skip_lyrics_fetch,
         run_transcription=not args.skip_transcription,
         run_correction=not args.skip_correction,

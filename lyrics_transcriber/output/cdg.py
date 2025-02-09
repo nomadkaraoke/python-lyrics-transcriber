@@ -126,7 +126,7 @@ class CDGGenerator:
         cdg_styles: dict,
     ) -> str:
         """Create TOML configuration file for CDG generation."""
-        safe_filename = self._get_safe_filename(artist, title, "Karaoke CDG", "toml")
+        safe_filename = self._get_safe_filename(artist, title, "Karaoke", "toml")
         toml_file = os.path.join(self.output_dir, safe_filename)
         self.logger.debug(f"Generating TOML file: {toml_file}")
 
@@ -161,7 +161,7 @@ class CDGGenerator:
             title=title,
             artist=artist,
             audio_file=audio_file,
-            output_name=f"{artist} - {title} (Karaoke CDG)",
+            output_name=f"{artist} - {title} (Karaoke)",
             sync_times=sync_times,
             instrumentals=instrumentals,
             formatted_lyrics=formatted_lyrics,
@@ -190,11 +190,11 @@ class CDGGenerator:
         """Compose CDG using KaraokeComposer."""
         kc = KaraokeComposer.from_file(toml_file)
         kc.compose()
-        kc.create_mp4(height=1080, fps=30)
+        # kc.create_mp4(height=1080, fps=30)
 
     def _find_cdg_zip(self, artist: str, title: str) -> str:
         """Find the generated CDG ZIP file."""
-        safe_filename = self._get_safe_filename(artist, title, "Karaoke CDG", "zip")
+        safe_filename = self._get_safe_filename(artist, title, "Karaoke", "zip")
         output_zip = os.path.join(self.output_dir, safe_filename)
 
         self.logger.info(f"Looking for CDG ZIP file in output directory: {output_zip}")
@@ -216,12 +216,12 @@ class CDGGenerator:
 
     def _get_cdg_path(self, artist: str, title: str) -> str:
         """Get the path to the CDG file."""
-        safe_filename = self._get_safe_filename(artist, title, "Karaoke CDG", "cdg")
+        safe_filename = self._get_safe_filename(artist, title, "Karaoke", "cdg")
         return os.path.join(self.output_dir, safe_filename)
 
     def _get_mp3_path(self, artist: str, title: str) -> str:
         """Get the path to the MP3 file."""
-        safe_filename = self._get_safe_filename(artist, title, "Karaoke CDG", "mp3")
+        safe_filename = self._get_safe_filename(artist, title, "Karaoke", "mp3")
         return os.path.join(self.output_dir, safe_filename)
 
     def _verify_output_files(self, cdg_file: str, mp3_file: str) -> None:
@@ -376,7 +376,7 @@ class CDGGenerator:
         cdg_styles: dict,
     ) -> dict:
         """Create TOML data structure."""
-        safe_output_name = self._get_safe_filename(artist, title, "Karaoke CDG")
+        safe_output_name = self._get_safe_filename(artist, title, "Karaoke")
         return {
             "title": title,
             "artist": artist,

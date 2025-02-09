@@ -43,3 +43,4 @@ class OutputConfig:
     generate_cdg: bool = True
     render_video: bool = True
     video_resolution: str = "360p"
+    subtitle_offset_ms: int = 0

@@ -5,7 +5,7 @@ import subprocess
 import json
 
 from lyrics_transcriber.output.ass.section_screen import SectionScreen
-from lyrics_transcriber.types import LyricsSegment
+from lyrics_transcriber.types import LyricsSegment, Word
 from lyrics_transcriber.output.ass import LyricsScreen, LyricsLine
 from lyrics_transcriber.output.ass.ass import ASS
 from lyrics_transcriber.output.ass.style import Style
@@ -25,6 +25,7 @@ class SubtitlesGenerator:
         font_size: int,
         line_height: int,
         styles: dict,
+        subtitle_offset_ms: int = 0,
         logger: Optional[logging.Logger] = None,
     ):
         """Initialize SubtitleGenerator.
@@ -34,12 +35,15 @@ class SubtitlesGenerator:
             video_resolution: Tuple of (width, height) for video resolution
             font_size: Font size for subtitles
             line_height: Line height for subtitle positioning
+            styles: Dictionary of style configurations
+            subtitle_offset_ms: Offset for subtitle timing in milliseconds
             logger: Optional logger instance
         """
         self.output_dir = output_dir
         self.video_resolution = video_resolution
         self.font_size = font_size
         self.styles = styles
+        self.subtitle_offset_ms = subtitle_offset_ms
         self.config = ScreenConfig(line_height=line_height, video_width=video_resolution[0], video_height=video_resolution[1])
         self.logger = logger or logging.getLogger(__name__)
 
@@ -90,6 +94,30 @@ class SubtitlesGenerator:
     def _create_screens(self, segments: List[LyricsSegment], song_duration: float) -> List[LyricsScreen]:
         """Create screens from segments with detailed logging."""
         self.logger.debug("Creating screens from segments")
+
+        # Apply timing offset to segments if needed
+        if self.subtitle_offset_ms != 0:
+            self.logger.info(f"Subtitle offset: {self.subtitle_offset_ms}ms")
+
+            offset_seconds = self.subtitle_offset_ms / 1000.0
+            segments = [
+                LyricsSegment(
+                    text=seg.text,
+                    words=[
+                        Word(
+                            text=word.text,
+                            start_time=max(0, word.start_time + offset_seconds),
+                            end_time=word.end_time + offset_seconds,
+                            confidence=word.confidence,
+                        )
+                        for word in seg.words
+                    ],
+                    start_time=max(0, seg.start_time + offset_seconds),
+                    end_time=seg.end_time + offset_seconds,
+                )
+                for seg in segments
+            ]
+            self.logger.info(f"Applied {self.subtitle_offset_ms}ms offset to segment timings")
 
         # Create section screens and get instrumental boundaries
         section_screens = self._create_section_screens(segments, song_duration)

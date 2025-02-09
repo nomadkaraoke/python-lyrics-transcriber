@@ -78,6 +78,7 @@ class OutputGenerator:
                 font_size=self.font_size,
                 line_height=self.line_height,
                 styles=self.config.styles,
+                subtitle_offset_ms=self.config.subtitle_offset_ms,
                 logger=self.logger,
             )
 
@@ -161,12 +162,12 @@ class OutputGenerator:
             "720p": (1280, 720),
             "360p": (640, 360),
         }
-        
+
         if resolution not in resolution_map:
             raise ValueError("Invalid video_resolution value. Must be one of: 4k, 1080p, 720p, 360p")
-            
+
         resolution_dims = resolution_map[resolution]
-        
+
         # Default font sizes for each resolution
         default_font_sizes = {
             "4k": 250,
@@ -174,13 +175,13 @@ class OutputGenerator:
             "720p": 100,
             "360p": 40,
         }
-        
+
         # Get font size from styles if available, otherwise use default
         font_size = self.config.styles.get("karaoke", {}).get("font_size", default_font_sizes[resolution])
-        
+
         # Line height matches font size for all except 360p
         line_height = 50 if resolution == "360p" else font_size
-        
+
         return resolution_dims, font_size, line_height
 
     def write_corrections_data(self, correction_result: CorrectionResult, output_prefix: str) -> str:
