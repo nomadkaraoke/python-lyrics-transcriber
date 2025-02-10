@@ -101,8 +101,9 @@ class ExtendAnchorHandler(GapCorrectionHandler):
                         original_position=gap.transcription_position + i,
                         source=sources,
                         confidence=confidence,
-                        reason="ExtendAnchorHandler: Matched reference source(s)",
+                        reason="Matched reference source(s)",
                         reference_positions=reference_positions,
+                        handler="ExtendAnchorHandler",
                     )
                 )
                 self.logger.debug(f"Validated word '{word}' with confidence {confidence} from sources: {sources}")

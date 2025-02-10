@@ -6,10 +6,11 @@ import { ApiClient } from '../api'
 
 interface AudioPlayerProps {
     apiClient: ApiClient | null,
-    onTimeUpdate?: (time: number) => void
+    onTimeUpdate?: (time: number) => void,
+    audioHash: string
 }
 
-export default function AudioPlayer({ apiClient, onTimeUpdate }: AudioPlayerProps) {
+export default function AudioPlayer({ apiClient, onTimeUpdate, audioHash }: AudioPlayerProps) {
     const [isPlaying, setIsPlaying] = useState(false)
     const [currentTime, setCurrentTime] = useState(0)
     const [duration, setDuration] = useState(0)
@@ -18,7 +19,7 @@ export default function AudioPlayer({ apiClient, onTimeUpdate }: AudioPlayerProp
     useEffect(() => {
         if (!apiClient) return
 
-        const audio = new Audio(apiClient.getAudioUrl())
+        const audio = new Audio(apiClient.getAudioUrl(audioHash))
         audioRef.current = audio
 
         // Add requestAnimationFrame for smoother updates
@@ -55,7 +56,7 @@ export default function AudioPlayer({ apiClient, onTimeUpdate }: AudioPlayerProp
             audio.src = ''
             audioRef.current = null
         }
-    }, [apiClient, onTimeUpdate])
+    }, [apiClient, onTimeUpdate, audioHash])
 
     const handlePlayPause = () => {
         if (!audioRef.current) return
@@ -130,7 +131,7 @@ export default function AudioPlayer({ apiClient, onTimeUpdate }: AudioPlayerProp
             <Typography variant="body2" color="text.secondary" sx={{ mr: 1 }}>
                 Playback:
             </Typography>
-            
+
             <IconButton
                 onClick={handlePlayPause}
                 size="small"
@@ -148,7 +149,7 @@ export default function AudioPlayer({ apiClient, onTimeUpdate }: AudioPlayerProp
                 max={duration}
                 onChange={handleSeek}
                 size="small"
-                sx={{ 
+                sx={{
                     width: 200,
                     mx: 1,
                     '& .MuiSlider-thumb': {

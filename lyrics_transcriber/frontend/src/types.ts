@@ -16,6 +16,7 @@ export interface LyricsSegment {
 
 export interface WordCorrection {
     id: string
+    handler: string
     original_word: string
     corrected_word: string
     segment_id: string

@@ -142,6 +142,7 @@ export default function DetailsModal({
                                                 <Typography>Corrected: <strong>"{correction.corrected_word}"</strong></Typography>
                                                 <Typography>Word ID: {correction.word_id}</Typography>
                                                 <Typography>Confidence: {correction.confidence?.toFixed(3) ?? 'N/A'}</Typography>
+                                                <Typography>Handler: {correction.handler}</Typography>
                                                 <Typography>Source: {correction.source}</Typography>
                                                 <Typography>Reason: {correction.reason}</Typography>
                                                 {correction.is_deletion && <Typography>Is Deletion: Yes</Typography>}

@@ -6,20 +6,15 @@ import {
     InteractionMode,
     LyricsSegment
 } from '../types'
-import LockIcon from '@mui/icons-material/Lock'
-import UploadFileIcon from '@mui/icons-material/UploadFile'
-import { Box, Button, Grid, Typography, useMediaQuery, useTheme } from '@mui/material'
+import { Box, Button, Grid, useMediaQuery, useTheme } from '@mui/material'
 import { useCallback, useState, useEffect } from 'react'
 import { ApiClient } from '../api'
-import CorrectionMetrics from './CorrectionMetrics'
 import DetailsModal from './DetailsModal'
-import ModeSelector from './ModeSelector'
 import ReferenceView from './ReferenceView'
 import TranscriptionView from './TranscriptionView'
 import { WordClickInfo, FlashType } from './shared/types'
 import EditModal from './EditModal'
 import ReviewChangesModal from './ReviewChangesModal'
-import AudioPlayer from './AudioPlayer'
 import { initializeDataWithIds, normalizeDataForSubmission } from './shared/utils/initializeDataWithIds'
 import {
     addSegmentBefore,
@@ -29,6 +24,7 @@ import {
 } from './shared/utils/segmentOperations'
 import { loadSavedData, saveData, clearSavedData } from './shared/utils/localStorage'
 import { setupKeyboardHandlers } from './shared/utils/keyboardHandlers'
+import Header from './Header'
 
 // Add type for window augmentation at the top of the file
 declare global {
@@ -44,6 +40,7 @@ interface LyricsAnalyzerProps {
     onShowMetadata: () => void
     apiClient: ApiClient | null
     isReadOnly: boolean
+    audioHash: string
 }
 
 export type ModalContent = {
@@ -60,7 +57,7 @@ export type ModalContent = {
     }
 }
 
-export default function LyricsAnalyzer({ data: initialData, onFileLoad, apiClient, isReadOnly }: LyricsAnalyzerProps) {
+export default function LyricsAnalyzer({ data: initialData, onFileLoad, apiClient, isReadOnly, audioHash }: LyricsAnalyzerProps) {
     const [modalContent, setModalContent] = useState<ModalContent | null>(null)
     const [flashingType, setFlashingType] = useState<FlashType>(null)
     const [highlightInfo, setHighlightInfo] = useState<HighlightInfo | null>(null)
@@ -239,92 +236,21 @@ export default function LyricsAnalyzer({ data: initialData, onFileLoad, apiClien
 
     return (
         <Box>
-            {isReadOnly && (
-                <Box sx={{ display: 'flex', alignItems: 'center', mb: 2, color: 'text.secondary' }}>
-                    <LockIcon sx={{ mr: 1 }} />
-                    <Typography variant="body2">
-                        View Only Mode
-                    </Typography>
-                </Box>
-            )}
-            <Box sx={{
-                display: 'flex',
-                flexDirection: isMobile ? 'column' : 'row',
-                gap: 2,
-                justifyContent: 'space-between',
-                alignItems: isMobile ? 'stretch' : 'center',
-                mb: 3
-            }}>
-                <Typography variant="h4" sx={{ fontSize: isMobile ? '1.75rem' : '2.125rem' }}>
-                    Lyrics Correction Review
-                </Typography>
-                {isReadOnly && (
-                    <Button
-                        variant="outlined"
-                        startIcon={<UploadFileIcon />}
-                        onClick={onFileLoad}
-                        fullWidth={isMobile}
-                    >
-                        Load File
-                    </Button>
-                )}
-            </Box>
-
-            <Box sx={{ mb: 3 }}>
-                <CorrectionMetrics
-                    // Anchor metrics
-                    anchorCount={data.metadata.anchor_sequences_count}
-                    multiSourceAnchors={data.anchor_sequences?.filter(anchor =>
-                        // Add null checks
-                        anchor?.reference_word_ids &&
-                        Object.keys(anchor.reference_word_ids || {}).length > 1
-                    ).length ?? 0}
-                    anchorWordCount={data.anchor_sequences?.reduce((sum, anchor) =>
-                        sum + (anchor.length || 0), 0) ?? 0}
-                    // Gap metrics
-                    correctedGapCount={data.gap_sequences?.filter(gap =>
-                        gap.corrections?.length > 0).length ?? 0}
-                    uncorrectedGapCount={data.gap_sequences?.filter(gap =>
-                        !gap.corrections?.length).length ?? 0}
-                    uncorrectedGaps={data.gap_sequences
-                        ?.filter(gap => !gap.corrections?.length && gap.word_ids)
-                        .map(gap => ({
-                            position: gap.word_ids?.[0] ?? '',
-                            length: gap.length ?? 0
-                        })) ?? []}
-                    // Correction details
-                    replacedCount={data.gap_sequences?.reduce((count, gap) =>
-                        count + (gap.corrections?.filter(c => !c.is_deletion && !c.split_total).length ?? 0), 0) ?? 0}
-                    addedCount={data.gap_sequences?.reduce((count, gap) =>
-                        count + (gap.corrections?.filter(c => c.split_total).length ?? 0), 0) ?? 0}
-                    deletedCount={data.gap_sequences?.reduce((count, gap) =>
-                        count + (gap.corrections?.filter(c => c.is_deletion).length ?? 0), 0) ?? 0}
-                    onMetricClick={{
-                        anchor: () => handleFlash('anchor'),
-                        corrected: () => handleFlash('corrected'),
-                        uncorrected: () => handleFlash('uncorrected')
-                    }}
-                    totalWords={data.metadata.total_words}
-                />
-            </Box>
-
-            <Box sx={{
-                display: 'flex',
-                flexDirection: isMobile ? 'column' : 'row',
-                gap: 5,
-                alignItems: 'flex-start',
-                justifyContent: 'flex-start',
-                mb: 3
-            }}>
-                <ModeSelector
-                    effectiveMode={effectiveMode}
-                    onChange={setInteractionMode}
-                />
-                <AudioPlayer
-                    apiClient={apiClient}
-                    onTimeUpdate={setCurrentAudioTime}
-                />
-            </Box>
+            <Header
+                isReadOnly={isReadOnly}
+                onFileLoad={onFileLoad}
+                data={data}
+                onMetricClick={{
+                    anchor: () => handleFlash('anchor'),
+                    corrected: () => handleFlash('corrected'),
+                    uncorrected: () => handleFlash('uncorrected')
+                }}
+                effectiveMode={effectiveMode}
+                onModeChange={setInteractionMode}
+                apiClient={apiClient}
+                audioHash={audioHash}
+                onTimeUpdate={setCurrentAudioTime}
+            />
 
             <Grid container spacing={2} direction={isMobile ? 'column' : 'row'}>
                 <Grid item xs={12} md={6}>

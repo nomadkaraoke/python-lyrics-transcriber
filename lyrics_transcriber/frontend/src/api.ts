@@ -4,7 +4,7 @@ import { CorrectionData } from './types';
 export interface ApiClient {
     getCorrectionData: () => Promise<CorrectionData>;
     submitCorrections: (data: CorrectionData) => Promise<void>;
-    getAudioUrl: () => string;
+    getAudioUrl: (audioHash: string) => string;
 }
 
 // Add new interface for the minimal update payload
@@ -47,8 +47,8 @@ export class LiveApiClient implements ApiClient {
         }
     }
 
-    getAudioUrl(): string {
-        return `${this.baseUrl}/audio`
+    getAudioUrl(audioHash: string): string {
+        return `${this.baseUrl}/audio/${audioHash}`
     }
 }
 
@@ -62,7 +62,8 @@ export class FileOnlyClient implements ApiClient {
         throw new Error('Not supported in file-only mode');
     }
 
-    getAudioUrl(): string {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    getAudioUrl(_audioHash: string): string {
         throw new Error('Not supported in file-only mode');
     }
 }

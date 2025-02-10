@@ -43,6 +43,7 @@ class WordOperations:
         source: str,
         confidence: float,
         reason: str,
+        handler: str,
         reference_positions: Optional[Dict[str, int]] = None,
     ) -> WordCorrection:
         """Creates a correction for replacing a single word with another word."""
@@ -57,6 +58,7 @@ class WordOperations:
             alternatives={},
             reference_positions=reference_positions,
             length=1,  # Single word replacement
+            handler=handler,
         )
 
     @staticmethod
@@ -67,6 +69,7 @@ class WordOperations:
         source: str,
         confidence: float,
         reason: str,
+        handler: str,
         reference_positions: Optional[Dict[str, int]] = None,
     ) -> List[WordCorrection]:
         """Creates corrections for splitting a single word into multiple words."""
@@ -86,6 +89,7 @@ class WordOperations:
                     split_total=len(reference_words),
                     reference_positions=reference_positions,
                     length=1,  # Each split word is length 1
+                    handler=handler,
                 )
             )
         return corrections
@@ -99,6 +103,7 @@ class WordOperations:
         confidence: float,
         combine_reason: str,
         delete_reason: str,
+        handler: str,
         reference_positions: Optional[Dict[str, int]] = None,
     ) -> List[WordCorrection]:
         """Creates corrections for combining multiple words into a single word."""
@@ -117,6 +122,7 @@ class WordOperations:
                 alternatives={},
                 reference_positions=reference_positions,
                 length=len(original_words),  # Combined word spans all original words
+                handler=handler,
             )
         )
 
@@ -135,6 +141,7 @@ class WordOperations:
                     is_deletion=True,
                     reference_positions=reference_positions,
                     length=1,  # Deleted words are length 1
+                    handler=handler,
                 )
             )
 

@@ -56,8 +56,9 @@ class RelaxedWordCountMatchHandler(GapCorrectionHandler):
                     original_position=gap.transcription_position + i,
                     source=matching_source,
                     confidence=1.0,
-                    reason=f"RelaxedWordCountMatchHandler: Source '{matching_source}' had matching word count",
+                    reason=f"Source '{matching_source}' had matching word count",
                     reference_positions=reference_positions,
+                    handler="RelaxedWordCountMatchHandler",
                 )
                 corrections.append(correction)
                 self.logger.debug(f"Correction made: {correction}")

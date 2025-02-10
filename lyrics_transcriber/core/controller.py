@@ -321,8 +321,21 @@ class LyricsTranscriber:
             return
 
         # Run correction if we have reference lyrics
+        
+        # Create metadata dict with song info
+        metadata = {
+            "artist": self.artist,
+            "title": self.title,
+            "full_reference_texts": {
+                source: lyrics.lyrics for source, lyrics in 
+                [(data.source, data) for data in self.results.lyrics_results]
+            }
+        }
+        
         corrected_data = self.corrector.run(
-            transcription_results=self.results.transcription_results, lyrics_results=self.results.lyrics_results
+            transcription_results=self.results.transcription_results,
+            lyrics_results=self.results.lyrics_results,
+            metadata=metadata  # Pass the metadata through
         )
 
         # Add audio filepath to metadata

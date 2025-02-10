@@ -12,6 +12,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 from pathlib import Path
 import socket
+import hashlib
 
 logger = logging.getLogger(__name__)
 
@@ -91,12 +92,17 @@ async def complete_review(updated_data: Dict[str, Any] = Body(...)):
         return {"status": "error", "message": str(e)}
 
 
-@app.get("/api/audio")
-async def get_audio():
+@app.get("/api/audio/{audio_hash}")
+async def get_audio(audio_hash: str):
     """Stream the audio file for playback in the browser."""
     if not audio_filepath or not os.path.exists(audio_filepath):
         logger.error(f"Audio file not found at {audio_filepath}")
         return {"error": "Audio file not found"}
+
+    # Verify the hash matches to prevent cache issues
+    if audio_hash != current_review.metadata.get("audio_hash"):
+        logger.error(f"Audio hash mismatch: expected {current_review.metadata.get('audio_hash')}, got {audio_hash}")
+        return {"error": "Invalid audio hash"}
 
     return FileResponse(
         audio_filepath,
@@ -127,6 +133,14 @@ def start_review_server(correction_result: CorrectionResult) -> CorrectionResult
 
     audio_filepath = correction_result.metadata.get("audio_filepath") if correction_result.metadata else None
 
+    # Generate audio hash if audio file exists
+    if audio_filepath and os.path.exists(audio_filepath):
+        with open(audio_filepath, 'rb') as f:
+            audio_hash = hashlib.md5(f.read()).hexdigest()
+        if not correction_result.metadata:
+            correction_result.metadata = {}
+        correction_result.metadata["audio_hash"] = audio_hash
+
     logger.info("Starting review server...")
 
     # Start Vite dev server (now just mounts static files)
@@ -155,10 +169,11 @@ def start_review_server(correction_result: CorrectionResult) -> CorrectionResult
     server_thread.start()
     logger.info("Server thread started")
 
-    # Open browser with the correct port
+    # Update URL to include audio hash
     base_api_url = f"http://localhost:{DEFAULT_PORT}/api"
     encoded_api_url = urllib.parse.quote(base_api_url, safe="")
-    webbrowser.open(f"http://localhost:{DEFAULT_PORT}?baseApiUrl={encoded_api_url}")
+    audio_hash_param = f"&audioHash={correction_result.metadata.get('audio_hash', '')}" if correction_result.metadata and "audio_hash" in correction_result.metadata else ""
+    webbrowser.open(f"http://localhost:{DEFAULT_PORT}?baseApiUrl={encoded_api_url}{audio_hash_param}")
     logger.info("Opened browser for review")
 
     # Wait for review to complete

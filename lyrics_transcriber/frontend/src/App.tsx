@@ -12,16 +12,21 @@ export default function App() {
   const [error, setError] = useState<string | null>(null)
   const [apiClient, setApiClient] = useState<ApiClient | null>(null)
   const [isReadOnly, setIsReadOnly] = useState(true)
+  const [audioHash, setAudioHash] = useState<string>('')
 
   useEffect(() => {
     // Parse query parameters
     const params = new URLSearchParams(window.location.search)
     const encodedApiUrl = params.get('baseApiUrl')
+    const audioHashParam = params.get('audioHash')
 
     if (encodedApiUrl) {
       const baseApiUrl = decodeURIComponent(encodedApiUrl)
       setApiClient(new LiveApiClient(baseApiUrl))
       setIsReadOnly(false)
+      if (audioHashParam) {
+        setAudioHash(audioHashParam)
+      }
       // Fetch initial data
       fetchData(baseApiUrl)
     } else {
@@ -189,6 +194,7 @@ export default function App() {
         onShowMetadata={() => setShowMetadata(true)}
         apiClient={apiClient}
         isReadOnly={isReadOnly}
+        audioHash={audioHash}
       />
       {renderMetadataModal()}
     </Box>

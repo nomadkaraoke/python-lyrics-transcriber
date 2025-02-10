@@ -127,6 +127,7 @@ class WordCorrection:
     # New fields to match TypeScript interface
     reference_positions: Optional[Dict[str, int]] = None  # Maps source to position in reference text
     length: int = 1  # Default to 1 for single-word corrections
+    handler: Optional[str] = None  # Name of the correction handler that created this correction
 
     def to_dict(self) -> Dict[str, Any]:
         return asdict(self)

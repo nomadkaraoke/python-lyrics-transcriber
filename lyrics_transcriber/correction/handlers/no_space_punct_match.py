@@ -68,9 +68,10 @@ class NoSpacePunctuationMatchHandler(GapCorrectionHandler):
                     original_position=gap.transcription_position,
                     source=matching_source,
                     confidence=1.0,
-                    combine_reason="NoSpacePunctuationMatchHandler: Words combined based on text match",
-                    delete_reason="NoSpacePunctuationMatchHandler: Word removed as part of text match combination",
+                    combine_reason="Words combined based on text match",
+                    delete_reason="Word removed as part of text match combination",
                     reference_positions=reference_positions,
+                    handler="NoSpacePunctuationMatchHandler",
                 )
             )
             self.logger.debug(f"Combined words into '{reference_words_original[0]}'.")
@@ -84,8 +85,9 @@ class NoSpacePunctuationMatchHandler(GapCorrectionHandler):
                     original_position=gap.transcription_position,
                     source=matching_source,
                     confidence=1.0,
-                    reason="NoSpacePunctuationMatchHandler: Split word based on text match",
+                    reason="Split word based on text match",
                     reference_positions=reference_positions,
+                    handler="NoSpacePunctuationMatchHandler",
                 )
             )
             self.logger.debug(f"Split word '{gap.words[0]}' into {reference_words_original}.")
@@ -100,8 +102,9 @@ class NoSpacePunctuationMatchHandler(GapCorrectionHandler):
                         original_position=gap.transcription_position + i,
                         source=matching_source,
                         confidence=1.0,
-                        reason=f"NoSpacePunctuationMatchHandler: Source '{matching_source}' matched when spaces and punctuation removed",
+                        reason=f"Source '{matching_source}' matched when spaces and punctuation removed",
                         reference_positions=reference_positions,
+                        handler="NoSpacePunctuationMatchHandler",
                     )
                     corrections.append(correction)
                     self.logger.debug(f"Correction made: {correction}")

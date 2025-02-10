@@ -112,8 +112,9 @@ class LevenshteinHandler(GapCorrectionHandler):
                         original_position=gap.transcription_position + i,
                         source=", ".join(sources),
                         confidence=final_confidence,
-                        reason=f"LevenshteinHandler: String similarity ({final_confidence:.2f})",
+                        reason=f"String similarity ({final_confidence:.2f})",
                         reference_positions=reference_positions,
+                        handler="LevenshteinHandler",
                     )
                 )
 

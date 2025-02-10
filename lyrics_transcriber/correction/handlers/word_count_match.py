@@ -54,8 +54,9 @@ class WordCountMatchHandler(GapCorrectionHandler):
                     original_position=gap.transcription_position + i,
                     source=sources,
                     confidence=1.0,
-                    reason="WordCountMatchHandler: Reference sources had same word count as gap",
+                    reason="Reference sources had same word count as gap",
                     reference_positions=reference_positions,
+                    handler="WordCountMatchHandler",
                 )
                 corrections.append(correction)
                 self.logger.debug(f"Correction made: {correction}")

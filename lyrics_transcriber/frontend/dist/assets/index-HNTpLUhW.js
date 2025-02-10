@@ -23813,8 +23813,8 @@ class LiveApiClient {
       throw new Error(`API error: ${response.statusText}`);
     }
   }
-  getAudioUrl() {
-    return `${this.baseUrl}/audio`;
+  getAudioUrl(audioHash) {
+    return `${this.baseUrl}/audio/${audioHash}`;
   }
 }
 class FileOnlyClient {
@@ -23825,7 +23825,8 @@ class FileOnlyClient {
   async submitCorrections(_data) {
     throw new Error("Not supported in file-only mode");
   }
-  getAudioUrl() {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  getAudioUrl(_audioHash) {
     throw new Error("Not supported in file-only mode");
   }
 }
@@ -23952,9 +23953,6 @@ function CorrectionMetrics({
     ) })
   ] });
 }
-const LockIcon = createSvgIcon(/* @__PURE__ */ jsxRuntimeExports.jsx("path", {
-  d: "M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2m-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2m3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1s3.1 1.39 3.1 3.1z"
-}), "Lock");
 const CloseIcon = createSvgIcon(/* @__PURE__ */ jsxRuntimeExports.jsx("path", {
   d: "M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"
 }), "Close");
@@ -24140,6 +24138,10 @@ function DetailsModal({
                     ((_a3 = correction.confidence) == null ? void 0 : _a3.toFixed(3)) ?? "N/A"
                   ] }),
                   /* @__PURE__ */ jsxRuntimeExports.jsxs(Typography, { children: [
+                    "Handler: ",
+                    correction.handler
+                  ] }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs(Typography, { children: [
                     "Source: ",
                     correction.source
                   ] }),
@@ -24208,43 +24210,6 @@ function GridItem({ title, value }) {
   return /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
     /* @__PURE__ */ jsxRuntimeExports.jsx(Grid, { item: true, xs: 4, children: /* @__PURE__ */ jsxRuntimeExports.jsx(Typography, { variant: "subtitle1", fontWeight: "bold", children: title }) }),
     /* @__PURE__ */ jsxRuntimeExports.jsx(Grid, { item: true, xs: 8, children: typeof value === "string" || typeof value === "number" ? /* @__PURE__ */ jsxRuntimeExports.jsx(Typography, { children: value }) : value })
-  ] });
-}
-const HighlightIcon = createSvgIcon(/* @__PURE__ */ jsxRuntimeExports.jsx("path", {
-  d: "m6 14 3 3v5h6v-5l3-3V9H6zm5-12h2v3h-2zM3.5 5.88l1.41-1.41 2.12 2.12L5.62 8zm13.46.71 2.12-2.12 1.41 1.41L18.38 8z"
-}), "Highlight");
-const InfoIcon = createSvgIcon(/* @__PURE__ */ jsxRuntimeExports.jsx("path", {
-  d: "M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2m1 15h-2v-6h2zm0-8h-2V7h2z"
-}), "Info");
-const EditIcon = createSvgIcon(/* @__PURE__ */ jsxRuntimeExports.jsx("path", {
-  d: "M3 17.25V21h3.75L17.81 9.94l-3.75-3.75zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34a.996.996 0 0 0-1.41 0l-1.83 1.83 3.75 3.75z"
-}), "Edit");
-function ModeSelector({ effectiveMode, onChange }) {
-  return /* @__PURE__ */ jsxRuntimeExports.jsxs(Box, { sx: { display: "flex", alignItems: "center", gap: 2 }, children: [
-    /* @__PURE__ */ jsxRuntimeExports.jsx(Typography, { variant: "body2", color: "text.secondary", children: "Click Mode:" }),
-    /* @__PURE__ */ jsxRuntimeExports.jsxs(
-      ToggleButtonGroup,
-      {
-        value: effectiveMode,
-        exclusive: true,
-        onChange: (_, newMode) => newMode && onChange(newMode),
-        size: "small",
-        children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsxs(ToggleButton, { value: "details", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx(InfoIcon, { sx: { mr: 1 } }),
-            "Details"
-          ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs(ToggleButton, { value: "highlight", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx(HighlightIcon, { sx: { mr: 1 } }),
-            "Highlight"
-          ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs(ToggleButton, { value: "edit", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx(EditIcon, { sx: { mr: 1 } }),
-            "Edit"
-          ] })
-        ]
-      }
-    )
   ] });
 }
 function calculateReferenceLinePositions(corrected_segments, anchors, currentSource) {
@@ -25900,136 +25865,6 @@ function ReviewChangesModal({
     }
   );
 }
-const PlayArrowIcon = createSvgIcon(/* @__PURE__ */ jsxRuntimeExports.jsx("path", {
-  d: "M8 5v14l11-7z"
-}), "PlayArrow");
-const PauseIcon = createSvgIcon(/* @__PURE__ */ jsxRuntimeExports.jsx("path", {
-  d: "M6 19h4V5H6zm8-14v14h4V5z"
-}), "Pause");
-function AudioPlayer({ apiClient, onTimeUpdate }) {
-  const [isPlaying, setIsPlaying] = reactExports.useState(false);
-  const [currentTime, setCurrentTime] = reactExports.useState(0);
-  const [duration2, setDuration] = reactExports.useState(0);
-  const audioRef = reactExports.useRef(null);
-  reactExports.useEffect(() => {
-    if (!apiClient) return;
-    const audio = new Audio(apiClient.getAudioUrl());
-    audioRef.current = audio;
-    let animationFrameId;
-    const updateTime = () => {
-      const time = audio.currentTime;
-      setCurrentTime(time);
-      onTimeUpdate == null ? void 0 : onTimeUpdate(time);
-      animationFrameId = requestAnimationFrame(updateTime);
-    };
-    audio.addEventListener("play", () => {
-      updateTime();
-    });
-    audio.addEventListener("pause", () => {
-      cancelAnimationFrame(animationFrameId);
-    });
-    audio.addEventListener("ended", () => {
-      cancelAnimationFrame(animationFrameId);
-      setIsPlaying(false);
-      setCurrentTime(0);
-    });
-    audio.addEventListener("loadedmetadata", () => {
-      setDuration(audio.duration);
-    });
-    return () => {
-      cancelAnimationFrame(animationFrameId);
-      audio.pause();
-      audio.src = "";
-      audioRef.current = null;
-    };
-  }, [apiClient, onTimeUpdate]);
-  const handlePlayPause = () => {
-    if (!audioRef.current) return;
-    if (isPlaying) {
-      audioRef.current.pause();
-    } else {
-      audioRef.current.play();
-    }
-    setIsPlaying(!isPlaying);
-  };
-  const handleSeek = (_, newValue) => {
-    if (!audioRef.current) return;
-    const time = newValue;
-    audioRef.current.currentTime = time;
-    setCurrentTime(time);
-  };
-  const formatTime = (seconds) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = Math.floor(seconds % 60);
-    return `${mins}:${secs.toString().padStart(2, "0")}`;
-  };
-  const seekAndPlay = (time) => {
-    if (!audioRef.current) return;
-    audioRef.current.currentTime = time;
-    setCurrentTime(time);
-    audioRef.current.play();
-    setIsPlaying(true);
-  };
-  const togglePlayback = reactExports.useCallback(() => {
-    if (!audioRef.current) return;
-    if (isPlaying) {
-      audioRef.current.pause();
-    } else {
-      audioRef.current.play();
-    }
-    setIsPlaying(!isPlaying);
-  }, [isPlaying]);
-  reactExports.useEffect(() => {
-    if (!apiClient) return;
-    const win = window;
-    win.seekAndPlayAudio = seekAndPlay;
-    win.toggleAudioPlayback = togglePlayback;
-    return () => {
-      delete win.seekAndPlayAudio;
-      delete win.toggleAudioPlayback;
-    };
-  }, [apiClient, togglePlayback]);
-  if (!apiClient) return null;
-  return /* @__PURE__ */ jsxRuntimeExports.jsxs(Box, { sx: {
-    display: "flex",
-    alignItems: "center",
-    gap: 1,
-    backgroundColor: "background.paper",
-    borderRadius: 1,
-    height: 40
-    // Match ToggleButtonGroup height
-  }, children: [
-    /* @__PURE__ */ jsxRuntimeExports.jsx(Typography, { variant: "body2", color: "text.secondary", sx: { mr: 1 }, children: "Playback:" }),
-    /* @__PURE__ */ jsxRuntimeExports.jsx(
-      IconButton,
-      {
-        onClick: handlePlayPause,
-        size: "small",
-        children: isPlaying ? /* @__PURE__ */ jsxRuntimeExports.jsx(PauseIcon, {}) : /* @__PURE__ */ jsxRuntimeExports.jsx(PlayArrowIcon, {})
-      }
-    ),
-    /* @__PURE__ */ jsxRuntimeExports.jsx(Typography, { variant: "body2", sx: { minWidth: 40 }, children: formatTime(currentTime) }),
-    /* @__PURE__ */ jsxRuntimeExports.jsx(
-      Slider,
-      {
-        value: currentTime,
-        min: 0,
-        max: duration2,
-        onChange: handleSeek,
-        size: "small",
-        sx: {
-          width: 200,
-          mx: 1,
-          "& .MuiSlider-thumb": {
-            width: 12,
-            height: 12
-          }
-        }
-      }
-    ),
-    /* @__PURE__ */ jsxRuntimeExports.jsx(Typography, { variant: "body2", sx: { minWidth: 40 }, children: formatTime(duration2) })
-  ] });
-}
 function normalizeDataForSubmission(data) {
   const normalized = JSON.parse(JSON.stringify(data));
   const preserveFloats = (obj) => {
@@ -26343,8 +26178,329 @@ const setupKeyboardHandlers = (state) => {
   };
   return { handleKeyDown, handleKeyUp };
 };
-function LyricsAnalyzer({ data: initialData, onFileLoad, apiClient, isReadOnly }) {
-  var _a, _b, _c, _d, _e, _f, _g, _h;
+const LockIcon = createSvgIcon(/* @__PURE__ */ jsxRuntimeExports.jsx("path", {
+  d: "M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2m-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2m3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1s3.1 1.39 3.1 3.1z"
+}), "Lock");
+const HighlightIcon = createSvgIcon(/* @__PURE__ */ jsxRuntimeExports.jsx("path", {
+  d: "m6 14 3 3v5h6v-5l3-3V9H6zm5-12h2v3h-2zM3.5 5.88l1.41-1.41 2.12 2.12L5.62 8zm13.46.71 2.12-2.12 1.41 1.41L18.38 8z"
+}), "Highlight");
+const InfoIcon = createSvgIcon(/* @__PURE__ */ jsxRuntimeExports.jsx("path", {
+  d: "M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2m1 15h-2v-6h2zm0-8h-2V7h2z"
+}), "Info");
+const EditIcon = createSvgIcon(/* @__PURE__ */ jsxRuntimeExports.jsx("path", {
+  d: "M3 17.25V21h3.75L17.81 9.94l-3.75-3.75zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34a.996.996 0 0 0-1.41 0l-1.83 1.83 3.75 3.75z"
+}), "Edit");
+function ModeSelector({ effectiveMode, onChange }) {
+  return /* @__PURE__ */ jsxRuntimeExports.jsxs(Box, { sx: { display: "flex", alignItems: "center", gap: 2 }, children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsx(Typography, { variant: "body2", color: "text.secondary", children: "Click Mode:" }),
+    /* @__PURE__ */ jsxRuntimeExports.jsxs(
+      ToggleButtonGroup,
+      {
+        value: effectiveMode,
+        exclusive: true,
+        onChange: (_, newMode) => newMode && onChange(newMode),
+        size: "small",
+        children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs(ToggleButton, { value: "details", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx(InfoIcon, { sx: { mr: 1 } }),
+            "Details"
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs(ToggleButton, { value: "highlight", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx(HighlightIcon, { sx: { mr: 1 } }),
+            "Highlight"
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs(ToggleButton, { value: "edit", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx(EditIcon, { sx: { mr: 1 } }),
+            "Edit"
+          ] })
+        ]
+      }
+    )
+  ] });
+}
+const PlayArrowIcon = createSvgIcon(/* @__PURE__ */ jsxRuntimeExports.jsx("path", {
+  d: "M8 5v14l11-7z"
+}), "PlayArrow");
+const PauseIcon = createSvgIcon(/* @__PURE__ */ jsxRuntimeExports.jsx("path", {
+  d: "M6 19h4V5H6zm8-14v14h4V5z"
+}), "Pause");
+function AudioPlayer({ apiClient, onTimeUpdate, audioHash }) {
+  const [isPlaying, setIsPlaying] = reactExports.useState(false);
+  const [currentTime, setCurrentTime] = reactExports.useState(0);
+  const [duration2, setDuration] = reactExports.useState(0);
+  const audioRef = reactExports.useRef(null);
+  reactExports.useEffect(() => {
+    if (!apiClient) return;
+    const audio = new Audio(apiClient.getAudioUrl(audioHash));
+    audioRef.current = audio;
+    let animationFrameId;
+    const updateTime = () => {
+      const time = audio.currentTime;
+      setCurrentTime(time);
+      onTimeUpdate == null ? void 0 : onTimeUpdate(time);
+      animationFrameId = requestAnimationFrame(updateTime);
+    };
+    audio.addEventListener("play", () => {
+      updateTime();
+    });
+    audio.addEventListener("pause", () => {
+      cancelAnimationFrame(animationFrameId);
+    });
+    audio.addEventListener("ended", () => {
+      cancelAnimationFrame(animationFrameId);
+      setIsPlaying(false);
+      setCurrentTime(0);
+    });
+    audio.addEventListener("loadedmetadata", () => {
+      setDuration(audio.duration);
+    });
+    return () => {
+      cancelAnimationFrame(animationFrameId);
+      audio.pause();
+      audio.src = "";
+      audioRef.current = null;
+    };
+  }, [apiClient, onTimeUpdate, audioHash]);
+  const handlePlayPause = () => {
+    if (!audioRef.current) return;
+    if (isPlaying) {
+      audioRef.current.pause();
+    } else {
+      audioRef.current.play();
+    }
+    setIsPlaying(!isPlaying);
+  };
+  const handleSeek = (_, newValue) => {
+    if (!audioRef.current) return;
+    const time = newValue;
+    audioRef.current.currentTime = time;
+    setCurrentTime(time);
+  };
+  const formatTime = (seconds) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = Math.floor(seconds % 60);
+    return `${mins}:${secs.toString().padStart(2, "0")}`;
+  };
+  const seekAndPlay = (time) => {
+    if (!audioRef.current) return;
+    audioRef.current.currentTime = time;
+    setCurrentTime(time);
+    audioRef.current.play();
+    setIsPlaying(true);
+  };
+  const togglePlayback = reactExports.useCallback(() => {
+    if (!audioRef.current) return;
+    if (isPlaying) {
+      audioRef.current.pause();
+    } else {
+      audioRef.current.play();
+    }
+    setIsPlaying(!isPlaying);
+  }, [isPlaying]);
+  reactExports.useEffect(() => {
+    if (!apiClient) return;
+    const win = window;
+    win.seekAndPlayAudio = seekAndPlay;
+    win.toggleAudioPlayback = togglePlayback;
+    return () => {
+      delete win.seekAndPlayAudio;
+      delete win.toggleAudioPlayback;
+    };
+  }, [apiClient, togglePlayback]);
+  if (!apiClient) return null;
+  return /* @__PURE__ */ jsxRuntimeExports.jsxs(Box, { sx: {
+    display: "flex",
+    alignItems: "center",
+    gap: 1,
+    backgroundColor: "background.paper",
+    borderRadius: 1,
+    height: 40
+    // Match ToggleButtonGroup height
+  }, children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsx(Typography, { variant: "body2", color: "text.secondary", sx: { mr: 1 }, children: "Playback:" }),
+    /* @__PURE__ */ jsxRuntimeExports.jsx(
+      IconButton,
+      {
+        onClick: handlePlayPause,
+        size: "small",
+        children: isPlaying ? /* @__PURE__ */ jsxRuntimeExports.jsx(PauseIcon, {}) : /* @__PURE__ */ jsxRuntimeExports.jsx(PlayArrowIcon, {})
+      }
+    ),
+    /* @__PURE__ */ jsxRuntimeExports.jsx(Typography, { variant: "body2", sx: { minWidth: 40 }, children: formatTime(currentTime) }),
+    /* @__PURE__ */ jsxRuntimeExports.jsx(
+      Slider,
+      {
+        value: currentTime,
+        min: 0,
+        max: duration2,
+        onChange: handleSeek,
+        size: "small",
+        sx: {
+          width: 200,
+          mx: 1,
+          "& .MuiSlider-thumb": {
+            width: 12,
+            height: 12
+          }
+        }
+      }
+    ),
+    /* @__PURE__ */ jsxRuntimeExports.jsx(Typography, { variant: "body2", sx: { minWidth: 40 }, children: formatTime(duration2) })
+  ] });
+}
+function Header({
+  isReadOnly,
+  onFileLoad,
+  data,
+  onMetricClick,
+  effectiveMode,
+  onModeChange,
+  apiClient,
+  audioHash,
+  onTimeUpdate
+}) {
+  var _a, _b, _c, _d, _e, _f, _g, _h, _i;
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down("md"));
+  const handlerCounts = ((_a = data.gap_sequences) == null ? void 0 : _a.reduce((counts, gap2) => {
+    var _a2;
+    (_a2 = gap2.corrections) == null ? void 0 : _a2.forEach((correction) => {
+      counts[correction.handler] = (counts[correction.handler] || 0) + 1;
+    });
+    return counts;
+  }, {})) || {};
+  const correctionHandlers = Object.keys(handlerCounts).sort();
+  return /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+    isReadOnly && /* @__PURE__ */ jsxRuntimeExports.jsxs(Box, { sx: { display: "flex", alignItems: "center", mb: 2, color: "text.secondary" }, children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx(LockIcon, { sx: { mr: 1 } }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx(Typography, { variant: "body2", children: "View Only Mode" })
+    ] }),
+    /* @__PURE__ */ jsxRuntimeExports.jsxs(Box, { sx: {
+      display: "flex",
+      flexDirection: isMobile ? "column" : "row",
+      gap: 2,
+      justifyContent: "space-between",
+      alignItems: isMobile ? "stretch" : "center",
+      mb: 3
+    }, children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx(Typography, { variant: "h4", sx: { fontSize: isMobile ? "1.75rem" : "2.125rem" }, children: "Lyrics Correction Review" }),
+      isReadOnly && /* @__PURE__ */ jsxRuntimeExports.jsx(
+        Button,
+        {
+          variant: "outlined",
+          startIcon: /* @__PURE__ */ jsxRuntimeExports.jsx(UploadFileIcon, {}),
+          onClick: onFileLoad,
+          fullWidth: isMobile,
+          children: "Load File"
+        }
+      )
+    ] }),
+    /* @__PURE__ */ jsxRuntimeExports.jsxs(Box, { sx: {
+      display: "flex",
+      gap: 2,
+      mb: 3,
+      flexDirection: isMobile ? "column" : "row"
+    }, children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs(Box, { sx: {
+        display: "flex",
+        flexDirection: "column",
+        gap: 0.5,
+        minWidth: "150px"
+      }, children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx(Typography, { variant: "caption", color: "text.secondary", sx: { mb: 0.5 }, children: "Correction Handlers" }),
+        correctionHandlers.map((handler) => /* @__PURE__ */ jsxRuntimeExports.jsxs(
+          Button,
+          {
+            variant: "outlined",
+            size: "small",
+            sx: {
+              textTransform: "none",
+              opacity: 0.8,
+              py: 0.25,
+              px: 1,
+              justifyContent: "flex-start",
+              minHeight: "24px"
+            },
+            children: [
+              handler,
+              " (",
+              handlerCounts[handler],
+              ")"
+            ]
+          },
+          handler
+        ))
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx(Box, { sx: { flexGrow: 1 }, children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+        CorrectionMetrics,
+        {
+          anchorCount: data.metadata.anchor_sequences_count,
+          multiSourceAnchors: ((_b = data.anchor_sequences) == null ? void 0 : _b.filter(
+            (anchor) => (anchor == null ? void 0 : anchor.reference_word_ids) && Object.keys(anchor.reference_word_ids || {}).length > 1
+          ).length) ?? 0,
+          anchorWordCount: ((_c = data.anchor_sequences) == null ? void 0 : _c.reduce((sum, anchor) => sum + (anchor.length || 0), 0)) ?? 0,
+          correctedGapCount: ((_d = data.gap_sequences) == null ? void 0 : _d.filter((gap2) => {
+            var _a2;
+            return ((_a2 = gap2.corrections) == null ? void 0 : _a2.length) > 0;
+          }).length) ?? 0,
+          uncorrectedGapCount: ((_e = data.gap_sequences) == null ? void 0 : _e.filter((gap2) => {
+            var _a2;
+            return !((_a2 = gap2.corrections) == null ? void 0 : _a2.length);
+          }).length) ?? 0,
+          uncorrectedGaps: ((_f = data.gap_sequences) == null ? void 0 : _f.filter((gap2) => {
+            var _a2;
+            return !((_a2 = gap2.corrections) == null ? void 0 : _a2.length) && gap2.word_ids;
+          }).map((gap2) => {
+            var _a2;
+            return {
+              position: ((_a2 = gap2.word_ids) == null ? void 0 : _a2[0]) ?? "",
+              length: gap2.length ?? 0
+            };
+          })) ?? [],
+          replacedCount: ((_g = data.gap_sequences) == null ? void 0 : _g.reduce((count, gap2) => {
+            var _a2;
+            return count + (((_a2 = gap2.corrections) == null ? void 0 : _a2.filter((c) => !c.is_deletion && !c.split_total).length) ?? 0);
+          }, 0)) ?? 0,
+          addedCount: ((_h = data.gap_sequences) == null ? void 0 : _h.reduce((count, gap2) => {
+            var _a2;
+            return count + (((_a2 = gap2.corrections) == null ? void 0 : _a2.filter((c) => c.split_total).length) ?? 0);
+          }, 0)) ?? 0,
+          deletedCount: ((_i = data.gap_sequences) == null ? void 0 : _i.reduce((count, gap2) => {
+            var _a2;
+            return count + (((_a2 = gap2.corrections) == null ? void 0 : _a2.filter((c) => c.is_deletion).length) ?? 0);
+          }, 0)) ?? 0,
+          onMetricClick,
+          totalWords: data.metadata.total_words
+        }
+      ) })
+    ] }),
+    /* @__PURE__ */ jsxRuntimeExports.jsxs(Box, { sx: {
+      display: "flex",
+      flexDirection: isMobile ? "column" : "row",
+      gap: 5,
+      alignItems: "flex-start",
+      justifyContent: "flex-start",
+      mb: 3
+    }, children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx(
+        ModeSelector,
+        {
+          effectiveMode,
+          onChange: onModeChange
+        }
+      ),
+      /* @__PURE__ */ jsxRuntimeExports.jsx(
+        AudioPlayer,
+        {
+          apiClient,
+          onTimeUpdate,
+          audioHash
+        }
+      )
+    ] })
+  ] });
+}
+function LyricsAnalyzer({ data: initialData, onFileLoad, apiClient, isReadOnly, audioHash }) {
   const [modalContent, setModalContent] = reactExports.useState(null);
   const [flashingType, setFlashingType] = reactExports.useState(null);
   const [highlightInfo, setHighlightInfo] = reactExports.useState(null);
@@ -26487,102 +26643,24 @@ function LyricsAnalyzer({ data: initialData, onFileLoad, apiClient, isReadOnly }
     }
   }, [data]);
   return /* @__PURE__ */ jsxRuntimeExports.jsxs(Box, { children: [
-    isReadOnly && /* @__PURE__ */ jsxRuntimeExports.jsxs(Box, { sx: { display: "flex", alignItems: "center", mb: 2, color: "text.secondary" }, children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx(LockIcon, { sx: { mr: 1 } }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx(Typography, { variant: "body2", children: "View Only Mode" })
-    ] }),
-    /* @__PURE__ */ jsxRuntimeExports.jsxs(Box, { sx: {
-      display: "flex",
-      flexDirection: isMobile ? "column" : "row",
-      gap: 2,
-      justifyContent: "space-between",
-      alignItems: isMobile ? "stretch" : "center",
-      mb: 3
-    }, children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx(Typography, { variant: "h4", sx: { fontSize: isMobile ? "1.75rem" : "2.125rem" }, children: "Lyrics Correction Review" }),
-      isReadOnly && /* @__PURE__ */ jsxRuntimeExports.jsx(
-        Button,
-        {
-          variant: "outlined",
-          startIcon: /* @__PURE__ */ jsxRuntimeExports.jsx(UploadFileIcon, {}),
-          onClick: onFileLoad,
-          fullWidth: isMobile,
-          children: "Load File"
-        }
-      )
-    ] }),
-    /* @__PURE__ */ jsxRuntimeExports.jsx(Box, { sx: { mb: 3 }, children: /* @__PURE__ */ jsxRuntimeExports.jsx(
-      CorrectionMetrics,
+    /* @__PURE__ */ jsxRuntimeExports.jsx(
+      Header,
       {
-        anchorCount: data.metadata.anchor_sequences_count,
-        multiSourceAnchors: ((_a = data.anchor_sequences) == null ? void 0 : _a.filter(
-          (anchor) => (
-            // Add null checks
-            (anchor == null ? void 0 : anchor.reference_word_ids) && Object.keys(anchor.reference_word_ids || {}).length > 1
-          )
-        ).length) ?? 0,
-        anchorWordCount: ((_b = data.anchor_sequences) == null ? void 0 : _b.reduce((sum, anchor) => sum + (anchor.length || 0), 0)) ?? 0,
-        correctedGapCount: ((_c = data.gap_sequences) == null ? void 0 : _c.filter((gap2) => {
-          var _a2;
-          return ((_a2 = gap2.corrections) == null ? void 0 : _a2.length) > 0;
-        }).length) ?? 0,
-        uncorrectedGapCount: ((_d = data.gap_sequences) == null ? void 0 : _d.filter((gap2) => {
-          var _a2;
-          return !((_a2 = gap2.corrections) == null ? void 0 : _a2.length);
-        }).length) ?? 0,
-        uncorrectedGaps: ((_e = data.gap_sequences) == null ? void 0 : _e.filter((gap2) => {
-          var _a2;
-          return !((_a2 = gap2.corrections) == null ? void 0 : _a2.length) && gap2.word_ids;
-        }).map((gap2) => {
-          var _a2;
-          return {
-            position: ((_a2 = gap2.word_ids) == null ? void 0 : _a2[0]) ?? "",
-            length: gap2.length ?? 0
-          };
-        })) ?? [],
-        replacedCount: ((_f = data.gap_sequences) == null ? void 0 : _f.reduce((count, gap2) => {
-          var _a2;
-          return count + (((_a2 = gap2.corrections) == null ? void 0 : _a2.filter((c) => !c.is_deletion && !c.split_total).length) ?? 0);
-        }, 0)) ?? 0,
-        addedCount: ((_g = data.gap_sequences) == null ? void 0 : _g.reduce((count, gap2) => {
-          var _a2;
-          return count + (((_a2 = gap2.corrections) == null ? void 0 : _a2.filter((c) => c.split_total).length) ?? 0);
-        }, 0)) ?? 0,
-        deletedCount: ((_h = data.gap_sequences) == null ? void 0 : _h.reduce((count, gap2) => {
-          var _a2;
-          return count + (((_a2 = gap2.corrections) == null ? void 0 : _a2.filter((c) => c.is_deletion).length) ?? 0);
-        }, 0)) ?? 0,
+        isReadOnly,
+        onFileLoad,
+        data,
         onMetricClick: {
           anchor: () => handleFlash("anchor"),
           corrected: () => handleFlash("corrected"),
           uncorrected: () => handleFlash("uncorrected")
         },
-        totalWords: data.metadata.total_words
+        effectiveMode,
+        onModeChange: setInteractionMode,
+        apiClient,
+        audioHash,
+        onTimeUpdate: setCurrentAudioTime
       }
-    ) }),
-    /* @__PURE__ */ jsxRuntimeExports.jsxs(Box, { sx: {
-      display: "flex",
-      flexDirection: isMobile ? "column" : "row",
-      gap: 5,
-      alignItems: "flex-start",
-      justifyContent: "flex-start",
-      mb: 3
-    }, children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx(
-        ModeSelector,
-        {
-          effectiveMode,
-          onChange: setInteractionMode
-        }
-      ),
-      /* @__PURE__ */ jsxRuntimeExports.jsx(
-        AudioPlayer,
-        {
-          apiClient,
-          onTimeUpdate: setCurrentAudioTime
-        }
-      )
-    ] }),
+    ),
     /* @__PURE__ */ jsxRuntimeExports.jsxs(Grid, { container: true, spacing: 2, direction: isMobile ? "column" : "row", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx(Grid, { item: true, xs: 12, md: 6, children: /* @__PURE__ */ jsxRuntimeExports.jsx(
         TranscriptionView,
@@ -26676,13 +26754,18 @@ function App() {
   const [error, setError] = reactExports.useState(null);
   const [apiClient, setApiClient] = reactExports.useState(null);
   const [isReadOnly, setIsReadOnly] = reactExports.useState(true);
+  const [audioHash, setAudioHash] = reactExports.useState("");
   reactExports.useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const encodedApiUrl = params.get("baseApiUrl");
+    const audioHashParam = params.get("audioHash");
     if (encodedApiUrl) {
       const baseApiUrl = decodeURIComponent(encodedApiUrl);
       setApiClient(new LiveApiClient(baseApiUrl));
       setIsReadOnly(false);
+      if (audioHashParam) {
+        setAudioHash(audioHashParam);
+      }
       fetchData(baseApiUrl);
     } else {
       setApiClient(new FileOnlyClient());
@@ -26800,7 +26883,8 @@ function App() {
         onFileLoad: handleFileLoad,
         onShowMetadata: () => setShowMetadata(true),
         apiClient,
-        isReadOnly
+        isReadOnly,
+        audioHash
       }
     ),
     renderMetadataModal()
@@ -26809,4 +26893,4 @@ function App() {
 ReactDOM$1.createRoot(document.getElementById("root")).render(
   /* @__PURE__ */ jsxRuntimeExports.jsx(App, {})
 );
-//# sourceMappingURL=index-DziHUCdh.js.map
+//# sourceMappingURL=index-HNTpLUhW.js.map

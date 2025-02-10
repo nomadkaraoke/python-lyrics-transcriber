@@ -1,4 +1,4 @@
-from typing import List, Optional, Tuple, Union
+from typing import List, Optional, Tuple, Union, Dict, Any
 import logging
 from pathlib import Path
 
@@ -52,7 +52,7 @@ class LyricsCorrector:
             self._anchor_finder = AnchorSequenceFinder(cache_dir=self._cache_dir, logger=self.logger)
         return self._anchor_finder
 
-    def run(self, transcription_results: List[TranscriptionResult], lyrics_results: List[LyricsData]) -> CorrectionResult:
+    def run(self, transcription_results: List[TranscriptionResult], lyrics_results: List[LyricsData], metadata: Optional[Dict[str, Any]] = None) -> CorrectionResult:
         """Execute the correction process."""
         if not transcription_results:
             self.logger.error("No transcription results available")
@@ -68,8 +68,12 @@ class LyricsCorrector:
         anchor_sequences = self.anchor_finder.find_anchors(transcribed_text, reference_texts)
         gap_sequences = self.anchor_finder.find_gaps(transcribed_text, anchor_sequences, reference_texts)
 
-        # Process corrections
-        corrections, corrected_segments = self._process_corrections(primary_transcription.segments, gap_sequences)
+        # Process corrections with metadata
+        corrections, corrected_segments = self._process_corrections(
+            primary_transcription.segments, 
+            gap_sequences,
+            metadata=metadata
+        )
 
         # Calculate correction ratio
         total_words = sum(len(segment.words) for segment in corrected_segments)
@@ -104,7 +108,7 @@ class LyricsCorrector:
         return leading_space + new_word.strip() + trailing_space
 
     def _process_corrections(
-        self, segments: List[LyricsSegment], gap_sequences: List[GapSequence]
+        self, segments: List[LyricsSegment], gap_sequences: List[GapSequence], metadata: Optional[Dict[str, Any]] = None
     ) -> Tuple[List[WordCorrection], List[LyricsSegment]]:
         """Process corrections using handlers.
 
@@ -125,7 +129,7 @@ class LyricsCorrector:
         self.logger.info(f"Starting correction process with {len(gap_sequences)} gaps")
 
         # First pass: Process all gaps
-        all_corrections = self._process_gaps(gap_sequences)
+        all_corrections = self._process_gaps(gap_sequences, metadata)
 
         # Second pass: Apply corrections to segments
         corrected_segments = self._apply_corrections_to_segments(segments, all_corrections)
@@ -133,7 +137,7 @@ class LyricsCorrector:
         self.logger.info(f"Correction process complete. Made {len(all_corrections)} corrections")
         return all_corrections, corrected_segments
 
-    def _process_gaps(self, gap_sequences: List[GapSequence]) -> List[WordCorrection]:
+    def _process_gaps(self, gap_sequences: List[GapSequence], metadata: Optional[Dict[str, Any]] = None) -> List[WordCorrection]:
         """Process each gap using available handlers until all words are corrected or no handlers remain."""
         all_corrections = []
         # return all_corrections
@@ -163,7 +167,8 @@ class LyricsCorrector:
                 if can_handle:
                     self.logger.debug(f"{handler.__class__.__name__} can handle gap")
                     # Only pass handler_data if it's not empty
-                    corrections = handler.handle(gap, handler_data if handler_data else None)
+                    corrections = handler.handle(gap, 
+                        handler_data if handler_data else metadata)
                     if corrections:
                         # Add corrections to gap and track corrected positions
                         for correction in corrections:

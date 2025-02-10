@@ -65,6 +65,7 @@ class RepeatCorrectionHandler(GapCorrectionHandler):
                         length=best_correction.length,  # Preserve length from original correction
                         split_index=best_correction.split_index,  # Preserve split info if present
                         split_total=best_correction.split_total,  # Preserve split info if present
+                        handler="RepeatCorrectionHandler",
                     )
                 )
 
