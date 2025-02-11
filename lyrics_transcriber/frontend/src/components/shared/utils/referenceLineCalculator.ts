@@ -1,9 +1,9 @@
-import { LyricsData, LyricsSegment } from '../../../types'
+import { AnchorSequence, LyricsSegment, Word } from '../../../types'
 import { LinePosition } from '../types'
 
 export function calculateReferenceLinePositions(
     corrected_segments: LyricsSegment[],
-    anchors: LyricsData['anchor_sequences'],
+    anchors: AnchorSequence[],
     currentSource: string
 ): { linePositions: LinePosition[] } {
     const linePositions: LinePosition[] = []
@@ -11,11 +11,13 @@ export function calculateReferenceLinePositions(
 
     // First, find all anchor sequences that cover entire lines
     const fullLineAnchors = anchors?.map(anchor => {
-        // Add null checks for anchor and reference_word_ids
-        if (!anchor?.reference_word_ids?.[currentSource]) return null
+        // Check if we have reference words for this source
+        const referenceWords = anchor.reference_words[currentSource]
+        if (!referenceWords?.length) return null
 
-        const referenceWordIds = anchor.reference_word_ids[currentSource]
-        if (!referenceWordIds?.length) return null
+        // Get the IDs of reference words
+        const referenceWordIds = referenceWords.map((w: Word) => w.id)
+        if (!referenceWordIds.length) return null
 
         return {
             referenceWordIds,
@@ -23,8 +25,10 @@ export function calculateReferenceLinePositions(
                 const wordIds = segment.words.map(w => w.id)
                 if (!wordIds.length) return false
 
-                // Check if all word IDs in this segment are part of the anchor
-                return wordIds.every(id => anchor.word_ids?.includes(id))
+                // Check if all word IDs in this segment are part of the anchor's transcribed words
+                return wordIds.every(id =>
+                    anchor.transcribed_words.some(w => w.id === id)
+                )
             })
         }
     })?.filter((a): a is NonNullable<typeof a> => a !== null) ?? []

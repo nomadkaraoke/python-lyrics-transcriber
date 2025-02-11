@@ -121,21 +121,21 @@ export default function Header({
                         // Anchor metrics
                         anchorCount={data.metadata.anchor_sequences_count}
                         multiSourceAnchors={data.anchor_sequences?.filter(anchor =>
-                            anchor?.reference_word_ids &&
-                            Object.keys(anchor.reference_word_ids || {}).length > 1
+                            anchor?.reference_words &&
+                            Object.keys(anchor.reference_words).length > 1
                         ).length ?? 0}
                         anchorWordCount={data.anchor_sequences?.reduce((sum, anchor) =>
-                            sum + (anchor.length || 0), 0) ?? 0}
+                            sum + (anchor.transcribed_words?.length || 0), 0) ?? 0}
                         // Gap metrics
                         correctedGapCount={data.gap_sequences?.filter(gap =>
                             gap.corrections?.length > 0).length ?? 0}
                         uncorrectedGapCount={data.gap_sequences?.filter(gap =>
                             !gap.corrections?.length).length ?? 0}
                         uncorrectedGaps={data.gap_sequences
-                            ?.filter(gap => !gap.corrections?.length && gap.word_ids)
+                            ?.filter(gap => !gap.corrections?.length && gap.transcribed_words?.length > 0)
                             .map(gap => ({
-                                position: gap.word_ids?.[0] ?? '',
-                                length: gap.length ?? 0
+                                position: gap.transcribed_words[0]?.id ?? '',
+                                length: gap.transcribed_words.length ?? 0
                             })) ?? []}
                         // Correction details
                         replacedCount={data.gap_sequences?.reduce((count, gap) =>

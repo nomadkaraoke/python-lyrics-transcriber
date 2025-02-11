@@ -34,29 +34,29 @@ interface DiffResult {
 // Add interfaces for the word and segment structures
 interface Word {
     text: string
-    start_time: number
-    end_time: number
+    start_time: number | null
+    end_time: number | null
     id?: string
 }
 
 interface Segment {
     text: string
-    start_time: number
-    end_time: number
+    start_time: number | null
+    end_time: number | null
     words: Word[]
     id?: string
 }
 
 const normalizeWordForComparison = (word: Word): Omit<Word, 'id'> => ({
     text: word.text,
-    start_time: word.start_time,
-    end_time: word.end_time
+    start_time: word.start_time ?? 0,  // Default to 0 for comparison
+    end_time: word.end_time ?? 0       // Default to 0 for comparison
 })
 
 const normalizeSegmentForComparison = (segment: Segment): Omit<Segment, 'id'> => ({
     text: segment.text,
-    start_time: segment.start_time,
-    end_time: segment.end_time,
+    start_time: segment.start_time ?? 0,  // Default to 0 for comparison
+    end_time: segment.end_time ?? 0,      // Default to 0 for comparison
     words: segment.words.map(normalizeWordForComparison)
 })
 
@@ -72,7 +72,6 @@ export default function ReviewChangesModal({
     const differences = useMemo(() => {
         const diffs: DiffResult[] = []
 
-        // Compare corrected segments
         originalData.corrected_segments.forEach((originalSegment, index) => {
             const updatedSegment = updatedData.corrected_segments[index]
             if (!updatedSegment) {
@@ -89,26 +88,26 @@ export default function ReviewChangesModal({
             const normalizedUpdated = normalizeSegmentForComparison(updatedSegment)
             const wordChanges: DiffResult[] = []
 
-            // Compare word-level changes based on position rather than IDs
-            normalizedOriginal.words.forEach((word: Omit<Word, 'id'>, wordIndex: number) => {
+            // Compare word-level changes
+            normalizedOriginal.words.forEach((word, wordIndex) => {
                 const updatedWord = normalizedUpdated.words[wordIndex]
                 if (!updatedWord) {
                     wordChanges.push({
                         type: 'removed',
                         path: `Word ${wordIndex}`,
-                        oldValue: `"${word.text}" (${word.start_time.toFixed(4)} - ${word.end_time.toFixed(4)})`
+                        oldValue: `"${word.text}" (${word.start_time?.toFixed(4) ?? 'N/A'} - ${word.end_time?.toFixed(4) ?? 'N/A'})`
                     })
                     return
                 }
 
                 if (word.text !== updatedWord.text ||
-                    Math.abs(word.start_time - updatedWord.start_time) > 0.0001 ||
-                    Math.abs(word.end_time - updatedWord.end_time) > 0.0001) {
+                    Math.abs((word.start_time ?? 0) - (updatedWord.start_time ?? 0)) > 0.0001 ||
+                    Math.abs((word.end_time ?? 0) - (updatedWord.end_time ?? 0)) > 0.0001) {
                     wordChanges.push({
                         type: 'modified',
                         path: `Word ${wordIndex}`,
-                        oldValue: `"${word.text}" (${word.start_time.toFixed(4)} - ${word.end_time.toFixed(4)})`,
-                        newValue: `"${updatedWord.text}" (${updatedWord.start_time.toFixed(4)} - ${updatedWord.end_time.toFixed(4)})`
+                        oldValue: `"${word.text}" (${word.start_time?.toFixed(4) ?? 'N/A'} - ${word.end_time?.toFixed(4) ?? 'N/A'})`,
+                        newValue: `"${updatedWord.text}" (${updatedWord.start_time?.toFixed(4) ?? 'N/A'} - ${updatedWord.end_time?.toFixed(4) ?? 'N/A'})`
                     })
                 }
             })
@@ -120,21 +119,22 @@ export default function ReviewChangesModal({
                     wordChanges.push({
                         type: 'added',
                         path: `Word ${i}`,
-                        newValue: `"${word.text}" (${word.start_time.toFixed(4)} - ${word.end_time.toFixed(4)})`
+                        newValue: `"${word.text}" (${word.start_time?.toFixed(4) ?? 'N/A'} - ${word.end_time?.toFixed(4) ?? 'N/A'})`
                     })
                 }
             }
 
+            // Compare segment-level changes
             if (normalizedOriginal.text !== normalizedUpdated.text ||
-                Math.abs(normalizedOriginal.start_time - normalizedUpdated.start_time) > 0.0001 ||
-                Math.abs(normalizedOriginal.end_time - normalizedUpdated.end_time) > 0.0001 ||
+                Math.abs((normalizedOriginal.start_time ?? 0) - (normalizedUpdated.start_time ?? 0)) > 0.0001 ||
+                Math.abs((normalizedOriginal.end_time ?? 0) - (normalizedUpdated.end_time ?? 0)) > 0.0001 ||
                 wordChanges.length > 0) {
                 diffs.push({
                     type: 'modified',
                     path: `Segment ${index}`,
                     segmentIndex: index,
-                    oldValue: `"${normalizedOriginal.text}" (${normalizedOriginal.start_time.toFixed(4)} - ${normalizedOriginal.end_time.toFixed(4)})`,
-                    newValue: `"${normalizedUpdated.text}" (${normalizedUpdated.start_time.toFixed(4)} - ${normalizedUpdated.end_time.toFixed(4)})`,
+                    oldValue: `"${normalizedOriginal.text}" (${normalizedOriginal.start_time?.toFixed(4) ?? 'N/A'} - ${normalizedOriginal.end_time?.toFixed(4) ?? 'N/A'})`,
+                    newValue: `"${normalizedUpdated.text}" (${normalizedUpdated.start_time?.toFixed(4) ?? 'N/A'} - ${normalizedUpdated.end_time?.toFixed(4) ?? 'N/A'})`,
                     wordChanges: wordChanges.length > 0 ? wordChanges : undefined
                 })
             }
@@ -148,7 +148,7 @@ export default function ReviewChangesModal({
                     type: 'added',
                     path: `Segment ${i}`,
                     segmentIndex: i,
-                    newValue: `"${segment.text}" (${segment.start_time.toFixed(4)} - ${segment.end_time.toFixed(4)})`
+                    newValue: `"${segment.text}" (${segment.start_time?.toFixed(4) ?? 'N/A'} - ${segment.end_time?.toFixed(4) ?? 'N/A'})`
                 })
             }
         }

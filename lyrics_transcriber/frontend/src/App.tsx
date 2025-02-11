@@ -39,6 +39,7 @@ export default function App() {
     try {
       const client = new LiveApiClient(baseUrl)
       const data = await client.getCorrectionData()
+      console.log('Full correction data from API:', data)
       setData(data)
     } catch (err) {
       const error = err as Error
@@ -57,9 +58,17 @@ export default function App() {
 
       try {
         const text = await file.text()
-        console.log('File contents:', text.slice(0, 500) + '...') // Show first 500 chars
         const parsedData = JSON.parse(text) as CorrectionData
-        console.log('Parsed file data:', parsedData)
+        console.log('File data loaded:', {
+          sampleCorrection: parsedData.gap_sequences?.[0]?.corrections?.[0],
+          sampleWord: parsedData.corrected_segments?.[0]?.words?.[0]
+        })
+
+        // Validate the structure
+        if (!parsedData.corrected_segments || !parsedData.gap_sequences) {
+          throw new Error('Invalid file format: missing required fields')
+        }
+
         setData(parsedData)
       } catch (err) {
         const error = err as Error

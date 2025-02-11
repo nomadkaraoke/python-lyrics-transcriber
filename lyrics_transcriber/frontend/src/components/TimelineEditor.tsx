@@ -116,40 +116,22 @@ export default function TimelineEditor({ words, startTime, endTime, onWordUpdate
         isResize: boolean
     ): boolean => {
         if (isResize) {
-            // If this is the last word, allow it to extend beyond the timeline
             if (currentIndex === words.length - 1) return false;
 
             const nextWord = words[currentIndex + 1]
-            if (!nextWord) return false
-            const hasCollision = proposedEnd > nextWord.start_time
-            if (hasCollision) {
-                console.log('Resize collision detected:', {
-                    proposedEnd,
-                    nextWordStart: nextWord.start_time,
-                    word: words[currentIndex].text,
-                    nextWord: nextWord.text
-                })
-            }
-            return hasCollision
+            if (!nextWord || nextWord.start_time === null) return false
+            return proposedEnd > nextWord.start_time
         }
 
-        // For move operations, check all words
         return words.some((word, index) => {
             if (index === currentIndex) return false
-            const overlap = (
+            if (word.start_time === null || word.end_time === null) return false
+
+            return (
                 (proposedStart >= word.start_time && proposedStart <= word.end_time) ||
                 (proposedEnd >= word.start_time && proposedEnd <= word.end_time) ||
                 (proposedStart <= word.start_time && proposedEnd >= word.end_time)
             )
-            if (overlap) {
-                console.log('Move collision detected:', {
-                    movingWord: words[currentIndex].text,
-                    collidingWord: word.text,
-                    proposedTimes: { start: proposedStart, end: proposedEnd },
-                    collidingTimes: { start: word.start_time, end: word.end_time }
-                })
-            }
-            return overlap
         })
     }
 
@@ -192,23 +174,18 @@ export default function TimelineEditor({ words, startTime, endTime, onWordUpdate
         const rect = containerRef.current?.getBoundingClientRect()
         if (!rect) return
 
+        const word = words[wordIndex]
+        if (word.start_time === null || word.end_time === null) return
+
         const initialX = e.clientX - rect.left
         const initialTime = ((initialX / rect.width) * (endTime - startTime))
-
-        console.log('Mouse down:', {
-            type,
-            wordIndex,
-            initialX,
-            initialTime,
-            word: words[wordIndex]
-        })
 
         setDragState({
             wordIndex,
             type,
             initialX,
             initialTime,
-            word: words[wordIndex]
+            word
         })
     }
 
@@ -219,67 +196,40 @@ export default function TimelineEditor({ words, startTime, endTime, onWordUpdate
         const x = e.clientX - rect.left
         const width = rect.width
 
+        const currentWord = words[dragState.wordIndex]
+        if (currentWord.start_time === null || currentWord.end_time === null ||
+            dragState.word.start_time === null || dragState.word.end_time === null) return
+
         if (dragState.type === 'resize') {
-            const currentWord = words[dragState.wordIndex]
-            // Use the initial word duration for consistent scaling
             const initialWordDuration = dragState.word.end_time - dragState.word.start_time
             const initialWordWidth = (initialWordDuration / (endTime - startTime)) * width
-
-            // Calculate how much the mouse has moved as a percentage of the initial word width
             const pixelDelta = x - dragState.initialX
             const percentageMoved = pixelDelta / initialWordWidth
             const timeDelta = initialWordDuration * percentageMoved
 
-            console.log('Resize calculation:', {
-                initialWordWidth,
-                initialWordDuration,
-                pixelDelta,
-                percentageMoved,
-                timeDelta,
-                currentDuration: currentWord.end_time - currentWord.start_time
-            })
-
             const proposedEnd = Math.max(
                 currentWord.start_time + MIN_DURATION,
-                dragState.word.end_time + timeDelta  // Use initial end time as reference
+                dragState.word.end_time + timeDelta
             )
 
-            // Check for collisions
             if (checkCollision(currentWord.start_time, proposedEnd, dragState.wordIndex, true)) return
 
-            // If we get here, the resize is valid
             onWordUpdate(dragState.wordIndex, {
                 start_time: currentWord.start_time,
                 end_time: proposedEnd
             })
         } else if (dragState.type === 'move') {
-            // Use timeline scale for consistent movement
             const pixelsPerSecond = width / (endTime - startTime)
             const pixelDelta = x - dragState.initialX
             const timeDelta = pixelDelta / pixelsPerSecond
 
-            const currentWord = words[dragState.wordIndex]
             const wordDuration = currentWord.end_time - currentWord.start_time
-
-            console.log('Move calculation:', {
-                timelineWidth: width,
-                timelineDuration: endTime - startTime,
-                pixelsPerSecond,
-                pixelDelta,
-                timeDelta,
-                currentDuration: wordDuration
-            })
-
             const proposedStart = dragState.word.start_time + timeDelta
             const proposedEnd = proposedStart + wordDuration
 
-            // Ensure we stay within timeline bounds
             if (proposedStart < startTime || proposedEnd > endTime) return
-
-            // Check for collisions
             if (checkCollision(proposedStart, proposedEnd, dragState.wordIndex, false)) return
 
-            // If we get here, the move is valid
             onWordUpdate(dragState.wordIndex, {
                 start_time: proposedStart,
                 end_time: proposedEnd
@@ -292,7 +242,7 @@ export default function TimelineEditor({ words, startTime, endTime, onWordUpdate
     }
 
     const isWordHighlighted = (word: Word): boolean => {
-        if (!currentTime || !word.start_time || !word.end_time) return false
+        if (!currentTime || word.start_time === null || word.end_time === null) return false
         return currentTime >= word.start_time && currentTime <= word.end_time
     }
 
@@ -332,12 +282,13 @@ export default function TimelineEditor({ words, startTime, endTime, onWordUpdate
             />
 
             {words.map((word, index) => {
+                // Skip words with null timestamps
+                if (word.start_time === null || word.end_time === null) return null;
+
                 const leftPosition = timeToPosition(word.start_time)
                 const rightPosition = timeToPosition(word.end_time)
                 const width = rightPosition - leftPosition
-
-                // Add visual padding only to right side (2% of total width)
-                const visualPadding = 2 // percentage points
+                const visualPadding = 2
                 const adjustedWidth = Math.max(0, width - visualPadding)
 
                 return (
@@ -345,21 +296,20 @@ export default function TimelineEditor({ words, startTime, endTime, onWordUpdate
                         key={index}
                         className={isWordHighlighted(word) ? 'highlighted' : ''}
                         sx={{
-                            left: `${leftPosition}%`,  // No adjustment to left position
+                            left: `${leftPosition}%`,
                             width: `${adjustedWidth}%`,
-                            // Ensure the last word doesn't overflow
                             maxWidth: `calc(${100 - leftPosition}% - 2px)`,
                         }}
                         onMouseDown={(e) => {
-                            e.stopPropagation();  // Prevent the parent's mousedown from firing
-                            handleMouseDown(e, index, 'move');
+                            e.stopPropagation()
+                            handleMouseDown(e, index, 'move')
                         }}
                     >
                         {word.text}
                         <ResizeHandle
                             onMouseDown={(e) => {
-                                e.stopPropagation();  // Prevent the parent's mousedown from firing
-                                handleMouseDown(e, index, 'resize');
+                                e.stopPropagation()
+                                handleMouseDown(e, index, 'resize')
                             }}
                         />
                     </TimelineWord>

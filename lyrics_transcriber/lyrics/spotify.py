@@ -1,9 +1,11 @@
 import logging
 from typing import Optional, Dict, Any
 import syrics.api
+import time
 
-from lyrics_transcriber.types import LyricsData, LyricsMetadata, LyricsSegment
+from lyrics_transcriber.types import LyricsData, LyricsMetadata, LyricsSegment, Word
 from lyrics_transcriber.lyrics.base_lyrics_provider import BaseLyricsProvider, LyricsProviderConfig
+from lyrics_transcriber.correction.handlers.word_operations import WordOperations
 
 
 class SpotifyProvider(BaseLyricsProvider):
@@ -12,7 +14,22 @@ class SpotifyProvider(BaseLyricsProvider):
     def __init__(self, config: LyricsProviderConfig, logger: Optional[logging.Logger] = None):
         super().__init__(config, logger)
         self.cookie = config.spotify_cookie
-        self.client = syrics.api.Spotify(self.cookie) if self.cookie else None
+        self.client = None
+
+        if self.cookie:
+            max_retries = 5
+            retry_delay = 5  # seconds
+
+            for attempt in range(max_retries):
+                try:
+                    self.client = syrics.api.Spotify(self.cookie)
+                    break  # Successfully initialized
+                except Exception as e:
+                    if attempt == max_retries - 1:  # Last attempt
+                        self.logger.error(f"Failed to initialize Spotify client after {max_retries} attempts: {str(e)}")
+                        break
+                    self.logger.warning(f"Attempt {attempt + 1}/{max_retries} failed, retrying in {retry_delay} seconds...")
+                    time.sleep(retry_delay)
 
     def _fetch_data_from_source(self, artist: str, title: str) -> Optional[Dict[str, Any]]:
         """Fetch raw data from Spotify APIs using syrics library."""
@@ -45,24 +62,6 @@ class SpotifyProvider(BaseLyricsProvider):
         track_data = raw_data["track_data"]
         lyrics_data = raw_data["lyrics_data"]["lyrics"]
 
-        # Convert raw lines to LyricsSegment objects
-        segments = []
-        for line in lyrics_data.get("lines", []):
-            if not line.get("words"):
-                continue
-
-            # Skip lines that are just musical notes
-            if not self._clean_lyrics(line["words"]):
-                continue
-
-            segment = LyricsSegment(
-                text=line["words"],
-                words=[],  # TODO: Could potentially split words if needed
-                start_time=float(line["startTimeMs"]) / 1000 if line["startTimeMs"] != "0" else None,
-                end_time=float(line["endTimeMs"]) / 1000 if line["endTimeMs"] != "0" else None,
-            )
-            segments.append(segment)
-
         # Create metadata object
         metadata = LyricsMetadata(
             source="spotify",
@@ -82,6 +81,44 @@ class SpotifyProvider(BaseLyricsProvider):
                 "sync_type": lyrics_data.get("syncType"),
             },
         )
+
+        # Create segments with timing information
+        segments = []
+        for line in lyrics_data.get("lines", []):
+            if not line.get("words"):
+                continue
+
+            # Skip lines that are just musical notes
+            if not self._clean_lyrics(line["words"]):
+                continue
+
+            # Split line into words
+            word_texts = line["words"].strip().split()
+            if not word_texts:
+                continue
+
+            # Calculate approximate timing for each word
+            start_time = float(line["startTimeMs"]) / 1000 if line["startTimeMs"] != "0" else 0.0
+            end_time = float(line["endTimeMs"]) / 1000 if line["endTimeMs"] != "0" else 0.0
+            duration = end_time - start_time
+            word_duration = duration / len(word_texts)
+
+            words = []
+            for i, word_text in enumerate(word_texts):
+                word = Word(
+                    id=WordOperations.generate_id(),
+                    text=word_text,
+                    start_time=start_time + (i * word_duration),
+                    end_time=start_time + ((i + 1) * word_duration),
+                    confidence=1.0,
+                    created_during_correction=False,
+                )
+                words.append(word)
+
+            segment = LyricsSegment(
+                id=WordOperations.generate_id(), text=line["words"].strip(), words=words, start_time=start_time, end_time=end_time
+            )
+            segments.append(segment)
 
         return LyricsData(source="spotify", lyrics="\n".join(segment.text for segment in segments), segments=segments, metadata=metadata)
 

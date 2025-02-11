@@ -1,13 +1,14 @@
 from dataclasses import dataclass
 import logging
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, List
 import json
 import hashlib
 from pathlib import Path
 import os
 from abc import ABC, abstractmethod
-from lyrics_transcriber.types import LyricsData
+from lyrics_transcriber.types import LyricsData, LyricsSegment, Word
 from karaoke_lyrics_processor import KaraokeLyricsProcessor
+from lyrics_transcriber.correction.handlers.word_operations import WordOperations
 
 
 @dataclass
@@ -100,8 +101,53 @@ class BaseLyricsProvider(ABC):
             self.logger.warning(f"Cache file {cache_path} is corrupted")
             return None
 
+    def _create_segments_with_words(self, text: str, is_synced: bool = False) -> List[LyricsSegment]:
+        """Create LyricsSegment objects with properly formatted words from text.
+
+        Args:
+            text: Raw lyrics text
+            is_synced: Whether timing information is available
+
+        Returns:
+            List of LyricsSegment objects with unique IDs and Word objects
+        """
+        segments = []
+        lines = text.strip().split("\n")
+
+        for line in lines:
+            if not line.strip():
+                continue
+
+            # Split line into words
+            word_texts = line.strip().split()
+            if not word_texts:
+                continue
+
+            words = []
+            for word_text in word_texts:
+                word = Word(
+                    id=WordOperations.generate_id(),
+                    text=word_text,
+                    start_time=0.0 if is_synced else None,
+                    end_time=0.0 if is_synced else None,
+                    confidence=1.0,  # Reference lyrics are considered ground truth
+                    created_during_correction=False,
+                )
+                words.append(word)
+
+            segment = LyricsSegment(
+                id=WordOperations.generate_id(),
+                text=line.strip(),
+                words=words,
+                start_time=words[0].start_time if is_synced else None,
+                end_time=words[-1].end_time if is_synced else None,
+            )
+            segments.append(segment)
+
+        return segments
+
     def _process_lyrics(self, lyrics_data: LyricsData) -> LyricsData:
-        """Process lyrics using KaraokeLyricsProcessor."""
+        """Process lyrics using KaraokeLyricsProcessor and create proper segments."""
         processor = KaraokeLyricsProcessor(
             log_level=self.logger.getEffectiveLevel(),
             log_formatter=self.logger.handlers[0].formatter if self.logger.handlers else None,
@@ -110,8 +156,11 @@ class BaseLyricsProvider(ABC):
         )
         processed_text = processor.process()
 
-        # Create new LyricsData with processed text
-        return LyricsData(source=lyrics_data.source, lyrics=processed_text, segments=lyrics_data.segments, metadata=lyrics_data.metadata)
+        # Create segments with words from processed text
+        segments = self._create_segments_with_words(processed_text, is_synced=lyrics_data.metadata.is_synced)
+
+        # Create new LyricsData with processed text and segments
+        return LyricsData(source=lyrics_data.source, lyrics=processed_text, segments=segments, metadata=lyrics_data.metadata)
 
     def _save_and_convert_result(self, cache_key: str, raw_data: Dict[str, Any]) -> LyricsData:
         """Convert raw result to standardized format, process lyrics, save to cache, and return."""

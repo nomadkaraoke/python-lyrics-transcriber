@@ -181,7 +181,7 @@ class VideoGenerator:
             "-vf", f"ass={ass_path}",  # Add subtitles
             "-c:v", self._get_video_codec(),
             # Video quality settings
-            "-preset", "slow",  # Better compression efficiency
+            "-preset", "fast",  # Better compression efficiency
             "-b:v", "5000k",  # Base video bitrate
             "-minrate", "5000k",  # Minimum bitrate
             "-maxrate", "20000k",  # Maximum bitrate

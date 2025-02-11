@@ -1,4 +1,5 @@
 import { CorrectionData } from './types';
+import { validateCorrectionData } from './validation';
 
 // New file to handle API communication
 export interface ApiClient {
@@ -23,8 +24,15 @@ export class LiveApiClient implements ApiClient {
         if (!response.ok) {
             throw new Error(`API error: ${response.statusText}`);
         }
-        const data = await response.json();
-        return data;
+        const rawData = await response.json();
+
+        try {
+            // This will throw if validation fails
+            return validateCorrectionData(rawData);
+        } catch (error) {
+            console.error('Data validation failed:', error);
+            throw new Error('Invalid data received from server: missing or incorrect fields');
+        }
     }
 
     async submitCorrections(data: CorrectionData): Promise<void> {

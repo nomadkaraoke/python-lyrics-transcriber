@@ -15,7 +15,6 @@ import TranscriptionView from './TranscriptionView'
 import { WordClickInfo, FlashType } from './shared/types'
 import EditModal from './EditModal'
 import ReviewChangesModal from './ReviewChangesModal'
-import { initializeDataWithIds, normalizeDataForSubmission } from './shared/utils/initializeDataWithIds'
 import {
     addSegmentBefore,
     splitSegment,
@@ -34,7 +33,7 @@ declare global {
     }
 }
 
-interface LyricsAnalyzerProps {
+export interface LyricsAnalyzerProps {
     data: CorrectionData
     onFileLoad: () => void
     onShowMetadata: () => void
@@ -62,12 +61,14 @@ export default function LyricsAnalyzer({ data: initialData, onFileLoad, apiClien
     const [flashingType, setFlashingType] = useState<FlashType>(null)
     const [highlightInfo, setHighlightInfo] = useState<HighlightInfo | null>(null)
     const [currentSource, setCurrentSource] = useState<string>(() => {
-        const availableSources = Object.keys(initialData.reference_texts)
+        if (!initialData?.reference_lyrics) {
+            return ''
+        }
+        const availableSources = Object.keys(initialData.reference_lyrics)
         return availableSources.length > 0 ? availableSources[0] : ''
     })
     const [isReviewComplete, setIsReviewComplete] = useState(false)
-    const [data, setData] = useState(() => initializeDataWithIds(initialData))
-    // Create deep copy of initial data for comparison later
+    const [data, setData] = useState(initialData)
     const [originalData] = useState(() => JSON.parse(JSON.stringify(initialData)))
     const [interactionMode, setInteractionMode] = useState<InteractionMode>('details')
     const [isShiftPressed, setIsShiftPressed] = useState(false)
@@ -81,6 +82,22 @@ export default function LyricsAnalyzer({ data: initialData, onFileLoad, apiClien
     const [currentAudioTime, setCurrentAudioTime] = useState(0)
     const theme = useTheme()
     const isMobile = useMediaQuery(theme.breakpoints.down('md'))
+
+    // Add debug logging for initial data
+    useEffect(() => {
+        console.log('LyricsAnalyzer Initial Data:', {
+            hasData: !!initialData,
+            segmentsCount: initialData?.corrected_segments?.length ?? 0,
+            anchorsCount: initialData?.anchor_sequences?.length ?? 0,
+            gapsCount: initialData?.gap_sequences?.length ?? 0,
+            firstAnchor: initialData?.anchor_sequences?.[0] && {
+                transcribedWords: initialData.anchor_sequences[0].transcribed_words.map(w => w.text),
+                referenceWords: initialData.anchor_sequences[0].reference_words
+            },
+            firstSegment: initialData?.corrected_segments?.[0],
+            referenceSources: Object.keys(initialData?.reference_lyrics ?? {})
+        });
+    }, [initialData]);
 
     // Load saved data
     useEffect(() => {
@@ -137,35 +154,66 @@ export default function LyricsAnalyzer({ data: initialData, onFileLoad, apiClien
     }, [])
 
     const handleWordClick = useCallback((info: WordClickInfo) => {
-        if (effectiveMode === 'edit') {
-            const segment = data.corrected_segments.find(segment =>
-                segment.words.some(word => word.id === info.word_id)
-            )
+        console.log('LyricsAnalyzer handleWordClick:', { info });
 
-            if (segment) {
-                const segmentIndex = data.corrected_segments.indexOf(segment)
-                setEditModalSegment({
-                    segment,
-                    index: segmentIndex,
-                    originalSegment: originalData.corrected_segments[segmentIndex]
-                })
+        if (effectiveMode === 'highlight') {
+            // Find if this word is part of a correction
+            const correction = data.corrections?.find(c =>
+                c.corrected_word_id === info.word_id ||
+                c.word_id === info.word_id
+            );
+
+            if (correction) {
+                setHighlightInfo({
+                    type: 'correction',
+                    transcribed_words: [], // Required by type but not used for corrections
+                    correction: correction
+                });
+                setFlashingType('word');
+                return;
             }
-        } else {
-            // Update flash handling for anchors/gaps
-            if (info.type === 'anchor' && info.anchor) {
-                handleFlash('word', {
+
+            // Find if this word is part of an anchor sequence
+            const anchor = data.anchor_sequences?.find(a =>
+                a.transcribed_words.some(w => w.id === info.word_id) ||
+                Object.values(a.reference_words).some(words =>
+                    words.some(w => w.id === info.word_id)
+                )
+            );
+
+            if (anchor) {
+                setHighlightInfo({
                     type: 'anchor',
-                    word_ids: info.anchor.word_ids,
-                    reference_word_ids: info.anchor.reference_word_ids
-                })
-            } else if (info.type === 'gap' && info.gap) {
-                handleFlash('word', {
-                    type: 'gap',
-                    word_ids: info.gap.word_ids
-                })
+                    sequence: anchor,
+                    transcribed_words: anchor.transcribed_words,
+                    reference_words: anchor.reference_words
+                });
+                setFlashingType('word');
+                return;
             }
+
+            // Find if this word is part of a gap sequence
+            const gap = data.gap_sequences?.find(g =>
+                g.transcribed_words.some(w => w.id === info.word_id) ||
+                Object.values(g.reference_words).some(words =>
+                    words.some(w => w.id === info.word_id)
+                )
+            );
+
+            if (gap) {
+                setHighlightInfo({
+                    type: 'gap',
+                    sequence: gap,
+                    transcribed_words: gap.transcribed_words,
+                    reference_words: gap.reference_words
+                });
+                setFlashingType('word');
+                return;
+            }
+        } else if (effectiveMode === 'details') {
+            // ... existing details mode code ...
         }
-    }, [effectiveMode, data.corrected_segments, handleFlash, originalData.corrected_segments])
+    }, [data, effectiveMode]);
 
     const handleUpdateSegment = useCallback((updatedSegment: LyricsSegment) => {
         if (!editModalSegment) return
@@ -188,8 +236,7 @@ export default function LyricsAnalyzer({ data: initialData, onFileLoad, apiClien
 
         try {
             console.log('Submitting changes to server')
-            const dataToSubmit = normalizeDataForSubmission(data)
-            await apiClient.submitCorrections(dataToSubmit)
+            await apiClient.submitCorrections(data)
 
             setIsReviewComplete(true)
             setIsReviewModalOpen(false)
@@ -212,8 +259,7 @@ export default function LyricsAnalyzer({ data: initialData, onFileLoad, apiClien
     const handleResetCorrections = useCallback(() => {
         if (window.confirm('Are you sure you want to reset all corrections? This cannot be undone.')) {
             clearSavedData(initialData.transcribed_text)
-            const freshData = initializeDataWithIds(JSON.parse(JSON.stringify(initialData)))
-            setData(freshData)
+            setData(JSON.parse(JSON.stringify(initialData)))
             setModalContent(null)
             setFlashingType(null)
             setHighlightInfo(null)
@@ -267,7 +313,7 @@ export default function LyricsAnalyzer({ data: initialData, onFileLoad, apiClien
                 </Grid>
                 <Grid item xs={12} md={6}>
                     <ReferenceView
-                        referenceTexts={data.reference_texts}
+                        referenceSources={data.reference_lyrics}
                         anchors={data.anchor_sequences}
                         gaps={data.gap_sequences}
                         mode={effectiveMode}
@@ -286,6 +332,7 @@ export default function LyricsAnalyzer({ data: initialData, onFileLoad, apiClien
                 open={modalContent !== null}
                 content={modalContent}
                 onClose={() => setModalContent(null)}
+                allCorrections={data.corrections}
             />
 
             <EditModal

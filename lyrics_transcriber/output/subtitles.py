@@ -44,7 +44,30 @@ class SubtitlesGenerator:
         self.font_size = font_size
         self.styles = styles
         self.subtitle_offset_ms = subtitle_offset_ms
-        self.config = ScreenConfig(line_height=line_height, video_width=video_resolution[0], video_height=video_resolution[1])
+        
+        # Create ScreenConfig with potential overrides from styles
+        karaoke_styles = styles.get("karaoke", {})
+        config_params = {
+            "line_height": line_height,
+            "video_width": video_resolution[0],
+            "video_height": video_resolution[1]
+        }
+        
+        # Add any overrides from styles
+        screen_config_props = [
+            "max_visible_lines",
+            "top_padding",
+            "screen_gap_threshold",
+            "post_roll_time",
+            "fade_in_ms",
+            "fade_out_ms"
+        ]
+        
+        for prop in screen_config_props:
+            if prop in karaoke_styles:
+                config_params[prop] = karaoke_styles[prop]
+        
+        self.config = ScreenConfig(**config_params)
         self.logger = logger or logging.getLogger(__name__)
 
     def _get_output_path(self, output_prefix: str, extension: str) -> str:
@@ -102,13 +125,16 @@ class SubtitlesGenerator:
             offset_seconds = self.subtitle_offset_ms / 1000.0
             segments = [
                 LyricsSegment(
+                    id=seg.id,  # Preserve original segment ID
                     text=seg.text,
                     words=[
                         Word(
+                            id=word.id,  # Preserve original word ID
                             text=word.text,
                             start_time=max(0, word.start_time + offset_seconds),
                             end_time=word.end_time + offset_seconds,
                             confidence=word.confidence,
+                            created_during_correction=getattr(word, "created_during_correction", False),  # Preserve correction flag
                         )
                         for word in seg.words
                     ],

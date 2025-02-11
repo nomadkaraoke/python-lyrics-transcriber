@@ -128,11 +128,20 @@ class SyllablesMatchHandler(GapCorrectionHandler):
         self.logger.debug("No reference source had matching syllable count")
         return False, {}
 
-    def handle(self, gap: GapSequence, data: Dict[str, Any]) -> List[WordCorrection]:
+    def handle(self, gap: GapSequence, data: Optional[Dict[str, Any]] = None) -> List[WordCorrection]:
+        """Handle the gap using syllable matching."""
+        if not data:
+            can_handle, data = self.can_handle(gap)
+            if not can_handle:
+                return []
+
         corrections = []
         matching_source = data["matching_source"]
         reference_words = data["reference_words"]
         reference_words_original = data["reference_words_original"]
+
+        # Get original word IDs if available
+        original_word_ids = [word.id if hasattr(word, "id") else None for word in gap.words]
 
         # Use the centralized method to calculate reference positions
         reference_positions = WordOperations.calculate_reference_positions(gap, [matching_source])
@@ -149,6 +158,7 @@ class SyllablesMatchHandler(GapCorrectionHandler):
 
                 # Get the group of words to combine
                 words_to_combine = gap.words[start_idx:end_idx]
+                word_ids_to_combine = original_word_ids[start_idx:end_idx]
                 corrections.extend(
                     WordOperations.create_word_combine_corrections(
                         original_words=words_to_combine,
@@ -160,6 +170,7 @@ class SyllablesMatchHandler(GapCorrectionHandler):
                         delete_reason="Word removed as part of syllable match combination",
                         reference_positions=reference_positions,
                         handler="SyllablesMatchHandler",
+                        original_word_ids=word_ids_to_combine,
                     )
                 )
 
@@ -167,7 +178,7 @@ class SyllablesMatchHandler(GapCorrectionHandler):
             # Single transcribed word -> multiple reference words
             words_per_gap = len(reference_words) / len(gap.words)
 
-            for i, orig_word in enumerate(gap.words):
+            for i, (orig_word, word_id) in enumerate(zip(gap.words, original_word_ids)):
                 start_idx = int(i * words_per_gap)
                 end_idx = int((i + 1) * words_per_gap)
                 ref_words_original_for_orig = reference_words_original[start_idx:end_idx]
@@ -182,12 +193,15 @@ class SyllablesMatchHandler(GapCorrectionHandler):
                         reason="Split word based on syllable match",
                         reference_positions=reference_positions,
                         handler="SyllablesMatchHandler",
+                        original_word_id=word_id,
                     )
                 )
 
         else:
             # One-to-one replacement
-            for i, (orig_word, ref_word, ref_word_original) in enumerate(zip(gap.words, reference_words, reference_words_original)):
+            for i, (orig_word, ref_word, ref_word_original, word_id) in enumerate(
+                zip(gap.words, reference_words, reference_words_original, original_word_ids)
+            ):
                 if orig_word.lower() != ref_word.lower():
                     corrections.append(
                         WordOperations.create_word_replacement_correction(
@@ -199,6 +213,7 @@ class SyllablesMatchHandler(GapCorrectionHandler):
                             reason=f"Source '{matching_source}' had matching syllable count",
                             reference_positions=reference_positions,
                             handler="SyllablesMatchHandler",
+                            original_word_id=word_id,
                         )
                     )
 

@@ -1,4 +1,4 @@
-import { AnchorSequence, GapSequence, HighlightInfo, InteractionMode, LyricsData, LyricsSegment } from '../../types'
+import { AnchorSequence, GapSequence, HighlightInfo, InteractionMode, CorrectionData, LyricsSegment, ReferenceSource } from '../../types'
 import { ModalContent } from '../LyricsAnalyzer'
 
 // Add FlashType definition directly in shared types
@@ -67,7 +67,7 @@ export interface TextSegmentProps extends BaseViewProps {
 
 // View-specific props
 export interface TranscriptionViewProps extends BaseViewProps {
-    data: LyricsData
+    data: CorrectionData
     onPlaySegment?: (startTime: number) => void
     currentTime?: number
 }
@@ -81,9 +81,9 @@ export interface LinePosition {
 
 // Reference-specific props
 export interface ReferenceViewProps extends BaseViewProps {
-    referenceTexts: Record<string, string>
-    anchors: LyricsData['anchor_sequences']
-    gaps: LyricsData['gap_sequences']
+    referenceSources: Record<string, ReferenceSource>
+    anchors: CorrectionData['anchor_sequences']
+    gaps: CorrectionData['gap_sequences']
     currentSource: string
     onSourceChange: (source: string) => void
     corrected_segments: LyricsSegment[]

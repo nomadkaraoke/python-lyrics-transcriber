@@ -6,7 +6,7 @@ from typing import Dict, Optional, Any, Union
 from pathlib import Path
 from lyrics_transcriber.types import TranscriptionData, LyricsSegment, Word
 from lyrics_transcriber.transcribers.base_transcriber import BaseTranscriber, TranscriptionError
-
+from lyrics_transcriber.correction.handlers.word_operations import WordOperations
 
 @dataclass
 class AudioShakeConfig:
@@ -183,6 +183,7 @@ class AudioShakeTranscriber(BaseTranscriber):
         for line in transcription_data.get("lines", []):
             words = [
                 Word(
+                    id=WordOperations.generate_id(),  # Generate unique ID for each word
                     text=word["text"].strip(" "),
                     start_time=word.get("start", 0.0),
                     end_time=word.get("end", 0.0),
@@ -193,6 +194,7 @@ class AudioShakeTranscriber(BaseTranscriber):
 
             segments.append(
                 LyricsSegment(
+                    id=WordOperations.generate_id(),  # Generate unique ID for each segment
                     text=line.get("text", " ".join(w.text for w in words)),
                     words=words,
                     start_time=min((w.start_time for w in words), default=0.0),

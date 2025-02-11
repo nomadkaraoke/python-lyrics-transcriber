@@ -36,18 +36,18 @@ class WordCountMatchHandler(GapCorrectionHandler):
 
     def handle(self, gap: GapSequence, data: Optional[Dict[str, Any]] = None) -> List[WordCorrection]:
         corrections = []
-        # Get both clean and original reference words from first source
         source = list(gap.reference_words.keys())[0]
         reference_words = gap.reference_words[source]
         reference_words_original = gap.reference_words_original[source]
         sources = ", ".join(gap.reference_words.keys())
 
-        # Use the centralized method to calculate reference positions for all sources
         reference_positions = WordOperations.calculate_reference_positions(gap)
 
-        # Since we know all reference sources agree, we can correct all words in the gap
         for i, (orig_word, ref_word, ref_word_original) in enumerate(zip(gap.words, reference_words, reference_words_original)):
             if orig_word.lower() != ref_word.lower():
+                # Get the original word's ID from the gap sequence
+                original_word_id = gap.words[i].id if hasattr(gap.words[i], 'id') else None
+                
                 correction = WordOperations.create_word_replacement_correction(
                     original_word=orig_word,
                     corrected_word=ref_word_original,
@@ -57,6 +57,7 @@ class WordCountMatchHandler(GapCorrectionHandler):
                     reason="Reference sources had same word count as gap",
                     reference_positions=reference_positions,
                     handler="WordCountMatchHandler",
+                    original_word_id=original_word_id,  # Pass the original word ID
                 )
                 corrections.append(correction)
                 self.logger.debug(f"Correction made: {correction}")

@@ -1,11 +1,21 @@
 from typing import List, Optional, Tuple, Union, Dict, Any
 import logging
 from pathlib import Path
+from copy import deepcopy
 
 from lyrics_transcriber.correction.handlers.no_space_punct_match import NoSpacePunctuationMatchHandler
 from lyrics_transcriber.correction.handlers.relaxed_word_count_match import RelaxedWordCountMatchHandler
 from lyrics_transcriber.correction.handlers.syllables_match import SyllablesMatchHandler
-from lyrics_transcriber.types import GapSequence, LyricsData, TranscriptionResult, CorrectionResult, LyricsSegment, WordCorrection, Word
+from lyrics_transcriber.types import (
+    CorrectionStep,
+    GapSequence,
+    LyricsData,
+    TranscriptionResult,
+    CorrectionResult,
+    LyricsSegment,
+    WordCorrection,
+    Word,
+)
 from lyrics_transcriber.correction.anchor_sequence import AnchorSequenceFinder
 from lyrics_transcriber.correction.handlers.base import GapCorrectionHandler
 from lyrics_transcriber.correction.handlers.word_count_match import WordCountMatchHandler
@@ -14,6 +24,7 @@ from lyrics_transcriber.correction.handlers.sound_alike import SoundAlikeHandler
 from lyrics_transcriber.correction.handlers.levenshtein import LevenshteinHandler
 from lyrics_transcriber.correction.handlers.repeat import RepeatCorrectionHandler
 from lyrics_transcriber.correction.handlers.llm import LLMHandler
+from lyrics_transcriber.correction.handlers.word_operations import WordOperations
 
 
 class LyricsCorrector:
@@ -35,11 +46,11 @@ class LyricsCorrector:
         # Default handlers in order of preference
         self.handlers = handlers or [
             ExtendAnchorHandler(logger=self.logger),
-            WordCountMatchHandler(logger=self.logger),
-            SyllablesMatchHandler(logger=self.logger),
-            RelaxedWordCountMatchHandler(logger=self.logger),
-            NoSpacePunctuationMatchHandler(logger=self.logger),
-            LLMHandler(logger=self.logger),
+            # WordCountMatchHandler(logger=self.logger),
+            # SyllablesMatchHandler(logger=self.logger),
+            # RelaxedWordCountMatchHandler(logger=self.logger),
+            # NoSpacePunctuationMatchHandler(logger=self.logger),
+            # LLMHandler(logger=self.logger),
             # RepeatCorrectionHandler(logger=self.logger),
             # SoundAlikeHandler(logger=self.logger),
             # LevenshteinHandler(logger=self.logger),
@@ -52,7 +63,12 @@ class LyricsCorrector:
             self._anchor_finder = AnchorSequenceFinder(cache_dir=self._cache_dir, logger=self.logger)
         return self._anchor_finder
 
-    def run(self, transcription_results: List[TranscriptionResult], lyrics_results: List[LyricsData], metadata: Optional[Dict[str, Any]] = None) -> CorrectionResult:
+    def run(
+        self,
+        transcription_results: List[TranscriptionResult],
+        lyrics_results: Dict[str, LyricsData],
+        metadata: Optional[Dict[str, Any]] = None,
+    ) -> CorrectionResult:
         """Execute the correction process."""
         if not transcription_results:
             self.logger.error("No transcription results available")
@@ -61,18 +77,19 @@ class LyricsCorrector:
         # Get primary transcription
         primary_transcription = sorted(transcription_results, key=lambda x: x.priority)[0].result
         transcribed_text = " ".join(" ".join(w.text for w in segment.words) for segment in primary_transcription.segments)
-        reference_texts = {lyrics.source: lyrics.lyrics for lyrics in lyrics_results}
 
         # Find anchor sequences and gaps
         self.logger.debug("Finding anchor sequences and gaps")
-        anchor_sequences = self.anchor_finder.find_anchors(transcribed_text, reference_texts)
-        gap_sequences = self.anchor_finder.find_gaps(transcribed_text, anchor_sequences, reference_texts)
+        anchor_sequences = self.anchor_finder.find_anchors(
+            transcribed_text, lyrics_results, primary_transcription  # Pass transcription result
+        )
+        gap_sequences = self.anchor_finder.find_gaps(
+            transcribed_text, anchor_sequences, lyrics_results, primary_transcription  # Pass transcription result
+        )
 
         # Process corrections with metadata
-        corrections, corrected_segments = self._process_corrections(
-            primary_transcription.segments, 
-            gap_sequences,
-            metadata=metadata
+        corrections, corrected_segments, correction_steps, word_id_map, segment_id_map = self._process_corrections(
+            primary_transcription.segments, gap_sequences, metadata=metadata
         )
 
         # Calculate correction ratio
@@ -88,7 +105,7 @@ class LyricsCorrector:
             corrections_made=corrections_made,
             confidence=correction_ratio,
             transcribed_text=transcribed_text,
-            reference_texts=reference_texts,
+            reference_lyrics=lyrics_results,
             anchor_sequences=anchor_sequences,
             resized_segments=[],
             gap_sequences=gap_sequences,
@@ -98,6 +115,9 @@ class LyricsCorrector:
                 "total_words": total_words,
                 "correction_ratio": correction_ratio,
             },
+            correction_steps=correction_steps,
+            word_id_map=word_id_map,
+            segment_id_map=segment_id_map,
         )
 
     def _preserve_formatting(self, original: str, new_word: str) -> str:
@@ -109,7 +129,7 @@ class LyricsCorrector:
 
     def _process_corrections(
         self, segments: List[LyricsSegment], gap_sequences: List[GapSequence], metadata: Optional[Dict[str, Any]] = None
-    ) -> Tuple[List[WordCorrection], List[LyricsSegment]]:
+    ) -> Tuple[List[WordCorrection], List[LyricsSegment], List[CorrectionStep], Dict[str, str], Dict[str, str]]:
         """Process corrections using handlers.
 
         The correction flow works as follows:
@@ -127,80 +147,94 @@ class LyricsCorrector:
         b) Applying those corrections to the original text (segment-centric)
         """
         self.logger.info(f"Starting correction process with {len(gap_sequences)} gaps")
+        correction_steps = []
+        all_corrections = []
+        word_id_map = {}
+        segment_id_map = {}
+
+        # Assign IDs to original segments/words if not already present
+        for segment in segments:
+            if not hasattr(segment, "id"):
+                segment.id = WordOperations.generate_id()
+                self.logger.debug(f"Generated new segment ID: {segment.id}")
+            for word in segment.words:
+                if not hasattr(word, "id"):
+                    word.id = WordOperations.generate_id()
+                    self.logger.debug(f"Generated new word ID: {word.id}")
 
         # First pass: Process all gaps
-        all_corrections = self._process_gaps(gap_sequences, metadata)
+        for gap_idx, gap in enumerate(gap_sequences, 1):
+            self.logger.info(f"Processing gap {gap_idx}/{len(gap_sequences)} at position {gap.transcription_position}")
+            self.logger.debug(f"Gap text: '{' '.join(w.text for w in gap.transcribed_words)}'")  # Updated to use Word objects
 
-        # Second pass: Apply corrections to segments
-        corrected_segments = self._apply_corrections_to_segments(segments, all_corrections)
-
-        self.logger.info(f"Correction process complete. Made {len(all_corrections)} corrections")
-        return all_corrections, corrected_segments
-
-    def _process_gaps(self, gap_sequences: List[GapSequence], metadata: Optional[Dict[str, Any]] = None) -> List[WordCorrection]:
-        """Process each gap using available handlers until all words are corrected or no handlers remain."""
-        all_corrections = []
-        # return all_corrections
-
-        for gap in gap_sequences:
-            self.logger.debug(f"Processing gap: {gap.text}")
-            high_confidence_positions = set()  # Track positions that have high confidence corrections
-            corrected_positions = set()  # Track all corrected positions regardless of confidence
-
-            # Try each handler until gap is fully corrected
             for handler in self.handlers:
-                # Skip if all words have high confidence corrections
-                uncorrected_positions = set(range(gap.transcription_position, gap.transcription_position + gap.length))
-                uncorrected_positions -= corrected_positions  # Skip any corrected positions
+                handler_name = handler.__class__.__name__
+                self.logger.debug(f"Trying handler: {handler_name}")
 
-                if not uncorrected_positions:
-                    self.logger.debug("All words have been corrected, skipping remaining handlers")
-                    break
+                if handler.can_handle(gap):
+                    self.logger.info(f"Handler {handler_name} can handle gap")
+                    # Store state before correction
+                    affected_segments = self._get_affected_segments(gap, segments)
+                    segments_before = [deepcopy(seg) for seg in affected_segments]
 
-                self.logger.debug(f"Trying handler {handler.__class__.__name__}")
-
-                # Pass previous corrections to RepeatCorrectionHandler
-                if isinstance(handler, RepeatCorrectionHandler):
-                    handler.set_previous_corrections(all_corrections)
-
-                can_handle, handler_data = handler.can_handle(gap)
-                if can_handle:
-                    self.logger.debug(f"{handler.__class__.__name__} can handle gap")
-                    # Only pass handler_data if it's not empty
-                    corrections = handler.handle(gap, 
-                        handler_data if handler_data else metadata)
+                    # Apply corrections
+                    corrections = handler.handle(gap)
                     if corrections:
-                        # Add corrections to gap and track corrected positions
+                        self.logger.info(f"Handler {handler_name} made {len(corrections)} corrections")
+                        # Track affected IDs
+                        affected_word_ids = [w.id for w in self._get_affected_words(gap, segments)]
+                        affected_segment_ids = [s.id for s in affected_segments]
+
+                        # Apply corrections and get updated segments
+                        updated_segments = self._apply_corrections_to_segments(affected_segments, corrections)
+
+                        # Update ID maps
                         for correction in corrections:
-                            # Skip if this position was already corrected
-                            if correction.original_position in corrected_positions:
-                                continue
+                            if correction.word_id and correction.corrected_word_id:
+                                word_id_map[correction.word_id] = correction.corrected_word_id
 
-                            gap.add_correction(correction)
-                            corrected_positions.add(correction.original_position)
-                            # Track positions with high confidence corrections (>= 0.9)
-                            if correction.confidence >= 0.9:
-                                high_confidence_positions.add(correction.original_position)
+                        # Map segment IDs
+                        for old_seg, new_seg in zip(affected_segments, updated_segments):
+                            segment_id_map[old_seg.id] = new_seg.id
 
-                        # Filter out corrections for already corrected positions
-                        new_corrections = [c for c in corrections if c.original_position in corrected_positions]
-                        if new_corrections:
-                            self.logger.debug(
-                                f"{handler.__class__.__name__} made {len(new_corrections)} corrections: "
-                                f"{[f'{c.original_word}->{c.corrected_word}' for c in new_corrections]}"
+                        # Create correction step
+                        step = CorrectionStep(
+                            handler_name=handler_name,
+                            affected_word_ids=affected_word_ids,
+                            affected_segment_ids=affected_segment_ids,
+                            corrections=corrections,
+                            segments_before=segments_before,
+                            segments_after=updated_segments,
+                            created_word_ids=[w.id for w in self._get_new_words(updated_segments, affected_word_ids)],
+                            deleted_word_ids=[id for id in affected_word_ids if not self._word_exists(id, updated_segments)],
+                        )
+                        correction_steps.append(step)
+                        all_corrections.extend(corrections)
+
+                        # Log correction details
+                        for correction in corrections:
+                            self.logger.info(
+                                f"Made correction: '{correction.original_word}' -> '{correction.corrected_word}' "
+                                f"(confidence: {correction.confidence:.2f}, reason: {correction.reason})"
                             )
-                            all_corrections.extend(new_corrections)
+                        break  # Stop trying other handlers once we've made corrections
+                    else:
+                        self.logger.debug(f"Handler {handler_name} found no corrections needed")
+                else:
+                    self.logger.debug(f"Handler {handler_name} cannot handle gap")
 
-                        # Log remaining uncorrected words
-                        if not gap.is_fully_corrected:
-                            uncorrected = [word for pos, word in gap.uncorrected_words if pos not in corrected_positions]
-                            if uncorrected:
-                                self.logger.debug(f"Uncorrected words remaining: {', '.join(uncorrected)}")
+        # Create final result with correction history
+        corrected_segments = self._apply_all_corrections(segments, all_corrections)
+        self.logger.info(f"Correction process completed with {len(all_corrections)} total corrections")
+        return all_corrections, corrected_segments, correction_steps, word_id_map, segment_id_map
 
-            if not gap.corrections:
-                self.logger.warning("No handler could handle the gap")
+    def _get_new_words(self, segments: List[LyricsSegment], original_word_ids: List[str]) -> List[Word]:
+        """Find words that were created during correction."""
+        return [w for s in segments for w in s.words if w.id not in original_word_ids]
 
-        return all_corrections
+    def _word_exists(self, word_id: str, segments: List[LyricsSegment]) -> bool:
+        """Check if a word ID still exists in the segments."""
+        return any(w.id == word_id for s in segments for w in s.words)
 
     def _apply_corrections_to_segments(self, segments: List[LyricsSegment], corrections: List[WordCorrection]) -> List[LyricsSegment]:
         """Apply corrections to create new segments."""
@@ -235,10 +269,12 @@ class LyricsCorrector:
                             correction.corrected_position = len(corrected_words)
                             corrected_words.append(
                                 Word(
+                                    id=correction.corrected_word_id or WordOperations.generate_id(),
                                     text=self._preserve_formatting(correction.original_word, correction.corrected_word),
                                     start_time=start_time,
                                     end_time=end_time,
                                     confidence=correction.confidence,
+                                    created_during_correction=True,
                                 )
                             )
                     else:
@@ -249,10 +285,12 @@ class LyricsCorrector:
                             correction.corrected_position = len(corrected_words)
                             corrected_words.append(
                                 Word(
+                                    id=correction.corrected_word_id or WordOperations.generate_id(),
                                     text=self._preserve_formatting(correction.original_word, correction.corrected_word),
                                     start_time=word.start_time,
                                     end_time=word.end_time,
                                     confidence=correction.confidence,
+                                    created_during_correction=True,
                                 )
                             )
                 else:
@@ -262,6 +300,7 @@ class LyricsCorrector:
             if corrected_words:
                 corrected_segments.append(
                     LyricsSegment(
+                        id=segment.id,  # Preserve original segment ID
                         text=" ".join(w.text for w in corrected_words),
                         words=corrected_words,
                         start_time=segment.start_time,
@@ -270,3 +309,47 @@ class LyricsCorrector:
                 )
 
         return corrected_segments
+
+    def _get_affected_segments(self, gap: GapSequence, segments: List[LyricsSegment]) -> List[LyricsSegment]:
+        """Get segments that contain words from the gap sequence."""
+        affected_segments = []
+        current_word_idx = 0
+
+        for segment in segments:
+            # Check if any words in this segment are part of the gap
+            segment_contains_gap = False
+            for word in segment.words:
+                if current_word_idx >= gap.transcription_position and current_word_idx < gap.transcription_position + gap.length:
+                    segment_contains_gap = True
+                    break
+                current_word_idx += 1
+
+            if segment_contains_gap:
+                affected_segments.append(segment)
+            elif affected_segments:  # We've passed the gap
+                break
+
+        return affected_segments
+
+    def _get_affected_words(self, gap: GapSequence, segments: List[LyricsSegment]) -> List[Word]:
+        """Get words that are part of the gap sequence."""
+        affected_words = []
+        current_word_idx = 0
+
+        for segment in segments:
+            for word in segment.words:
+                if current_word_idx >= gap.transcription_position and current_word_idx < gap.transcription_position + gap.length:
+                    affected_words.append(word)
+                current_word_idx += 1
+                if current_word_idx >= gap.transcription_position + gap.length:
+                    return affected_words
+
+        return affected_words
+
+    def _apply_all_corrections(self, segments: List[LyricsSegment], corrections: List[WordCorrection]) -> List[LyricsSegment]:
+        """Apply all corrections to create final corrected segments."""
+        # Make a deep copy to avoid modifying original segments
+        working_segments = deepcopy(segments)
+
+        # Apply corrections in order
+        return self._apply_corrections_to_segments(working_segments, corrections)

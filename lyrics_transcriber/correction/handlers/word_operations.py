@@ -1,5 +1,6 @@
 from typing import List, Optional, Dict
 from lyrics_transcriber.types import WordCorrection, GapSequence
+import shortuuid
 
 
 class WordOperations:
@@ -36,6 +37,11 @@ class WordOperations:
         return reference_positions
 
     @staticmethod
+    def generate_id() -> str:
+        """Generate a unique ID for words/segments."""
+        return shortuuid.uuid()
+
+    @staticmethod
     def create_word_replacement_correction(
         original_word: str,
         corrected_word: str,
@@ -45,6 +51,7 @@ class WordOperations:
         reason: str,
         handler: str,
         reference_positions: Optional[Dict[str, int]] = None,
+        original_word_id: Optional[str] = None,
     ) -> WordCorrection:
         """Creates a correction for replacing a single word with another word."""
         return WordCorrection(
@@ -57,8 +64,10 @@ class WordOperations:
             reason=reason,
             alternatives={},
             reference_positions=reference_positions,
-            length=1,  # Single word replacement
+            length=1,
             handler=handler,
+            word_id=original_word_id,
+            corrected_word_id=WordOperations.generate_id() if corrected_word else None,
         )
 
     @staticmethod
@@ -71,6 +80,7 @@ class WordOperations:
         reason: str,
         handler: str,
         reference_positions: Optional[Dict[str, int]] = None,
+        original_word_id: Optional[str] = None,
     ) -> List[WordCorrection]:
         """Creates corrections for splitting a single word into multiple words."""
         corrections = []
@@ -90,6 +100,8 @@ class WordOperations:
                     reference_positions=reference_positions,
                     length=1,  # Each split word is length 1
                     handler=handler,
+                    word_id=original_word_id if split_idx == 0 else None,
+                    corrected_word_id=WordOperations.generate_id(),
                 )
             )
         return corrections
@@ -105,9 +117,11 @@ class WordOperations:
         delete_reason: str,
         handler: str,
         reference_positions: Optional[Dict[str, int]] = None,
+        original_word_ids: Optional[List[str]] = None,
     ) -> List[WordCorrection]:
         """Creates corrections for combining multiple words into a single word."""
         corrections = []
+        word_ids = original_word_ids or [None] * len(original_words)
 
         # First word gets replaced
         corrections.append(
@@ -123,11 +137,13 @@ class WordOperations:
                 reference_positions=reference_positions,
                 length=len(original_words),  # Combined word spans all original words
                 handler=handler,
+                word_id=word_ids[0],
+                corrected_word_id=WordOperations.generate_id(),
             )
         )
 
         # Additional words get marked for deletion
-        for i, word in enumerate(original_words[1:], start=1):
+        for i, (word, word_id) in enumerate(zip(original_words[1:], word_ids[1:]), start=1):
             corrections.append(
                 WordCorrection(
                     original_word=word,
@@ -142,6 +158,8 @@ class WordOperations:
                     reference_positions=reference_positions,
                     length=1,  # Deleted words are length 1
                     handler=handler,
+                    word_id=word_id,
+                    corrected_word_id=None,
                 )
             )
 

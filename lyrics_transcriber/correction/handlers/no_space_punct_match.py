@@ -30,30 +30,33 @@ class NoSpacePunctuationMatchHandler(GapCorrectionHandler):
         gap_text = self._remove_spaces_and_punct(gap.words)
 
         # Check if any reference source matches when spaces and punctuation are removed
-        for words in gap.reference_words.values():
+        for source, words in gap.reference_words.items():
             ref_text = self._remove_spaces_and_punct(words)
             if gap_text == ref_text:
                 self.logger.debug("Found a matching reference source with spaces and punctuation removed.")
-                return True, {}
+                return True, {
+                    "matching_source": source,
+                    "reference_words": words,
+                    "reference_words_original": gap.reference_words_original[source],
+                }
 
         self.logger.debug("No matching reference source found with spaces and punctuation removed.")
         return False, {}
 
     def handle(self, gap: GapSequence, data: Optional[Dict[str, Any]] = None) -> List[WordCorrection]:
-        corrections = []
+        """Handle the gap using no-space punctuation matching."""
+        if not data:
+            can_handle, data = self.can_handle(gap)
+            if not can_handle:
+                return []
 
-        # Find the matching source (we know there is at least one from can_handle)
-        gap_text = self._remove_spaces_and_punct(gap.words)
-        matching_source = None
-        reference_words = None
-        reference_words_original = None
-        for source, words in gap.reference_words.items():
-            if self._remove_spaces_and_punct(words) == gap_text:
-                matching_source = source
-                reference_words = words
-                reference_words_original = gap.reference_words_original[source]
-                self.logger.debug(f"Using source '{source}' for corrections.")
-                break
+        corrections = []
+        matching_source = data["matching_source"]
+        reference_words = data["reference_words"]
+        reference_words_original = data["reference_words_original"]
+
+        # Get original word IDs if available
+        original_word_ids = [word.id if hasattr(word, "id") else None for word in gap.words]
 
         # Calculate reference positions for the matching source
         reference_positions = WordOperations.calculate_reference_positions(gap, [matching_source])
@@ -72,6 +75,7 @@ class NoSpacePunctuationMatchHandler(GapCorrectionHandler):
                     delete_reason="Word removed as part of text match combination",
                     reference_positions=reference_positions,
                     handler="NoSpacePunctuationMatchHandler",
+                    original_word_ids=original_word_ids,
                 )
             )
             self.logger.debug(f"Combined words into '{reference_words_original[0]}'.")
@@ -88,13 +92,16 @@ class NoSpacePunctuationMatchHandler(GapCorrectionHandler):
                     reason="Split word based on text match",
                     reference_positions=reference_positions,
                     handler="NoSpacePunctuationMatchHandler",
+                    original_word_id=original_word_ids[0],
                 )
             )
             self.logger.debug(f"Split word '{gap.words[0]}' into {reference_words_original}.")
 
         else:
             # One-to-one replacement
-            for i, (orig_word, ref_word, ref_word_original) in enumerate(zip(gap.words, reference_words, reference_words_original)):
+            for i, (orig_word, ref_word, ref_word_original, word_id) in enumerate(
+                zip(gap.words, reference_words, reference_words_original, original_word_ids)
+            ):
                 if orig_word.lower() != ref_word.lower():
                     correction = WordOperations.create_word_replacement_correction(
                         original_word=orig_word,
@@ -105,6 +112,7 @@ class NoSpacePunctuationMatchHandler(GapCorrectionHandler):
                         reason=f"Source '{matching_source}' matched when spaces and punctuation removed",
                         reference_positions=reference_positions,
                         handler="NoSpacePunctuationMatchHandler",
+                        original_word_id=word_id,
                     )
                     corrections.append(correction)
                     self.logger.debug(f"Correction made: {correction}")

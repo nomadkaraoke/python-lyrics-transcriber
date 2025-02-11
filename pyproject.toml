@@ -33,6 +33,7 @@ fastapi = ">=0.115"
 uvicorn = ">=0.34"
 fonttools = ">=4.55"
 ollama = "^0.4.7"
+shortuuid = "^1.0.13"
 
 [tool.poetry.group.dev.dependencies]
 black = ">=23"

@@ -9,17 +9,20 @@ import {
 } from '@mui/material'
 import CloseIcon from '@mui/icons-material/Close'
 import { ModalContent } from './LyricsAnalyzer'
+import { WordCorrection } from '@/types'
 
 interface DetailsModalProps {
     open: boolean
     content: ModalContent | null
     onClose: () => void
+    allCorrections?: WordCorrection[]
 }
 
 export default function DetailsModal({
     open,
     content,
     onClose,
+    allCorrections = []
 }: DetailsModalProps) {
     if (!content) return null
 
@@ -32,7 +35,19 @@ export default function DetailsModal({
         return ''
     }
 
-    const isCorrected = content.type === 'gap' && content.data.corrections?.length > 0
+    const isCorrected = content.type === 'gap' && (
+        content.data.corrections?.length > 0 ||
+        allCorrections.some(c => c.corrected_word_id === content.data.wordId)
+    )
+
+    const getAllCorrections = () => {
+        if (content.type !== 'gap') return []
+
+        return [
+            ...(content.data.corrections || []),
+            ...allCorrections.filter(c => c.corrected_word_id === content.data.wordId)
+        ]
+    }
 
     const renderContent = () => {
         switch (content.type) {
@@ -50,11 +65,11 @@ export default function DetailsModal({
                         <GridItem title="Word ID" value={content.data.wordId} />
                         <GridItem title="Length" value={`${content.data.length} words`} />
                         <GridItem
-                            title="Reference Word IDs"
-                            value={content.data.reference_word_ids ?
-                                Object.entries(content.data.reference_word_ids).map(([source, ids]) => (
-                                    `${source}: ${ids?.join(', ') ?? 'No IDs'}`
-                                )).join('\n') : 'No reference word IDs'
+                            title="Reference Words"
+                            value={content.data.reference_words ?
+                                Object.entries(content.data.reference_words).map(([source, words]) => (
+                                    `${source}: ${words.map(w => w.text).join(', ')}`
+                                )).join('\n') : 'No reference words'
                             }
                         />
                         <GridItem title="Confidence" value={content.data.confidence?.toFixed(3) ?? 'N/A'} />
@@ -121,21 +136,25 @@ export default function DetailsModal({
                                 value={
                                     <>
                                         {content.data.reference_words.spotify && (
-                                            <Typography>Spotify: "{content.data.reference_words.spotify.join(' ')}"</Typography>
+                                            <Typography>
+                                                Spotify: "{content.data.reference_words.spotify.map(w => w.text).join(' ')}"
+                                            </Typography>
                                         )}
                                         {content.data.reference_words.genius && (
-                                            <Typography>Genius: "{content.data.reference_words.genius.join(' ')}"</Typography>
+                                            <Typography>
+                                                Genius: "{content.data.reference_words.genius.map(w => w.text).join(' ')}"
+                                            </Typography>
                                         )}
                                     </>
                                 }
                             />
                         )}
-                        {isCorrected && content.data.corrections && (
+                        {isCorrected && (
                             <GridItem
                                 title="Correction Details"
                                 value={
                                     <>
-                                        {content.data.corrections.map((correction, index) => (
+                                        {getAllCorrections().map((correction, index) => (
                                             <Box key={index} sx={{ mb: 2, p: 1, border: '1px solid #ccc', borderRadius: '4px' }}>
                                                 <Typography variant="subtitle2" fontWeight="bold">Correction {index + 1}</Typography>
                                                 <Typography>Original: <strong>"{correction.original_word}"</strong></Typography>

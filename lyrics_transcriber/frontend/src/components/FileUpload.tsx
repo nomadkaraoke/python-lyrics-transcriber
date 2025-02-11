@@ -1,10 +1,10 @@
 import { ChangeEvent, DragEvent, useState } from 'react'
 import { Paper, Typography } from '@mui/material'
 import CloudUploadIcon from '@mui/icons-material/CloudUpload'
-import { LyricsData } from '../types'
+import { CorrectionData } from '../types'
 
 interface FileUploadProps {
-    onUpload: (data: LyricsData) => void
+    onUpload: (data: CorrectionData) => void
 }
 
 export default function FileUpload({ onUpload }: FileUploadProps) {

@@ -21,7 +21,7 @@ class LyricsControllerResult:
     """Holds the results of the transcription and correction process."""
 
     # Results from different sources
-    lyrics_results: List[LyricsData] = field(default_factory=list)
+    lyrics_results: dict[str, LyricsData] = field(default_factory=dict)
     transcription_results: List[TranscriptionResult] = field(default_factory=list)
 
     # Corrected results
@@ -260,7 +260,7 @@ class LyricsTranscriber:
             try:
                 result = provider.fetch_lyrics(self.artist, self.title)
                 if result:
-                    self.results.lyrics_results.append(result)
+                    self.results.lyrics_results[name] = result
                     self.logger.info(f"Successfully fetched lyrics from {name}")
 
             except Exception as e:
@@ -308,7 +308,7 @@ class LyricsTranscriber:
                     corrections_made=0,  # No corrections made
                     confidence=1.0,  # Full confidence since we're using original
                     transcribed_text="",  # Will be generated from segments
-                    reference_texts={},
+                    reference_lyrics={},
                     anchor_sequences=[],
                     gap_sequences=[],
                     resized_segments=[],  # Will be populated later
@@ -321,21 +321,20 @@ class LyricsTranscriber:
             return
 
         # Run correction if we have reference lyrics
-        
+
         # Create metadata dict with song info
         metadata = {
             "artist": self.artist,
             "title": self.title,
             "full_reference_texts": {
-                source: lyrics.lyrics for source, lyrics in 
-                [(data.source, data) for data in self.results.lyrics_results]
-            }
+                source: lyrics.lyrics for source, lyrics in self.results.lyrics_results.items()
+            },
         }
-        
+
         corrected_data = self.corrector.run(
             transcription_results=self.results.transcription_results,
             lyrics_results=self.results.lyrics_results,
-            metadata=metadata  # Pass the metadata through
+            metadata=metadata,  # Pass the metadata through
         )
 
         # Add audio filepath to metadata

@@ -23,32 +23,38 @@ class RelaxedWordCountMatchHandler(GapCorrectionHandler):
         for source, words in gap.reference_words.items():
             if len(words) == gap.length:
                 self.logger.debug(f"Source '{source}' has matching word count.")
-                return True, {}
+                return True, {
+                    "matching_source": source,
+                    "reference_words": words,
+                    "reference_words_original": gap.reference_words_original[source],
+                }
 
         self.logger.debug("No source with matching word count found.")
         return False, {}
 
     def handle(self, gap: GapSequence, data: Optional[Dict[str, Any]] = None) -> List[WordCorrection]:
-        corrections = []
+        """Handle the gap using word count matching."""
+        if not data:
+            can_handle, data = self.can_handle(gap)
+            if not can_handle:
+                return []
 
-        # Find the first source that has matching word count
-        matching_source = None
-        reference_words = None
-        reference_words_original = None
-        for source, words in gap.reference_words.items():
-            if len(words) == gap.length:
-                matching_source = source
-                reference_words = words
-                reference_words_original = gap.reference_words_original[source]
-                self.logger.debug(f"Using source '{source}' for corrections.")
-                break
+        corrections = []
+        matching_source = data["matching_source"]
+        reference_words = data["reference_words"]
+        reference_words_original = data["reference_words_original"]
+
+        # Get original word IDs if available
+        original_word_ids = [word.id if hasattr(word, "id") else None for word in gap.words]
 
         # Use the centralized method to calculate reference positions for the matching source
         reference_positions = WordOperations.calculate_reference_positions(gap, [matching_source])
         self.logger.debug(f"Calculated reference positions: {reference_positions}")
 
         # Since we found a source with matching word count, we can correct using that source
-        for i, (orig_word, ref_word, ref_word_original) in enumerate(zip(gap.words, reference_words, reference_words_original)):
+        for i, (orig_word, ref_word, ref_word_original, word_id) in enumerate(
+            zip(gap.words, reference_words, reference_words_original, original_word_ids)
+        ):
             if orig_word.lower() != ref_word.lower():
                 correction = WordOperations.create_word_replacement_correction(
                     original_word=orig_word,
@@ -59,6 +65,7 @@ class RelaxedWordCountMatchHandler(GapCorrectionHandler):
                     reason=f"Source '{matching_source}' had matching word count",
                     reference_positions=reference_positions,
                     handler="RelaxedWordCountMatchHandler",
+                    original_word_id=word_id,
                 )
                 corrections.append(correction)
                 self.logger.debug(f"Correction made: {correction}")

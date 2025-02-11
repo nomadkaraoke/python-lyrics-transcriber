@@ -97,7 +97,7 @@ class OutputGenerator:
     def generate_outputs(
         self,
         transcription_corrected: Optional[CorrectionResult],
-        lyrics_results: List[LyricsData],
+        lyrics_results: dict[str, LyricsData],
         output_prefix: str,
         audio_filepath: str,
         artist: Optional[str] = None,
@@ -108,7 +108,7 @@ class OutputGenerator:
 
         try:
             # Generate plain lyrics files for each provider
-            for lyrics_data in lyrics_results:
+            for name, lyrics_data in lyrics_results.items():
                 self.plain_text.write_lyrics(lyrics_data, output_prefix)
 
             # Only process transcription-related outputs if we have transcription data

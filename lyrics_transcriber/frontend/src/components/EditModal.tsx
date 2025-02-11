@@ -62,22 +62,36 @@ export default function EditModal({
         setEditedSegment(segment)
     }, [segment])
 
+    // Add a function to get safe time values
+    const getSafeTimeRange = (segment: LyricsSegment | null) => {
+        if (!segment) return { start: 0, end: 1 }; // Default 1-second range
+
+        const start = segment.start_time ?? 0;
+        const end = segment.end_time ?? (start + 1);
+        return { start, end };
+    }
+
     if (!segment || segmentIndex === null || !editedSegment || !originalSegment) return null
 
-    const handleWordChange = (index: number, field: keyof Word, value: string | number) => {
+    // Get safe time values for TimelineEditor
+    const timeRange = getSafeTimeRange(editedSegment)
+
+    const handleWordChange = (index: number, updates: Partial<Word>) => {
         const newWords = [...editedSegment.words]
         newWords[index] = {
             ...newWords[index],
-            [field]: field === 'start_time' || field === 'end_time'
-                ? parseFloat(Number(value).toFixed(4))
-                : value
+            ...updates
         }
         updateSegment(newWords)
     }
 
     const updateSegment = (newWords: Word[]) => {
-        const segmentStartTime = Math.min(...newWords.map(w => w.start_time))
-        const segmentEndTime = Math.max(...newWords.map(w => w.end_time))
+        // Filter out null values before finding min/max
+        const validStartTimes = newWords.map(w => w.start_time).filter((t): t is number => t !== null)
+        const validEndTimes = newWords.map(w => w.end_time).filter((t): t is number => t !== null)
+
+        const segmentStartTime = validStartTimes.length > 0 ? Math.min(...validStartTimes) : null
+        const segmentEndTime = validEndTimes.length > 0 ? Math.max(...validEndTimes) : null
 
         setEditedSegment({
             ...editedSegment,
@@ -95,11 +109,12 @@ export default function EditModal({
         if (index === undefined) {
             // Add at end
             const lastWord = newWords[newWords.length - 1]
+            const lastEndTime = lastWord.end_time ?? 0
             newWord = {
                 id: nanoid(),
                 text: '',
-                start_time: lastWord.end_time,
-                end_time: lastWord.end_time + 0.5,
+                start_time: lastEndTime,
+                end_time: lastEndTime + 0.5,
                 confidence: 1.0
             }
             newWords.push(newWord)
@@ -108,8 +123,11 @@ export default function EditModal({
             const prevWord = newWords[index]
             const nextWord = newWords[index + 1]
             const midTime = prevWord ?
-                (nextWord ? (prevWord.end_time + nextWord.start_time) / 2 : prevWord.end_time + 0.5) :
-                (nextWord ? nextWord.start_time - 0.5 : 0)
+                (nextWord ?
+                    ((prevWord.end_time ?? 0) + (nextWord.start_time ?? 0)) / 2 :
+                    (prevWord.end_time ?? 0) + 0.5
+                ) :
+                (nextWord ? (nextWord.start_time ?? 0) - 0.5 : 0)
 
             newWord = {
                 id: nanoid(),
@@ -126,7 +144,9 @@ export default function EditModal({
 
     const handleSplitWord = (index: number) => {
         const word = editedSegment.words[index]
-        const midTime = (word.start_time + word.end_time) / 2
+        const startTime = word.start_time ?? 0
+        const endTime = word.end_time ?? startTime + 0.5
+        const midTime = (startTime + endTime) / 2
         const words = word.text.split(/\s+/)
 
         if (words.length <= 1) {
@@ -142,7 +162,7 @@ export default function EditModal({
             {
                 id: nanoid(),
                 text: words[0],
-                start_time: word.start_time,
+                start_time: startTime,
                 end_time: midTime,
                 confidence: 1.0
             },
@@ -150,7 +170,7 @@ export default function EditModal({
                 id: nanoid(),
                 text: words[1],
                 start_time: midTime,
-                end_time: word.end_time,
+                end_time: endTime,
                 confidence: 1.0
             }
         )
@@ -168,8 +188,8 @@ export default function EditModal({
         newWords.splice(index, 2, {
             id: nanoid(),
             text: `${word1.text} ${word2.text}`.trim(),
-            start_time: word1.start_time,
-            end_time: word2.end_time,
+            start_time: word1.start_time ?? null,
+            end_time: word2.end_time ?? null,
             confidence: 1.0
         })
 
@@ -202,7 +222,7 @@ export default function EditModal({
                 originalText: segment?.text,
                 editedText: editedSegment.text,
                 wordCount: editedSegment.words.length,
-                timeRange: `${editedSegment.start_time.toFixed(4)} - ${editedSegment.end_time.toFixed(4)}`
+                timeRange: `${editedSegment.start_time?.toFixed(4) ?? 'N/A'} - ${editedSegment.end_time?.toFixed(4) ?? 'N/A'}`
             })
             onSave(editedSegment)
             onClose()
@@ -213,7 +233,9 @@ export default function EditModal({
         if (!editedSegment) return
 
         const newWords = replacementText.trim().split(/\s+/)
-        const segmentDuration = editedSegment.end_time - editedSegment.start_time
+        const startTime = editedSegment.start_time ?? 0
+        const endTime = editedSegment.end_time ?? (startTime + newWords.length) // Default to 1 second per word
+        const segmentDuration = endTime - startTime
 
         let updatedWords: Word[]
 
@@ -232,8 +254,8 @@ export default function EditModal({
             updatedWords = newWords.map((text, index) => ({
                 id: nanoid(),  // Generate new ID
                 text,
-                start_time: editedSegment.start_time + (index * avgWordDuration),
-                end_time: editedSegment.start_time + ((index + 1) * avgWordDuration),
+                start_time: startTime + (index * avgWordDuration),
+                end_time: startTime + ((index + 1) * avgWordDuration),
                 confidence: 1.0
             }))
         }
@@ -274,10 +296,10 @@ export default function EditModal({
             <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                 <Box sx={{ flex: 1, display: 'flex', alignItems: 'center', gap: 1 }}>
                     Edit Segment {segmentIndex}
-                    {segment?.start_time !== undefined && onPlaySegment && (
+                    {segment?.start_time !== null && onPlaySegment && (
                         <IconButton
                             size="small"
-                            onClick={() => onPlaySegment(segment.start_time)}
+                            onClick={() => onPlaySegment(segment.start_time!)}
                             sx={{ padding: '4px' }}
                         >
                             <PlayCircleOutlineIcon />
@@ -292,22 +314,18 @@ export default function EditModal({
                 <Box sx={{ mb: 2 }}>
                     <TimelineEditor
                         words={editedSegment.words}
-                        startTime={editedSegment.start_time}
-                        endTime={editedSegment.end_time}
-                        onWordUpdate={(index, updates) => {
-                            const newWords = [...editedSegment.words]
-                            newWords[index] = { ...newWords[index], ...updates }
-                            updateSegment(newWords)
-                        }}
+                        startTime={timeRange.start}
+                        endTime={timeRange.end}
+                        onWordUpdate={handleWordChange}
                         currentTime={currentTime}
                         onPlaySegment={onPlaySegment}
                     />
                 </Box>
 
                 <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                    Original Time Range: {originalSegment.start_time.toFixed(2)} - {originalSegment.end_time.toFixed(2)}
+                    Original Time Range: {originalSegment.start_time?.toFixed(2) ?? 'N/A'} - {originalSegment.end_time?.toFixed(2) ?? 'N/A'}
                     <br />
-                    Current Time Range: {editedSegment.start_time.toFixed(2)} - {editedSegment.end_time.toFixed(2)}
+                    Current Time Range: {editedSegment.start_time?.toFixed(2) ?? 'N/A'} - {editedSegment.end_time?.toFixed(2) ?? 'N/A'}
                 </Typography>
 
                 <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, mb: 3 }}>
@@ -316,14 +334,14 @@ export default function EditModal({
                             <TextField
                                 label={`Word ${index}`}
                                 value={word.text}
-                                onChange={(e) => handleWordChange(index, 'text', e.target.value)}
+                                onChange={(e) => handleWordChange(index, { text: e.target.value })}
                                 fullWidth
                                 size="small"
                             />
                             <TextField
                                 label="Start Time"
-                                value={word.start_time.toFixed(2)}
-                                onChange={(e) => handleWordChange(index, 'start_time', parseFloat(e.target.value))}
+                                value={word.start_time?.toFixed(2) ?? ''}
+                                onChange={(e) => handleWordChange(index, { start_time: parseFloat(e.target.value) })}
                                 type="number"
                                 inputProps={{ step: 0.01 }}
                                 sx={{ width: '150px' }}
@@ -331,8 +349,8 @@ export default function EditModal({
                             />
                             <TextField
                                 label="End Time"
-                                value={word.end_time.toFixed(2)}
-                                onChange={(e) => handleWordChange(index, 'end_time', parseFloat(e.target.value))}
+                                value={word.end_time?.toFixed(2) ?? ''}
+                                onChange={(e) => handleWordChange(index, { end_time: parseFloat(e.target.value) })}
                                 type="number"
                                 inputProps={{ step: 0.01 }}
                                 sx={{ width: '150px' }}

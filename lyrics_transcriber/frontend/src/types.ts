@@ -1,34 +1,36 @@
 export interface Word {
     id: string
     text: string
-    start_time: number
-    end_time: number
+    start_time: number | null
+    end_time: number | null
     confidence?: number
+    created_during_correction?: boolean
 }
 
 export interface LyricsSegment {
     id: string
     text: string
     words: Word[]
-    start_time: number
-    end_time: number
+    start_time: number | null
+    end_time: number | null
 }
 
 export interface WordCorrection {
-    id: string
+    id?: string
     handler: string
     original_word: string
     corrected_word: string
-    segment_id: string
+    segment_id?: string
     word_id: string
+    corrected_word_id: string
     source: string
     confidence: number
     reason: string
     alternatives: Record<string, number>
     is_deletion: boolean
-    split_index?: number
-    split_total?: number
-    reference_positions?: Record<string, string>
+    split_index?: number | null
+    split_total?: number | null
+    reference_positions?: Record<string, number>
     length: number
 }
 
@@ -40,12 +42,16 @@ export interface PhraseScore {
 }
 
 export interface AnchorSequence {
-    id: string
+    id?: string
     words: string[]
+    transcribed_words: Word[]
     text: string
     length: number
-    word_ids: string[]
-    reference_word_ids: Record<string, string[]>
+    transcription_position: number
+    reference_positions: Record<string, number>
+    reference_words: {
+        [source: string]: Word[]
+    }
     confidence: number
     phrase_score: PhraseScore
     total_score: number
@@ -58,42 +64,78 @@ export interface AnchorReference {
 }
 
 export interface GapSequence {
-    id: string
+    id?: string
     text: string
     words: string[]
-    word_ids: string[]
+    transcribed_words: Word[]
     length: number
+    transcription_position: number
     corrections: WordCorrection[]
-    preceding_anchor: AnchorReference | null
-    following_anchor: AnchorReference | null
+    preceding_anchor: {
+        words: string[]
+        transcribed_words: Word[]
+        text: string
+        length: number
+        transcription_position: number
+        reference_positions: Record<string, number>
+        reference_words: {
+            [source: string]: Word[]
+        }
+        confidence: number
+    } | null
+    following_anchor: {
+        words: string[]
+        transcribed_words: Word[]
+        text: string
+        length: number
+        transcription_position: number
+        reference_positions: Record<string, number>
+        reference_words: {
+            [source: string]: Word[]
+        }
+        confidence: number
+    } | null
     reference_words: {
-        [source: string]: string[]
+        [source: string]: Word[]
+    }
+    reference_words_original?: {
+        [source: string]: Word[]
     }
 }
 
-export interface LyricsData {
-    transcribed_text: string
-    corrected_text: string
-    original_segments: LyricsSegment[]
+export interface ReferenceSource {
+    segments: LyricsSegment[]
     metadata: {
-        anchor_sequences_count: number
-        gap_sequences_count: number
-        total_words: number
-        correction_ratio: number
+        source: string
+        track_name: string
+        artist_names: string
+        album_name: string
+        duration_ms: number | null
+        explicit: boolean | null
+        language: string | null
+        is_synced: boolean
+        lyrics_provider: string
+        lyrics_provider_id: string
+        provider_metadata: Record<string, unknown>
     }
-    anchor_sequences: AnchorSequence[]
-    gap_sequences: GapSequence[]
-    corrected_segments: LyricsSegment[]
-    corrections_made: number
-    confidence: number
+    source: string
+}
+
+export interface CorrectionStep {
+    handler_name: string
+    affected_word_ids: string[]
+    affected_segment_ids: string[]
     corrections: WordCorrection[]
-    reference_texts: Record<string, string>
+    segments_before: LyricsSegment[]
+    segments_after: LyricsSegment[]
+    created_word_ids: string[]
+    deleted_word_ids: string[]
 }
 
 export interface CorrectionData {
     transcribed_text: string
     original_segments: LyricsSegment[]
-    reference_texts: Record<string, string>
+    reference_lyrics: Record<string, ReferenceSource>
     anchor_sequences: AnchorSequence[]
     gap_sequences: GapSequence[]
     resized_segments?: LyricsSegment[]
@@ -107,13 +149,22 @@ export interface CorrectionData {
         gap_sequences_count: number
         total_words: number
         correction_ratio: number
+        audio_filepath?: string
+        audio_hash?: string
     }
+    correction_steps: CorrectionStep[]
+    word_id_map: Record<string, string>
+    segment_id_map: Record<string, string>
 }
 
 export interface HighlightInfo {
-    word_ids?: string[]
-    reference_word_ids?: Record<string, string[]>
-    type: 'single' | 'gap' | 'anchor'
+    type: 'single' | 'gap' | 'anchor' | 'correction'
+    sequence?: AnchorSequence | GapSequence
+    transcribed_words: Word[]
+    reference_words?: {
+        [source: string]: Word[]
+    }
+    correction?: WordCorrection
 }
 
 export type InteractionMode = 'highlight' | 'details' | 'edit'

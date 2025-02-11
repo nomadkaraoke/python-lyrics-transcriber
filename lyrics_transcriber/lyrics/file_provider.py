@@ -67,7 +67,7 @@ class FileProvider(BaseLyricsProvider):
         self.logger.debug(f"Converting raw data to LyricsData format: {raw_data}")
 
         try:
-            # Create metadata object like Genius provider does
+            # Create metadata object
             metadata = LyricsMetadata(
                 source="file",
                 track_name=self.title,
@@ -78,10 +78,11 @@ class FileProvider(BaseLyricsProvider):
                 provider_metadata={"filepath": raw_data["filepath"]},
             )
 
-            lyrics_data = LyricsData(
-                source="file", lyrics=raw_data["text"], segments=[], metadata=metadata  # No timing information from file
-            )
-            self.logger.debug(f"Created LyricsData object: {lyrics_data}")
+            # Create segments with words from the processed text
+            segments = self._create_segments_with_words(raw_data["text"], is_synced=False)
+
+            lyrics_data = LyricsData(source="file", lyrics=raw_data["text"], segments=segments, metadata=metadata)
+            self.logger.debug(f"Created LyricsData object with {len(segments)} segments")
             return lyrics_data
 
         except Exception as e:

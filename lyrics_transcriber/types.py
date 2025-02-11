@@ -7,10 +7,13 @@ from enum import Enum
 class Word:
     """Represents a single word with its timing (in seconds) and confidence information."""
 
+    id: str  # New: Unique identifier for each word
     text: str
     start_time: float
     end_time: float
     confidence: Optional[float] = None
+    # New: Track if this word was created during correction
+    created_during_correction: bool = False
 
     def to_dict(self) -> Dict[str, Any]:
         """Convert Word to dictionary for JSON serialization."""
@@ -24,10 +27,12 @@ class Word:
     def from_dict(cls, data: Dict[str, Any]) -> "Word":
         """Create Word from dictionary."""
         return cls(
+            id=data["id"],
             text=data["text"],
             start_time=data["start_time"],
             end_time=data["end_time"],
             confidence=data.get("confidence"),  # Use get() since confidence is optional
+            created_during_correction=data.get("created_during_correction", False),
         )
 
 
@@ -35,6 +40,7 @@ class Word:
 class LyricsSegment:
     """Represents a segment/line of lyrics with timing information in seconds."""
 
+    id: str  # New: Unique identifier for each segment
     text: str
     words: List[Word]
     start_time: float
@@ -43,6 +49,7 @@ class LyricsSegment:
     def to_dict(self) -> Dict[str, Any]:
         """Convert LyricsSegment to dictionary for JSON serialization."""
         return {
+            "id": self.id,
             "text": self.text,
             "words": [word.to_dict() for word in self.words],
             "start_time": self.start_time,
@@ -53,6 +60,7 @@ class LyricsSegment:
     def from_dict(cls, data: Dict[str, Any]) -> "LyricsSegment":
         """Create LyricsSegment from dictionary."""
         return cls(
+            id=data["id"],
             text=data["text"],
             words=[Word.from_dict(w) for w in data["words"]],
             start_time=data["start_time"],
@@ -80,11 +88,28 @@ class LyricsMetadata:
     lyrics_provider_id: Optional[str] = None
 
     # Provider-specific metadata
-    provider_metadata: Dict[str, Any] = None
+    provider_metadata: Dict[str, Any] = field(default_factory=dict)
 
     def to_dict(self) -> Dict[str, Any]:
         """Convert metadata to dictionary for JSON serialization."""
         return asdict(self)
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> "LyricsMetadata":
+        """Create LyricsMetadata from dictionary."""
+        return cls(
+            source=data["source"],
+            track_name=data["track_name"],
+            artist_names=data["artist_names"],
+            album_name=data.get("album_name"),
+            duration_ms=data.get("duration_ms"),
+            explicit=data.get("explicit"),
+            language=data.get("language"),
+            is_synced=data.get("is_synced", False),
+            lyrics_provider=data.get("lyrics_provider"),
+            lyrics_provider_id=data.get("lyrics_provider_id"),
+            provider_metadata=data.get("provider_metadata", {}),
+        )
 
 
 @dataclass
@@ -104,6 +129,16 @@ class LyricsData:
             "metadata": self.metadata.to_dict(),
             "source": self.source,
         }
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> "LyricsData":
+        """Create LyricsData from dictionary."""
+        return cls(
+            lyrics=data["lyrics"],
+            segments=[LyricsSegment.from_dict(s) for s in data["segments"]],
+            metadata=LyricsMetadata.from_dict(data["metadata"]),
+            source=data["source"],
+        )
 
 
 @dataclass
@@ -128,6 +163,9 @@ class WordCorrection:
     reference_positions: Optional[Dict[str, int]] = None  # Maps source to position in reference text
     length: int = 1  # Default to 1 for single-word corrections
     handler: Optional[str] = None  # Name of the correction handler that created this correction
+    # New ID fields for tracking word identity through corrections
+    word_id: Optional[str] = None  # ID of the original word being corrected
+    corrected_word_id: Optional[str] = None  # ID of the new word after correction
 
     def to_dict(self) -> Dict[str, Any]:
         return asdict(self)
@@ -208,9 +246,11 @@ class PhraseScore:
 class AnchorSequence:
     """Represents a sequence of words that appears in both transcribed and reference lyrics."""
 
-    words: List[str]
+    words: List[str]  # The text of the words in the transcription
+    transcribed_words: List[Word]  # The actual Word objects from the transcription
     transcription_position: int  # Starting position in transcribed text
     reference_positions: Dict[str, int]  # Source -> position mapping
+    reference_words: Dict[str, List[Word]]  # Source -> list of Word objects from reference
     confidence: float
 
     @property
@@ -227,10 +267,12 @@ class AnchorSequence:
         """Convert the anchor sequence to a JSON-serializable dictionary."""
         return {
             "words": self.words,
+            "transcribed_words": [w.to_dict() for w in self.transcribed_words],
             "text": self.text,
             "length": self.length,
             "transcription_position": self.transcription_position,
             "reference_positions": self.reference_positions,
+            "reference_words": {source: [w.to_dict() for w in words] for source, words in self.reference_words.items()},
             "confidence": self.confidence,
         }
 
@@ -239,8 +281,10 @@ class AnchorSequence:
         """Create AnchorSequence from dictionary."""
         return cls(
             words=data["words"],
+            transcribed_words=[Word.from_dict(w) for w in data["transcribed_words"]],
             transcription_position=data["transcription_position"],
             reference_positions=data["reference_positions"],
+            reference_words={source: [Word.from_dict(w) for w in words] for source, words in data["reference_words"].items()},
             confidence=data["confidence"],
         )
 
@@ -286,11 +330,12 @@ class GapSequence:
     """Represents a sequence of words between anchor sequences in transcribed lyrics."""
 
     words: Tuple[str, ...]
+    transcribed_words: List[Word]  # The actual Word objects from the transcription
     transcription_position: int  # Original starting position in transcription
     preceding_anchor: Optional[AnchorSequence]
     following_anchor: Optional[AnchorSequence]
-    reference_words: Dict[str, List[str]]
-    reference_words_original: Dict[str, List[str]]
+    reference_words: Dict[str, List[Word]]  # Source -> list of Word objects from reference
+    reference_words_original: Dict[str, List[Word]]  # Original reference words before any corrections
     corrections: List[WordCorrection] = field(default_factory=list)
     _corrected_positions: Set[int] = field(default_factory=set, repr=False)
     _position_offset: int = field(default=0, repr=False)  # Track cumulative position changes
@@ -366,13 +411,14 @@ class GapSequence:
         """Convert the gap sequence to a JSON-serializable dictionary."""
         return {
             "words": self.words,
+            "transcribed_words": [w.to_dict() for w in self.transcribed_words],
             "text": self.text,
             "length": self.length,
             "transcription_position": self.transcription_position,
             "preceding_anchor": self.preceding_anchor.to_dict() if self.preceding_anchor else None,
             "following_anchor": self.following_anchor.to_dict() if self.following_anchor else None,
-            "reference_words": self.reference_words,
-            "reference_words_original": self.reference_words_original,
+            "reference_words": {source: [w.to_dict() for w in words] for source, words in self.reference_words.items()},
+            "reference_words_original": {source: [w.to_dict() for w in words] for source, words in self.reference_words_original.items()},
             "corrections": [c.to_dict() for c in self.corrections],
         }
 
@@ -381,17 +427,63 @@ class GapSequence:
         """Create GapSequence from dictionary."""
         gap = cls(
             words=tuple(data["words"]),
+            transcribed_words=[Word.from_dict(w) for w in data["transcribed_words"]],
             transcription_position=data["transcription_position"],
             preceding_anchor=AnchorSequence.from_dict(data["preceding_anchor"]) if data["preceding_anchor"] else None,
             following_anchor=AnchorSequence.from_dict(data["following_anchor"]) if data["following_anchor"] else None,
-            reference_words=data["reference_words"],
-            reference_words_original=data.get("reference_words_original", {}),
+            reference_words={source: [Word.from_dict(w) for w in words] for source, words in data["reference_words"].items()},
+            reference_words_original={
+                source: [Word.from_dict(w) for w in words] for source, words in data["reference_words_original"].items()
+            },
         )
         # Add any corrections from the data
         if "corrections" in data:
             for correction_data in data["corrections"]:
                 gap.add_correction(WordCorrection.from_dict(correction_data))
         return gap
+
+
+@dataclass
+class CorrectionStep:
+    """Represents a single correction operation with enough info to replay/undo."""
+
+    handler_name: str
+    affected_word_ids: List[str]  # IDs of words modified/deleted
+    affected_segment_ids: List[str]  # IDs of segments modified
+    corrections: List[WordCorrection]
+    # State before and after for affected segments
+    segments_before: List[LyricsSegment]
+    segments_after: List[LyricsSegment]
+    # For splits/merges
+    created_word_ids: List[str] = field(default_factory=list)  # New words created
+    deleted_word_ids: List[str] = field(default_factory=list)  # Words removed
+
+    def to_dict(self) -> Dict[str, Any]:
+        """Convert CorrectionStep to dictionary for JSON serialization."""
+        return {
+            "handler_name": self.handler_name,
+            "affected_word_ids": self.affected_word_ids,
+            "affected_segment_ids": self.affected_segment_ids,
+            "corrections": [c.to_dict() for c in self.corrections],
+            "segments_before": [s.to_dict() for s in self.segments_before],
+            "segments_after": [s.to_dict() for s in self.segments_after],
+            "created_word_ids": self.created_word_ids,
+            "deleted_word_ids": self.deleted_word_ids,
+        }
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> "CorrectionStep":
+        """Create CorrectionStep from dictionary."""
+        return cls(
+            handler_name=data["handler_name"],
+            affected_word_ids=data["affected_word_ids"],
+            affected_segment_ids=data["affected_segment_ids"],
+            corrections=[WordCorrection.from_dict(c) for c in data["corrections"]],
+            segments_before=[LyricsSegment.from_dict(s) for s in data["segments_before"]],
+            segments_after=[LyricsSegment.from_dict(s) for s in data["segments_after"]],
+            created_word_ids=data["created_word_ids"],
+            deleted_word_ids=data["deleted_word_ids"],
+        )
 
 
 @dataclass
@@ -412,19 +504,24 @@ class CorrectionResult:
 
     # Debug/analysis information
     transcribed_text: str
-    reference_texts: Dict[str, str]
+    reference_lyrics: Dict[str, LyricsData]  # Maps source to LyricsData
     anchor_sequences: List[AnchorSequence]
     gap_sequences: List[GapSequence]
     resized_segments: List[LyricsSegment]
 
     metadata: Dict[str, Any]
 
+    # Correction history
+    correction_steps: List[CorrectionStep]
+    word_id_map: Dict[str, str]  # Maps original word IDs to corrected word IDs
+    segment_id_map: Dict[str, str]  # Maps original segment IDs to corrected segment IDs
+
     def to_dict(self) -> Dict[str, Any]:
         """Convert the correction result to a JSON-serializable dictionary."""
         return {
             "transcribed_text": self.transcribed_text,
             "original_segments": [s.to_dict() for s in self.original_segments],
-            "reference_texts": self.reference_texts,
+            "reference_lyrics": {source: lyrics.to_dict() for source, lyrics in self.reference_lyrics.items()},
             "anchor_sequences": [a.to_dict() for a in self.anchor_sequences],
             "gap_sequences": [g.to_dict() for g in self.gap_sequences],
             "resized_segments": [s.to_dict() for s in self.resized_segments],
@@ -434,6 +531,9 @@ class CorrectionResult:
             "corrections": [c.to_dict() for c in self.corrections],
             "corrected_segments": [s.to_dict() for s in self.corrected_segments],
             "metadata": self.metadata,
+            "correction_steps": [step.to_dict() for step in self.correction_steps],
+            "word_id_map": self.word_id_map,
+            "segment_id_map": self.segment_id_map,
         }
 
     @classmethod
@@ -447,9 +547,12 @@ class CorrectionResult:
             corrections_made=data["corrections_made"],
             confidence=data["confidence"],
             transcribed_text=data["transcribed_text"],
-            reference_texts=data["reference_texts"],
+            reference_lyrics={source: LyricsData.from_dict(lyrics) for source, lyrics in data["reference_lyrics"].items()},
             anchor_sequences=[AnchorSequence.from_dict(a) for a in data["anchor_sequences"]],
             gap_sequences=[GapSequence.from_dict(g) for g in data["gap_sequences"]],
             resized_segments=[LyricsSegment.from_dict(s) for s in data["resized_segments"]],
             metadata=data["metadata"],
+            correction_steps=[CorrectionStep.from_dict(step) for step in data["correction_steps"]],
+            word_id_map=data["word_id_map"],
+            segment_id_map=data["segment_id_map"],
         )

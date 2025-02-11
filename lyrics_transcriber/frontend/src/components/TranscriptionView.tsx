@@ -56,31 +56,52 @@ export default function TranscriptionView({
             <Box sx={{ display: 'flex', flexDirection: 'column' }}>
                 {data.corrected_segments.map((segment, segmentIndex) => {
                     const segmentWords: TranscriptionWordPosition[] = segment.words.map(word => {
+                        // Find if this word is part of a correction
+                        const correction = (
+                            // Check gap sequence corrections
+                            data.gap_sequences?.flatMap(g => g.corrections || [])
+                                .find(c => c.corrected_word_id === word.id) ||
+                            // Also check main corrections array
+                            data.corrections?.find(c => c.corrected_word_id === word.id)
+                        )
+
+                        // Find if this word is part of an anchor sequence
                         const anchor = data.anchor_sequences?.find(a =>
-                            a?.word_ids?.includes(word.id)
+                            a.transcribed_words.some(w => w.id === word.id)
                         )
 
-                        // If not in an anchor, check if it belongs to a gap sequence
-                        const gap = !anchor ? data.gap_sequences?.find(g =>
-                            g?.word_ids?.includes(word.id)
-                        ) : undefined
+                        // If not in anchor, check if it belongs to a gap sequence
+                        const gap = data.gap_sequences?.find(g => {
+                            // Check transcribed words
+                            const inTranscribed = g.transcribed_words.some(w => w.id === word.id)
 
-                        // Check if this specific word has been corrected
-                        const isWordCorrected = gap?.corrections?.some(
-                            correction => correction.word_id === word.id
-                        )
+                            // Check reference words
+                            const inReference = Object.values(g.reference_words).some(refs =>
+                                refs.some(w => w.id === word.id)
+                            )
+
+                            // Check if this word is a corrected version
+                            const isCorrection = g.corrections?.some(c =>
+                                c.corrected_word_id === word.id ||
+                                c.word_id === word.id
+                            )
+
+                            return inTranscribed || inReference || isCorrection
+                        })
 
                         return {
                             word: {
                                 id: word.id,
                                 text: word.text,
-                                start_time: word.start_time,
-                                end_time: word.end_time
+                                start_time: word.start_time ?? undefined,
+                                end_time: word.end_time ?? undefined
                             },
                             type: anchor ? 'anchor' : gap ? 'gap' : 'other',
                             sequence: anchor || gap,
+                            sequencePosition: anchor?.transcription_position ?? gap?.transcription_position ?? undefined,
                             isInRange: true,
-                            isCorrected: isWordCorrected
+                            isCorrected: Boolean(correction),
+                            gap: gap
                         }
                     })
 
@@ -93,10 +114,10 @@ export default function TranscriptionView({
                                 >
                                     {segmentIndex}
                                 </SegmentIndex>
-                                {segment.start_time !== undefined && (
+                                {segment.start_time !== null && (
                                     <IconButton
                                         size="small"
-                                        onClick={() => onPlaySegment?.(segment.start_time)}
+                                        onClick={() => onPlaySegment?.(segment.start_time!)}
                                         sx={{ padding: '2px' }}
                                     >
                                         <PlayCircleOutlineIcon fontSize="small" />
@@ -114,6 +135,7 @@ export default function TranscriptionView({
                                     mode={mode}
                                     preserveSegments={true}
                                     currentTime={currentTime}
+                                    gaps={data.gap_sequences}
                                 />
                             </TextContainer>
                         </Box>

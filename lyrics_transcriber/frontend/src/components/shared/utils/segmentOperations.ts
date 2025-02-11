@@ -9,7 +9,8 @@ export const addSegmentBefore = (
     const beforeSegment = newData.corrected_segments[beforeIndex]
 
     // Create new segment starting 1 second before the target segment
-    const newStartTime = Math.max(0, beforeSegment.start_time - 1)
+    // Use 0 as default if start_time is null
+    const newStartTime = Math.max(0, (beforeSegment.start_time ?? 1) - 1)
     const newEndTime = newStartTime + 1
 
     const newSegment: LyricsSegment = {
@@ -51,20 +52,24 @@ export const splitSegment = (
 
     if (secondHalfWords.length === 0) return null // Nothing to split
 
+    const lastFirstWord = firstHalfWords[firstHalfWords.length - 1]
+    const firstSecondWord = secondHalfWords[0]
+    const lastSecondWord = secondHalfWords[secondHalfWords.length - 1]
+
     // Create two segments from the split
     const firstSegment: LyricsSegment = {
         ...segment,
         words: firstHalfWords,
         text: firstHalfWords.map(w => w.text).join(' '),
-        end_time: firstHalfWords[firstHalfWords.length - 1].end_time
+        end_time: lastFirstWord.end_time ?? null
     }
 
     const secondSegment: LyricsSegment = {
         id: nanoid(),
         words: secondHalfWords,
         text: secondHalfWords.map(w => w.text).join(' '),
-        start_time: secondHalfWords[0].start_time,
-        end_time: secondHalfWords[secondHalfWords.length - 1].end_time
+        start_time: firstSecondWord.start_time ?? null,
+        end_time: lastSecondWord.end_time ?? null
     }
 
     // Replace the original segment with the two new segments
@@ -88,18 +93,25 @@ export const deleteSegment = (
     // Remove segment
     newData.corrected_segments = newData.corrected_segments.filter((_, index) => index !== segmentIndex)
 
-    // Update anchor and gap sequences to remove references to deleted words
+    // Update anchor sequences to remove references to deleted words
     newData.anchor_sequences = newData.anchor_sequences.map(anchor => ({
         ...anchor,
-        word_ids: anchor.word_ids.filter(id =>
-            !deletedSegment.words.some(word => word.id === id)
+        transcribed_words: anchor.transcribed_words.filter(word =>
+            !deletedSegment.words.some(deletedWord => deletedWord.id === word.id)
+        ),
+        words: anchor.words.filter((_, idx) =>
+            anchor.transcribed_words.some(w => w.text.toLowerCase() === anchor.words[idx].toLowerCase())
         )
     }))
 
+    // Update gap sequences to remove references to deleted words
     newData.gap_sequences = newData.gap_sequences.map(gap => ({
         ...gap,
-        word_ids: gap.word_ids.filter(id =>
-            !deletedSegment.words.some(word => word.id === id)
+        transcribed_words: gap.transcribed_words.filter(word =>
+            !deletedSegment.words.some(deletedWord => deletedWord.id === word.id)
+        ),
+        words: gap.words.filter((_, idx) =>
+            gap.transcribed_words.some(w => w.text.toLowerCase() === gap.words[idx].toLowerCase())
         )
     }))
 

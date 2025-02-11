@@ -1,7 +1,7 @@
 from typing import List, Optional, Tuple, Dict, Any
 import logging
 
-from lyrics_transcriber.types import GapSequence, WordCorrection
+from lyrics_transcriber.types import GapSequence, WordCorrection, Word
 from lyrics_transcriber.correction.handlers.base import GapCorrectionHandler
 from lyrics_transcriber.correction.handlers.word_operations import WordOperations
 
@@ -57,7 +57,7 @@ class ExtendAnchorHandler(GapCorrectionHandler):
         # At least one word must match between gap and any reference source
         # in the same position
         has_match = any(
-            i < len(ref_words) and gap.words[i].lower() == ref_words[i].lower()
+            i < len(ref_words) and gap.words[i].lower() == ref_words[i].text.lower()
             for ref_words in gap.reference_words.values()
             for i in range(min(len(gap.words), len(ref_words)))
         )
@@ -72,7 +72,9 @@ class ExtendAnchorHandler(GapCorrectionHandler):
         for i, word in enumerate(gap.words):
             # Find reference sources that have a matching word at this position
             matching_sources = [
-                source for source, ref_words in gap.reference_words.items() if i < len(ref_words) and word.lower() == ref_words[i].lower()
+                source
+                for source, ref_words in gap.reference_words.items()
+                if i < len(ref_words) and word.lower() == ref_words[i].text.lower()
             ]
 
             if matching_sources:
@@ -90,9 +92,17 @@ class ExtendAnchorHandler(GapCorrectionHandler):
                         # Find this word's position in the reference text
                         ref_words = gap.reference_words[source]
                         for ref_idx, ref_word in enumerate(ref_words):
-                            if ref_word.lower() == word.lower():
+                            if ref_word.text.lower() == word.lower():
                                 reference_positions[source] = base_reference_positions[source] + ref_idx
                                 break
+
+                # Get the Word ID from the matching reference word
+                ref_word_id = None
+                if matching_sources:
+                    first_source = matching_sources[0]
+                    ref_words = gap.reference_words[first_source]
+                    if i < len(ref_words):
+                        ref_word_id = ref_words[i].id
 
                 corrections.append(
                     WordOperations.create_word_replacement_correction(
@@ -104,6 +114,7 @@ class ExtendAnchorHandler(GapCorrectionHandler):
                         reason="Matched reference source(s)",
                         reference_positions=reference_positions,
                         handler="ExtendAnchorHandler",
+                        original_word_id=ref_word_id,  # Use the reference word's ID
                     )
                 )
                 self.logger.debug(f"Validated word '{word}' with confidence {confidence} from sources: {sources}")

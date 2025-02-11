@@ -3,6 +3,7 @@ import re
 from typing import List, Optional, Tuple
 
 from lyrics_transcriber.types import LyricsSegment, Word
+from lyrics_transcriber.correction.handlers.word_operations import WordOperations
 
 
 class SegmentResizer:
@@ -101,7 +102,13 @@ class SegmentResizer:
             Output: LyricsSegment(text="Hello World", words=[...])
         """
         cleaned_text = self._clean_text(segment.text)
-        return LyricsSegment(text=cleaned_text, words=segment.words, start_time=segment.start_time, end_time=segment.end_time)
+        return LyricsSegment(
+            id=segment.id,  # Preserve the original segment ID
+            text=cleaned_text,
+            words=segment.words,
+            start_time=segment.start_time,
+            end_time=segment.end_time,
+        )
 
     def _create_cleaned_word(self, word: Word) -> Word:
         """Create a new word with cleaned text."""
@@ -226,7 +233,13 @@ class SegmentResizer:
     def _create_segment_from_words(self, line: str, words: List[Word]) -> LyricsSegment:
         """Create a new segment from a list of words."""
         cleaned_text = self._clean_text(line)
-        return LyricsSegment(text=cleaned_text, words=words, start_time=words[0].start_time, end_time=words[-1].end_time)
+        return LyricsSegment(
+            id=WordOperations.generate_id(),  # Generate new ID for split segments
+            text=cleaned_text,
+            words=words,
+            start_time=words[0].start_time,
+            end_time=words[-1].end_time,
+        )
 
     def _process_segment_text(self, text: str) -> List[str]:
         """Process segment text to determine optimal split points."""

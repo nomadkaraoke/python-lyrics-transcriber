@@ -5,9 +5,10 @@ import { calculateReferenceLinePositions } from './shared/utils/referenceLineCal
 import { SourceSelector } from './shared/components/SourceSelector'
 import { HighlightedText } from './shared/components/HighlightedText'
 import { WordCorrection } from '@/types'
+import { TranscriptionWordPosition } from './shared/types'
 
 export default function ReferenceView({
-    referenceTexts,
+    referenceSources,
     anchors,
     onElementClick,
     onWordClick,
@@ -19,56 +20,116 @@ export default function ReferenceView({
     mode,
     gaps
 }: ReferenceViewProps) {
-    // Get available sources from referenceTexts object
+    // Get available sources from referenceSources object
     const availableSources = useMemo(() =>
-        Object.keys(referenceTexts) as Array<string>,
-        [referenceTexts]
+        Object.keys(referenceSources),
+        [referenceSources]
     )
+
+    // Ensure we always have a valid currentSource
+    const effectiveCurrentSource = useMemo(() =>
+        currentSource || (availableSources.length > 0 ? availableSources[0] : ''),
+        [currentSource, availableSources]
+    )
+
+    // Create word positions for the reference view
+    const referenceWordPositions = useMemo(() => {
+        const positions: TranscriptionWordPosition[] = [];
+        const allPositions = new Map<number, TranscriptionWordPosition[]>();
+
+        // Map anchor words
+        anchors?.forEach(anchor => {
+            const position = anchor.reference_positions[effectiveCurrentSource];
+            if (position === undefined) return;
+
+            if (!allPositions.has(position)) {
+                allPositions.set(position, []);
+            }
+
+            anchor.reference_words[effectiveCurrentSource]?.forEach(word => {
+                const wordPosition: TranscriptionWordPosition = {
+                    word: {
+                        id: word.id,
+                        text: word.text,
+                        start_time: word.start_time ?? undefined,
+                        end_time: word.end_time ?? undefined
+                    },
+                    type: 'anchor',
+                    sequence: anchor,
+                    isInRange: true
+                };
+                allPositions.get(position)!.push(wordPosition);
+            });
+        });
+
+        // Map gap words
+        gaps?.forEach(gap => {
+            const position = gap.preceding_anchor?.reference_positions[effectiveCurrentSource] ??
+                gap.following_anchor?.reference_positions[effectiveCurrentSource];
+
+            if (position === undefined) return;
+
+            const gapPosition = gap.preceding_anchor ? position + 1 : position - 1;
+
+            if (!allPositions.has(gapPosition)) {
+                allPositions.set(gapPosition, []);
+            }
+
+            gap.reference_words[effectiveCurrentSource]?.forEach(word => {
+                const wordPosition: TranscriptionWordPosition = {
+                    word: {
+                        id: word.id,
+                        text: word.text,
+                        start_time: word.start_time ?? undefined,
+                        end_time: word.end_time ?? undefined
+                    },
+                    type: 'gap',
+                    sequence: gap,
+                    isInRange: true,
+                    isCorrected: gap.corrections?.some(
+                        correction => correction.reference_positions?.[effectiveCurrentSource]?.toString() === word.id
+                    )
+                };
+                allPositions.get(gapPosition)!.push(wordPosition);
+            });
+        });
+
+        // Sort by position and flatten
+        Array.from(allPositions.entries())
+            .sort(([a], [b]) => a - b)
+            // eslint-disable-next-line @typescript-eslint/no-unused-vars
+            .forEach(([_, words]) => {
+                positions.push(...words);
+            });
+
+        return positions;
+    }, [anchors, gaps, effectiveCurrentSource]);
 
     const { linePositions } = useMemo(() =>
         calculateReferenceLinePositions(
             corrected_segments,
             anchors,
-            currentSource
+            effectiveCurrentSource
         ),
-        [corrected_segments, anchors, currentSource]
+        [corrected_segments, anchors, effectiveCurrentSource]
     )
 
     // Create a mapping of reference words to their corrections
     const referenceCorrections = useMemo(() => {
         const corrections = new Map<string, string>();
-
-        console.log('Building referenceCorrections map:', {
-            gapsCount: gaps.length,
-            currentSource,
-        });
-
-        gaps.forEach(gap => {
-            gap.corrections.forEach((correction: WordCorrection) => {
-                // Get the reference position for this correction
-                const referencePosition = correction.reference_positions?.[currentSource];
-
-                if (typeof referencePosition === 'number') {
-                    const wordId = `${currentSource}-word-${referencePosition}`;
-                    corrections.set(wordId, correction.corrected_word);
-
-                    console.log('Adding correction mapping:', {
-                        wordId,
-                        correctedWord: correction.corrected_word,
-                        referencePosition,
-                        correction
-                    });
+        gaps?.forEach(gap => {
+            gap.corrections?.forEach((correction: WordCorrection) => {
+                const referencePosition = correction.reference_positions?.[effectiveCurrentSource];
+                if (referencePosition !== undefined) {
+                    corrections.set(referencePosition.toString(), correction.corrected_word);
                 }
             });
         });
-
-        console.log('Final referenceCorrections map:', {
-            size: corrections.size,
-            entries: Array.from(corrections.entries())
-        });
-
         return corrections;
-    }, [gaps, currentSource]);
+    }, [gaps, effectiveCurrentSource]);
+
+    // Get the segments for the current source
+    const currentSourceSegments = referenceSources[effectiveCurrentSource]?.segments || [];
 
     return (
         <Paper sx={{ p: 2 }}>
@@ -77,14 +138,15 @@ export default function ReferenceView({
                     Reference Text
                 </Typography>
                 <SourceSelector
-                    currentSource={currentSource}
+                    currentSource={effectiveCurrentSource}
                     onSourceChange={onSourceChange}
                     availableSources={availableSources}
                 />
             </Box>
             <Box sx={{ display: 'flex', flexDirection: 'column' }}>
                 <HighlightedText
-                    text={referenceTexts[currentSource]}
+                    wordPositions={referenceWordPositions}
+                    segments={currentSourceSegments}
                     anchors={anchors}
                     onElementClick={onElementClick}
                     onWordClick={onWordClick}
@@ -92,10 +154,11 @@ export default function ReferenceView({
                     highlightInfo={highlightInfo}
                     mode={mode}
                     isReference={true}
-                    currentSource={currentSource}
+                    currentSource={effectiveCurrentSource}
                     linePositions={linePositions}
                     referenceCorrections={referenceCorrections}
                     gaps={gaps}
+                    preserveSegments={true}
                 />
             </Box>
         </Paper>
