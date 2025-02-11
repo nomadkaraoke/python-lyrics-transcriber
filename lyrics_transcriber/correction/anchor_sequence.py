@@ -93,10 +93,14 @@ class AnchorSequenceFinder:
             return anchor
         return None
 
-    def _get_cache_key(self, transcribed: str, references: Dict[str, LyricsData]) -> str:
+    def _get_cache_key(self, transcribed: str, references: Dict[str, LyricsData], transcription_result: TranscriptionResult) -> str:
         """Generate a unique cache key for the input combination."""
         # Create a string that uniquely identifies the inputs
-        input_str = f"{transcribed}|{'|'.join(f'{k}:{v}' for k,v in sorted(references.items()))}"
+        input_str = (
+            f"{transcribed}|"
+            f"{'|'.join(f'{k}:{v}' for k,v in sorted(references.items()))}|"
+            f"{transcription_result.id if hasattr(transcription_result, 'id') else ''}"
+        )
         return hashlib.md5(input_str.encode()).hexdigest()
 
     def _save_to_cache(self, cache_path: Path, data: Any) -> None:
@@ -175,7 +179,7 @@ class AnchorSequenceFinder:
         transcription_result: TranscriptionResult,
     ) -> List[ScoredAnchor]:
         """Find anchor sequences that appear in both transcription and references."""
-        cache_key = self._get_cache_key(transcribed, references)
+        cache_key = self._get_cache_key(transcribed, references, transcription_result)
         cache_path = self.cache_dir / f"anchors_{cache_key}.json"
 
         # Try to load from cache
@@ -187,7 +191,7 @@ class AnchorSequenceFinder:
                 self.logger.warning(f"Cache format mismatch: {e}. Recomputing.")
 
         # If not in cache or cache format invalid, perform the computation
-        self.logger.info("Cache miss - computing anchors")
+        self.logger.info(f"Cache miss for key {cache_key} - computing anchors")
         self.logger.info(f"Finding anchor sequences for transcription with length {len(transcribed)}")
 
         # Get all words from transcription
@@ -384,7 +388,7 @@ class AnchorSequenceFinder:
         transcription_result: TranscriptionResult,
     ) -> List[GapSequence]:
         """Find gaps between anchor sequences in the transcribed text."""
-        cache_key = self._get_cache_key(transcribed, references)
+        cache_key = self._get_cache_key(transcribed, references, transcription_result)
         cache_path = self.cache_dir / f"gaps_{cache_key}.json"
 
         # Try to load from cache
@@ -393,7 +397,7 @@ class AnchorSequenceFinder:
             return [GapSequence.from_dict(gap) for gap in cached_data]
 
         # If not in cache, perform the computation
-        self.logger.info("Cache miss - computing gaps")
+        self.logger.info(f"Cache miss for key {cache_key} - computing gaps")
 
         # Get all words from transcription
         all_words = []

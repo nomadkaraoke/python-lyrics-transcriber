@@ -28664,6 +28664,7 @@ function HighlightedText({
     return false;
   };
   const shouldHighlightWord = (wordPos) => {
+    if (isReference) return false;
     if ("type" in wordPos && currentTime !== void 0 && "start_time" in wordPos.word) {
       const word = wordPos.word;
       return word.start_time !== null && word.end_time !== null && currentTime >= word.start_time && currentTime <= word.end_time;
@@ -30636,7 +30637,7 @@ function LyricsAnalyzer({ data: initialData, onFileLoad, apiClient, isReadOnly, 
     });
   }, []);
   const handleWordClick = reactExports.useCallback((info) => {
-    var _a, _b, _c;
+    var _a, _b, _c, _d;
     console.log("LyricsAnalyzer handleWordClick:", { info });
     if (effectiveMode === "highlight") {
       const correction = (_a = data.corrections) == null ? void 0 : _a.find(
@@ -30682,8 +30683,39 @@ function LyricsAnalyzer({ data: initialData, onFileLoad, apiClient, isReadOnly, 
         setFlashingType("word");
         return;
       }
+    } else if (effectiveMode === "edit") {
+      const segmentIndex = data.corrected_segments.findIndex(
+        (segment) => segment.words.some((word) => word.id === info.word_id)
+      );
+      if (segmentIndex !== -1) {
+        const segment = data.corrected_segments[segmentIndex];
+        setEditModalSegment({
+          segment,
+          index: segmentIndex,
+          originalSegment: JSON.parse(JSON.stringify(segment))
+        });
+      }
+    } else if (effectiveMode === "details") {
+      if (info.type === "anchor" && info.anchor) {
+        setModalContent({
+          type: "anchor",
+          data: {
+            ...info.anchor,
+            wordId: info.word_id
+          }
+        });
+      } else if (info.type === "gap" && info.gap) {
+        setModalContent({
+          type: "gap",
+          data: {
+            ...info.gap,
+            wordId: info.word_id,
+            word: ((_d = info.gap.transcribed_words.find((w) => w.id === info.word_id)) == null ? void 0 : _d.text) || ""
+          }
+        });
+      }
     }
-  }, [data, effectiveMode]);
+  }, [data, effectiveMode, setModalContent]);
   const handleUpdateSegment = reactExports.useCallback((updatedSegment) => {
     if (!editModalSegment) return;
     const newData = updateSegment(data, editModalSegment.index, updatedSegment);
@@ -30994,4 +31026,4 @@ function App() {
 ReactDOM$1.createRoot(document.getElementById("root")).render(
   /* @__PURE__ */ jsxRuntimeExports.jsx(App, {})
 );
-//# sourceMappingURL=index-DeXvwZTs.js.map
+//# sourceMappingURL=index-BckN3-k3.js.map

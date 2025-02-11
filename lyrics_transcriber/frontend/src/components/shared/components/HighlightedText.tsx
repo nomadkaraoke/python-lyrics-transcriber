@@ -96,8 +96,11 @@ export function HighlightedText({
     }
 
     const shouldHighlightWord = (wordPos: TranscriptionWordPosition | { word: string; id: string }): boolean => {
+        // Don't highlight words in reference view
+        if (isReference) return false
+
         if ('type' in wordPos && currentTime !== undefined && 'start_time' in wordPos.word) {
-            const word = wordPos.word as Word  // Type assertion to ensure we have the full Word type
+            const word = wordPos.word as Word
             return word.start_time !== null &&
                 word.end_time !== null &&
                 currentTime >= word.start_time &&

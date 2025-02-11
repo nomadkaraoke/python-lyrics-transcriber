@@ -79,7 +79,28 @@ async def complete_review(updated_data: Dict[str, Any] = Body(...)):
             raise ValueError("No review in progress")
 
         # Update only the corrections and corrected_segments
-        current_review.corrections = [WordCorrection.from_dict(c) for c in updated_data["corrections"]]
+        current_review.corrections = [
+            WordCorrection(
+                original_word=c.get("original_word", ""),
+                corrected_word=c.get("corrected_word", ""),
+                original_position=c.get("original_position", 0),  # Ensure this is set
+                source=c.get("source", "review"),
+                reason=c.get("reason", "manual_review"),
+                segment_index=c.get("segment_index", 0),
+                confidence=c.get("confidence"),
+                alternatives=c.get("alternatives", {}),
+                is_deletion=c.get("is_deletion", False),
+                split_index=c.get("split_index"),
+                split_total=c.get("split_total"),
+                corrected_position=c.get("corrected_position"),
+                reference_positions=c.get("reference_positions"),
+                length=c.get("length", 1),
+                handler=c.get("handler"),
+                word_id=c.get("word_id"),
+                corrected_word_id=c.get("corrected_word_id"),
+            )
+            for c in updated_data["corrections"]
+        ]
         current_review.corrected_segments = [LyricsSegment.from_dict(s) for s in updated_data["corrected_segments"]]
         current_review.corrections_made = len(current_review.corrections)
 
@@ -135,7 +156,7 @@ def start_review_server(correction_result: CorrectionResult) -> CorrectionResult
 
     # Generate audio hash if audio file exists
     if audio_filepath and os.path.exists(audio_filepath):
-        with open(audio_filepath, 'rb') as f:
+        with open(audio_filepath, "rb") as f:
             audio_hash = hashlib.md5(f.read()).hexdigest()
         if not correction_result.metadata:
             correction_result.metadata = {}
@@ -172,7 +193,11 @@ def start_review_server(correction_result: CorrectionResult) -> CorrectionResult
     # Update URL to include audio hash
     base_api_url = f"http://localhost:{DEFAULT_PORT}/api"
     encoded_api_url = urllib.parse.quote(base_api_url, safe="")
-    audio_hash_param = f"&audioHash={correction_result.metadata.get('audio_hash', '')}" if correction_result.metadata and "audio_hash" in correction_result.metadata else ""
+    audio_hash_param = (
+        f"&audioHash={correction_result.metadata.get('audio_hash', '')}"
+        if correction_result.metadata and "audio_hash" in correction_result.metadata
+        else ""
+    )
     webbrowser.open(f"http://localhost:{DEFAULT_PORT}?baseApiUrl={encoded_api_url}{audio_hash_param}")
     logger.info("Opened browser for review")
 

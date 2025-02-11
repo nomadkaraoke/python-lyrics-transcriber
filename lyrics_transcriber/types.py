@@ -1,4 +1,4 @@
-from dataclasses import dataclass, asdict, field
+from dataclasses import dataclass, asdict, field, fields
 from typing import Any, Dict, List, Optional, Set, Protocol, Tuple
 from enum import Enum
 
@@ -147,12 +147,12 @@ class WordCorrection:
 
     original_word: str
     corrected_word: str  # Empty string indicates word should be deleted
-    segment_index: int
     original_position: int
     source: str  # e.g., "spotify", "genius"
-    confidence: Optional[float]
     reason: str  # e.g., "matched_in_3_sources", "high_confidence_match"
-    alternatives: Dict[str, int]  # Other possible corrections and their occurrence counts
+    segment_index: int = 0  # Default to 0 since it's often not needed
+    confidence: Optional[float] = None
+    alternatives: Dict[str, int] = field(default_factory=dict)  # Other possible corrections and their occurrence counts
     is_deletion: bool = False  # New field to explicitly mark deletions
     # New fields for handling word splits
     split_index: Optional[int] = None  # Position in the split sequence (0-based)
@@ -168,12 +168,16 @@ class WordCorrection:
     corrected_word_id: Optional[str] = None  # ID of the new word after correction
 
     def to_dict(self) -> Dict[str, Any]:
+        """Convert to dictionary representation."""
         return asdict(self)
 
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> "WordCorrection":
         """Create WordCorrection from dictionary."""
-        return cls(**data)
+        # Filter out any keys that aren't part of the dataclass
+        valid_fields = {f.name for f in fields(cls)}
+        filtered_data = {k: v for k, v in data.items() if k in valid_fields}
+        return cls(**filtered_data)
 
 
 @dataclass
