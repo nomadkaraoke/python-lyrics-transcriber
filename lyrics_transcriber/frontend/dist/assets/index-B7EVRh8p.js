@@ -27831,9 +27831,9 @@ const ReferenceSourceSchema = z.object({
   segments: z.array(LyricsSegmentSchema),
   metadata: z.object({
     source: z.string(),
-    track_name: z.string(),
-    artist_names: z.string(),
-    album_name: z.string(),
+    track_name: z.string().nullable(),
+    artist_names: z.string().nullable(),
+    album_name: z.string().nullable(),
     duration_ms: z.number().nullable(),
     explicit: z.boolean().nullable(),
     language: z.string().nullable(),
@@ -31026,4 +31026,4 @@ function App() {
 ReactDOM$1.createRoot(document.getElementById("root")).render(
   /* @__PURE__ */ jsxRuntimeExports.jsx(App, {})
 );
-//# sourceMappingURL=index-BckN3-k3.js.map
+//# sourceMappingURL=index-B7EVRh8p.js.map

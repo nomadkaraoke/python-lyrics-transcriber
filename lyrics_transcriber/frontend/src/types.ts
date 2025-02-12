@@ -107,9 +107,9 @@ export interface ReferenceSource {
     segments: LyricsSegment[]
     metadata: {
         source: string
-        track_name: string
-        artist_names: string
-        album_name: string
+        track_name: string | null
+        artist_names: string | null
+        album_name: string | null
         duration_ms: number | null
         explicit: boolean | null
         language: string | null

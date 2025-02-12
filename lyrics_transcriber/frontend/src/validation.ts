@@ -41,9 +41,9 @@ const ReferenceSourceSchema = z.object({
     segments: z.array(LyricsSegmentSchema),
     metadata: z.object({
         source: z.string(),
-        track_name: z.string(),
-        artist_names: z.string(),
-        album_name: z.string(),
+        track_name: z.string().nullable(),
+        artist_names: z.string().nullable(),
+        album_name: z.string().nullable(),
         duration_ms: z.number().nullable(),
         explicit: z.boolean().nullable(),
         language: z.string().nullable(),
