@@ -66,10 +66,16 @@ export interface TextSegmentProps extends BaseViewProps {
 }
 
 // View-specific props
-export interface TranscriptionViewProps extends BaseViewProps {
+export interface TranscriptionViewProps {
     data: CorrectionData
+    onElementClick: (content: ModalContent) => void
+    onWordClick?: (info: WordClickInfo) => void
+    flashingType: FlashType
+    highlightInfo: HighlightInfo | null
+    mode: InteractionMode
     onPlaySegment?: (startTime: number) => void
     currentTime?: number
+    anchors?: AnchorSequence[]
 }
 
 // Add LinePosition type here since it's used in multiple places

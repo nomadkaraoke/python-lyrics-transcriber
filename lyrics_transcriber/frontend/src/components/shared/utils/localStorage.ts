@@ -1,7 +1,8 @@
 import { CorrectionData, LyricsSegment } from '../../../types'
 
-// Simple hash function for generating storage keys
-export const generateStorageKey = (text: string): string => {
+// Change the key generation to use a hash of the first segment's text instead
+export const generateStorageKey = (data: CorrectionData): string => {
+    const text = data.original_segments[0]?.text || ''
     let hash = 0
     for (let i = 0; i < text.length; i++) {
         const char = text.charCodeAt(i)
@@ -28,14 +29,15 @@ const stripIds = (obj: CorrectionData): LyricsSegment[] => {
 }
 
 export const loadSavedData = (initialData: CorrectionData): CorrectionData | null => {
-    const storageKey = generateStorageKey(initialData.transcribed_text)
+    const storageKey = generateStorageKey(initialData)
     const savedDataStr = localStorage.getItem('lyrics_analyzer_data')
     const savedDataObj = savedDataStr ? JSON.parse(savedDataStr) : {}
 
     if (savedDataObj[storageKey]) {
         try {
             const parsed = savedDataObj[storageKey]
-            if (parsed.transcribed_text === initialData.transcribed_text) {
+            // Compare first segment text instead of transcribed_text
+            if (parsed.original_segments[0]?.text === initialData.original_segments[0]?.text) {
                 const strippedSaved = stripIds(parsed)
                 const strippedInitial = stripIds(initialData)
                 const hasChanges = JSON.stringify(strippedSaved) !== JSON.stringify(strippedInitial)
@@ -58,7 +60,7 @@ export const loadSavedData = (initialData: CorrectionData): CorrectionData | nul
 }
 
 export const saveData = (data: CorrectionData, initialData: CorrectionData): void => {
-    const storageKey = generateStorageKey(initialData.transcribed_text)
+    const storageKey = generateStorageKey(initialData)
     const savedDataStr = localStorage.getItem('lyrics_analyzer_data')
     const savedDataObj = savedDataStr ? JSON.parse(savedDataStr) : {}
 
@@ -66,8 +68,8 @@ export const saveData = (data: CorrectionData, initialData: CorrectionData): voi
     localStorage.setItem('lyrics_analyzer_data', JSON.stringify(savedDataObj))
 }
 
-export const clearSavedData = (transcribedText: string): void => {
-    const storageKey = generateStorageKey(transcribedText)
+export const clearSavedData = (data: CorrectionData): void => {
+    const storageKey = generateStorageKey(data)
     const savedDataStr = localStorage.getItem('lyrics_analyzer_data')
     const savedDataObj = savedDataStr ? JSON.parse(savedDataStr) : {}
 

@@ -120,7 +120,7 @@ class SpotifyProvider(BaseLyricsProvider):
             )
             segments.append(segment)
 
-        return LyricsData(source="spotify", lyrics="\n".join(segment.text for segment in segments), segments=segments, metadata=metadata)
+        return LyricsData(source="spotify", segments=segments, metadata=metadata)
 
     def _clean_lyrics(self, lyrics: str) -> str:
         """Clean and process lyrics from Spotify to remove unwanted content."""

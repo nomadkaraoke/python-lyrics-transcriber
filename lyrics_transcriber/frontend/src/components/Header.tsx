@@ -7,6 +7,7 @@ import ModeSelector from './ModeSelector'
 import AudioPlayer from './AudioPlayer'
 import { InteractionMode } from '../types'
 import { ApiClient } from '../api'
+import { findWordById } from './shared/utils/wordUtils'
 
 interface HeaderProps {
     isReadOnly: boolean
@@ -121,22 +122,25 @@ export default function Header({
                         // Anchor metrics
                         anchorCount={data.metadata.anchor_sequences_count}
                         multiSourceAnchors={data.anchor_sequences?.filter(anchor =>
-                            anchor?.reference_words &&
-                            Object.keys(anchor.reference_words).length > 1
+                            anchor?.reference_word_ids &&
+                            Object.keys(anchor.reference_word_ids).length > 1
                         ).length ?? 0}
                         anchorWordCount={data.anchor_sequences?.reduce((sum, anchor) =>
-                            sum + (anchor.transcribed_words?.length || 0), 0) ?? 0}
+                            sum + (anchor.transcribed_word_ids?.length || 0), 0) ?? 0}
                         // Gap metrics
                         correctedGapCount={data.gap_sequences?.filter(gap =>
                             gap.corrections?.length > 0).length ?? 0}
                         uncorrectedGapCount={data.gap_sequences?.filter(gap =>
                             !gap.corrections?.length).length ?? 0}
                         uncorrectedGaps={data.gap_sequences
-                            ?.filter(gap => !gap.corrections?.length && gap.transcribed_words?.length > 0)
-                            .map(gap => ({
-                                position: gap.transcribed_words[0]?.id ?? '',
-                                length: gap.transcribed_words.length ?? 0
-                            })) ?? []}
+                            ?.filter(gap => !gap.corrections?.length && gap.transcribed_word_ids?.length > 0)
+                            .map(gap => {
+                                const firstWord = findWordById(data.corrected_segments, gap.transcribed_word_ids[0]);
+                                return {
+                                    position: firstWord?.id ?? '',
+                                    length: gap.transcribed_word_ids.length ?? 0
+                                };
+                            }) ?? []}
                         // Correction details
                         replacedCount={data.gap_sequences?.reduce((count, gap) =>
                             count + (gap.corrections?.filter(c => !c.is_deletion && !c.split_total).length ?? 0), 0) ?? 0}

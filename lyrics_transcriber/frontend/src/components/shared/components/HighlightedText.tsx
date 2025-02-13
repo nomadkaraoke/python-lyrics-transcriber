@@ -7,6 +7,7 @@ import type { FlashType, LinePosition, TranscriptionWordPosition, WordClickInfo 
 import React from 'react'
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import IconButton from '@mui/material/IconButton';
+import { getWordsFromIds } from '../utils/wordUtils'
 
 export interface HighlightedTextProps {
     text?: string
@@ -76,15 +77,23 @@ export function HighlightedText({
                 (flashingType === 'word' && (
                     // For anchors
                     (highlightInfo?.type === 'anchor' && wordPos.type === 'anchor' &&
-                        (isReference && currentSource
-                            ? (highlightInfo.sequence as AnchorSequence).reference_words[currentSource]?.some(w => w.id === wordPos.word.id)
-                            : highlightInfo.sequence?.transcribed_words.some(w => w.id === wordPos.word.id)
+                        (isReference && currentSource && highlightInfo.sequence
+                            ? getWordsFromIds(segments || [], 
+                                (highlightInfo.sequence as AnchorSequence).reference_word_ids[currentSource] || []
+                              ).some(w => w.id === wordPos.word.id)
+                            : getWordsFromIds(segments || [], 
+                                (highlightInfo.sequence as AnchorSequence).transcribed_word_ids
+                              ).some(w => w.id === wordPos.word.id)
                         )) ||
                     // For gaps
                     (highlightInfo?.type === 'gap' && wordPos.type === 'gap' &&
-                        (isReference && currentSource
-                            ? (highlightInfo.sequence as GapSequence).reference_words[currentSource]?.some(w => w.id === wordPos.word.id)
-                            : (highlightInfo.sequence as GapSequence)?.transcribed_words.some(w => w.id === wordPos.word.id))
+                        (isReference && currentSource && highlightInfo.sequence
+                            ? getWordsFromIds(segments || [], 
+                                (highlightInfo.sequence as GapSequence).reference_word_ids[currentSource] || []
+                              ).some(w => w.id === wordPos.word.id)
+                            : getWordsFromIds(segments || [], 
+                                (highlightInfo.sequence as GapSequence).transcribed_word_ids
+                              ).some(w => w.id === wordPos.word.id))
                     ) ||
                     // For corrections
                     (highlightInfo?.type === 'correction' && isReference && currentSource &&
@@ -145,7 +154,7 @@ export function HighlightedText({
                             );
 
                             const anchor = wordPos?.type === 'anchor' ? anchors?.find(a =>
-                                a.reference_words[currentSource]?.some(w => w.id === word.id)
+                                (a.reference_word_ids[currentSource] || []).includes(word.id)
                             ) : undefined;
 
                             const hasCorrection = referenceCorrections.has(word.id);
@@ -243,7 +252,7 @@ export function HighlightedText({
                                 wordCount++
 
                                 const anchor = currentSource ? anchors?.find(a =>
-                                    a.reference_words[currentSource]?.some(w => w.id === wordId)
+                                    a.reference_word_ids[currentSource]?.includes(wordId)
                                 ) : undefined
 
                                 const hasCorrection = referenceCorrections.has(wordId)

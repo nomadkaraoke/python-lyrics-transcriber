@@ -19,28 +19,27 @@ export function useWordClick({
     onWordClick,
     isReference = false,
     currentSource = '',
-    gaps = [] }: UseWordClickProps) {
+    gaps = [],
+    anchors = []
+}: UseWordClickProps) {
     const handleWordClick = useCallback((
         word: string,
         wordId: string,
         anchor?: AnchorSequence,
         gap?: GapSequence
     ) => {
-
         // Check if word belongs to anchor
         const belongsToAnchor = anchor && (
             isReference
-                ? anchor.reference_words[currentSource]?.some(w => w.id === wordId)
-                : anchor.transcribed_words.some(w => w.id === wordId)
+                ? anchor.reference_word_ids[currentSource]?.includes(wordId)
+                : anchor.transcribed_word_ids.includes(wordId)
         )
 
         // Check if word belongs to gap
         const belongsToGap = gap && (
             isReference
-                ? Object.entries(gap.reference_words).some(([source, words]) =>
-                    source === currentSource && words.some(w => w.id === wordId)
-                )
-                : gap.transcribed_words.some(w => w.id === wordId)
+                ? gap.reference_word_ids[currentSource]?.includes(wordId)
+                : gap.transcribed_word_ids.includes(wordId)
         )
 
         // Debug info
@@ -54,14 +53,14 @@ export function useWordClick({
             },
             anchorInfo: anchor && {
                 id: anchor.id,
-                transcribedWords: anchor.transcribed_words,
-                referenceWords: anchor.reference_words,
+                transcribedWordIds: anchor.transcribed_word_ids,
+                referenceWordIds: anchor.reference_word_ids,
                 belongsToAnchor
             },
             gapInfo: gap && {
                 id: gap.id,
-                transcribedWords: gap.transcribed_words,
-                referenceWords: gap.reference_words,
+                transcribedWordIds: gap.transcribed_word_ids,
+                referenceWordIds: gap.reference_word_ids,
                 belongsToGap
             }
         })
@@ -69,7 +68,7 @@ export function useWordClick({
         // For reference view clicks, find the corresponding gap
         if (isReference && currentSource) {
             const matchingGap = gaps?.find(g =>
-                g.reference_words[currentSource]?.some(w => w.id === wordId)
+                g.reference_word_ids[currentSource]?.includes(wordId)
             );
 
             if (matchingGap) {
@@ -120,7 +119,8 @@ export function useWordClick({
                     data: {
                         ...anchor,
                         wordId,
-                        word
+                        word,
+                        anchor_sequences: anchors
                     }
                 })
             } else if (belongsToGap && gap) {
@@ -129,39 +129,33 @@ export function useWordClick({
                     data: {
                         ...gap,
                         wordId,
-                        word
+                        word,
+                        anchor_sequences: anchors
                     }
                 })
             } else if (!isReference) {
                 // Create synthetic gap for non-sequence words (transcription view only)
                 const syntheticGap: GapSequence = {
                     id: `synthetic-${wordId}`,
-                    text: word,
-                    words: [word],
-                    transcribed_words: [{
-                        id: wordId,
-                        text: word,
-                        start_time: null,
-                        end_time: null
-                    }],
-                    length: 1,
+                    transcribed_word_ids: [wordId],
                     transcription_position: -1,
                     corrections: [],
-                    preceding_anchor: null,
-                    following_anchor: null,
-                    reference_words: {}
+                    preceding_anchor_id: null,
+                    following_anchor_id: null,
+                    reference_word_ids: {}
                 }
                 onElementClick({
                     type: 'gap',
                     data: {
                         ...syntheticGap,
                         wordId,
-                        word
+                        word,
+                        anchor_sequences: anchors
                     }
                 })
             }
         }
-    }, [mode, onWordClick, onElementClick, isReference, currentSource, gaps])
+    }, [mode, onWordClick, onElementClick, isReference, currentSource, gaps, anchors])
 
     return { handleWordClick }
 } 

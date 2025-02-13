@@ -24,6 +24,7 @@ import {
 import { loadSavedData, saveData, clearSavedData } from './shared/utils/localStorage'
 import { setupKeyboardHandlers } from './shared/utils/keyboardHandlers'
 import Header from './Header'
+import { findWordById, getWordsFromIds } from './shared/utils/wordUtils'
 
 // Add type for window augmentation at the top of the file
 declare global {
@@ -47,12 +48,14 @@ export type ModalContent = {
     data: AnchorSequence & {
         wordId: string
         word?: string
+        anchor_sequences: AnchorSequence[]
     }
 } | {
     type: 'gap'
     data: GapSequence & {
         wordId: string
         word: string
+        anchor_sequences: AnchorSequence[]
     }
 }
 
@@ -83,7 +86,7 @@ export default function LyricsAnalyzer({ data: initialData, onFileLoad, apiClien
     const theme = useTheme()
     const isMobile = useMediaQuery(theme.breakpoints.down('md'))
 
-    // Add debug logging for initial data
+    // Update debug logging to use new ID-based structure
     useEffect(() => {
         console.log('LyricsAnalyzer Initial Data:', {
             hasData: !!initialData,
@@ -91,8 +94,8 @@ export default function LyricsAnalyzer({ data: initialData, onFileLoad, apiClien
             anchorsCount: initialData?.anchor_sequences?.length ?? 0,
             gapsCount: initialData?.gap_sequences?.length ?? 0,
             firstAnchor: initialData?.anchor_sequences?.[0] && {
-                transcribedWords: initialData.anchor_sequences[0].transcribed_words.map(w => w.text),
-                referenceWords: initialData.anchor_sequences[0].reference_words
+                transcribedWordIds: initialData.anchor_sequences[0].transcribed_word_ids,
+                referenceWordIds: initialData.anchor_sequences[0].reference_word_ids
             },
             firstSegment: initialData?.corrected_segments?.[0],
             referenceSources: Object.keys(initialData?.reference_lyrics ?? {})
@@ -175,18 +178,50 @@ export default function LyricsAnalyzer({ data: initialData, onFileLoad, apiClien
 
             // Find if this word is part of an anchor sequence
             const anchor = data.anchor_sequences?.find(a =>
-                a.transcribed_words.some(w => w.id === info.word_id) ||
-                Object.values(a.reference_words).some(words =>
-                    words.some(w => w.id === info.word_id)
+                a.transcribed_word_ids.includes(info.word_id) ||
+                Object.values(a.reference_word_ids).some(ids =>
+                    ids.includes(info.word_id)
                 )
             );
 
             if (anchor) {
+                // Create a temporary segment containing all words
+                const allWords = data.corrected_segments.flatMap(s => s.words)
+                const tempSegment: LyricsSegment = {
+                    id: 'temp',
+                    words: allWords,
+                    text: allWords.map(w => w.text).join(' '),
+                    start_time: allWords[0]?.start_time ?? null,
+                    end_time: allWords[allWords.length - 1]?.end_time ?? null
+                }
+
+                const transcribedWords = getWordsFromIds(
+                    [tempSegment],
+                    anchor.transcribed_word_ids
+                );
+
+                const referenceWords = Object.fromEntries(
+                    Object.entries(anchor.reference_word_ids).map(([source, ids]) => {
+                        const sourceWords = data.reference_lyrics[source].segments.flatMap(s => s.words)
+                        const tempSourceSegment: LyricsSegment = {
+                            id: `temp-${source}`,
+                            words: sourceWords,
+                            text: sourceWords.map(w => w.text).join(' '),
+                            start_time: sourceWords[0]?.start_time ?? null,
+                            end_time: sourceWords[sourceWords.length - 1]?.end_time ?? null
+                        }
+                        return [
+                            source,
+                            getWordsFromIds([tempSourceSegment], ids)
+                        ]
+                    })
+                );
+
                 setHighlightInfo({
                     type: 'anchor',
                     sequence: anchor,
-                    transcribed_words: anchor.transcribed_words,
-                    reference_words: anchor.reference_words
+                    transcribed_words: transcribedWords,
+                    reference_words: referenceWords
                 });
                 setFlashingType('word');
                 return;
@@ -194,18 +229,49 @@ export default function LyricsAnalyzer({ data: initialData, onFileLoad, apiClien
 
             // Find if this word is part of a gap sequence
             const gap = data.gap_sequences?.find(g =>
-                g.transcribed_words.some(w => w.id === info.word_id) ||
-                Object.values(g.reference_words).some(words =>
-                    words.some(w => w.id === info.word_id)
+                g.transcribed_word_ids.includes(info.word_id) ||
+                Object.values(g.reference_word_ids).some(ids =>
+                    ids.includes(info.word_id)
                 )
             );
 
             if (gap) {
+                const allWords = data.corrected_segments.flatMap(s => s.words)
+                const tempSegment: LyricsSegment = {
+                    id: 'temp',
+                    words: allWords,
+                    text: allWords.map(w => w.text).join(' '),
+                    start_time: allWords[0]?.start_time ?? null,
+                    end_time: allWords[allWords.length - 1]?.end_time ?? null
+                }
+
+                const transcribedWords = getWordsFromIds(
+                    [tempSegment],
+                    gap.transcribed_word_ids
+                );
+
+                const referenceWords = Object.fromEntries(
+                    Object.entries(gap.reference_word_ids).map(([source, ids]) => {
+                        const sourceWords = data.reference_lyrics[source].segments.flatMap(s => s.words)
+                        const tempSourceSegment: LyricsSegment = {
+                            id: `temp-${source}`,
+                            words: sourceWords,
+                            text: sourceWords.map(w => w.text).join(' '),
+                            start_time: sourceWords[0]?.start_time ?? null,
+                            end_time: sourceWords[sourceWords.length - 1]?.end_time ?? null
+                        }
+                        return [
+                            source,
+                            getWordsFromIds([tempSourceSegment], ids)
+                        ]
+                    })
+                );
+
                 setHighlightInfo({
                     type: 'gap',
                     sequence: gap,
-                    transcribed_words: gap.transcribed_words,
-                    reference_words: gap.reference_words
+                    transcribed_words: transcribedWords,
+                    reference_words: referenceWords
                 });
                 setFlashingType('word');
                 return;
@@ -226,20 +292,25 @@ export default function LyricsAnalyzer({ data: initialData, onFileLoad, apiClien
             }
         } else if (effectiveMode === 'details') {
             if (info.type === 'anchor' && info.anchor) {
+                const word = findWordById(data.corrected_segments, info.word_id);
                 setModalContent({
                     type: 'anchor',
                     data: {
                         ...info.anchor,
-                        wordId: info.word_id
+                        wordId: info.word_id,
+                        word: word?.text,
+                        anchor_sequences: data.anchor_sequences
                     }
                 });
             } else if (info.type === 'gap' && info.gap) {
+                const word = findWordById(data.corrected_segments, info.word_id);
                 setModalContent({
                     type: 'gap',
                     data: {
                         ...info.gap,
                         wordId: info.word_id,
-                        word: info.gap.transcribed_words.find(w => w.id === info.word_id)?.text || ''
+                        word: word?.text || '',
+                        anchor_sequences: data.anchor_sequences
                     }
                 });
             }
@@ -289,7 +360,7 @@ export default function LyricsAnalyzer({ data: initialData, onFileLoad, apiClien
 
     const handleResetCorrections = useCallback(() => {
         if (window.confirm('Are you sure you want to reset all corrections? This cannot be undone.')) {
-            clearSavedData(initialData.transcribed_text)
+            clearSavedData(initialData)
             setData(JSON.parse(JSON.stringify(initialData)))
             setModalContent(null)
             setFlashingType(null)
@@ -340,6 +411,7 @@ export default function LyricsAnalyzer({ data: initialData, onFileLoad, apiClien
                         highlightInfo={highlightInfo}
                         onPlaySegment={handlePlaySegment}
                         currentTime={currentAudioTime}
+                        anchors={data.anchor_sequences}
                     />
                 </Grid>
                 <Grid item xs={12} md={6}>
@@ -364,6 +436,7 @@ export default function LyricsAnalyzer({ data: initialData, onFileLoad, apiClien
                 content={modalContent}
                 onClose={() => setModalContent(null)}
                 allCorrections={data.corrections}
+                referenceLyrics={data.reference_lyrics}
             />
 
             <EditModal

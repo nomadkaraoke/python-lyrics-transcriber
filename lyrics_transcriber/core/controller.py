@@ -303,11 +303,9 @@ class LyricsTranscriber:
                 self.results.transcription_corrected = CorrectionResult(
                     original_segments=best_transcription.result.segments,
                     corrected_segments=best_transcription.result.segments,
-                    corrected_text="",  # Will be generated from segments
                     corrections=[],  # No corrections made
                     corrections_made=0,  # No corrections made
                     confidence=1.0,  # Full confidence since we're using original
-                    transcribed_text="",  # Will be generated from segments
                     reference_lyrics={},
                     anchor_sequences=[],
                     gap_sequences=[],
@@ -320,15 +318,11 @@ class LyricsTranscriber:
                 )
             return
 
-        # Run correction if we have reference lyrics
-
         # Create metadata dict with song info
         metadata = {
             "artist": self.artist,
             "title": self.title,
-            "full_reference_texts": {
-                source: lyrics.lyrics for source, lyrics in self.results.lyrics_results.items()
-            },
+            "full_reference_texts": {source: lyrics.get_full_text() for source, lyrics in self.results.lyrics_results.items()},
         }
 
         corrected_data = self.corrector.run(

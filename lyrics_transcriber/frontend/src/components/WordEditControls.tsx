@@ -15,7 +15,7 @@ export function useWordEdit(content: ModalContent | null) {
 
     useEffect(() => {
         if (content) {
-            setEditedWord(content.type === 'gap' ? content.data.word : content.type === 'anchor' ? content.data.words[0] : '')
+            setEditedWord(content.data.word || '')
             setIsEditing(false)
         }
     }, [content])
@@ -37,11 +37,7 @@ export default function WordEditControls({ content, onUpdateCorrection, onClose 
     } = useWordEdit(content)
 
     const handleStartEdit = () => {
-        if (content.type === 'gap') {
-            setEditedWord(content.data.word)
-        } else if (content.type === 'anchor') {
-            setEditedWord(content.data.words[0])
-        }
+        setEditedWord(content.data.word || '')
         setIsEditing(true)
     }
 
@@ -59,10 +55,8 @@ export default function WordEditControls({ content, onUpdateCorrection, onClose 
     }
 
     const handleCancelEdit = () => {
-        if (content.type === 'gap') {
-            setEditedWord(content.data.word)
-            setIsEditing(false)
-        }
+        setEditedWord(content.data.word || '')
+        setIsEditing(false)
     }
 
     const handleWordChange = (event: React.ChangeEvent<HTMLInputElement>) => {

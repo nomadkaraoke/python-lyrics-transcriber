@@ -11,6 +11,7 @@ import hashlib
 from lyrics_transcriber.types import LyricsData, PhraseScore, AnchorSequence, GapSequence, ScoredAnchor, TranscriptionResult, Word
 from lyrics_transcriber.correction.phrase_analyzer import PhraseAnalyzer
 from lyrics_transcriber.correction.text_utils import clean_text
+from lyrics_transcriber.utils.word_utils import WordUtils
 
 
 class AnchorSequenceFinder:
@@ -105,20 +106,53 @@ class AnchorSequenceFinder:
         input_str = f"{transcribed}|" f"{','.join(ref_texts)}"
         return hashlib.md5(input_str.encode()).hexdigest()
 
-    def _save_to_cache(self, cache_path: Path, data: Any) -> None:
+    def _save_to_cache(self, cache_path: Path, anchors: List[ScoredAnchor]) -> None:
         """Save results to cache file."""
         self.logger.debug(f"Saving to cache: {cache_path}")
+        # Convert to dictionary format that matches the expected loading format
+        cache_data = [{"anchor": anchor.anchor.to_dict(), "phrase_score": anchor.phrase_score.to_dict()} for anchor in anchors]
         with open(cache_path, "w") as f:
-            json.dump(data, f, indent=2)
+            json.dump(cache_data, f, indent=2)
 
-    def _load_from_cache(self, cache_path: Path) -> Optional[Any]:
+    def _load_from_cache(self, cache_path: Path) -> Optional[List[ScoredAnchor]]:
         """Load results from cache if available."""
         try:
             self.logger.debug(f"Attempting to load from cache: {cache_path}")
             with open(cache_path, "r") as f:
-                return json.load(f)
-        except (FileNotFoundError, json.JSONDecodeError):
-            self.logger.debug("Cache miss or invalid cache file")
+                cached_data = json.load(f)
+
+            self.logger.info("Loading anchors from cache")
+            try:
+                # Log the raw dictionary data instead of the object
+                if cached_data:
+                    self.logger.debug(f"Cached data structure: {json.dumps(cached_data[0], indent=2)}")
+
+                # Convert cached data back to ScoredAnchor objects
+                anchors = []
+                for data in cached_data:
+                    if "anchor" not in data or "phrase_score" not in data:
+                        raise KeyError("Missing required keys: anchor, phrase_score")
+
+                    anchor = AnchorSequence.from_dict(data["anchor"])
+                    phrase_score = PhraseScore.from_dict(data["phrase_score"])
+                    anchors.append(ScoredAnchor(anchor=anchor, phrase_score=phrase_score))
+
+                return anchors
+
+            except KeyError as e:
+                self.logger.error(f"Cache format mismatch. Missing key: {e}")
+                # Log the raw data for debugging
+                if cached_data:
+                    self.logger.error(f"First cached anchor data: {json.dumps(cached_data[0], indent=2)}")
+                self.logger.error("Expected keys: anchor, phrase_score")
+                self.logger.warning(f"Cache format mismatch: {e}. Recomputing.")
+                return None
+
+        except (FileNotFoundError, json.JSONDecodeError) as e:
+            self.logger.debug(f"Cache miss or invalid cache file: {e}")
+            return None
+        except Exception as e:
+            self.logger.error(f"Unexpected error loading cache: {type(e).__name__}: {e}")
             return None
 
     def _process_ngram_length(
@@ -164,11 +198,11 @@ class AnchorSequenceFinder:
 
                 matches = self._find_matching_sources(ngram, ref_texts_clean, n)
                 if len(matches) >= min_sources:
-                    # Always use the original Word objects from all_words
-                    transcribed_words = all_words[trans_pos : trans_pos + n]
+                    # Get Word IDs for transcribed words
+                    transcribed_word_ids = [w.id for w in all_words[trans_pos : trans_pos + n]]
 
-                    # Get corresponding Word objects for each match
-                    ref_word_matches = {source: ref_words[source][pos : pos + n] for source, pos in matches.items()}
+                    # Get Word IDs for reference words
+                    reference_word_ids = {source: [w.id for w in ref_words[source][pos : pos + n]] for source, pos in matches.items()}
 
                     # Mark positions as used
                     for source, pos in matches.items():
@@ -176,11 +210,11 @@ class AnchorSequenceFinder:
                     used_trans_positions.add(trans_pos)
 
                     anchor = AnchorSequence(
-                        words=[w.text for w in transcribed_words],  # Use actual word texts
-                        transcribed_words=transcribed_words,  # Use original Word objects
+                        id=WordUtils.generate_id(),
+                        transcribed_word_ids=transcribed_word_ids,
                         transcription_position=trans_pos,
                         reference_positions=matches,
-                        reference_words=ref_word_matches,
+                        reference_word_ids=reference_word_ids,
                         confidence=len(matches) / len(ref_texts_clean),
                     )
                     candidate_anchors.append(anchor)
@@ -203,9 +237,19 @@ class AnchorSequenceFinder:
         if cached_data := self._load_from_cache(cache_path):
             self.logger.info("Loading anchors from cache")
             try:
-                return [ScoredAnchor.from_dict(anchor) for anchor in cached_data]
-            except KeyError as e:
-                self.logger.warning(f"Cache format mismatch: {e}. Recomputing.")
+                # Convert cached_data to dictionary before logging
+                if cached_data:
+                    first_anchor = {"anchor": cached_data[0].anchor.to_dict(), "phrase_score": cached_data[0].phrase_score.to_dict()}
+                    self.logger.debug(f"Cached data structure: {json.dumps(first_anchor, indent=2)}")
+                return cached_data
+            except Exception as e:
+                self.logger.error(f"Unexpected error loading cache: {type(e).__name__}: {e}")
+                if cached_data:
+                    try:
+                        first_anchor = {"anchor": cached_data[0].anchor.to_dict(), "phrase_score": cached_data[0].phrase_score.to_dict()}
+                        self.logger.error(f"First cached anchor data: {json.dumps(first_anchor, indent=2)}")
+                    except:
+                        self.logger.error("Could not serialize first cached anchor for logging")
 
         # If not in cache or cache format invalid, perform the computation
         self.logger.info(f"Cache miss for key {cache_key} - computing anchors")
@@ -251,29 +295,16 @@ class AnchorSequenceFinder:
                 candidate_anchors.extend(anchors)
 
         self.logger.info(f"Found {len(candidate_anchors)} candidate anchors")
-        filtered_anchors = self._remove_overlapping_sequences(candidate_anchors, transcribed)
+        filtered_anchors = self._remove_overlapping_sequences(candidate_anchors, transcribed, transcription_result)
 
         # Save to cache
-        self._save_to_cache(cache_path, [anchor.to_dict() for anchor in filtered_anchors])
+        self._save_to_cache(cache_path, filtered_anchors)
         return filtered_anchors
 
     def _score_sequence(self, words: List[str], context: str) -> PhraseScore:
         """Score a sequence based on its phrase quality"""
         self.logger.debug(f"_score_sequence called for: '{' '.join(words)}'")
         return self.phrase_analyzer.score_phrase(words, context)
-
-    def _score_anchor(self, anchor: AnchorSequence, context: str) -> ScoredAnchor:
-        """Score an anchor sequence based on phrase quality and line breaks.
-
-        Args:
-            anchor: The anchor sequence to score
-            context: The original transcribed text
-        """
-        # Let phrase_analyzer handle all scoring including line breaks
-        phrase_score = self.phrase_analyzer.score_phrase(anchor.words, context)
-
-        # self.logger.debug(f"_score_anchor called for sequence: '{anchor.text}'")
-        return ScoredAnchor(anchor=anchor, phrase_score=phrase_score)
 
     def _get_sequence_priority(self, scored_anchor: ScoredAnchor) -> Tuple[float, float, float, float, int]:
         """Get priority tuple for sorting sequences.
@@ -289,7 +320,7 @@ class AnchorSequenceFinder:
         """
         # self.logger.debug(f"_get_sequence_priority called for anchor: '{scored_anchor.anchor.text}'")
         position_bonus = 1.0 if scored_anchor.anchor.transcription_position == 0 else 0.0
-        length_bonus = len(scored_anchor.anchor.words) * 0.2  # Add bonus for longer sequences
+        length_bonus = len(scored_anchor.anchor.transcribed_word_ids) * 0.2  # Changed from words to transcribed_word_ids
 
         return (
             len(scored_anchor.anchor.reference_positions),  # More sources is better
@@ -310,25 +341,39 @@ class AnchorSequenceFinder:
             True if sequences overlap in transcription or share any reference positions
         """
         # Check transcription overlap
-        seq1_trans_range = range(seq1.transcription_position, seq1.transcription_position + len(seq1.words))
-        seq2_trans_range = range(seq2.transcription_position, seq2.transcription_position + len(seq2.words))
+        seq1_trans_range = range(
+            seq1.transcription_position, seq1.transcription_position + len(seq1.transcribed_word_ids)
+        )  # Changed from words
+        seq2_trans_range = range(
+            seq2.transcription_position, seq2.transcription_position + len(seq2.transcribed_word_ids)
+        )  # Changed from words
         trans_overlap = bool(set(seq1_trans_range) & set(seq2_trans_range))
 
         # Check reference overlap - only consider positions in shared sources
         shared_sources = set(seq1.reference_positions.keys()) & set(seq2.reference_positions.keys())
         ref_overlap = any(seq1.reference_positions[source] == seq2.reference_positions[source] for source in shared_sources)
 
-        # self.logger.debug(f"Checking overlap between '{seq1.text}' and '{seq2.text}'")
         return trans_overlap or ref_overlap
 
-    def _remove_overlapping_sequences(self, anchors: List[AnchorSequence], context: str) -> List[ScoredAnchor]:
+    def _remove_overlapping_sequences(
+        self,
+        anchors: List[AnchorSequence],
+        context: str,
+        transcription_result: TranscriptionResult,
+    ) -> List[ScoredAnchor]:
         """Remove overlapping sequences using phrase analysis."""
         if not anchors:
             return []
 
         self.logger.info(f"Scoring {len(anchors)} anchors")
 
-        # Benchmark both approaches
+        # Create word map for scoring
+        word_map = {w.id: w for s in transcription_result.segments for w in s.words}
+
+        # Add word map to each anchor for scoring
+        for anchor in anchors:
+            anchor.transcribed_words = [word_map[word_id] for word_id in anchor.transcribed_word_ids]
+
         start_time = time.time()
 
         # Try different pool sizes
@@ -342,7 +387,7 @@ class AnchorSequenceFinder:
         with Pool(processes=num_processes) as pool:
             scored_anchors = list(
                 tqdm(
-                    pool.imap(score_anchor_partial, anchors, chunksize=50),  # Added chunksize
+                    pool.imap(score_anchor_partial, anchors, chunksize=50),
                     total=len(anchors),
                     desc="Scoring anchors (parallel)",
                 )
@@ -376,7 +421,11 @@ class AnchorSequenceFinder:
         if not hasattr(AnchorSequenceFinder._score_anchor_static, "_phrase_analyzer"):
             AnchorSequenceFinder._score_anchor_static._phrase_analyzer = PhraseAnalyzer(logger=logging.getLogger(__name__))
 
-        phrase_score = AnchorSequenceFinder._score_anchor_static._phrase_analyzer.score_phrase(anchor.words, context)
+        # Get the words from the transcribed word IDs
+        # We need to pass in the actual words for scoring
+        words = [w.text for w in anchor.transcribed_words]  # This needs to be passed in
+
+        phrase_score = AnchorSequenceFinder._score_anchor_static._phrase_analyzer.score_phrase(words, context)
         return ScoredAnchor(anchor=anchor, phrase_score=phrase_score)
 
     def _get_reference_words(self, source: str, ref_words: List[str], start_pos: Optional[int], end_pos: Optional[int]) -> List[str]:
@@ -417,58 +466,63 @@ class AnchorSequenceFinder:
         }
         ref_words = {source: [w for s in lyrics.segments for w in s.words] for source, lyrics in references.items()}
 
-        # Create gaps with Word objects
+        # Create gaps with Word IDs
         gaps = []
         sorted_anchors = sorted(anchors, key=lambda x: x.anchor.transcription_position)
 
         # Handle initial gap
         if sorted_anchors:
-            first_anchor_pos = sorted_anchors[0].anchor.transcription_position
+            first_anchor = sorted_anchors[0].anchor
+            first_anchor_pos = first_anchor.transcription_position
             if first_anchor_pos > 0:
-                # Use original Word objects for the gap
-                gap_words = all_words[:first_anchor_pos]
+                gap_word_ids = [w.id for w in all_words[:first_anchor_pos]]
                 if gap := self._create_initial_gap(
-                    words=[w.text for w in gap_words],
-                    transcribed_words=gap_words,
-                    first_anchor=sorted_anchors[0],
+                    id=WordUtils.generate_id(),
+                    transcribed_word_ids=gap_word_ids,
+                    transcription_position=0,
+                    following_anchor_id=first_anchor.id,
                     ref_texts_clean=ref_texts_clean,
                     ref_words=ref_words,
+                    following_anchor=first_anchor,
                 ):
                     gaps.append(gap)
 
         # Handle gaps between anchors
         for i in range(len(sorted_anchors) - 1):
-            current_anchor = sorted_anchors[i]
-            next_anchor = sorted_anchors[i + 1]
-            gap_start = current_anchor.anchor.transcription_position + len(current_anchor.anchor.words)
-            gap_end = next_anchor.anchor.transcription_position
+            current_anchor = sorted_anchors[i].anchor
+            next_anchor = sorted_anchors[i + 1].anchor
+            gap_start = current_anchor.transcription_position + len(current_anchor.transcribed_word_ids)
+            gap_end = next_anchor.transcription_position
 
             if gap_end > gap_start:
-                # Use original Word objects for the gap
-                gap_words = all_words[gap_start:gap_end]
+                gap_word_ids = [w.id for w in all_words[gap_start:gap_end]]
                 if between_gap := self._create_between_gap(
-                    words=[w.text for w in gap_words],
-                    transcribed_words=gap_words,
-                    current_anchor=current_anchor,
-                    next_anchor=next_anchor,
+                    id=WordUtils.generate_id(),
+                    transcribed_word_ids=gap_word_ids,
+                    transcription_position=gap_start,
+                    preceding_anchor_id=current_anchor.id,
+                    following_anchor_id=next_anchor.id,
                     ref_texts_clean=ref_texts_clean,
                     ref_words=ref_words,
+                    preceding_anchor=current_anchor,
+                    following_anchor=next_anchor,
                 ):
                     gaps.append(between_gap)
 
         # Handle final gap
         if sorted_anchors:
-            last_anchor = sorted_anchors[-1]
-            last_pos = last_anchor.anchor.transcription_position + len(last_anchor.anchor.words)
+            last_anchor = sorted_anchors[-1].anchor
+            last_pos = last_anchor.transcription_position + len(last_anchor.transcribed_word_ids)
             if last_pos < len(all_words):
-                # Use original Word objects for the gap
-                gap_words = all_words[last_pos:]
+                gap_word_ids = [w.id for w in all_words[last_pos:]]
                 if final_gap := self._create_final_gap(
-                    words=[w.text for w in gap_words],
-                    transcribed_words=gap_words,
-                    last_anchor=last_anchor,
+                    id=WordUtils.generate_id(),
+                    transcribed_word_ids=gap_word_ids,
+                    transcription_position=last_pos,
+                    preceding_anchor_id=last_anchor.id,
                     ref_texts_clean=ref_texts_clean,
                     ref_words=ref_words,
+                    preceding_anchor=last_anchor,
                 ):
                     gaps.append(final_gap)
 
@@ -476,118 +530,118 @@ class AnchorSequenceFinder:
 
     def _create_initial_gap(
         self,
-        words: List[str],
-        transcribed_words: List[Word],
-        first_anchor: Optional[ScoredAnchor],
+        id: str,
+        transcribed_word_ids: List[str],
+        transcription_position: int,
+        following_anchor_id: str,
         ref_texts_clean: Dict[str, List[str]],
         ref_words: Dict[str, List[Word]],
+        following_anchor: AnchorSequence,
     ) -> Optional[GapSequence]:
-        """Create gap sequence before the first anchor."""
-        if not first_anchor:
-            # If no anchors, entire text is a gap
-            return GapSequence(
-                words=tuple(words),
-                transcribed_words=transcribed_words,
-                transcription_position=0,
-                preceding_anchor=None,
-                following_anchor=None,
-                reference_words={source: words for source, words in ref_words.items()},
-                reference_words_original={source: words for source, words in ref_words.items()},
-            )
+        """Create gap sequence before the first anchor.
 
-        if first_anchor.anchor.transcription_position > 0:
-            # Create gap from start to first anchor
-            gap_ref_words = {}
-            gap_ref_words_original = {}
-            for source in ref_texts_clean:
-                if source in first_anchor.anchor.reference_positions:
-                    end_pos = first_anchor.anchor.reference_positions[source]
-                    gap_ref_words[source] = ref_words[source][:end_pos]
-                    gap_ref_words_original[source] = ref_words[source][:end_pos]
+        The gap includes all reference words from the start of each reference
+        up to the position where the following anchor starts in that reference.
+        """
+        if transcription_position > 0:
+            # Get reference word IDs for the gap
+            reference_word_ids = {}
+            for source, words in ref_words.items():
+                if source in ref_texts_clean:
+                    # Get the position where the following anchor starts in this source
+                    if source in following_anchor.reference_positions:
+                        end_pos = following_anchor.reference_positions[source]
+                        # Include all words from start up to the anchor
+                        reference_word_ids[source] = [w.id for w in words[:end_pos]]
+                    else:
+                        # If this source doesn't contain the following anchor,
+                        # we can't determine the gap content for it
+                        reference_word_ids[source] = []
 
             return GapSequence(
-                words=tuple(words[: first_anchor.anchor.transcription_position]),
-                transcribed_words=transcribed_words,
-                transcription_position=0,
-                preceding_anchor=None,
-                following_anchor=first_anchor.anchor,
-                reference_words=gap_ref_words,
-                reference_words_original=gap_ref_words_original,
+                id=id,
+                transcribed_word_ids=transcribed_word_ids,
+                transcription_position=transcription_position,
+                preceding_anchor_id=None,
+                following_anchor_id=following_anchor_id,
+                reference_word_ids=reference_word_ids,
             )
         return None
 
     def _create_between_gap(
         self,
-        words: List[str],
-        transcribed_words: List[Word],
-        current_anchor: ScoredAnchor,
-        next_anchor: ScoredAnchor,
+        id: str,
+        transcribed_word_ids: List[str],
+        transcription_position: int,
+        preceding_anchor_id: str,
+        following_anchor_id: str,
         ref_texts_clean: Dict[str, List[str]],
         ref_words: Dict[str, List[Word]],
+        preceding_anchor: AnchorSequence,
+        following_anchor: AnchorSequence,
     ) -> Optional[GapSequence]:
-        """Create gap sequence between two anchors."""
-        gap_start = current_anchor.anchor.transcription_position + current_anchor.anchor.length
-        gap_end = next_anchor.anchor.transcription_position
+        """Create gap sequence between two anchors.
 
-        if gap_end > gap_start:
-            gap_ref_words = {}
-            gap_ref_words_original = {}
-            shared_sources = set(current_anchor.anchor.reference_positions.keys()) & set(next_anchor.anchor.reference_positions.keys())
+        For each reference source, the gap includes all words between the end of the
+        preceding anchor and the start of the following anchor in that source.
+        """
+        # Get reference word IDs for the gap
+        reference_word_ids = {}
+        for source, words in ref_words.items():
+            if source in ref_texts_clean:
+                # Only process sources that contain both anchors
+                if source in preceding_anchor.reference_positions and source in following_anchor.reference_positions:
+                    start_pos = preceding_anchor.reference_positions[source] + len(preceding_anchor.reference_word_ids[source])
+                    end_pos = following_anchor.reference_positions[source]
+                    # Include all words between the anchors
+                    reference_word_ids[source] = [w.id for w in words[start_pos:end_pos]]
+                else:
+                    # If this source doesn't contain both anchors,
+                    # we can't determine the gap content for it
+                    reference_word_ids[source] = []
 
-            # Check for large position differences in next_anchor
-            if len(next_anchor.anchor.reference_positions) > 1:
-                positions = list(next_anchor.anchor.reference_positions.values())
-                max_diff = max(positions) - min(positions)
-                if max_diff > 20:
-                    earliest_source = min(next_anchor.anchor.reference_positions.items(), key=lambda x: x[1])[0]
-                    self.logger.warning(
-                        f"Large position difference ({max_diff} words) in next anchor. Using only earliest source: {earliest_source}"
-                    )
-                    shared_sources &= {earliest_source}
-
-            for source in shared_sources:
-                start_pos = current_anchor.anchor.reference_positions[source] + current_anchor.anchor.length
-                end_pos = next_anchor.anchor.reference_positions[source]
-                gap_ref_words[source] = ref_words[source][start_pos:end_pos]
-                gap_ref_words_original[source] = ref_words[source][start_pos:end_pos]
-
-            return GapSequence(
-                words=tuple(words[gap_start:gap_end]),
-                transcribed_words=transcribed_words,
-                transcription_position=gap_start,
-                preceding_anchor=current_anchor.anchor,
-                following_anchor=next_anchor.anchor,
-                reference_words=gap_ref_words,
-                reference_words_original=gap_ref_words_original,
-            )
-        return None
+        return GapSequence(
+            id=id,
+            transcribed_word_ids=transcribed_word_ids,
+            transcription_position=transcription_position,
+            preceding_anchor_id=preceding_anchor_id,
+            following_anchor_id=following_anchor_id,
+            reference_word_ids=reference_word_ids,
+        )
 
     def _create_final_gap(
         self,
-        words: List[str],
-        transcribed_words: List[Word],
-        last_anchor: ScoredAnchor,
+        id: str,
+        transcribed_word_ids: List[str],
+        transcription_position: int,
+        preceding_anchor_id: str,
         ref_texts_clean: Dict[str, List[str]],
         ref_words: Dict[str, List[Word]],
+        preceding_anchor: AnchorSequence,
     ) -> Optional[GapSequence]:
-        """Create gap sequence after the last anchor."""
-        last_pos = last_anchor.anchor.transcription_position + last_anchor.anchor.length
-        if last_pos < len(words):
-            gap_ref_words = {}
-            gap_ref_words_original = {}
-            for source in ref_texts_clean:
-                if source in last_anchor.anchor.reference_positions:
-                    start_pos = last_anchor.anchor.reference_positions[source] + last_anchor.anchor.length
-                    gap_ref_words[source] = ref_words[source][start_pos:]
-                    gap_ref_words_original[source] = ref_words[source][start_pos:]
+        """Create gap sequence after the last anchor.
 
-            return GapSequence(
-                words=tuple(words[last_pos:]),
-                transcribed_words=transcribed_words,
-                transcription_position=last_pos,
-                preceding_anchor=last_anchor.anchor,
-                following_anchor=None,
-                reference_words=gap_ref_words,
-                reference_words_original=gap_ref_words_original,
-            )
-        return None
+        For each reference source, includes all words from the end of the
+        preceding anchor to the end of that reference.
+        """
+        # Get reference word IDs for the gap
+        reference_word_ids = {}
+        for source, words in ref_words.items():
+            if source in ref_texts_clean:
+                if source in preceding_anchor.reference_positions:
+                    start_pos = preceding_anchor.reference_positions[source] + len(preceding_anchor.reference_word_ids[source])
+                    # Include all words from end of last anchor to end of reference
+                    reference_word_ids[source] = [w.id for w in words[start_pos:]]
+                else:
+                    # If this source doesn't contain the preceding anchor,
+                    # we can't determine the gap content for it
+                    reference_word_ids[source] = []
+
+        return GapSequence(
+            id=id,
+            transcribed_word_ids=transcribed_word_ids,
+            transcription_position=transcription_position,
+            preceding_anchor_id=preceding_anchor_id,
+            following_anchor_id=None,
+            reference_word_ids=reference_word_ids,
+        )

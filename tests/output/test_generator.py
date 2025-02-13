@@ -57,7 +57,7 @@ def sample_correction_result(sample_segment):
 def sample_lyrics_data():
     """Create a sample LyricsData instance."""
     metadata = LyricsMetadata(source="test", track_name="Test Track", artist_names="Test Artist")
-    return LyricsData(lyrics="test lyrics", segments=[], metadata=metadata, source="test")
+    return LyricsData(segments=[], metadata=metadata, source="test")
 
 
 def test_output_generator_initialization(test_config):

@@ -44,7 +44,8 @@ export default function TranscriptionView({
     highlightInfo,
     mode,
     onPlaySegment,
-    currentTime = 0
+    currentTime = 0,
+    anchors = []
 }: TranscriptionViewProps) {
     const [selectedSegmentIndex, setSelectedSegmentIndex] = useState<number | null>(null)
 
@@ -67,17 +68,17 @@ export default function TranscriptionView({
 
                         // Find if this word is part of an anchor sequence
                         const anchor = data.anchor_sequences?.find(a =>
-                            a.transcribed_words.some(w => w.id === word.id)
+                            a.transcribed_word_ids.includes(word.id)
                         )
 
                         // If not in anchor, check if it belongs to a gap sequence
                         const gap = data.gap_sequences?.find(g => {
                             // Check transcribed words
-                            const inTranscribed = g.transcribed_words.some(w => w.id === word.id)
+                            const inTranscribed = g.transcribed_word_ids.includes(word.id)
 
                             // Check reference words
-                            const inReference = Object.values(g.reference_words).some(refs =>
-                                refs.some(w => w.id === word.id)
+                            const inReference = Object.values(g.reference_word_ids).some(ids =>
+                                ids.includes(word.id)
                             )
 
                             // Check if this word is a corrected version
@@ -127,7 +128,7 @@ export default function TranscriptionView({
                             <TextContainer>
                                 <HighlightedText
                                     wordPositions={segmentWords}
-                                    anchors={data.anchor_sequences}
+                                    anchors={anchors}
                                     onElementClick={onElementClick}
                                     onWordClick={onWordClick}
                                     flashingType={flashingType}

@@ -27851,42 +27851,23 @@ const PhraseScoreSchema = z.object({
   total_score: z.number()
 });
 const AnchorSequenceSchema = z.object({
-  id: z.string().optional(),
-  words: z.array(z.string()),
-  transcribed_words: z.array(WordSchema),
+  id: z.string(),
+  transcribed_word_ids: z.array(z.string()),
   transcription_position: z.number(),
   reference_positions: z.record(z.number()),
-  reference_words: z.record(z.array(WordSchema)),
+  reference_word_ids: z.record(z.array(z.string())),
   confidence: z.number(),
   phrase_score: PhraseScoreSchema,
   total_score: z.number()
 });
 const GapSequenceSchema = z.object({
-  id: z.string().optional(),
-  text: z.string(),
-  words: z.array(z.string()),
-  transcribed_words: z.array(WordSchema),
-  length: z.number(),
+  id: z.string(),
+  transcribed_word_ids: z.array(z.string()),
   transcription_position: z.number(),
   corrections: z.array(WordCorrectionSchema),
-  preceding_anchor: z.object({
-    words: z.array(z.string()),
-    transcribed_words: z.array(WordSchema),
-    transcription_position: z.number(),
-    reference_positions: z.record(z.number()),
-    reference_words: z.record(z.array(WordSchema)),
-    confidence: z.number()
-  }).nullable(),
-  following_anchor: z.object({
-    words: z.array(z.string()),
-    transcribed_words: z.array(WordSchema),
-    transcription_position: z.number(),
-    reference_positions: z.record(z.number()),
-    reference_words: z.record(z.array(WordSchema)),
-    confidence: z.number()
-  }).nullable(),
-  reference_words: z.record(z.array(WordSchema)),
-  reference_words_original: z.record(z.array(WordSchema)).optional()
+  preceding_anchor_id: z.string().nullable(),
+  following_anchor_id: z.string().nullable(),
+  reference_word_ids: z.record(z.array(z.string()))
 });
 const CorrectionStepSchema = z.object({
   handler_name: z.string(),
@@ -27899,13 +27880,11 @@ const CorrectionStepSchema = z.object({
   deleted_word_ids: z.array(z.string())
 });
 const CorrectionDataSchema = z.object({
-  transcribed_text: z.string(),
   original_segments: z.array(LyricsSegmentSchema),
   reference_lyrics: z.record(ReferenceSourceSchema),
   anchor_sequences: z.array(AnchorSequenceSchema),
   gap_sequences: z.array(GapSequenceSchema),
-  resized_segments: z.array(LyricsSegmentSchema).optional(),
-  corrected_text: z.string(),
+  resized_segments: z.array(LyricsSegmentSchema),
   corrections_made: z.number(),
   confidence: z.number(),
   corrections: z.array(WordCorrectionSchema),
@@ -28102,19 +28081,56 @@ function CorrectionMetrics({
 const CloseIcon = createSvgIcon(/* @__PURE__ */ jsxRuntimeExports.jsx("path", {
   d: "M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"
 }), "Close");
+function findWordById(segments, wordId) {
+  for (const segment of segments) {
+    const word = segment.words.find((w) => w.id === wordId);
+    if (word) return word;
+  }
+  return void 0;
+}
+function getWordsFromIds(segments, wordIds) {
+  return wordIds.map((id) => findWordById(segments, id)).filter((word) => word !== void 0);
+}
+function formatReferenceWords(content, referenceLyrics) {
+  if (!content || !referenceLyrics) return "";
+  return Object.entries(content.data.reference_word_ids).map(([source, wordIds]) => {
+    var _a;
+    const words = getWordsFromIds(
+      ((_a = referenceLyrics[source]) == null ? void 0 : _a.segments) ?? [],
+      wordIds
+    );
+    return `${source}: "${words.map((w) => w.text).join(" ")}"`;
+  }).join("\n");
+}
+function getAnchorText(anchorId, anchors, referenceLyrics) {
+  var _a;
+  if (!anchorId || !referenceLyrics) return anchorId || "";
+  const anchor = anchors.find((a) => a.id === anchorId);
+  if (!anchor) return anchorId;
+  const firstSource = Object.entries(anchor.reference_word_ids)[0];
+  if (!firstSource) return anchorId;
+  const [source, wordIds] = firstSource;
+  const words = getWordsFromIds(
+    ((_a = referenceLyrics[source]) == null ? void 0 : _a.segments) ?? [],
+    wordIds
+  );
+  return `${anchorId} ("${words.map((w) => w.text).join(" ")}")`;
+}
 function DetailsModal({
   open,
   content,
   onClose,
-  allCorrections = []
+  allCorrections,
+  referenceLyrics
 }) {
-  var _a;
+  var _a, _b;
   if (!content) return null;
+  const referenceWordsText = formatReferenceWords(content, referenceLyrics);
   const getCurrentWord = () => {
     if (content.type === "gap") {
       return content.data.word;
     } else if (content.type === "anchor") {
-      return content.data.word ?? content.data.words[0];
+      return content.data.word ?? "";
     }
     return "";
   };
@@ -28127,9 +28143,10 @@ function DetailsModal({
     ];
   };
   const renderContent = () => {
-    var _a2, _b, _c, _d, _e, _f;
+    var _a2, _b2, _c, _d, _e, _f, _g;
     switch (content.type) {
       case "anchor":
+        const anchorWords = ((_a2 = content.data.transcribed_word_ids) == null ? void 0 : _a2.length) ?? 0;
         return /* @__PURE__ */ jsxRuntimeExports.jsxs(Grid, { container: true, spacing: 2, children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx(
             GridItem,
@@ -28142,7 +28159,7 @@ function DetailsModal({
             GridItem,
             {
               title: "Full Text",
-              value: `"${content.data.words.join(" ")}"`
+              value: `"${content.data.word ?? ""}"`
             }
           ),
           /* @__PURE__ */ jsxRuntimeExports.jsx(GridItem, { title: "Word ID", value: content.data.wordId }),
@@ -28150,17 +28167,17 @@ function DetailsModal({
             GridItem,
             {
               title: "Length",
-              value: `${content.data.words.length} words`
+              value: `${anchorWords} words`
             }
           ),
           /* @__PURE__ */ jsxRuntimeExports.jsx(
             GridItem,
             {
               title: "Reference Words",
-              value: content.data.reference_words ? Object.entries(content.data.reference_words).map(([source, words]) => `${source}: ${words.map((w) => w.text).join(", ")}`).join("\n") : "No reference words"
+              value: /* @__PURE__ */ jsxRuntimeExports.jsx("pre", { style: { margin: 0, whiteSpace: "pre-wrap" }, children: referenceWordsText })
             }
           ),
-          /* @__PURE__ */ jsxRuntimeExports.jsx(GridItem, { title: "Confidence", value: ((_a2 = content.data.confidence) == null ? void 0 : _a2.toFixed(3)) ?? "N/A" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(GridItem, { title: "Confidence", value: ((_b2 = content.data.confidence) == null ? void 0 : _b2.toFixed(3)) ?? "N/A" }),
           content.data.phrase_score && /* @__PURE__ */ jsxRuntimeExports.jsx(
             GridItem,
             {
@@ -28172,20 +28189,20 @@ function DetailsModal({
                 ] }),
                 /* @__PURE__ */ jsxRuntimeExports.jsxs(Typography, { children: [
                   "Natural Break: ",
-                  ((_b = content.data.phrase_score.natural_break_score) == null ? void 0 : _b.toFixed(3)) ?? "N/A"
+                  ((_c = content.data.phrase_score.natural_break_score) == null ? void 0 : _c.toFixed(3)) ?? "N/A"
                 ] }),
                 /* @__PURE__ */ jsxRuntimeExports.jsxs(Typography, { children: [
                   "Length: ",
-                  ((_c = content.data.phrase_score.length_score) == null ? void 0 : _c.toFixed(3)) ?? "N/A"
+                  ((_d = content.data.phrase_score.length_score) == null ? void 0 : _d.toFixed(3)) ?? "N/A"
                 ] }),
                 /* @__PURE__ */ jsxRuntimeExports.jsxs(Typography, { children: [
                   "Total: ",
-                  ((_d = content.data.phrase_score.total_score) == null ? void 0 : _d.toFixed(3)) ?? "N/A"
+                  ((_e = content.data.phrase_score.total_score) == null ? void 0 : _e.toFixed(3)) ?? "N/A"
                 ] })
               ] })
             }
           ),
-          /* @__PURE__ */ jsxRuntimeExports.jsx(GridItem, { title: "Total Score", value: ((_e = content.data.total_score) == null ? void 0 : _e.toFixed(3)) ?? "N/A" })
+          /* @__PURE__ */ jsxRuntimeExports.jsx(GridItem, { title: "Total Score", value: ((_f = content.data.total_score) == null ? void 0 : _f.toFixed(3)) ?? "N/A" })
         ] });
       case "gap":
         return /* @__PURE__ */ jsxRuntimeExports.jsxs(Grid, { container: true, spacing: 2, children: [
@@ -28199,19 +28216,6 @@ function DetailsModal({
           /* @__PURE__ */ jsxRuntimeExports.jsx(
             GridItem,
             {
-              title: "Current Text",
-              value: `"${((_f = content.data.words) == null ? void 0 : _f.map((word) => {
-                var _a3;
-                const wordCorrection = (_a3 = content.data.corrections) == null ? void 0 : _a3.find(
-                  (c) => c.original_word === word
-                );
-                return wordCorrection ? wordCorrection.corrected_word : word;
-              }).join(" ")) ?? content.data.word}"`
-            }
-          ),
-          /* @__PURE__ */ jsxRuntimeExports.jsx(
-            GridItem,
-            {
               title: "Word ID",
               value: content.data.wordId
             }
@@ -28220,46 +28224,28 @@ function DetailsModal({
             GridItem,
             {
               title: "Length",
-              value: `${content.data.length} words`
+              value: `${((_g = content.data.transcribed_word_ids) == null ? void 0 : _g.length) ?? 0} words`
             }
           ),
-          content.data.preceding_anchor && /* @__PURE__ */ jsxRuntimeExports.jsx(
+          content.data.preceding_anchor_id && /* @__PURE__ */ jsxRuntimeExports.jsx(
             GridItem,
             {
               title: "Preceding Anchor",
-              value: `"${content.data.preceding_anchor.words.join(" ")}"`
+              value: getAnchorText(content.data.preceding_anchor_id, content.data.anchor_sequences, referenceLyrics)
+            }
+          ),
+          content.data.following_anchor_id && /* @__PURE__ */ jsxRuntimeExports.jsx(
+            GridItem,
+            {
+              title: "Following Anchor",
+              value: getAnchorText(content.data.following_anchor_id, content.data.anchor_sequences, referenceLyrics)
             }
           ),
           /* @__PURE__ */ jsxRuntimeExports.jsx(
             GridItem,
             {
-              title: "Transcribed Text",
-              value: `"${content.data.text}"`
-            }
-          ),
-          content.data.following_anchor && /* @__PURE__ */ jsxRuntimeExports.jsx(
-            GridItem,
-            {
-              title: "Following Anchor",
-              value: `"${content.data.following_anchor.words.join(" ")}"`
-            }
-          ),
-          content.data.reference_words && /* @__PURE__ */ jsxRuntimeExports.jsx(
-            GridItem,
-            {
               title: "Reference Words",
-              value: /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
-                content.data.reference_words.spotify && /* @__PURE__ */ jsxRuntimeExports.jsxs(Typography, { children: [
-                  'Spotify: "',
-                  content.data.reference_words.spotify.map((w) => w.text).join(" "),
-                  '"'
-                ] }),
-                content.data.reference_words.genius && /* @__PURE__ */ jsxRuntimeExports.jsxs(Typography, { children: [
-                  'Genius: "',
-                  content.data.reference_words.genius.map((w) => w.text).join(" "),
-                  '"'
-                ] })
-              ] })
+              value: /* @__PURE__ */ jsxRuntimeExports.jsx("pre", { style: { margin: 0, whiteSpace: "pre-wrap" }, children: referenceWordsText })
             }
           ),
           isCorrected && /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -28339,29 +28325,26 @@ function DetailsModal({
     {
       open,
       onClose,
-      maxWidth: "sm",
+      maxWidth: "md",
       fullWidth: true,
       children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx(
-          IconButton,
-          {
-            onClick: onClose,
-            sx: {
-              position: "absolute",
-              right: 8,
-              top: 8
-            },
-            children: /* @__PURE__ */ jsxRuntimeExports.jsx(CloseIcon, {})
-          }
-        ),
         /* @__PURE__ */ jsxRuntimeExports.jsxs(DialogTitle, { children: [
-          content.type === "gap" && (isCorrected ? "Corrected " : "Uncorrected "),
+          content.type === "gap" && (((_b = content.data.corrections) == null ? void 0 : _b.length) ? "Corrected " : "Uncorrected "),
           content.type.charAt(0).toUpperCase() + content.type.slice(1),
           ' Details - "',
           getCurrentWord(),
-          '"'
+          '"',
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            IconButton,
+            {
+              "aria-label": "close",
+              onClick: onClose,
+              sx: { position: "absolute", right: 8, top: 8 },
+              children: /* @__PURE__ */ jsxRuntimeExports.jsx(CloseIcon, {})
+            }
+          )
         ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx(DialogContent, { dividers: true, children: renderContent() })
+        /* @__PURE__ */ jsxRuntimeExports.jsx(DialogContent, { children: renderContent() })
       ]
     }
   );
@@ -28377,17 +28360,15 @@ function calculateReferenceLinePositions(corrected_segments, anchors, currentSou
   const linePositions = [];
   let currentReferencePosition = 0;
   const fullLineAnchors = ((_a = anchors == null ? void 0 : anchors.map((anchor) => {
-    const referenceWords = anchor.reference_words[currentSource];
-    if (!(referenceWords == null ? void 0 : referenceWords.length)) return null;
-    const referenceWordIds = referenceWords.map((w) => w.id);
-    if (!referenceWordIds.length) return null;
+    const referenceWordIds = anchor.reference_word_ids[currentSource];
+    if (!(referenceWordIds == null ? void 0 : referenceWordIds.length)) return null;
     return {
       referenceWordIds,
       transcriptionLine: corrected_segments.findIndex((segment) => {
         const wordIds = segment.words.map((w) => w.id);
         if (!wordIds.length) return false;
         return wordIds.every(
-          (id) => anchor.transcribed_words.some((w) => w.id === id)
+          (id) => anchor.transcribed_word_ids.includes(id)
         );
       })
     };
@@ -28491,14 +28472,13 @@ function useWordClick({
   onWordClick,
   isReference = false,
   currentSource = "",
-  gaps = []
+  gaps = [],
+  anchors = []
 }) {
   const handleWordClick = reactExports.useCallback((word, wordId, anchor, gap2) => {
-    var _a, _b, _c;
-    const belongsToAnchor = anchor && (isReference ? (_a = anchor.reference_words[currentSource]) == null ? void 0 : _a.some((w) => w.id === wordId) : anchor.transcribed_words.some((w) => w.id === wordId));
-    const belongsToGap = gap2 && (isReference ? Object.entries(gap2.reference_words).some(
-      ([source, words]) => source === currentSource && words.some((w) => w.id === wordId)
-    ) : gap2.transcribed_words.some((w) => w.id === wordId));
+    var _a, _b, _c, _d;
+    const belongsToAnchor = anchor && (isReference ? (_a = anchor.reference_word_ids[currentSource]) == null ? void 0 : _a.includes(wordId) : anchor.transcribed_word_ids.includes(wordId));
+    const belongsToGap = gap2 && (isReference ? (_b = gap2.reference_word_ids[currentSource]) == null ? void 0 : _b.includes(wordId) : gap2.transcribed_word_ids.includes(wordId));
     console.log("Word Click Debug:", {
       clickInfo: {
         word,
@@ -28509,14 +28489,14 @@ function useWordClick({
       },
       anchorInfo: anchor && {
         id: anchor.id,
-        transcribedWords: anchor.transcribed_words,
-        referenceWords: anchor.reference_words,
+        transcribedWordIds: anchor.transcribed_word_ids,
+        referenceWordIds: anchor.reference_word_ids,
         belongsToAnchor
       },
       gapInfo: gap2 && {
         id: gap2.id,
-        transcribedWords: gap2.transcribed_words,
-        referenceWords: gap2.reference_words,
+        transcribedWordIds: gap2.transcribed_word_ids,
+        referenceWordIds: gap2.reference_word_ids,
         belongsToGap
       }
     });
@@ -28524,7 +28504,7 @@ function useWordClick({
       const matchingGap = gaps == null ? void 0 : gaps.find(
         (g) => {
           var _a2;
-          return (_a2 = g.reference_words[currentSource]) == null ? void 0 : _a2.some((w) => w.id === wordId);
+          return (_a2 = g.reference_word_ids[currentSource]) == null ? void 0 : _a2.includes(wordId);
         }
       );
       if (matchingGap) {
@@ -28550,7 +28530,7 @@ function useWordClick({
           anchor: void 0,
           gap: gap2
         });
-      } else if (((_b = gap2 == null ? void 0 : gap2.corrections) == null ? void 0 : _b.some((c) => c.corrected_word_id === wordId)) || ((_c = gap2 == null ? void 0 : gap2.corrections) == null ? void 0 : _c.some((c) => c.word_id === wordId))) {
+      } else if (((_c = gap2 == null ? void 0 : gap2.corrections) == null ? void 0 : _c.some((c) => c.corrected_word_id === wordId)) || ((_d = gap2 == null ? void 0 : gap2.corrections) == null ? void 0 : _d.some((c) => c.word_id === wordId))) {
         onWordClick == null ? void 0 : onWordClick({
           word_id: wordId,
           type: "gap",
@@ -28572,7 +28552,8 @@ function useWordClick({
           data: {
             ...anchor,
             wordId,
-            word
+            word,
+            anchor_sequences: anchors
           }
         });
       } else if (belongsToGap && gap2) {
@@ -28581,38 +28562,32 @@ function useWordClick({
           data: {
             ...gap2,
             wordId,
-            word
+            word,
+            anchor_sequences: anchors
           }
         });
       } else if (!isReference) {
         const syntheticGap = {
           id: `synthetic-${wordId}`,
-          text: word,
-          words: [word],
-          transcribed_words: [{
-            id: wordId,
-            text: word,
-            start_time: null,
-            end_time: null
-          }],
-          length: 1,
+          transcribed_word_ids: [wordId],
           transcription_position: -1,
           corrections: [],
-          preceding_anchor: null,
-          following_anchor: null,
-          reference_words: {}
+          preceding_anchor_id: null,
+          following_anchor_id: null,
+          reference_word_ids: {}
         };
         onElementClick({
           type: "gap",
           data: {
             ...syntheticGap,
             wordId,
-            word
+            word,
+            anchor_sequences: anchors
           }
         });
       }
     }
-  }, [mode, onWordClick, onElementClick, isReference, currentSource, gaps]);
+  }, [mode, onWordClick, onElementClick, isReference, currentSource, gaps, anchors]);
   return { handleWordClick };
 }
 const ContentCopyIcon = createSvgIcon(/* @__PURE__ */ jsxRuntimeExports.jsx("path", {
@@ -28642,10 +28617,11 @@ function HighlightedText({
     onWordClick,
     isReference,
     currentSource,
-    gaps
+    gaps,
+    anchors
   });
   const shouldWordFlash = (wordPos) => {
-    var _a, _b, _c, _d, _e, _f, _g, _h;
+    var _a, _b, _c, _d;
     if (!flashingType) return false;
     if ("type" in wordPos) {
       const gap2 = wordPos.sequence;
@@ -28656,9 +28632,21 @@ function HighlightedText({
       );
       return Boolean(
         flashingType === "anchor" && wordPos.type === "anchor" || flashingType === "corrected" && isCorrected || flashingType === "uncorrected" && wordPos.type === "gap" && !isCorrected || flashingType === "word" && // For anchors
-        ((highlightInfo == null ? void 0 : highlightInfo.type) === "anchor" && wordPos.type === "anchor" && (isReference && currentSource ? (_b = highlightInfo.sequence.reference_words[currentSource]) == null ? void 0 : _b.some((w) => w.id === wordPos.word.id) : (_c = highlightInfo.sequence) == null ? void 0 : _c.transcribed_words.some((w) => w.id === wordPos.word.id)) || // For gaps
-        (highlightInfo == null ? void 0 : highlightInfo.type) === "gap" && wordPos.type === "gap" && (isReference && currentSource ? (_d = highlightInfo.sequence.reference_words[currentSource]) == null ? void 0 : _d.some((w) => w.id === wordPos.word.id) : (_e = highlightInfo.sequence) == null ? void 0 : _e.transcribed_words.some((w) => w.id === wordPos.word.id)) || // For corrections
-        (highlightInfo == null ? void 0 : highlightInfo.type) === "correction" && isReference && currentSource && ((_h = (_g = (_f = highlightInfo.correction) == null ? void 0 : _f.reference_positions) == null ? void 0 : _g[currentSource]) == null ? void 0 : _h.toString()) === wordPos.word.id)
+        ((highlightInfo == null ? void 0 : highlightInfo.type) === "anchor" && wordPos.type === "anchor" && (isReference && currentSource && highlightInfo.sequence ? getWordsFromIds(
+          segments || [],
+          highlightInfo.sequence.reference_word_ids[currentSource] || []
+        ).some((w) => w.id === wordPos.word.id) : getWordsFromIds(
+          segments || [],
+          highlightInfo.sequence.transcribed_word_ids
+        ).some((w) => w.id === wordPos.word.id)) || // For gaps
+        (highlightInfo == null ? void 0 : highlightInfo.type) === "gap" && wordPos.type === "gap" && (isReference && currentSource && highlightInfo.sequence ? getWordsFromIds(
+          segments || [],
+          highlightInfo.sequence.reference_word_ids[currentSource] || []
+        ).some((w) => w.id === wordPos.word.id) : getWordsFromIds(
+          segments || [],
+          highlightInfo.sequence.transcribed_word_ids
+        ).some((w) => w.id === wordPos.word.id)) || // For corrections
+        (highlightInfo == null ? void 0 : highlightInfo.type) === "correction" && isReference && currentSource && ((_d = (_c = (_b = highlightInfo.correction) == null ? void 0 : _b.reference_positions) == null ? void 0 : _c[currentSource]) == null ? void 0 : _d.toString()) === wordPos.word.id)
       );
     }
     return false;
@@ -28703,10 +28691,7 @@ function HighlightedText({
           (pos) => pos.word.id === word.id
         );
         const anchor = (wordPos == null ? void 0 : wordPos.type) === "anchor" ? anchors == null ? void 0 : anchors.find(
-          (a) => {
-            var _a;
-            return (_a = a.reference_words[currentSource]) == null ? void 0 : _a.some((w) => w.id === word.id);
-          }
+          (a) => (a.reference_word_ids[currentSource] || []).includes(word.id)
         ) : void 0;
         const hasCorrection = referenceCorrections.has(word.id);
         const isUncorrectedGap = (wordPos == null ? void 0 : wordPos.type) === "gap" && !hasCorrection;
@@ -28800,7 +28785,7 @@ function HighlightedText({
             const anchor = currentSource ? anchors == null ? void 0 : anchors.find(
               (a) => {
                 var _a;
-                return (_a = a.reference_words[currentSource]) == null ? void 0 : _a.some((w) => w.id === wordId);
+                return (_a = a.reference_word_ids[currentSource]) == null ? void 0 : _a.includes(wordId);
               }
             ) : void 0;
             const hasCorrection = referenceCorrections.has(wordId);
@@ -28863,13 +28848,16 @@ function ReferenceView({
     const positions = [];
     const allPositions = /* @__PURE__ */ new Map();
     anchors == null ? void 0 : anchors.forEach((anchor) => {
-      var _a2;
       const position2 = anchor.reference_positions[effectiveCurrentSource];
       if (position2 === void 0) return;
       if (!allPositions.has(position2)) {
         allPositions.set(position2, []);
       }
-      (_a2 = anchor.reference_words[effectiveCurrentSource]) == null ? void 0 : _a2.forEach((word) => {
+      const referenceWords = getWordsFromIds(
+        referenceSources[effectiveCurrentSource].segments,
+        anchor.reference_word_ids[effectiveCurrentSource] || []
+      );
+      referenceWords.forEach((word) => {
         const wordPosition = {
           word: {
             id: word.id,
@@ -28885,15 +28873,20 @@ function ReferenceView({
       });
     });
     gaps == null ? void 0 : gaps.forEach((gap2) => {
-      var _a2, _b, _c;
-      const position2 = ((_a2 = gap2.preceding_anchor) == null ? void 0 : _a2.reference_positions[effectiveCurrentSource]) ?? ((_b = gap2.following_anchor) == null ? void 0 : _b.reference_positions[effectiveCurrentSource]);
+      const precedingAnchor = gap2.preceding_anchor_id ? anchors == null ? void 0 : anchors.find((a) => a.id === gap2.preceding_anchor_id) : void 0;
+      const followingAnchor = gap2.following_anchor_id ? anchors == null ? void 0 : anchors.find((a) => a.id === gap2.following_anchor_id) : void 0;
+      const position2 = (precedingAnchor == null ? void 0 : precedingAnchor.reference_positions[effectiveCurrentSource]) ?? (followingAnchor == null ? void 0 : followingAnchor.reference_positions[effectiveCurrentSource]);
       if (position2 === void 0) return;
-      const gapPosition = gap2.preceding_anchor ? position2 + 1 : position2 - 1;
+      const gapPosition = precedingAnchor ? position2 + 1 : position2 - 1;
       if (!allPositions.has(gapPosition)) {
         allPositions.set(gapPosition, []);
       }
-      (_c = gap2.reference_words[effectiveCurrentSource]) == null ? void 0 : _c.forEach((word) => {
-        var _a3;
+      const referenceWords = getWordsFromIds(
+        referenceSources[effectiveCurrentSource].segments,
+        gap2.reference_word_ids[effectiveCurrentSource] || []
+      );
+      referenceWords.forEach((word) => {
+        var _a2;
         const wordPosition = {
           word: {
             id: word.id,
@@ -28904,10 +28897,10 @@ function ReferenceView({
           type: "gap",
           sequence: gap2,
           isInRange: true,
-          isCorrected: (_a3 = gap2.corrections) == null ? void 0 : _a3.some(
+          isCorrected: (_a2 = gap2.corrections) == null ? void 0 : _a2.some(
             (correction) => {
-              var _a4, _b2;
-              return ((_b2 = (_a4 = correction.reference_positions) == null ? void 0 : _a4[effectiveCurrentSource]) == null ? void 0 : _b2.toString()) === word.id;
+              var _a3, _b;
+              return ((_b = (_a3 = correction.reference_positions) == null ? void 0 : _a3[effectiveCurrentSource]) == null ? void 0 : _b.toString()) === word.id;
             }
           )
         };
@@ -28918,7 +28911,7 @@ function ReferenceView({
       positions.push(...words);
     });
     return positions;
-  }, [anchors, gaps, effectiveCurrentSource]);
+  }, [anchors, gaps, effectiveCurrentSource, referenceSources]);
   const { linePositions } = reactExports.useMemo(
     () => calculateReferenceLinePositions(
       corrected_segments,
@@ -29065,7 +29058,8 @@ function TranscriptionView({
   highlightInfo,
   mode,
   onPlaySegment,
-  currentTime = 0
+  currentTime = 0,
+  anchors = []
 }) {
   const [selectedSegmentIndex, setSelectedSegmentIndex] = reactExports.useState(null);
   return /* @__PURE__ */ jsxRuntimeExports.jsxs(Paper, { sx: { p: 2 }, children: [
@@ -29079,13 +29073,13 @@ function TranscriptionView({
           ((_b = data.corrections) == null ? void 0 : _b.find((c) => c.corrected_word_id === word.id))
         );
         const anchor = (_c = data.anchor_sequences) == null ? void 0 : _c.find(
-          (a) => a.transcribed_words.some((w) => w.id === word.id)
+          (a) => a.transcribed_word_ids.includes(word.id)
         );
         const gap2 = (_d = data.gap_sequences) == null ? void 0 : _d.find((g) => {
           var _a2;
-          const inTranscribed = g.transcribed_words.some((w) => w.id === word.id);
-          const inReference = Object.values(g.reference_words).some(
-            (refs) => refs.some((w) => w.id === word.id)
+          const inTranscribed = g.transcribed_word_ids.includes(word.id);
+          const inReference = Object.values(g.reference_word_ids).some(
+            (ids) => ids.includes(word.id)
           );
           const isCorrection = (_a2 = g.corrections) == null ? void 0 : _a2.some(
             (c) => c.corrected_word_id === word.id || c.word_id === word.id
@@ -29131,7 +29125,7 @@ function TranscriptionView({
           HighlightedText,
           {
             wordPositions: segmentWords,
-            anchors: data.anchor_sequences,
+            anchors,
             onElementClick,
             onWordClick,
             flashingType,
@@ -30111,7 +30105,6 @@ const addSegmentBefore = (data, beforeIndex) => {
     }]
   };
   newData.corrected_segments.splice(beforeIndex, 0, newSegment);
-  newData.corrected_text = newData.corrected_segments.map((segment) => segment.text).join("\n");
   return newData;
 };
 const splitSegment = (data, segmentIndex, afterWordIndex) => {
@@ -30137,7 +30130,6 @@ const splitSegment = (data, segmentIndex, afterWordIndex) => {
     end_time: lastSecondWord.end_time ?? null
   };
   newData.corrected_segments.splice(segmentIndex, 1, firstSegment, secondSegment);
-  newData.corrected_text = newData.corrected_segments.map((segment2) => segment2.text).join("\n");
   return newData;
 };
 const deleteSegment = (data, segmentIndex) => {
@@ -30146,23 +30138,16 @@ const deleteSegment = (data, segmentIndex) => {
   newData.corrected_segments = newData.corrected_segments.filter((_, index) => index !== segmentIndex);
   newData.anchor_sequences = newData.anchor_sequences.map((anchor) => ({
     ...anchor,
-    transcribed_words: anchor.transcribed_words.filter(
-      (word) => !deletedSegment.words.some((deletedWord) => deletedWord.id === word.id)
-    ),
-    words: anchor.words.filter(
-      (_, idx) => anchor.transcribed_words.some((w) => w.text.toLowerCase() === anchor.words[idx].toLowerCase())
+    transcribed_word_ids: anchor.transcribed_word_ids.filter(
+      (wordId) => !deletedSegment.words.some((deletedWord) => deletedWord.id === wordId)
     )
   }));
   newData.gap_sequences = newData.gap_sequences.map((gap2) => ({
     ...gap2,
-    transcribed_words: gap2.transcribed_words.filter(
-      (word) => !deletedSegment.words.some((deletedWord) => deletedWord.id === word.id)
-    ),
-    words: gap2.words.filter(
-      (_, idx) => gap2.transcribed_words.some((w) => w.text.toLowerCase() === gap2.words[idx].toLowerCase())
+    transcribed_word_ids: gap2.transcribed_word_ids.filter(
+      (wordId) => !deletedSegment.words.some((deletedWord) => deletedWord.id === wordId)
     )
   }));
-  newData.corrected_text = newData.corrected_segments.map((segment) => segment.text).join("\n");
   return newData;
 };
 const updateSegment = (data, segmentIndex, updatedSegment) => {
@@ -30172,10 +30157,11 @@ const updateSegment = (data, segmentIndex, updatedSegment) => {
     id: word.id || nanoid()
   }));
   newData.corrected_segments[segmentIndex] = updatedSegment;
-  newData.corrected_text = newData.corrected_segments.map((segment) => segment.text).join("\n");
   return newData;
 };
-const generateStorageKey = (text) => {
+const generateStorageKey = (data) => {
+  var _a;
+  const text = ((_a = data.original_segments[0]) == null ? void 0 : _a.text) || "";
   let hash2 = 0;
   for (let i = 0; i < text.length; i++) {
     const char2 = text.charCodeAt(i);
@@ -30198,13 +30184,14 @@ const stripIds = (obj) => {
   });
 };
 const loadSavedData = (initialData) => {
-  const storageKey = generateStorageKey(initialData.transcribed_text);
+  var _a, _b;
+  const storageKey = generateStorageKey(initialData);
   const savedDataStr = localStorage.getItem("lyrics_analyzer_data");
   const savedDataObj = savedDataStr ? JSON.parse(savedDataStr) : {};
   if (savedDataObj[storageKey]) {
     try {
       const parsed = savedDataObj[storageKey];
-      if (parsed.transcribed_text === initialData.transcribed_text) {
+      if (((_a = parsed.original_segments[0]) == null ? void 0 : _a.text) === ((_b = initialData.original_segments[0]) == null ? void 0 : _b.text)) {
         const strippedSaved = stripIds(parsed);
         const strippedInitial = stripIds(initialData);
         const hasChanges = JSON.stringify(strippedSaved) !== JSON.stringify(strippedInitial);
@@ -30224,14 +30211,14 @@ const loadSavedData = (initialData) => {
   return null;
 };
 const saveData = (data, initialData) => {
-  const storageKey = generateStorageKey(initialData.transcribed_text);
+  const storageKey = generateStorageKey(initialData);
   const savedDataStr = localStorage.getItem("lyrics_analyzer_data");
   const savedDataObj = savedDataStr ? JSON.parse(savedDataStr) : {};
   savedDataObj[storageKey] = data;
   localStorage.setItem("lyrics_analyzer_data", JSON.stringify(savedDataObj));
 };
-const clearSavedData = (transcribedText) => {
-  const storageKey = generateStorageKey(transcribedText);
+const clearSavedData = (data) => {
+  const storageKey = generateStorageKey(data);
   const savedDataStr = localStorage.getItem("lyrics_analyzer_data");
   const savedDataObj = savedDataStr ? JSON.parse(savedDataStr) : {};
   delete savedDataObj[storageKey];
@@ -30522,11 +30509,11 @@ function Header({
         {
           anchorCount: data.metadata.anchor_sequences_count,
           multiSourceAnchors: ((_b = data.anchor_sequences) == null ? void 0 : _b.filter(
-            (anchor) => (anchor == null ? void 0 : anchor.reference_words) && Object.keys(anchor.reference_words).length > 1
+            (anchor) => (anchor == null ? void 0 : anchor.reference_word_ids) && Object.keys(anchor.reference_word_ids).length > 1
           ).length) ?? 0,
           anchorWordCount: ((_c = data.anchor_sequences) == null ? void 0 : _c.reduce((sum, anchor) => {
             var _a2;
-            return sum + (((_a2 = anchor.transcribed_words) == null ? void 0 : _a2.length) || 0);
+            return sum + (((_a2 = anchor.transcribed_word_ids) == null ? void 0 : _a2.length) || 0);
           }, 0)) ?? 0,
           correctedGapCount: ((_d = data.gap_sequences) == null ? void 0 : _d.filter((gap2) => {
             var _a2;
@@ -30538,12 +30525,12 @@ function Header({
           }).length) ?? 0,
           uncorrectedGaps: ((_f = data.gap_sequences) == null ? void 0 : _f.filter((gap2) => {
             var _a2, _b2;
-            return !((_a2 = gap2.corrections) == null ? void 0 : _a2.length) && ((_b2 = gap2.transcribed_words) == null ? void 0 : _b2.length) > 0;
+            return !((_a2 = gap2.corrections) == null ? void 0 : _a2.length) && ((_b2 = gap2.transcribed_word_ids) == null ? void 0 : _b2.length) > 0;
           }).map((gap2) => {
-            var _a2;
+            const firstWord = findWordById(data.corrected_segments, gap2.transcribed_word_ids[0]);
             return {
-              position: ((_a2 = gap2.transcribed_words[0]) == null ? void 0 : _a2.id) ?? "",
-              length: gap2.transcribed_words.length ?? 0
+              position: (firstWord == null ? void 0 : firstWord.id) ?? "",
+              length: gap2.transcribed_word_ids.length ?? 0
             };
           })) ?? [],
           replacedCount: ((_g = data.gap_sequences) == null ? void 0 : _g.reduce((count, gap2) => {
@@ -30619,8 +30606,8 @@ function LyricsAnalyzer({ data: initialData, onFileLoad, apiClient, isReadOnly, 
       anchorsCount: ((_b = initialData == null ? void 0 : initialData.anchor_sequences) == null ? void 0 : _b.length) ?? 0,
       gapsCount: ((_c = initialData == null ? void 0 : initialData.gap_sequences) == null ? void 0 : _c.length) ?? 0,
       firstAnchor: ((_d = initialData == null ? void 0 : initialData.anchor_sequences) == null ? void 0 : _d[0]) && {
-        transcribedWords: initialData.anchor_sequences[0].transcribed_words.map((w) => w.text),
-        referenceWords: initialData.anchor_sequences[0].reference_words
+        transcribedWordIds: initialData.anchor_sequences[0].transcribed_word_ids,
+        referenceWordIds: initialData.anchor_sequences[0].reference_word_ids
       },
       firstSegment: (_e = initialData == null ? void 0 : initialData.corrected_segments) == null ? void 0 : _e[0],
       referenceSources: Object.keys((initialData == null ? void 0 : initialData.reference_lyrics) ?? {})
@@ -30668,7 +30655,7 @@ function LyricsAnalyzer({ data: initialData, onFileLoad, apiClient, isReadOnly, 
     });
   }, []);
   const handleWordClick = reactExports.useCallback((info) => {
-    var _a, _b, _c, _d;
+    var _a, _b, _c, _d, _e, _f, _g;
     console.log("LyricsAnalyzer handleWordClick:", { info });
     if (effectiveMode === "highlight") {
       const correction = (_a = data.corrections) == null ? void 0 : _a.find(
@@ -30685,31 +30672,89 @@ function LyricsAnalyzer({ data: initialData, onFileLoad, apiClient, isReadOnly, 
         return;
       }
       const anchor = (_b = data.anchor_sequences) == null ? void 0 : _b.find(
-        (a) => a.transcribed_words.some((w) => w.id === info.word_id) || Object.values(a.reference_words).some(
-          (words) => words.some((w) => w.id === info.word_id)
+        (a) => a.transcribed_word_ids.includes(info.word_id) || Object.values(a.reference_word_ids).some(
+          (ids) => ids.includes(info.word_id)
         )
       );
       if (anchor) {
+        const allWords = data.corrected_segments.flatMap((s) => s.words);
+        const tempSegment = {
+          id: "temp",
+          words: allWords,
+          text: allWords.map((w) => w.text).join(" "),
+          start_time: ((_c = allWords[0]) == null ? void 0 : _c.start_time) ?? null,
+          end_time: ((_d = allWords[allWords.length - 1]) == null ? void 0 : _d.end_time) ?? null
+        };
+        const transcribedWords = getWordsFromIds(
+          [tempSegment],
+          anchor.transcribed_word_ids
+        );
+        const referenceWords = Object.fromEntries(
+          Object.entries(anchor.reference_word_ids).map(([source, ids]) => {
+            var _a2, _b2;
+            const sourceWords = data.reference_lyrics[source].segments.flatMap((s) => s.words);
+            const tempSourceSegment = {
+              id: `temp-${source}`,
+              words: sourceWords,
+              text: sourceWords.map((w) => w.text).join(" "),
+              start_time: ((_a2 = sourceWords[0]) == null ? void 0 : _a2.start_time) ?? null,
+              end_time: ((_b2 = sourceWords[sourceWords.length - 1]) == null ? void 0 : _b2.end_time) ?? null
+            };
+            return [
+              source,
+              getWordsFromIds([tempSourceSegment], ids)
+            ];
+          })
+        );
         setHighlightInfo({
           type: "anchor",
           sequence: anchor,
-          transcribed_words: anchor.transcribed_words,
-          reference_words: anchor.reference_words
+          transcribed_words: transcribedWords,
+          reference_words: referenceWords
         });
         setFlashingType("word");
         return;
       }
-      const gap2 = (_c = data.gap_sequences) == null ? void 0 : _c.find(
-        (g) => g.transcribed_words.some((w) => w.id === info.word_id) || Object.values(g.reference_words).some(
-          (words) => words.some((w) => w.id === info.word_id)
+      const gap2 = (_e = data.gap_sequences) == null ? void 0 : _e.find(
+        (g) => g.transcribed_word_ids.includes(info.word_id) || Object.values(g.reference_word_ids).some(
+          (ids) => ids.includes(info.word_id)
         )
       );
       if (gap2) {
+        const allWords = data.corrected_segments.flatMap((s) => s.words);
+        const tempSegment = {
+          id: "temp",
+          words: allWords,
+          text: allWords.map((w) => w.text).join(" "),
+          start_time: ((_f = allWords[0]) == null ? void 0 : _f.start_time) ?? null,
+          end_time: ((_g = allWords[allWords.length - 1]) == null ? void 0 : _g.end_time) ?? null
+        };
+        const transcribedWords = getWordsFromIds(
+          [tempSegment],
+          gap2.transcribed_word_ids
+        );
+        const referenceWords = Object.fromEntries(
+          Object.entries(gap2.reference_word_ids).map(([source, ids]) => {
+            var _a2, _b2;
+            const sourceWords = data.reference_lyrics[source].segments.flatMap((s) => s.words);
+            const tempSourceSegment = {
+              id: `temp-${source}`,
+              words: sourceWords,
+              text: sourceWords.map((w) => w.text).join(" "),
+              start_time: ((_a2 = sourceWords[0]) == null ? void 0 : _a2.start_time) ?? null,
+              end_time: ((_b2 = sourceWords[sourceWords.length - 1]) == null ? void 0 : _b2.end_time) ?? null
+            };
+            return [
+              source,
+              getWordsFromIds([tempSourceSegment], ids)
+            ];
+          })
+        );
         setHighlightInfo({
           type: "gap",
           sequence: gap2,
-          transcribed_words: gap2.transcribed_words,
-          reference_words: gap2.reference_words
+          transcribed_words: transcribedWords,
+          reference_words: referenceWords
         });
         setFlashingType("word");
         return;
@@ -30728,20 +30773,25 @@ function LyricsAnalyzer({ data: initialData, onFileLoad, apiClient, isReadOnly, 
       }
     } else if (effectiveMode === "details") {
       if (info.type === "anchor" && info.anchor) {
+        const word = findWordById(data.corrected_segments, info.word_id);
         setModalContent({
           type: "anchor",
           data: {
             ...info.anchor,
-            wordId: info.word_id
+            wordId: info.word_id,
+            word: word == null ? void 0 : word.text,
+            anchor_sequences: data.anchor_sequences
           }
         });
       } else if (info.type === "gap" && info.gap) {
+        const word = findWordById(data.corrected_segments, info.word_id);
         setModalContent({
           type: "gap",
           data: {
             ...info.gap,
             wordId: info.word_id,
-            word: ((_d = info.gap.transcribed_words.find((w) => w.id === info.word_id)) == null ? void 0 : _d.text) || ""
+            word: (word == null ? void 0 : word.text) || "",
+            anchor_sequences: data.anchor_sequences
           }
         });
       }
@@ -30780,7 +30830,7 @@ function LyricsAnalyzer({ data: initialData, onFileLoad, apiClient, isReadOnly, 
   }, []);
   const handleResetCorrections = reactExports.useCallback(() => {
     if (window.confirm("Are you sure you want to reset all corrections? This cannot be undone.")) {
-      clearSavedData(initialData.transcribed_text);
+      clearSavedData(initialData);
       setData(JSON.parse(JSON.stringify(initialData)));
       setModalContent(null);
       setFlashingType(null);
@@ -30829,7 +30879,8 @@ function LyricsAnalyzer({ data: initialData, onFileLoad, apiClient, isReadOnly, 
           flashingType,
           highlightInfo,
           onPlaySegment: handlePlaySegment,
-          currentTime: currentAudioTime
+          currentTime: currentAudioTime,
+          anchors: data.anchor_sequences
         }
       ) }),
       /* @__PURE__ */ jsxRuntimeExports.jsx(Grid, { item: true, xs: 12, md: 6, children: /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -30855,7 +30906,8 @@ function LyricsAnalyzer({ data: initialData, onFileLoad, apiClient, isReadOnly, 
         open: modalContent !== null,
         content: modalContent,
         onClose: () => setModalContent(null),
-        allCorrections: data.corrections
+        allCorrections: data.corrections,
+        referenceLyrics: data.reference_lyrics
       }
     ),
     /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -31057,4 +31109,4 @@ function App() {
 ReactDOM$1.createRoot(document.getElementById("root")).render(
   /* @__PURE__ */ jsxRuntimeExports.jsx(App, {})
 );
-//# sourceMappingURL=index-aY7Fz7Ew.js.map
+//# sourceMappingURL=index-DUTfVrxN.js.map

@@ -18,19 +18,20 @@ class WordOperations:
             Dictionary mapping source names to their reference positions
         """
         reference_positions = {}
-        if gap.preceding_anchor:
+        if gap.preceding_anchor_id:
             # If no sources specified, use all sources from reference words
-            sources_to_check = sources or list(gap.reference_words.keys())
+            sources_to_check = sources or list(gap.reference_word_ids.keys())
 
             for source in sources_to_check:
+                # Get reference positions from the anchor
                 if source in gap.preceding_anchor.reference_positions:
                     # Calculate base position from anchor
                     anchor_pos = gap.preceding_anchor.reference_positions[source]
-                    base_ref_pos = anchor_pos + len(gap.preceding_anchor.words)
+                    base_ref_pos = anchor_pos + len(gap.preceding_anchor.reference_word_ids[source])
 
                     # Calculate word offset within the gap
-                    word_offset = gap.words.index(gap.words[gap.transcription_position - gap.transcription_position])
-
+                    word_offset = 0
+                    
                     # Add word offset to base position
                     ref_pos = base_ref_pos + word_offset
                     reference_positions[source] = ref_pos

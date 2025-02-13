@@ -44,22 +44,23 @@ class ExtendAnchorHandler(GapCorrectionHandler):
         self.logger = logger or logging.getLogger(__name__)
 
     def can_handle(self, gap: GapSequence) -> Tuple[bool, Dict[str, Any]]:
-        # Must have reference words
-        if not gap.reference_words:
-            self.logger.debug("No reference words available.")
+        """Check if this handler can process the gap."""
+        # Must have reference word IDs
+        if not gap.reference_word_ids:
+            self.logger.debug("No reference word IDs available.")
             return False, {}
 
-        # Gap must have words
-        if not gap.words:
-            self.logger.debug("No words in the gap to process.")
+        # Gap must have word IDs
+        if not gap.transcribed_word_ids:
+            self.logger.debug("No word IDs in the gap to process.")
             return False, {}
 
-        # At least one word must match between gap and any reference source
+        # At least one word ID must match between gap and any reference source
         # in the same position
         has_match = any(
-            i < len(ref_words) and gap.words[i].lower() == ref_words[i].text.lower()
-            for ref_words in gap.reference_words.values()
-            for i in range(min(len(gap.words), len(ref_words)))
+            i < len(ref_word_ids) and gap.transcribed_word_ids[i] == ref_word_ids[i]
+            for ref_word_ids in gap.reference_word_ids.values()
+            for i in range(min(len(gap.transcribed_word_ids), len(ref_word_ids)))
         )
 
         self.logger.debug(f"Can handle gap: {has_match}")
@@ -68,18 +69,28 @@ class ExtendAnchorHandler(GapCorrectionHandler):
     def handle(self, gap: GapSequence, data: Optional[Dict[str, Any]] = None) -> List[WordCorrection]:
         corrections = []
 
+        # Get word lookup map from data
+        word_map = data.get("word_map", {})
+        if not word_map:
+            self.logger.error("No word_map provided in data")
+            return []
+
         # Process each word in the gap that has a corresponding reference position
-        for i, word in enumerate(gap.words):
+        for i, word_id in enumerate(gap.transcribed_word_ids):
+            # Get the actual word object
+            if word_id not in word_map:
+                self.logger.error(f"Word ID {word_id} not found in word_map")
+                continue
+            word = word_map[word_id]
+
             # Find reference sources that have a matching word at this position
             matching_sources = [
-                source
-                for source, ref_words in gap.reference_words.items()
-                if i < len(ref_words) and word.lower() == ref_words[i].text.lower()
+                source for source, ref_word_ids in gap.reference_word_ids.items() if i < len(ref_word_ids) and word_id == ref_word_ids[i]
             ]
 
             if matching_sources:
                 # Word matches reference(s) at this position - validate it
-                confidence = len(matching_sources) / len(gap.reference_words)
+                confidence = len(matching_sources) / len(gap.reference_word_ids)
                 sources = ", ".join(matching_sources)
 
                 # Get base reference positions
@@ -90,34 +101,25 @@ class ExtendAnchorHandler(GapCorrectionHandler):
                 for source in matching_sources:
                     if source in base_reference_positions:
                         # Find this word's position in the reference text
-                        ref_words = gap.reference_words[source]
-                        for ref_idx, ref_word in enumerate(ref_words):
-                            if ref_word.text.lower() == word.lower():
+                        ref_word_ids = gap.reference_word_ids[source]
+                        for ref_idx, ref_word_id in enumerate(ref_word_ids):
+                            if ref_word_id == word_id:
                                 reference_positions[source] = base_reference_positions[source] + ref_idx
                                 break
 
-                # Get the Word ID from the matching reference word
-                ref_word_id = None
-                if matching_sources:
-                    first_source = matching_sources[0]
-                    ref_words = gap.reference_words[first_source]
-                    if i < len(ref_words):
-                        ref_word_id = ref_words[i].id
-
                 corrections.append(
                     WordOperations.create_word_replacement_correction(
-                        original_word=word,
-                        corrected_word=word,  # Same word, just validating
+                        original_word=word.text,  # Use the word text from the Word object
+                        corrected_word=word.text,  # Same word, just validating
                         original_position=gap.transcription_position + i,
                         source=sources,
                         confidence=confidence,
                         reason="Matched reference source(s)",
                         reference_positions=reference_positions,
                         handler="ExtendAnchorHandler",
-                        original_word_id=ref_word_id,  # Use the reference word's ID
+                        original_word_id=word_id,
                     )
                 )
-                self.logger.debug(f"Validated word '{word}' with confidence {confidence} from sources: {sources}")
-            # No else clause - non-matching words are left unchanged
+                self.logger.debug(f"Validated word '{word.text}' with confidence {confidence} from sources: {sources}")
 
         return corrections

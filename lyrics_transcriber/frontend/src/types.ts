@@ -42,58 +42,27 @@ export interface PhraseScore {
 }
 
 export interface AnchorSequence {
-    id?: string
-    words: string[]
-    transcribed_words: Word[]
+    id: string
+    transcribed_word_ids: string[]
     transcription_position: number
     reference_positions: Record<string, number>
-    reference_words: {
-        [source: string]: Word[]
+    reference_word_ids: {
+        [source: string]: string[]
     }
     confidence: number
     phrase_score: PhraseScore
     total_score: number
 }
 
-export interface AnchorReference {
-    text: string
-    word_ids: string[]
-    confidence: number
-}
-
 export interface GapSequence {
-    id?: string
-    text: string
-    words: string[]
-    transcribed_words: Word[]
-    length: number
+    id: string
+    transcribed_word_ids: string[]
     transcription_position: number
     corrections: WordCorrection[]
-    preceding_anchor: {
-        words: string[]
-        transcribed_words: Word[]
-        transcription_position: number
-        reference_positions: Record<string, number>
-        reference_words: {
-            [source: string]: Word[]
-        }
-        confidence: number
-    } | null
-    following_anchor: {
-        words: string[]
-        transcribed_words: Word[]
-        transcription_position: number
-        reference_positions: Record<string, number>
-        reference_words: {
-            [source: string]: Word[]
-        }
-        confidence: number
-    } | null
-    reference_words: {
-        [source: string]: Word[]
-    }
-    reference_words_original?: {
-        [source: string]: Word[]
+    preceding_anchor_id: string | null
+    following_anchor_id: string | null
+    reference_word_ids: {
+        [source: string]: string[]
     }
 }
 
@@ -127,13 +96,11 @@ export interface CorrectionStep {
 }
 
 export interface CorrectionData {
-    transcribed_text: string
     original_segments: LyricsSegment[]
     reference_lyrics: Record<string, ReferenceSource>
     anchor_sequences: AnchorSequence[]
     gap_sequences: GapSequence[]
-    resized_segments?: LyricsSegment[]
-    corrected_text: string
+    resized_segments: LyricsSegment[]
     corrections_made: number
     confidence: number
     corrections: WordCorrection[]

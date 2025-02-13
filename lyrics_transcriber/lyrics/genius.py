@@ -81,7 +81,7 @@ class GeniusProvider(BaseLyricsProvider):
         segments = self._create_segments_with_words(lyrics, is_synced=False)
 
         # Create result object with segments
-        return LyricsData(source="genius", lyrics=lyrics, segments=segments, metadata=metadata)
+        return LyricsData(source="genius", segments=segments, metadata=metadata)
 
     def _clean_lyrics(self, lyrics: str) -> str:
         """Clean and process lyrics from Genius to remove unwanted content."""

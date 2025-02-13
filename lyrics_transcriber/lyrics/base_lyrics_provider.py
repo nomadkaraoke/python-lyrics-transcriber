@@ -148,10 +148,13 @@ class BaseLyricsProvider(ABC):
 
     def _process_lyrics(self, lyrics_data: LyricsData) -> LyricsData:
         """Process lyrics using KaraokeLyricsProcessor and create proper segments."""
+        # Concatenate all segment texts to get the full lyrics
+        full_lyrics = lyrics_data.get_full_text()
+
         processor = KaraokeLyricsProcessor(
             log_level=self.logger.getEffectiveLevel(),
             log_formatter=self.logger.handlers[0].formatter if self.logger.handlers else None,
-            input_lyrics_text=lyrics_data.lyrics,
+            input_lyrics_text=full_lyrics,
             max_line_length=self.max_line_length,
         )
         processed_text = processor.process()
@@ -160,7 +163,7 @@ class BaseLyricsProvider(ABC):
         segments = self._create_segments_with_words(processed_text, is_synced=lyrics_data.metadata.is_synced)
 
         # Create new LyricsData with processed text and segments
-        return LyricsData(source=lyrics_data.source, lyrics=processed_text, segments=segments, metadata=lyrics_data.metadata)
+        return LyricsData(source=lyrics_data.source, segments=segments, metadata=lyrics_data.metadata)
 
     def _save_and_convert_result(self, cache_key: str, raw_data: Dict[str, Any]) -> LyricsData:
         """Convert raw result to standardized format, process lyrics, save to cache, and return."""

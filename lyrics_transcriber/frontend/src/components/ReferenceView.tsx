@@ -6,6 +6,7 @@ import { SourceSelector } from './shared/components/SourceSelector'
 import { HighlightedText } from './shared/components/HighlightedText'
 import { WordCorrection } from '@/types'
 import { TranscriptionWordPosition } from './shared/types'
+import { getWordsFromIds } from './shared/utils/wordUtils'
 
 export default function ReferenceView({
     referenceSources,
@@ -46,7 +47,12 @@ export default function ReferenceView({
                 allPositions.set(position, []);
             }
 
-            anchor.reference_words[effectiveCurrentSource]?.forEach(word => {
+            const referenceWords = getWordsFromIds(
+                referenceSources[effectiveCurrentSource].segments,
+                anchor.reference_word_ids[effectiveCurrentSource] || []
+            );
+
+            referenceWords.forEach(word => {
                 const wordPosition: TranscriptionWordPosition = {
                     word: {
                         id: word.id,
@@ -64,18 +70,30 @@ export default function ReferenceView({
 
         // Map gap words
         gaps?.forEach(gap => {
-            const position = gap.preceding_anchor?.reference_positions[effectiveCurrentSource] ??
-                gap.following_anchor?.reference_positions[effectiveCurrentSource];
+            const precedingAnchor = gap.preceding_anchor_id ?
+                anchors?.find(a => a.id === gap.preceding_anchor_id) :
+                undefined;
+            const followingAnchor = gap.following_anchor_id ?
+                anchors?.find(a => a.id === gap.following_anchor_id) :
+                undefined;
+
+            const position = precedingAnchor?.reference_positions[effectiveCurrentSource] ??
+                followingAnchor?.reference_positions[effectiveCurrentSource];
 
             if (position === undefined) return;
 
-            const gapPosition = gap.preceding_anchor ? position + 1 : position - 1;
+            const gapPosition = precedingAnchor ? position + 1 : position - 1;
 
             if (!allPositions.has(gapPosition)) {
                 allPositions.set(gapPosition, []);
             }
 
-            gap.reference_words[effectiveCurrentSource]?.forEach(word => {
+            const referenceWords = getWordsFromIds(
+                referenceSources[effectiveCurrentSource].segments,
+                gap.reference_word_ids[effectiveCurrentSource] || []
+            );
+
+            referenceWords.forEach(word => {
                 const wordPosition: TranscriptionWordPosition = {
                     word: {
                         id: word.id,
@@ -103,7 +121,7 @@ export default function ReferenceView({
             });
 
         return positions;
-    }, [anchors, gaps, effectiveCurrentSource]);
+    }, [anchors, gaps, effectiveCurrentSource, referenceSources]);
 
     const { linePositions } = useMemo(() =>
         calculateReferenceLinePositions(

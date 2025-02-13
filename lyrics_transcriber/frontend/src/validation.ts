@@ -63,43 +63,24 @@ const PhraseScoreSchema = z.object({
 })
 
 const AnchorSequenceSchema = z.object({
-    id: z.string().optional(),
-    words: z.array(z.string()),
-    transcribed_words: z.array(WordSchema),
+    id: z.string(),
+    transcribed_word_ids: z.array(z.string()),
     transcription_position: z.number(),
     reference_positions: z.record(z.number()),
-    reference_words: z.record(z.array(WordSchema)),
+    reference_word_ids: z.record(z.array(z.string())),
     confidence: z.number(),
     phrase_score: PhraseScoreSchema,
     total_score: z.number()
 })
 
 const GapSequenceSchema = z.object({
-    id: z.string().optional(),
-    text: z.string(),
-    words: z.array(z.string()),
-    transcribed_words: z.array(WordSchema),
-    length: z.number(),
+    id: z.string(),
+    transcribed_word_ids: z.array(z.string()),
     transcription_position: z.number(),
     corrections: z.array(WordCorrectionSchema),
-    preceding_anchor: z.object({
-        words: z.array(z.string()),
-        transcribed_words: z.array(WordSchema),
-        transcription_position: z.number(),
-        reference_positions: z.record(z.number()),
-        reference_words: z.record(z.array(WordSchema)),
-        confidence: z.number()
-    }).nullable(),
-    following_anchor: z.object({
-        words: z.array(z.string()),
-        transcribed_words: z.array(WordSchema),
-        transcription_position: z.number(),
-        reference_positions: z.record(z.number()),
-        reference_words: z.record(z.array(WordSchema)),
-        confidence: z.number()
-    }).nullable(),
-    reference_words: z.record(z.array(WordSchema)),
-    reference_words_original: z.record(z.array(WordSchema)).optional()
+    preceding_anchor_id: z.string().nullable(),
+    following_anchor_id: z.string().nullable(),
+    reference_word_ids: z.record(z.array(z.string()))
 })
 
 const CorrectionStepSchema = z.object({
@@ -114,13 +95,11 @@ const CorrectionStepSchema = z.object({
 })
 
 const CorrectionDataSchema = z.object({
-    transcribed_text: z.string(),
     original_segments: z.array(LyricsSegmentSchema),
     reference_lyrics: z.record(ReferenceSourceSchema),
     anchor_sequences: z.array(AnchorSequenceSchema),
     gap_sequences: z.array(GapSequenceSchema),
-    resized_segments: z.array(LyricsSegmentSchema).optional(),
-    corrected_text: z.string(),
+    resized_segments: z.array(LyricsSegmentSchema),
     corrections_made: z.number(),
     confidence: z.number(),
     corrections: z.array(WordCorrectionSchema),

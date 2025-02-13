@@ -9,28 +9,65 @@ import {
 } from '@mui/material'
 import CloseIcon from '@mui/icons-material/Close'
 import { ModalContent } from './LyricsAnalyzer'
-import { WordCorrection } from '@/types'
+import { WordCorrection, ReferenceSource, AnchorSequence } from '../types'
+import { getWordsFromIds } from './shared/utils/wordUtils'
 
 interface DetailsModalProps {
     open: boolean
     content: ModalContent | null
     onClose: () => void
-    allCorrections?: WordCorrection[]
+    allCorrections: WordCorrection[]
+    referenceLyrics?: Record<string, ReferenceSource>
+}
+
+function formatReferenceWords(content: ModalContent | null, referenceLyrics?: Record<string, ReferenceSource>): string {
+    if (!content || !referenceLyrics) return ''
+
+    return Object.entries(content.data.reference_word_ids)
+        .map(([source, wordIds]) => {
+            const words = getWordsFromIds(
+                referenceLyrics[source]?.segments ?? [],
+                wordIds
+            )
+            return `${source}: "${words.map(w => w.text).join(' ')}"`
+        })
+        .join('\n')
+}
+
+function getAnchorText(anchorId: string | null, anchors: AnchorSequence[], referenceLyrics?: Record<string, ReferenceSource>): string {
+    if (!anchorId || !referenceLyrics) return anchorId || ''
+
+    const anchor = anchors.find(a => a.id === anchorId)
+    if (!anchor) return anchorId
+
+    // Get the first source's words as representative text
+    const firstSource = Object.entries(anchor.reference_word_ids)[0]
+    if (!firstSource) return anchorId
+
+    const [source, wordIds] = firstSource
+    const words = getWordsFromIds(
+        referenceLyrics[source]?.segments ?? [],
+        wordIds
+    )
+    return `${anchorId} ("${words.map(w => w.text).join(' ')}")`
 }
 
 export default function DetailsModal({
     open,
     content,
     onClose,
-    allCorrections = []
+    allCorrections,
+    referenceLyrics
 }: DetailsModalProps) {
     if (!content) return null
+
+    const referenceWordsText = formatReferenceWords(content, referenceLyrics)
 
     const getCurrentWord = () => {
         if (content.type === 'gap') {
             return content.data.word
         } else if (content.type === 'anchor') {
-            return content.data.word ?? content.data.words[0]
+            return content.data.word ?? ''
         }
         return ''
     }
@@ -52,6 +89,7 @@ export default function DetailsModal({
     const renderContent = () => {
         switch (content.type) {
             case 'anchor':
+                const anchorWords = content.data.transcribed_word_ids?.length ?? 0
                 return (
                     <Grid container spacing={2}>
                         <GridItem
@@ -60,19 +98,17 @@ export default function DetailsModal({
                         />
                         <GridItem
                             title="Full Text"
-                            value={`"${content.data.words.join(' ')}"`}
+                            value={`"${content.data.word ?? ''}"`}
                         />
                         <GridItem title="Word ID" value={content.data.wordId} />
                         <GridItem
                             title="Length"
-                            value={`${content.data.words.length} words`}
+                            value={`${anchorWords} words`}
                         />
                         <GridItem
                             title="Reference Words"
-                            value={content.data.reference_words ?
-                                Object.entries(content.data.reference_words).map(([source, words]) => (
-                                    `${source}: ${words.map(w => w.text).join(', ')}`
-                                )).join('\n') : 'No reference words'
+                            value={
+                                <pre style={{ margin: 0, whiteSpace: 'pre-wrap' }}>{referenceWordsText}</pre>
                             }
                         />
                         <GridItem title="Confidence" value={content.data.confidence?.toFixed(3) ?? 'N/A'} />
@@ -101,57 +137,31 @@ export default function DetailsModal({
                             value={`"${getCurrentWord()}"`}
                         />
                         <GridItem
-                            title="Current Text"
-                            value={`"${content.data.words?.map(word => {
-                                const wordCorrection = content.data.corrections?.find(
-                                    c => c.original_word === word
-                                )
-                                return wordCorrection ? wordCorrection.corrected_word : word
-                            }).join(' ') ?? content.data.word}"`}
-                        />
-                        <GridItem
                             title="Word ID"
                             value={content.data.wordId}
                         />
                         <GridItem
                             title="Length"
-                            value={`${content.data.length} words`}
+                            value={`${content.data.transcribed_word_ids?.length ?? 0} words`}
                         />
-                        {content.data.preceding_anchor && (
+                        {content.data.preceding_anchor_id && (
                             <GridItem
                                 title="Preceding Anchor"
-                                value={`"${content.data.preceding_anchor.words.join(' ')}"`}
+                                value={getAnchorText(content.data.preceding_anchor_id, content.data.anchor_sequences, referenceLyrics)}
+                            />
+                        )}
+                        {content.data.following_anchor_id && (
+                            <GridItem
+                                title="Following Anchor"
+                                value={getAnchorText(content.data.following_anchor_id, content.data.anchor_sequences, referenceLyrics)}
                             />
                         )}
                         <GridItem
-                            title="Transcribed Text"
-                            value={`"${content.data.text}"`}
+                            title="Reference Words"
+                            value={
+                                <pre style={{ margin: 0, whiteSpace: 'pre-wrap' }}>{referenceWordsText}</pre>
+                            }
                         />
-                        {content.data.following_anchor && (
-                            <GridItem
-                                title="Following Anchor"
-                                value={`"${content.data.following_anchor.words.join(' ')}"`}
-                            />
-                        )}
-                        {content.data.reference_words && (
-                            <GridItem
-                                title="Reference Words"
-                                value={
-                                    <>
-                                        {content.data.reference_words.spotify && (
-                                            <Typography>
-                                                Spotify: "{content.data.reference_words.spotify.map(w => w.text).join(' ')}"
-                                            </Typography>
-                                        )}
-                                        {content.data.reference_words.genius && (
-                                            <Typography>
-                                                Genius: "{content.data.reference_words.genius.map(w => w.text).join(' ')}"
-                                            </Typography>
-                                        )}
-                                    </>
-                                }
-                            />
-                        )}
                         {isCorrected && (
                             <GridItem
                                 title="Correction Details"
@@ -201,24 +211,25 @@ export default function DetailsModal({
         <Dialog
             open={open}
             onClose={onClose}
-            maxWidth="sm"
+            maxWidth="md"
             fullWidth
         >
-            <IconButton
-                onClick={onClose}
-                sx={{
-                    position: 'absolute',
-                    right: 8,
-                    top: 8,
-                }}
-            >
-                <CloseIcon />
-            </IconButton>
             <DialogTitle>
-                {content.type === 'gap' && (isCorrected ? 'Corrected ' : 'Uncorrected ')}
+                {content.type === 'gap' && (
+                    content.data.corrections?.length ? 'Corrected ' : 'Uncorrected '
+                )}
                 {content.type.charAt(0).toUpperCase() + content.type.slice(1)} Details - "{getCurrentWord()}"
+                <IconButton
+                    aria-label="close"
+                    onClick={onClose}
+                    sx={{ position: 'absolute', right: 8, top: 8 }}
+                >
+                    <CloseIcon />
+                </IconButton>
             </DialogTitle>
-            <DialogContent dividers>{renderContent()}</DialogContent>
+            <DialogContent>
+                {renderContent()}
+            </DialogContent>
         </Dialog>
     )
 }

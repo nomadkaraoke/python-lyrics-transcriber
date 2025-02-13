@@ -55,12 +55,10 @@ def sample_correction_result():
     return CorrectionResult(
         original_segments=[segment],
         corrected_segments=[segment],
-        corrected_text="Test lyrics",
         corrections=[],
         corrections_made=0,
         confidence=0.9,
         transcribed_text="Test lyrics",
-        reference_texts={"source": "Test lyrics"},
         anchor_sequences=[],
         gap_sequences=[],
         resized_segments=[segment],

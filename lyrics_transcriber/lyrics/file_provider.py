@@ -81,7 +81,7 @@ class FileProvider(BaseLyricsProvider):
             # Create segments with words from the processed text
             segments = self._create_segments_with_words(raw_data["text"], is_synced=False)
 
-            lyrics_data = LyricsData(source="file", lyrics=raw_data["text"], segments=segments, metadata=metadata)
+            lyrics_data = LyricsData(source="file", segments=segments, metadata=metadata)
             self.logger.debug(f"Created LyricsData object with {len(segments)} segments")
             return lyrics_data
 

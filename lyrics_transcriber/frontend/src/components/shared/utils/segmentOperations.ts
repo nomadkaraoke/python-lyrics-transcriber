@@ -30,11 +30,6 @@ export const addSegmentBefore = (
     // Insert the new segment before the current one
     newData.corrected_segments.splice(beforeIndex, 0, newSegment)
 
-    // Update corrected_text
-    newData.corrected_text = newData.corrected_segments
-        .map(segment => segment.text)
-        .join('\n')
-
     return newData
 }
 
@@ -75,11 +70,6 @@ export const splitSegment = (
     // Replace the original segment with the two new segments
     newData.corrected_segments.splice(segmentIndex, 1, firstSegment, secondSegment)
 
-    // Update corrected_text
-    newData.corrected_text = newData.corrected_segments
-        .map(segment => segment.text)
-        .join('\n')
-
     return newData
 }
 
@@ -96,29 +86,18 @@ export const deleteSegment = (
     // Update anchor sequences to remove references to deleted words
     newData.anchor_sequences = newData.anchor_sequences.map(anchor => ({
         ...anchor,
-        transcribed_words: anchor.transcribed_words.filter(word =>
-            !deletedSegment.words.some(deletedWord => deletedWord.id === word.id)
-        ),
-        words: anchor.words.filter((_, idx) =>
-            anchor.transcribed_words.some(w => w.text.toLowerCase() === anchor.words[idx].toLowerCase())
+        transcribed_word_ids: anchor.transcribed_word_ids.filter(wordId =>
+            !deletedSegment.words.some(deletedWord => deletedWord.id === wordId)
         )
     }))
 
     // Update gap sequences to remove references to deleted words
     newData.gap_sequences = newData.gap_sequences.map(gap => ({
         ...gap,
-        transcribed_words: gap.transcribed_words.filter(word =>
-            !deletedSegment.words.some(deletedWord => deletedWord.id === word.id)
-        ),
-        words: gap.words.filter((_, idx) =>
-            gap.transcribed_words.some(w => w.text.toLowerCase() === gap.words[idx].toLowerCase())
+        transcribed_word_ids: gap.transcribed_word_ids.filter(wordId =>
+            !deletedSegment.words.some(deletedWord => deletedWord.id === wordId)
         )
     }))
-
-    // Update corrected_text
-    newData.corrected_text = newData.corrected_segments
-        .map(segment => segment.text)
-        .join('\n')
 
     return newData
 }
@@ -137,11 +116,6 @@ export const updateSegment = (
     }))
 
     newData.corrected_segments[segmentIndex] = updatedSegment
-
-    // Update corrected_text
-    newData.corrected_text = newData.corrected_segments
-        .map(segment => segment.text)
-        .join('\n')
 
     return newData
 } 
