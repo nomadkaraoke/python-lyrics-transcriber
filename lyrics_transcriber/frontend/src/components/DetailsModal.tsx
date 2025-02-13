@@ -60,10 +60,13 @@ export default function DetailsModal({
                         />
                         <GridItem
                             title="Full Text"
-                            value={`"${content.data.text}"`}
+                            value={`"${content.data.words.join(' ')}"`}
                         />
                         <GridItem title="Word ID" value={content.data.wordId} />
-                        <GridItem title="Length" value={`${content.data.length} words`} />
+                        <GridItem
+                            title="Length"
+                            value={`${content.data.words.length} words`}
+                        />
                         <GridItem
                             title="Reference Words"
                             value={content.data.reference_words ?
@@ -117,7 +120,7 @@ export default function DetailsModal({
                         {content.data.preceding_anchor && (
                             <GridItem
                                 title="Preceding Anchor"
-                                value={`"${content.data.preceding_anchor.text}"`}
+                                value={`"${content.data.preceding_anchor.words.join(' ')}"`}
                             />
                         )}
                         <GridItem
@@ -127,7 +130,7 @@ export default function DetailsModal({
                         {content.data.following_anchor && (
                             <GridItem
                                 title="Following Anchor"
-                                value={`"${content.data.following_anchor.text}"`}
+                                value={`"${content.data.following_anchor.words.join(' ')}"`}
                             />
                         )}
                         {content.data.reference_words && (

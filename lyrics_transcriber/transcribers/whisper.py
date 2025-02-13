@@ -11,7 +11,7 @@ from pathlib import Path
 from pydub import AudioSegment
 from lyrics_transcriber.types import TranscriptionData, LyricsSegment, Word
 from lyrics_transcriber.transcribers.base_transcriber import BaseTranscriber, TranscriptionError
-from lyrics_transcriber.correction.handlers.word_operations import WordOperations
+from lyrics_transcriber.utils.word_utils import WordUtils
 
 
 @dataclass
@@ -263,7 +263,7 @@ class WhisperTranscriber(BaseTranscriber):
         # First collect all words from word_timestamps
         word_list = [
             Word(
-                id=WordOperations.generate_id(),  # Generate unique ID for each word
+                id=WordUtils.generate_id(),  # Generate unique ID for each word
                 text=word["word"].strip(),
                 start_time=word["start"],
                 end_time=word["end"],
@@ -279,7 +279,7 @@ class WhisperTranscriber(BaseTranscriber):
             segment_words = [word for word in word_list if seg["start"] <= word.start_time < seg["end"]]
             segments.append(
                 LyricsSegment(
-                    id=WordOperations.generate_id(),  # Generate unique ID for each segment
+                    id=WordUtils.generate_id(),  # Generate unique ID for each segment
                     text=seg["text"].strip(),
                     words=segment_words,
                     start_time=seg["start"],

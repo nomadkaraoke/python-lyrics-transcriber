@@ -5,7 +5,7 @@ import time
 
 from lyrics_transcriber.types import LyricsData, LyricsMetadata, LyricsSegment, Word
 from lyrics_transcriber.lyrics.base_lyrics_provider import BaseLyricsProvider, LyricsProviderConfig
-from lyrics_transcriber.correction.handlers.word_operations import WordOperations
+from lyrics_transcriber.utils.word_utils import WordUtils
 
 
 class SpotifyProvider(BaseLyricsProvider):
@@ -106,7 +106,7 @@ class SpotifyProvider(BaseLyricsProvider):
             words = []
             for i, word_text in enumerate(word_texts):
                 word = Word(
-                    id=WordOperations.generate_id(),
+                    id=WordUtils.generate_id(),
                     text=word_text,
                     start_time=start_time + (i * word_duration),
                     end_time=start_time + ((i + 1) * word_duration),
@@ -116,7 +116,7 @@ class SpotifyProvider(BaseLyricsProvider):
                 words.append(word)
 
             segment = LyricsSegment(
-                id=WordOperations.generate_id(), text=line["words"].strip(), words=words, start_time=start_time, end_time=end_time
+                id=WordUtils.generate_id(), text=line["words"].strip(), words=words, start_time=start_time, end_time=end_time
             )
             segments.append(segment)
 

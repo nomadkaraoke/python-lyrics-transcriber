@@ -1,9 +1,9 @@
 import logging
 import re
-from typing import List, Optional, Tuple
+from typing import List, Optional
 
 from lyrics_transcriber.types import LyricsSegment, Word
-from lyrics_transcriber.correction.handlers.word_operations import WordOperations
+from lyrics_transcriber.utils.word_utils import WordUtils
 
 
 class SegmentResizer:
@@ -234,7 +234,7 @@ class SegmentResizer:
         """Create a new segment from a list of words."""
         cleaned_text = self._clean_text(line)
         return LyricsSegment(
-            id=WordOperations.generate_id(),  # Generate new ID for split segments
+            id=WordUtils.generate_id(),  # Generate new ID for split segments
             text=cleaned_text,
             words=words,
             start_time=words[0].start_time,

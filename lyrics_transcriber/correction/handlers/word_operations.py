@@ -1,6 +1,6 @@
 from typing import List, Optional, Dict
 from lyrics_transcriber.types import WordCorrection, GapSequence
-import shortuuid
+from lyrics_transcriber.utils.word_utils import WordUtils
 
 
 class WordOperations:
@@ -37,11 +37,6 @@ class WordOperations:
         return reference_positions
 
     @staticmethod
-    def generate_id() -> str:
-        """Generate a unique ID for words/segments."""
-        return shortuuid.uuid()
-
-    @staticmethod
     def create_word_replacement_correction(
         original_word: str,
         corrected_word: str,
@@ -67,7 +62,7 @@ class WordOperations:
             length=1,
             handler=handler,
             word_id=original_word_id,
-            corrected_word_id=WordOperations.generate_id() if corrected_word else None,
+            corrected_word_id=WordUtils.generate_id() if corrected_word else None,
         )
 
     @staticmethod
@@ -101,7 +96,7 @@ class WordOperations:
                     length=1,  # Each split word is length 1
                     handler=handler,
                     word_id=original_word_id if split_idx == 0 else None,
-                    corrected_word_id=WordOperations.generate_id(),
+                    corrected_word_id=WordUtils.generate_id(),
                 )
             )
         return corrections
@@ -138,7 +133,7 @@ class WordOperations:
                 length=len(original_words),  # Combined word spans all original words
                 handler=handler,
                 word_id=word_ids[0],
-                corrected_word_id=WordOperations.generate_id(),
+                corrected_word_id=WordUtils.generate_id(),
             )
         )
 

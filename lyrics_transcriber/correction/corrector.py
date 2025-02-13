@@ -3,9 +3,6 @@ import logging
 from pathlib import Path
 from copy import deepcopy
 
-from lyrics_transcriber.correction.handlers.no_space_punct_match import NoSpacePunctuationMatchHandler
-from lyrics_transcriber.correction.handlers.relaxed_word_count_match import RelaxedWordCountMatchHandler
-from lyrics_transcriber.correction.handlers.syllables_match import SyllablesMatchHandler
 from lyrics_transcriber.types import (
     CorrectionStep,
     GapSequence,
@@ -18,13 +15,8 @@ from lyrics_transcriber.types import (
 )
 from lyrics_transcriber.correction.anchor_sequence import AnchorSequenceFinder
 from lyrics_transcriber.correction.handlers.base import GapCorrectionHandler
-from lyrics_transcriber.correction.handlers.word_count_match import WordCountMatchHandler
 from lyrics_transcriber.correction.handlers.extend_anchor import ExtendAnchorHandler
-from lyrics_transcriber.correction.handlers.sound_alike import SoundAlikeHandler
-from lyrics_transcriber.correction.handlers.levenshtein import LevenshteinHandler
-from lyrics_transcriber.correction.handlers.repeat import RepeatCorrectionHandler
-from lyrics_transcriber.correction.handlers.llm import LLMHandler
-from lyrics_transcriber.correction.handlers.word_operations import WordOperations
+from lyrics_transcriber.utils.word_utils import WordUtils
 
 
 class LyricsCorrector:
@@ -155,11 +147,11 @@ class LyricsCorrector:
         # Assign IDs to original segments/words if not already present
         for segment in segments:
             if not hasattr(segment, "id"):
-                segment.id = WordOperations.generate_id()
+                segment.id = WordUtils.generate_id()
                 self.logger.debug(f"Generated new segment ID: {segment.id}")
             for word in segment.words:
                 if not hasattr(word, "id"):
-                    word.id = WordOperations.generate_id()
+                    word.id = WordUtils.generate_id()
                     self.logger.debug(f"Generated new word ID: {word.id}")
 
         # First pass: Process all gaps
@@ -269,7 +261,7 @@ class LyricsCorrector:
                             correction.corrected_position = len(corrected_words)
                             corrected_words.append(
                                 Word(
-                                    id=correction.corrected_word_id or WordOperations.generate_id(),
+                                    id=correction.corrected_word_id or WordUtils.generate_id(),
                                     text=self._preserve_formatting(correction.original_word, correction.corrected_word),
                                     start_time=start_time,
                                     end_time=end_time,
@@ -285,7 +277,7 @@ class LyricsCorrector:
                             correction.corrected_position = len(corrected_words)
                             corrected_words.append(
                                 Word(
-                                    id=correction.corrected_word_id or WordOperations.generate_id(),
+                                    id=correction.corrected_word_id or WordUtils.generate_id(),
                                     text=self._preserve_formatting(correction.original_word, correction.corrected_word),
                                     start_time=word.start_time,
                                     end_time=word.end_time,

@@ -95,12 +95,14 @@ class AnchorSequenceFinder:
 
     def _get_cache_key(self, transcribed: str, references: Dict[str, LyricsData], transcription_result: TranscriptionResult) -> str:
         """Generate a unique cache key for the input combination."""
-        # Create a string that uniquely identifies the inputs
-        input_str = (
-            f"{transcribed}|"
-            f"{'|'.join(f'{k}:{v}' for k,v in sorted(references.items()))}|"
-            f"{transcription_result.id if hasattr(transcription_result, 'id') else ''}"
-        )
+        # Create a string that uniquely identifies the inputs, but only using stable content
+        # Use only the text content, not IDs or other potentially varying metadata
+        ref_texts = []
+        for source, lyrics in sorted(references.items()):
+            text = " ".join(w.text for s in lyrics.segments for w in s.words)
+            ref_texts.append(f"{source}:{text}")
+
+        input_str = f"{transcribed}|" f"{','.join(ref_texts)}"
         return hashlib.md5(input_str.encode()).hexdigest()
 
     def _save_to_cache(self, cache_path: Path, data: Any) -> None:
@@ -145,13 +147,28 @@ class AnchorSequenceFinder:
                 if trans_pos in used_trans_positions:
                     continue
 
+                # Get the actual words from the transcription at this position
+                actual_words = [w.text.lower().strip('.,?!"\n') for w in all_words[trans_pos : trans_pos + n]]
+                ngram_words = [w.lower() for w in ngram]
+
+                if actual_words != ngram_words:
+                    self.logger.error(f"Mismatch between ngram and actual words at position {trans_pos}:")
+                    self.logger.error(f"Ngram words: {ngram_words}")
+                    self.logger.error(f"Actual words: {actual_words}")
+                    self.logger.error(f"Full trans_words: {trans_words}")
+                    self.logger.error(f"Full all_words: {[w.text for w in all_words]}")
+                    raise AssertionError(
+                        f"Ngram words don't match actual words at position {trans_pos}. "
+                        f"This should never happen as trans_words should be derived from all_words."
+                    )
+
                 matches = self._find_matching_sources(ngram, ref_texts_clean, n)
                 if len(matches) >= min_sources:
+                    # Always use the original Word objects from all_words
+                    transcribed_words = all_words[trans_pos : trans_pos + n]
+
                     # Get corresponding Word objects for each match
                     ref_word_matches = {source: ref_words[source][pos : pos + n] for source, pos in matches.items()}
-
-                    # Get corresponding transcribed Word objects
-                    transcribed_words = all_words[trans_pos : trans_pos + n]
 
                     # Mark positions as used
                     for source, pos in matches.items():
@@ -159,8 +176,8 @@ class AnchorSequenceFinder:
                     used_trans_positions.add(trans_pos)
 
                     anchor = AnchorSequence(
-                        words=ngram,
-                        transcribed_words=transcribed_words,
+                        words=[w.text for w in transcribed_words],  # Use actual word texts
+                        transcribed_words=transcribed_words,  # Use original Word objects
                         transcription_position=trans_pos,
                         reference_positions=matches,
                         reference_words=ref_word_matches,
@@ -168,7 +185,7 @@ class AnchorSequenceFinder:
                     )
                     candidate_anchors.append(anchor)
                     found_new_match = True
-                    break  # Start over to try finding more matches
+                    break
 
         return candidate_anchors
 
@@ -199,8 +216,8 @@ class AnchorSequenceFinder:
         for segment in transcription_result.segments:
             all_words.extend(segment.words)
 
-        # Clean and split texts
-        trans_words = self._clean_text(transcribed).split()
+        # Clean and split texts - this should match all_words exactly
+        trans_words = [w.text.lower().strip('.,?!"\n') for w in all_words]  # Changed to derive directly from all_words
         ref_texts_clean = {
             source: self._clean_text(" ".join(w.text for s in lyrics.segments for w in s.words)).split()
             for source, lyrics in references.items()
@@ -388,23 +405,12 @@ class AnchorSequenceFinder:
         transcription_result: TranscriptionResult,
     ) -> List[GapSequence]:
         """Find gaps between anchor sequences in the transcribed text."""
-        cache_key = self._get_cache_key(transcribed, references, transcription_result)
-        cache_path = self.cache_dir / f"gaps_{cache_key}.json"
-
-        # Try to load from cache
-        if cached_data := self._load_from_cache(cache_path):
-            self.logger.info("Loading gaps from cache")
-            return [GapSequence.from_dict(gap) for gap in cached_data]
-
-        # If not in cache, perform the computation
-        self.logger.info(f"Cache miss for key {cache_key} - computing gaps")
-
         # Get all words from transcription
         all_words = []
         for segment in transcription_result.segments:
             all_words.extend(segment.words)
 
-        words = self._clean_text(transcribed).split()
+        # Clean and split reference texts
         ref_texts_clean = {
             source: self._clean_text(" ".join(w.text for s in lyrics.segments for w in s.words)).split()
             for source, lyrics in references.items()
@@ -416,45 +422,56 @@ class AnchorSequenceFinder:
         sorted_anchors = sorted(anchors, key=lambda x: x.anchor.transcription_position)
 
         # Handle initial gap
-        if initial_gap := self._create_initial_gap(
-            words=words,
-            transcribed_words=all_words[: sorted_anchors[0].anchor.transcription_position] if sorted_anchors else all_words,
-            first_anchor=sorted_anchors[0] if sorted_anchors else None,
-            ref_texts_clean=ref_texts_clean,
-            ref_words=ref_words,
-        ):
-            gaps.append(initial_gap)
+        if sorted_anchors:
+            first_anchor_pos = sorted_anchors[0].anchor.transcription_position
+            if first_anchor_pos > 0:
+                # Use original Word objects for the gap
+                gap_words = all_words[:first_anchor_pos]
+                if gap := self._create_initial_gap(
+                    words=[w.text for w in gap_words],
+                    transcribed_words=gap_words,
+                    first_anchor=sorted_anchors[0],
+                    ref_texts_clean=ref_texts_clean,
+                    ref_words=ref_words,
+                ):
+                    gaps.append(gap)
 
         # Handle gaps between anchors
         for i in range(len(sorted_anchors) - 1):
             current_anchor = sorted_anchors[i]
             next_anchor = sorted_anchors[i + 1]
-            if between_gap := self._create_between_gap(
-                words=words,
-                transcribed_words=all_words[
-                    current_anchor.anchor.transcription_position + current_anchor.anchor.length : next_anchor.anchor.transcription_position
-                ],
-                current_anchor=current_anchor,
-                next_anchor=next_anchor,
-                ref_texts_clean=ref_texts_clean,
-                ref_words=ref_words,
-            ):
-                gaps.append(between_gap)
+            gap_start = current_anchor.anchor.transcription_position + len(current_anchor.anchor.words)
+            gap_end = next_anchor.anchor.transcription_position
+
+            if gap_end > gap_start:
+                # Use original Word objects for the gap
+                gap_words = all_words[gap_start:gap_end]
+                if between_gap := self._create_between_gap(
+                    words=[w.text for w in gap_words],
+                    transcribed_words=gap_words,
+                    current_anchor=current_anchor,
+                    next_anchor=next_anchor,
+                    ref_texts_clean=ref_texts_clean,
+                    ref_words=ref_words,
+                ):
+                    gaps.append(between_gap)
 
         # Handle final gap
-        if sorted_anchors and (
-            final_gap := self._create_final_gap(
-                words=words,
-                transcribed_words=all_words[sorted_anchors[-1].anchor.transcription_position + sorted_anchors[-1].anchor.length :],
-                last_anchor=sorted_anchors[-1],
-                ref_texts_clean=ref_texts_clean,
-                ref_words=ref_words,
-            )
-        ):
-            gaps.append(final_gap)
+        if sorted_anchors:
+            last_anchor = sorted_anchors[-1]
+            last_pos = last_anchor.anchor.transcription_position + len(last_anchor.anchor.words)
+            if last_pos < len(all_words):
+                # Use original Word objects for the gap
+                gap_words = all_words[last_pos:]
+                if final_gap := self._create_final_gap(
+                    words=[w.text for w in gap_words],
+                    transcribed_words=gap_words,
+                    last_anchor=last_anchor,
+                    ref_texts_clean=ref_texts_clean,
+                    ref_words=ref_words,
+                ):
+                    gaps.append(final_gap)
 
-        # Save to cache
-        self._save_to_cache(cache_path, [gap.to_dict() for gap in gaps])
         return gaps
 
     def _create_initial_gap(

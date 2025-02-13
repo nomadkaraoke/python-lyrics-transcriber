@@ -66,8 +66,6 @@ const AnchorSequenceSchema = z.object({
     id: z.string().optional(),
     words: z.array(z.string()),
     transcribed_words: z.array(WordSchema),
-    text: z.string(),
-    length: z.number(),
     transcription_position: z.number(),
     reference_positions: z.record(z.number()),
     reference_words: z.record(z.array(WordSchema)),
@@ -87,8 +85,6 @@ const GapSequenceSchema = z.object({
     preceding_anchor: z.object({
         words: z.array(z.string()),
         transcribed_words: z.array(WordSchema),
-        text: z.string(),
-        length: z.number(),
         transcription_position: z.number(),
         reference_positions: z.record(z.number()),
         reference_words: z.record(z.array(WordSchema)),
@@ -97,8 +93,6 @@ const GapSequenceSchema = z.object({
     following_anchor: z.object({
         words: z.array(z.string()),
         transcribed_words: z.array(WordSchema),
-        text: z.string(),
-        length: z.number(),
         transcription_position: z.number(),
         reference_positions: z.record(z.number()),
         reference_words: z.record(z.array(WordSchema)),

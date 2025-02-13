@@ -45,8 +45,6 @@ export interface AnchorSequence {
     id?: string
     words: string[]
     transcribed_words: Word[]
-    text: string
-    length: number
     transcription_position: number
     reference_positions: Record<string, number>
     reference_words: {
@@ -74,8 +72,6 @@ export interface GapSequence {
     preceding_anchor: {
         words: string[]
         transcribed_words: Word[]
-        text: string
-        length: number
         transcription_position: number
         reference_positions: Record<string, number>
         reference_words: {
@@ -86,8 +82,6 @@ export interface GapSequence {
     following_anchor: {
         words: string[]
         transcribed_words: Word[]
-        text: string
-        length: number
         transcription_position: number
         reference_positions: Record<string, number>
         reference_words: {

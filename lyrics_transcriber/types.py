@@ -1,6 +1,7 @@
 from dataclasses import dataclass, asdict, field, fields
-from typing import Any, Dict, List, Optional, Set, Protocol, Tuple
+from typing import Any, Dict, List, Optional, Set, Tuple
 from enum import Enum
+from lyrics_transcriber.utils.word_utils import WordUtils
 
 
 @dataclass
@@ -271,9 +272,7 @@ class AnchorSequence:
         """Convert the anchor sequence to a JSON-serializable dictionary."""
         return {
             "words": self.words,
-            "transcribed_words": [w.to_dict() for w in self.transcribed_words],
-            "text": self.text,
-            "length": self.length,
+            "transcribed_words": [w.to_dict() for w in self.transcribed_words] if self.transcribed_words else [],
             "transcription_position": self.transcription_position,
             "reference_positions": self.reference_positions,
             "reference_words": {source: [w.to_dict() for w in words] for source, words in self.reference_words.items()},
@@ -283,9 +282,18 @@ class AnchorSequence:
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> "AnchorSequence":
         """Create AnchorSequence from dictionary."""
+        # Handle missing transcribed_words in cached data
+        if "transcribed_words" not in data:
+            # Create minimal Word objects from the words list
+            data["transcribed_words"] = [
+                Word(id=WordUtils.generate_id(), text=word, start_time=0.0, end_time=0.0, confidence=1.0) for word in data["words"]
+            ]
+        else:
+            data["transcribed_words"] = [Word.from_dict(w) for w in data["transcribed_words"]]
+
         return cls(
             words=data["words"],
-            transcribed_words=[Word.from_dict(w) for w in data["transcribed_words"]],
+            transcribed_words=data["transcribed_words"],
             transcription_position=data["transcription_position"],
             reference_positions=data["reference_positions"],
             reference_words={source: [Word.from_dict(w) for w in words] for source, words in data["reference_words"].items()},

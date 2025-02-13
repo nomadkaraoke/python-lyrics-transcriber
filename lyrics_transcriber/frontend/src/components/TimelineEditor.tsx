@@ -75,7 +75,6 @@ const TimelineWord = styled(Box)(({ theme }) => ({
 
 const ResizeHandle = styled(Box)(({ theme }) => ({
     position: 'absolute',
-    right: -4,
     top: 0,
     width: 8,
     height: '100%',
@@ -83,6 +82,12 @@ const ResizeHandle = styled(Box)(({ theme }) => ({
     '&:hover': {
         backgroundColor: theme.palette.primary.light,
     },
+    '&.left': {
+        left: -4,
+    },
+    '&.right': {
+        right: -4,
+    }
 }))
 
 // Add new styled component for the cursor
@@ -101,7 +106,7 @@ export default function TimelineEditor({ words, startTime, endTime, onWordUpdate
     const containerRef = useRef<HTMLDivElement>(null)
     const [dragState, setDragState] = useState<{
         wordIndex: number
-        type: 'move' | 'resize'
+        type: 'move' | 'resize-left' | 'resize-right'
         initialX: number
         initialTime: number
         word: Word
@@ -170,7 +175,7 @@ export default function TimelineEditor({ words, startTime, endTime, onWordUpdate
         return marks
     }
 
-    const handleMouseDown = (e: React.MouseEvent, wordIndex: number, type: 'move' | 'resize') => {
+    const handleMouseDown = (e: React.MouseEvent, wordIndex: number, type: 'move' | 'resize-left' | 'resize-right') => {
         const rect = containerRef.current?.getBoundingClientRect()
         if (!rect) return
 
@@ -200,7 +205,7 @@ export default function TimelineEditor({ words, startTime, endTime, onWordUpdate
         if (currentWord.start_time === null || currentWord.end_time === null ||
             dragState.word.start_time === null || dragState.word.end_time === null) return
 
-        if (dragState.type === 'resize') {
+        if (dragState.type === 'resize-right') {
             const initialWordDuration = dragState.word.end_time - dragState.word.start_time
             const initialWordWidth = (initialWordDuration / (endTime - startTime)) * width
             const pixelDelta = x - dragState.initialX
@@ -217,6 +222,24 @@ export default function TimelineEditor({ words, startTime, endTime, onWordUpdate
             onWordUpdate(dragState.wordIndex, {
                 start_time: currentWord.start_time,
                 end_time: proposedEnd
+            })
+        } else if (dragState.type === 'resize-left') {
+            const initialWordDuration = dragState.word.end_time - dragState.word.start_time
+            const initialWordWidth = (initialWordDuration / (endTime - startTime)) * width
+            const pixelDelta = x - dragState.initialX
+            const percentageMoved = pixelDelta / initialWordWidth
+            const timeDelta = initialWordDuration * percentageMoved
+
+            const proposedStart = Math.min(
+                currentWord.end_time - MIN_DURATION,
+                dragState.word.start_time + timeDelta
+            )
+
+            if (checkCollision(proposedStart, currentWord.end_time, dragState.wordIndex, true)) return
+
+            onWordUpdate(dragState.wordIndex, {
+                start_time: proposedStart,
+                end_time: currentWord.end_time
             })
         } else if (dragState.type === 'move') {
             const pixelsPerSecond = width / (endTime - startTime)
@@ -305,11 +328,19 @@ export default function TimelineEditor({ words, startTime, endTime, onWordUpdate
                             handleMouseDown(e, index, 'move')
                         }}
                     >
-                        {word.text}
                         <ResizeHandle
+                            className="left"
                             onMouseDown={(e) => {
                                 e.stopPropagation()
-                                handleMouseDown(e, index, 'resize')
+                                handleMouseDown(e, index, 'resize-left')
+                            }}
+                        />
+                        {word.text}
+                        <ResizeHandle
+                            className="right"
+                            onMouseDown={(e) => {
+                                e.stopPropagation()
+                                handleMouseDown(e, index, 'resize-right')
                             }}
                         />
                     </TimelineWord>

@@ -27854,8 +27854,6 @@ const AnchorSequenceSchema = z.object({
   id: z.string().optional(),
   words: z.array(z.string()),
   transcribed_words: z.array(WordSchema),
-  text: z.string(),
-  length: z.number(),
   transcription_position: z.number(),
   reference_positions: z.record(z.number()),
   reference_words: z.record(z.array(WordSchema)),
@@ -27874,8 +27872,6 @@ const GapSequenceSchema = z.object({
   preceding_anchor: z.object({
     words: z.array(z.string()),
     transcribed_words: z.array(WordSchema),
-    text: z.string(),
-    length: z.number(),
     transcription_position: z.number(),
     reference_positions: z.record(z.number()),
     reference_words: z.record(z.array(WordSchema)),
@@ -27884,8 +27880,6 @@ const GapSequenceSchema = z.object({
   following_anchor: z.object({
     words: z.array(z.string()),
     transcribed_words: z.array(WordSchema),
-    text: z.string(),
-    length: z.number(),
     transcription_position: z.number(),
     reference_positions: z.record(z.number()),
     reference_words: z.record(z.array(WordSchema)),
@@ -28148,11 +28142,17 @@ function DetailsModal({
             GridItem,
             {
               title: "Full Text",
-              value: `"${content.data.text}"`
+              value: `"${content.data.words.join(" ")}"`
             }
           ),
           /* @__PURE__ */ jsxRuntimeExports.jsx(GridItem, { title: "Word ID", value: content.data.wordId }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx(GridItem, { title: "Length", value: `${content.data.length} words` }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            GridItem,
+            {
+              title: "Length",
+              value: `${content.data.words.length} words`
+            }
+          ),
           /* @__PURE__ */ jsxRuntimeExports.jsx(
             GridItem,
             {
@@ -28227,7 +28227,7 @@ function DetailsModal({
             GridItem,
             {
               title: "Preceding Anchor",
-              value: `"${content.data.preceding_anchor.text}"`
+              value: `"${content.data.preceding_anchor.words.join(" ")}"`
             }
           ),
           /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -28241,7 +28241,7 @@ function DetailsModal({
             GridItem,
             {
               title: "Following Anchor",
-              value: `"${content.data.following_anchor.text}"`
+              value: `"${content.data.following_anchor.words.join(" ")}"`
             }
           ),
           content.data.reference_words && /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -29235,13 +29235,18 @@ const TimelineWord = styled(Box)(({ theme }) => ({
 }));
 const ResizeHandle = styled(Box)(({ theme }) => ({
   position: "absolute",
-  right: -4,
   top: 0,
   width: 8,
   height: "100%",
   cursor: "col-resize",
   "&:hover": {
     backgroundColor: theme.palette.primary.light
+  },
+  "&.left": {
+    left: -4
+  },
+  "&.right": {
+    right: -4
   }
 }));
 const TimelineCursor = styled(Box)(({ theme }) => ({
@@ -29331,7 +29336,7 @@ function TimelineEditor({ words, startTime, endTime, onWordUpdate, currentTime =
     const width2 = rect.width;
     const currentWord = words[dragState.wordIndex];
     if (currentWord.start_time === null || currentWord.end_time === null || dragState.word.start_time === null || dragState.word.end_time === null) return;
-    if (dragState.type === "resize") {
+    if (dragState.type === "resize-right") {
       const initialWordDuration = dragState.word.end_time - dragState.word.start_time;
       const initialWordWidth = initialWordDuration / (endTime - startTime) * width2;
       const pixelDelta = x - dragState.initialX;
@@ -29345,6 +29350,21 @@ function TimelineEditor({ words, startTime, endTime, onWordUpdate, currentTime =
       onWordUpdate(dragState.wordIndex, {
         start_time: currentWord.start_time,
         end_time: proposedEnd
+      });
+    } else if (dragState.type === "resize-left") {
+      const initialWordDuration = dragState.word.end_time - dragState.word.start_time;
+      const initialWordWidth = initialWordDuration / (endTime - startTime) * width2;
+      const pixelDelta = x - dragState.initialX;
+      const percentageMoved = pixelDelta / initialWordWidth;
+      const timeDelta = initialWordDuration * percentageMoved;
+      const proposedStart = Math.min(
+        currentWord.end_time - MIN_DURATION,
+        dragState.word.start_time + timeDelta
+      );
+      if (checkCollision(proposedStart, currentWord.end_time, dragState.wordIndex, true)) return;
+      onWordUpdate(dragState.wordIndex, {
+        start_time: proposedStart,
+        end_time: currentWord.end_time
       });
     } else if (dragState.type === "move") {
       const pixelsPerSecond = width2 / (endTime - startTime);
@@ -29420,13 +29440,24 @@ function TimelineEditor({ words, startTime, endTime, onWordUpdate, currentTime =
                 handleMouseDown(e, index, "move");
               },
               children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  ResizeHandle,
+                  {
+                    className: "left",
+                    onMouseDown: (e) => {
+                      e.stopPropagation();
+                      handleMouseDown(e, index, "resize-left");
+                    }
+                  }
+                ),
                 word.text,
                 /* @__PURE__ */ jsxRuntimeExports.jsx(
                   ResizeHandle,
                   {
+                    className: "right",
                     onMouseDown: (e) => {
                       e.stopPropagation();
-                      handleMouseDown(e, index, "resize");
+                      handleMouseDown(e, index, "resize-right");
                     }
                   }
                 )
@@ -31026,4 +31057,4 @@ function App() {
 ReactDOM$1.createRoot(document.getElementById("root")).render(
   /* @__PURE__ */ jsxRuntimeExports.jsx(App, {})
 );
-//# sourceMappingURL=index-B7EVRh8p.js.map
+//# sourceMappingURL=index-aY7Fz7Ew.js.map

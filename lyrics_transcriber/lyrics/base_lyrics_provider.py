@@ -8,7 +8,7 @@ import os
 from abc import ABC, abstractmethod
 from lyrics_transcriber.types import LyricsData, LyricsSegment, Word
 from karaoke_lyrics_processor import KaraokeLyricsProcessor
-from lyrics_transcriber.correction.handlers.word_operations import WordOperations
+from lyrics_transcriber.utils.word_utils import WordUtils
 
 
 @dataclass
@@ -126,7 +126,7 @@ class BaseLyricsProvider(ABC):
             words = []
             for word_text in word_texts:
                 word = Word(
-                    id=WordOperations.generate_id(),
+                    id=WordUtils.generate_id(),
                     text=word_text,
                     start_time=0.0 if is_synced else None,
                     end_time=0.0 if is_synced else None,
@@ -136,7 +136,7 @@ class BaseLyricsProvider(ABC):
                 words.append(word)
 
             segment = LyricsSegment(
-                id=WordOperations.generate_id(),
+                id=WordUtils.generate_id(),
                 text=line.strip(),
                 words=words,
                 start_time=words[0].start_time if is_synced else None,
