@@ -10,19 +10,15 @@ def clean_text(text: str) -> str:
     Returns:
         Cleaned text with:
         - All text converted to lowercase
-        - Hyphens and slashes converted to spaces
-        - All other punctuation removed
         - Multiple spaces/whitespace collapsed to single space
         - Leading/trailing whitespace removed
+        - Punctuation removed (except for internal hyphens/slashes in words)
     """
     # Convert to lowercase
     text = text.lower()
 
-    # Replace hyphens and slashes with spaces first
-    text = text.replace("-", " ").replace("/", " ")
-
-    # Remove remaining punctuation
-    text = re.sub(r"[^\w\s]", "", text)
+    # Remove punctuation except hyphens and slashes that are between word characters
+    text = re.sub(r"(?<!\w)[^\w\s]|[^\w\s](?!\w)", "", text)
 
     # Normalize whitespace (collapse multiple spaces, remove leading/trailing)
     text = " ".join(text.split())
