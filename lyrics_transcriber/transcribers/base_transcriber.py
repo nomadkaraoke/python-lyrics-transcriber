@@ -94,14 +94,22 @@ class BaseTranscriber(ABC):
             self._validate_audio_file(audio_filepath)
             self.logger.debug("Audio file validation passed")
 
-            # Check cache first
+            # Check converted cache first
             file_hash = self._get_file_hash(audio_filepath)
-            raw_cache_path = self._get_cache_path(file_hash, "raw")
+            converted_cache_path = self._get_cache_path(file_hash, "converted")
+            converted_data = self._load_from_cache(converted_cache_path)
+            if converted_data:
+                self.logger.info(f"Using cached converted data for {audio_filepath}")
+                return TranscriptionData.from_dict(converted_data)
 
+            # Check raw cache next
+            raw_cache_path = self._get_cache_path(file_hash, "raw")
             raw_data = self._load_from_cache(raw_cache_path)
             if raw_data:
                 self.logger.info(f"Using cached raw data for {audio_filepath}")
-                return self._save_and_convert_result(file_hash, raw_data)
+                converted_result = self._convert_result_format(raw_data)
+                self._save_to_cache(converted_cache_path, converted_result.to_dict())
+                return converted_result
 
             # If not in cache, perform transcription
             self.logger.info(f"No cache found, transcribing {audio_filepath}")

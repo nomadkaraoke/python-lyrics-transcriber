@@ -202,6 +202,17 @@ class TranscriptionData:
             "metadata": self.metadata,
         }
 
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> "TranscriptionData":
+        """Create TranscriptionData from dictionary."""
+        return cls(
+            segments=[LyricsSegment.from_dict(s) for s in data["segments"]],
+            words=[Word.from_dict(w) for w in data["words"]],
+            text=data["text"],
+            source=data["source"],
+            metadata=data.get("metadata"),
+        )
+
 
 @dataclass
 class TranscriptionResult:

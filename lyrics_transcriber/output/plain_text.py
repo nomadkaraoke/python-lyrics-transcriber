@@ -39,7 +39,9 @@ class PlainTextGenerator:
 
         try:
             with open(output_path, "w", encoding="utf-8") as f:
-                f.write(lyrics_data.lyrics)
+                # Join segment texts with newlines
+                lyrics_text = "\n".join(segment.text for segment in lyrics_data.segments)
+                f.write(lyrics_text)
             self.logger.info(f"Plain lyrics file generated: {output_path}")
             return output_path
         except Exception as e:

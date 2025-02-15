@@ -42,20 +42,31 @@ class BaseLyricsProvider(ABC):
 
         # Use artist and title for cache key instead of audio file hash
         cache_key = self._get_artist_title_hash(artist, title)
-        raw_cache_path = self._get_cache_path(cache_key, "raw")
 
-        # Try to load from cache first
+        # Check converted cache first
+        converted_cache_path = self._get_cache_path(cache_key, "converted")
+        converted_data = self._load_from_cache(converted_cache_path)
+        if converted_data:
+            self.logger.info(f"Using cached converted lyrics for {artist} - {title}")
+            return LyricsData.from_dict(converted_data)
+
+        # Check raw cache next
+        raw_cache_path = self._get_cache_path(cache_key, "raw")
         raw_data = self._load_from_cache(raw_cache_path)
-        if raw_data is not None:
-            self.logger.info(f"Using cached lyrics for {artist} - {title}")
-            return self._save_and_convert_result(cache_key, raw_data)
+        if raw_data:
+            self.logger.info(f"Using cached raw lyrics for {artist} - {title}")
+            converted_result = self._convert_result_format(raw_data)
+            self._save_to_cache(converted_cache_path, converted_result.to_dict())
+            return converted_result
 
         # If not in cache, fetch from source
         raw_result = self._fetch_data_from_source(artist, title)
         if raw_result:
             # Save raw API response
             self._save_to_cache(raw_cache_path, raw_result)
-            return self._save_and_convert_result(cache_key, raw_result)
+            converted_result = self._convert_result_format(raw_result)
+            self._save_to_cache(converted_cache_path, converted_result.to_dict())
+            return converted_result
 
         return None
 
