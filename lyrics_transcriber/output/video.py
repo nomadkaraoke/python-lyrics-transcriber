@@ -277,18 +277,23 @@ class VideoGenerator:
         # Add audio input and subtitle overlay
         cmd.extend([
             "-i", audio_path,
-            "-c:a", "aac",  # Use AAC for audio (better browser compatibility)
-            "-b:a", "128k",  # Lower audio bitrate for preview
+            "-c:a", "aac",  # Use AAC for audio
+            "-b:a", "128k",  # Audio bitrate
             "-vf", f"ass={ass_path}",  # Add subtitles
-            "-c:v", "libx264",  # Use H.264 for video
-            # Video quality settings for preview (lower quality, faster encoding)
-            "-preset", "ultrafast",  # Fastest encoding
-            "-b:v", "800k",  # Lower video bitrate for preview
-            "-maxrate", "1000k",
+            "-c:v", "libx264",  # Use H.264 codec
+            "-profile:v", "baseline",  # Most compatible H.264 profile
+            "-level", "3.0",  # Compatibility level
+            "-pix_fmt", "yuv420p",  # Required for browser compatibility
+            "-preset", "ultrafast",
+            "-b:v", "1000k",  # Slightly higher bitrate
+            "-maxrate", "1500k",
             "-bufsize", "2000k",
-            "-movflags", "+faststart",  # Enable fast start for web playback
-            "-shortest",  # End encoding after shortest stream
-            "-y",  # Overwrite output without asking
+            "-movflags", "+faststart+frag_keyframe+empty_moov",  # Enhanced streaming flags
+            "-g", "30",  # Keyframe every 30 frames (1 second)
+            "-keyint_min", "30",  # Minimum keyframe interval
+            "-sc_threshold", "0",  # Disable scene change detection
+            "-shortest",
+            "-y"
         ])
         # fmt: on
 

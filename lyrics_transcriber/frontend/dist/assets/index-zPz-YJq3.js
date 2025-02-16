@@ -27941,9 +27941,17 @@ class LiveApiClient {
   getAudioUrl(audioHash) {
     return `${this.baseUrl}/audio/${audioHash}`;
   }
-  async generatePreviewVideo() {
+  async generatePreviewVideo(data) {
+    const updatePayload = {
+      corrections: data.corrections,
+      corrected_segments: data.corrected_segments
+    };
     const response = await fetch(`${this.baseUrl}/preview-video`, {
-      method: "POST"
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify(updatePayload)
     });
     if (!response.ok) {
       return {
@@ -29909,60 +29917,50 @@ function EditModal({
 const ExpandMoreIcon = createSvgIcon(/* @__PURE__ */ jsxRuntimeExports.jsx("path", {
   d: "M16.59 8.59 12 13.17 7.41 8.59 6 10l6 6 6-6z"
 }), "ExpandMore");
-const PlayArrowIcon = createSvgIcon(/* @__PURE__ */ jsxRuntimeExports.jsx("path", {
-  d: "M8 5v14l11-7z"
-}), "PlayArrow");
-function PreviewVideoSection({ apiClient, isModalOpen }) {
-  const [previewState, setPreviewState] = reactExports.useState({ status: "idle" });
+function PreviewVideoSection({
+  apiClient,
+  isModalOpen,
+  updatedData
+}) {
+  const [previewState, setPreviewState] = reactExports.useState({ status: "loading" });
   reactExports.useEffect(() => {
-    if (!isModalOpen) {
-      setPreviewState({ status: "idle" });
+    if (isModalOpen && apiClient) {
+      const generatePreview = async () => {
+        setPreviewState({ status: "loading" });
+        try {
+          const response = await apiClient.generatePreviewVideo(updatedData);
+          if (response.status === "error") {
+            setPreviewState({
+              status: "error",
+              error: response.message || "Failed to generate preview video"
+            });
+            return;
+          }
+          if (!response.preview_hash) {
+            setPreviewState({
+              status: "error",
+              error: "No preview hash received from server"
+            });
+            return;
+          }
+          const videoUrl = apiClient.getPreviewVideoUrl(response.preview_hash);
+          setPreviewState({
+            status: "ready",
+            videoUrl
+          });
+        } catch (error) {
+          setPreviewState({
+            status: "error",
+            error: error.message || "Failed to generate preview video"
+          });
+        }
+      };
+      generatePreview();
     }
-  }, [isModalOpen]);
-  const handleGeneratePreview = async () => {
-    if (!apiClient) return;
-    setPreviewState({ status: "loading" });
-    try {
-      const response = await apiClient.generatePreviewVideo();
-      if (response.status === "error") {
-        setPreviewState({
-          status: "error",
-          error: response.message || "Failed to generate preview video"
-        });
-        return;
-      }
-      if (!response.preview_hash) {
-        setPreviewState({
-          status: "error",
-          error: "No preview hash received from server"
-        });
-        return;
-      }
-      const videoUrl = apiClient.getPreviewVideoUrl(response.preview_hash);
-      setPreviewState({
-        status: "ready",
-        videoUrl
-      });
-    } catch (error) {
-      setPreviewState({
-        status: "error",
-        error: error.message || "Failed to generate preview video"
-      });
-    }
-  };
+  }, [isModalOpen, apiClient, updatedData]);
   if (!apiClient) return null;
   return /* @__PURE__ */ jsxRuntimeExports.jsxs(Box, { sx: { mt: 3, mb: 2 }, children: [
     /* @__PURE__ */ jsxRuntimeExports.jsx(Typography, { variant: "h6", gutterBottom: true, children: "Preview Video" }),
-    previewState.status === "idle" && /* @__PURE__ */ jsxRuntimeExports.jsx(
-      Button,
-      {
-        variant: "outlined",
-        startIcon: /* @__PURE__ */ jsxRuntimeExports.jsx(PlayArrowIcon, {}),
-        onClick: handleGeneratePreview,
-        sx: { mb: 2 },
-        children: "Generate Preview Video"
-      }
-    ),
     previewState.status === "loading" && /* @__PURE__ */ jsxRuntimeExports.jsxs(Box, { sx: { display: "flex", alignItems: "center", gap: 2, mb: 2 }, children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx(CircularProgress, { size: 24 }),
       /* @__PURE__ */ jsxRuntimeExports.jsx(Typography, { children: "Generating preview video..." })
@@ -29976,20 +29974,28 @@ function PreviewVideoSection({ apiClient, isModalOpen }) {
           {
             color: "inherit",
             size: "small",
-            onClick: handleGeneratePreview,
+            onClick: () => {
+              setPreviewState({ status: "loading" });
+            },
             children: "Retry"
           }
         ),
         children: previewState.error
       }
     ) }),
-    previewState.status === "ready" && previewState.videoUrl && /* @__PURE__ */ jsxRuntimeExports.jsx(Box, { sx: { mb: 2 }, children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+    previewState.status === "ready" && previewState.videoUrl && /* @__PURE__ */ jsxRuntimeExports.jsx(Box, { sx: {
+      width: "calc(100% + 48px)",
+      margin: "0 -24px"
+    }, children: /* @__PURE__ */ jsxRuntimeExports.jsx(
       "video",
       {
         controls: true,
-        width: "100%",
         src: previewState.videoUrl,
-        style: { maxHeight: "400px" },
+        style: {
+          display: "block",
+          width: "100%",
+          height: "auto"
+        },
         children: "Your browser does not support the video tag."
       }
     ) })
@@ -30185,7 +30191,8 @@ function ReviewChangesModal({
             PreviewVideoSection,
             {
               apiClient,
-              isModalOpen: open
+              isModalOpen: open,
+              updatedData
             }
           )
         ] }),
@@ -30409,6 +30416,9 @@ function ModeSelector({ effectiveMode, onChange }) {
     )
   ] });
 }
+const PlayArrowIcon = createSvgIcon(/* @__PURE__ */ jsxRuntimeExports.jsx("path", {
+  d: "M8 5v14l11-7z"
+}), "PlayArrow");
 const PauseIcon = createSvgIcon(/* @__PURE__ */ jsxRuntimeExports.jsx("path", {
   d: "M6 19h4V5H6zm8-14v14h4V5z"
 }), "Pause");
@@ -31225,4 +31235,4 @@ function App() {
 ReactDOM$1.createRoot(document.getElementById("root")).render(
   /* @__PURE__ */ jsxRuntimeExports.jsx(App, {})
 );
-//# sourceMappingURL=index-R2zfAEx8.js.map
+//# sourceMappingURL=index-zPz-YJq3.js.map

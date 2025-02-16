@@ -345,6 +345,7 @@ class LyricsTranscriber:
             import json
             from copy import deepcopy
             from ..review.server import ReviewServer
+            from ..output.segment_resizer import SegmentResizer
 
             self.logger.info("Starting human review process")
 
@@ -373,6 +374,11 @@ class LyricsTranscriber:
                 logger=self.logger,
             )
             reviewed_data = review_server.start()
+
+            # Ensure resized segments are populated after review
+            if not reviewed_data.resized_segments:
+                segment_resizer = SegmentResizer(max_line_length=self.output_config.max_line_length, logger=self.logger)
+                reviewed_data.resized_segments = segment_resizer.resize_segments(reviewed_data.corrected_segments)
 
             # Normalize and convert reviewed data
             human_data = normalize_data(deepcopy(reviewed_data.to_dict()))

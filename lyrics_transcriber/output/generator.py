@@ -114,7 +114,7 @@ class OutputGenerator:
                 if preview_mode:
                     # Generate ASS subtitles for preview
                     outputs.ass = self.subtitle.generate_ass(
-                        transcription_corrected.corrected_segments, 
+                        transcription_corrected.resized_segments, 
                         output_prefix,
                         audio_filepath
                     )

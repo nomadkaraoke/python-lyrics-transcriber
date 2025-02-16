@@ -14,6 +14,10 @@ from lyrics_transcriber.core.config import OutputConfig
 import uvicorn
 import webbrowser
 from threading import Thread
+from lyrics_transcriber.output.generator import OutputGenerator
+import asyncio
+from lyrics_transcriber.output.segment_resizer import SegmentResizer
+import json
 
 logger = logging.getLogger(__name__)
 
@@ -75,10 +79,10 @@ class ReviewServer:
         """Get the correction data."""
         return self.correction_result.to_dict()
 
-    async def complete_review(self, updated_data: Dict[str, Any] = Body(...)):
-        """Complete the review process."""
-        try:
-            self.correction_result.corrections = [
+    def _update_correction_result(self, base_result: CorrectionResult, updated_data: Dict[str, Any]) -> CorrectionResult:
+        """Update a CorrectionResult with new correction data."""
+        return CorrectionResult(
+            corrections=[
                 WordCorrection(
                     original_word=c.get("original_word", ""),
                     corrected_word=c.get("corrected_word", ""),
@@ -99,13 +103,28 @@ class ReviewServer:
                     corrected_word_id=c.get("corrected_word_id"),
                 )
                 for c in updated_data["corrections"]
-            ]
-            self.correction_result.corrected_segments = [LyricsSegment.from_dict(s) for s in updated_data["corrected_segments"]]
-            self.correction_result.corrections_made = len(self.correction_result.corrections)
+            ],
+            corrected_segments=[LyricsSegment.from_dict(s) for s in updated_data["corrected_segments"]],
+            # Copy existing fields from the base result
+            original_segments=base_result.original_segments,
+            corrections_made=len(updated_data["corrections"]),
+            confidence=base_result.confidence,
+            reference_lyrics=base_result.reference_lyrics,
+            anchor_sequences=base_result.anchor_sequences,
+            gap_sequences=base_result.gap_sequences,
+            resized_segments=None,  # Will be generated if needed
+            metadata=base_result.metadata,
+            correction_steps=base_result.correction_steps,
+            word_id_map=base_result.word_id_map,
+            segment_id_map=base_result.segment_id_map,
+        )
 
+    async def complete_review(self, updated_data: Dict[str, Any] = Body(...)):
+        """Complete the review process."""
+        try:
+            self.correction_result = self._update_correction_result(self.correction_result, updated_data)
             self.review_completed = True
             return {"status": "success"}
-
         except Exception as e:
             self.logger.error(f"Failed to update correction data: {str(e)}")
             return {"status": "error", "message": str(e)}
@@ -132,16 +151,76 @@ class ReviewServer:
     async def generate_preview_video(self, updated_data: Dict[str, Any] = Body(...)):
         """Generate a preview video with the current corrections."""
         try:
-            # Preview video generation is not implemented yet
-            self.logger.info("Preview video generation requested but not implemented")
-            return {"status": "error", "message": "Preview video generation not implemented"}
+            # Create temporary correction result with updated data
+            temp_correction = self._update_correction_result(self.correction_result, updated_data)
+
+            # Generate a unique hash for this preview
+            preview_data = json.dumps(updated_data, sort_keys=True).encode("utf-8")
+            preview_hash = hashlib.md5(preview_data).hexdigest()[:12]  # Use first 12 chars for shorter filename
+
+            # Resize segments if needed
+            if not temp_correction.resized_segments:
+                segment_resizer = SegmentResizer(max_line_length=self.output_config.max_line_length, logger=self.logger)
+                temp_correction.resized_segments = segment_resizer.resize_segments(temp_correction.corrected_segments)
+
+            # Initialize output generator with preview settings
+            preview_config = OutputConfig(
+                output_dir=self.output_config.output_dir,
+                cache_dir=self.output_config.cache_dir,
+                output_styles_json=self.output_config.output_styles_json,
+                video_resolution="360p",  # Force 360p for preview
+                styles=self.output_config.styles,
+                max_line_length=self.output_config.max_line_length,
+            )
+            output_generator = OutputGenerator(config=preview_config, logger=self.logger)
+
+            # Generate preview outputs with unique prefix
+            preview_outputs = output_generator.generate_outputs(
+                transcription_corrected=temp_correction,
+                lyrics_results={},  # Empty dict since we don't need lyrics results for preview
+                output_prefix=f"preview_{preview_hash}",  # Include hash in filename
+                audio_filepath=self.audio_filepath,
+                preview_mode=True,
+            )
+
+            if not preview_outputs.video:
+                raise ValueError("Preview video generation failed")
+
+            # Store the path for later retrieval
+            if not hasattr(self, "preview_videos"):
+                self.preview_videos = {}
+            self.preview_videos[preview_hash] = preview_outputs.video
+
+            return {"status": "success", "preview_hash": preview_hash}
+
         except Exception as e:
             self.logger.error(f"Failed to generate preview video: {str(e)}")
             raise HTTPException(status_code=500, detail=str(e))
 
     async def get_preview_video(self, preview_hash: str):
         """Stream the preview video."""
-        raise HTTPException(status_code=404, detail="Preview video not found")
+        try:
+            if not hasattr(self, "preview_videos") or preview_hash not in self.preview_videos:
+                raise FileNotFoundError("Preview video not found")
+
+            video_path = self.preview_videos[preview_hash]
+            if not os.path.exists(video_path):
+                raise FileNotFoundError("Preview video file not found")
+
+            return FileResponse(
+                video_path,
+                media_type="video/mp4",
+                filename=os.path.basename(video_path),
+                headers={
+                    "Accept-Ranges": "bytes",
+                    "Content-Disposition": "inline",
+                    "Cache-Control": "no-cache",
+                    "X-Content-Type-Options": "nosniff",
+                },
+            )
+        except Exception as e:
+            self.logger.error(f"Failed to stream preview video: {str(e)}")
+            raise HTTPException(status_code=404, detail="Preview video not found")
 
     def start(self) -> CorrectionResult:
         """Start the review server and wait for completion."""
