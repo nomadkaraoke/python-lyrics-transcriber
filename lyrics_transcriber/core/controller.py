@@ -342,9 +342,9 @@ class LyricsTranscriber:
 
         # Add human review step
         if self.output_config.enable_review:
-            from ..review import start_review_server
             import json
             from copy import deepcopy
+            from ..review.server import ReviewServer
 
             self.logger.info("Starting human review process")
 
@@ -365,8 +365,14 @@ class LyricsTranscriber:
             auto_data = normalize_data(deepcopy(self.results.transcription_corrected.to_dict()))
             auto_corrected_json = json.dumps(auto_data, indent=4).splitlines()
 
-            # Pass through review server
-            reviewed_data = start_review_server(self.results.transcription_corrected)
+            # Create and start review server
+            review_server = ReviewServer(
+                correction_result=self.results.transcription_corrected,
+                output_config=self.output_config,
+                audio_filepath=self.audio_filepath,
+                logger=self.logger,
+            )
+            reviewed_data = review_server.start()
 
             # Normalize and convert reviewed data
             human_data = normalize_data(deepcopy(reviewed_data.to_dict()))
@@ -383,8 +389,6 @@ class LyricsTranscriber:
                 self.logger.warning("Changes made by human review:")
                 for line in diff:
                     self.logger.warning(line.rstrip())
-
-            # exit(1)
 
     def generate_outputs(self) -> None:
         """Generate output files based on enabled features and available data."""

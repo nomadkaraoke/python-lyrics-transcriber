@@ -102,27 +102,55 @@ class OutputGenerator:
         audio_filepath: str,
         artist: Optional[str] = None,
         title: Optional[str] = None,
+        preview_mode: bool = False,
     ) -> OutputPaths:
         """Generate all requested output formats."""
         outputs = OutputPaths()
 
         try:
-            # Generate plain lyrics files for each provider
-            for name, lyrics_data in lyrics_results.items():
-                self.plain_text.write_lyrics(lyrics_data, output_prefix)
-
             # Only process transcription-related outputs if we have transcription data
             if transcription_corrected:
-                # Write original (uncorrected) transcription
-                outputs.original_txt = self.plain_text.write_original_transcription(transcription_corrected, output_prefix)
+                # For preview, we only need to generate ASS and video
+                if preview_mode:
+                    # Generate ASS subtitles for preview
+                    outputs.ass = self.subtitle.generate_ass(
+                        transcription_corrected.corrected_segments, 
+                        output_prefix,
+                        audio_filepath
+                    )
+                    
+                    # Generate preview video
+                    outputs.video = self.video.generate_preview_video(
+                        outputs.ass,
+                        audio_filepath,
+                        output_prefix
+                    )
+                    
+                    return outputs
 
-                # Resize corrected segments to ensure none are longer than max_line_length
-                resized_segments = self.segment_resizer.resize_segments(transcription_corrected.corrected_segments)
+                # Normal output generation (non-preview mode)
+                # Generate plain lyrics files for each provider
+                for name, lyrics_data in lyrics_results.items():
+                    self.plain_text.write_lyrics(lyrics_data, output_prefix)
+
+                # Write original (uncorrected) transcription
+                outputs.original_txt = self.plain_text.write_original_transcription(
+                    transcription_corrected, output_prefix
+                )
+
+                # Resize corrected segments
+                resized_segments = self.segment_resizer.resize_segments(
+                    transcription_corrected.corrected_segments
+                )
                 transcription_corrected.resized_segments = resized_segments
-                outputs.corrections_json = self.write_corrections_data(transcription_corrected, output_prefix)
+                outputs.corrections_json = self.write_corrections_data(
+                    transcription_corrected, output_prefix
+                )
 
                 # Write corrected lyrics as plain text
-                outputs.corrected_txt = self.plain_text.write_corrected_lyrics(resized_segments, output_prefix)
+                outputs.corrected_txt = self.plain_text.write_corrected_lyrics(
+                    resized_segments, output_prefix
+                )
 
                 # Generate LRC using LyricsFileGenerator
                 outputs.lrc = self.lyrics_file.generate_lrc(resized_segments, output_prefix)
@@ -140,8 +168,12 @@ class OutputGenerator:
                 # Generate video if requested
                 if self.config.render_video:
                     # Generate ASS subtitles
-                    outputs.ass = self.subtitle.generate_ass(resized_segments, output_prefix, audio_filepath)
-                    outputs.video = self.video.generate_video(outputs.ass, audio_filepath, output_prefix)
+                    outputs.ass = self.subtitle.generate_ass(
+                        resized_segments, output_prefix, audio_filepath
+                    )
+                    outputs.video = self.video.generate_video(
+                        outputs.ass, audio_filepath, output_prefix
+                    )
 
             return outputs
 

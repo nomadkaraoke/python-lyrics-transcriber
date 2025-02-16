@@ -27941,6 +27941,21 @@ class LiveApiClient {
   getAudioUrl(audioHash) {
     return `${this.baseUrl}/audio/${audioHash}`;
   }
+  async generatePreviewVideo() {
+    const response = await fetch(`${this.baseUrl}/preview-video`, {
+      method: "POST"
+    });
+    if (!response.ok) {
+      return {
+        status: "error",
+        message: `API error: ${response.statusText}`
+      };
+    }
+    return await response.json();
+  }
+  getPreviewVideoUrl(previewHash) {
+    return `${this.baseUrl}/preview-video/${previewHash}`;
+  }
 }
 class FileOnlyClient {
   async getCorrectionData() {
@@ -27952,6 +27967,13 @@ class FileOnlyClient {
   }
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   getAudioUrl(_audioHash) {
+    throw new Error("Not supported in file-only mode");
+  }
+  async generatePreviewVideo() {
+    throw new Error("Not supported in file-only mode");
+  }
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  getPreviewVideoUrl(_previewHash) {
     throw new Error("Not supported in file-only mode");
   }
 }
@@ -29887,6 +29909,92 @@ function EditModal({
 const ExpandMoreIcon = createSvgIcon(/* @__PURE__ */ jsxRuntimeExports.jsx("path", {
   d: "M16.59 8.59 12 13.17 7.41 8.59 6 10l6 6 6-6z"
 }), "ExpandMore");
+const PlayArrowIcon = createSvgIcon(/* @__PURE__ */ jsxRuntimeExports.jsx("path", {
+  d: "M8 5v14l11-7z"
+}), "PlayArrow");
+function PreviewVideoSection({ apiClient, isModalOpen }) {
+  const [previewState, setPreviewState] = reactExports.useState({ status: "idle" });
+  reactExports.useEffect(() => {
+    if (!isModalOpen) {
+      setPreviewState({ status: "idle" });
+    }
+  }, [isModalOpen]);
+  const handleGeneratePreview = async () => {
+    if (!apiClient) return;
+    setPreviewState({ status: "loading" });
+    try {
+      const response = await apiClient.generatePreviewVideo();
+      if (response.status === "error") {
+        setPreviewState({
+          status: "error",
+          error: response.message || "Failed to generate preview video"
+        });
+        return;
+      }
+      if (!response.preview_hash) {
+        setPreviewState({
+          status: "error",
+          error: "No preview hash received from server"
+        });
+        return;
+      }
+      const videoUrl = apiClient.getPreviewVideoUrl(response.preview_hash);
+      setPreviewState({
+        status: "ready",
+        videoUrl
+      });
+    } catch (error) {
+      setPreviewState({
+        status: "error",
+        error: error.message || "Failed to generate preview video"
+      });
+    }
+  };
+  if (!apiClient) return null;
+  return /* @__PURE__ */ jsxRuntimeExports.jsxs(Box, { sx: { mt: 3, mb: 2 }, children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsx(Typography, { variant: "h6", gutterBottom: true, children: "Preview Video" }),
+    previewState.status === "idle" && /* @__PURE__ */ jsxRuntimeExports.jsx(
+      Button,
+      {
+        variant: "outlined",
+        startIcon: /* @__PURE__ */ jsxRuntimeExports.jsx(PlayArrowIcon, {}),
+        onClick: handleGeneratePreview,
+        sx: { mb: 2 },
+        children: "Generate Preview Video"
+      }
+    ),
+    previewState.status === "loading" && /* @__PURE__ */ jsxRuntimeExports.jsxs(Box, { sx: { display: "flex", alignItems: "center", gap: 2, mb: 2 }, children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx(CircularProgress, { size: 24 }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx(Typography, { children: "Generating preview video..." })
+    ] }),
+    previewState.status === "error" && /* @__PURE__ */ jsxRuntimeExports.jsx(Box, { sx: { mb: 2 }, children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+      Alert,
+      {
+        severity: "error",
+        action: /* @__PURE__ */ jsxRuntimeExports.jsx(
+          Button,
+          {
+            color: "inherit",
+            size: "small",
+            onClick: handleGeneratePreview,
+            children: "Retry"
+          }
+        ),
+        children: previewState.error
+      }
+    ) }),
+    previewState.status === "ready" && previewState.videoUrl && /* @__PURE__ */ jsxRuntimeExports.jsx(Box, { sx: { mb: 2 }, children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+      "video",
+      {
+        controls: true,
+        width: "100%",
+        src: previewState.videoUrl,
+        style: { maxHeight: "400px" },
+        children: "Your browser does not support the video tag."
+      }
+    ) })
+  ] });
+}
 const normalizeWordForComparison = (word) => ({
   text: word.text,
   start_time: word.start_time ?? 0,
@@ -29907,7 +30015,8 @@ function ReviewChangesModal({
   onClose,
   originalData,
   updatedData,
-  onSubmit
+  onSubmit,
+  apiClient
 }) {
   const [expandedSegments, setExpandedSegments] = reactExports.useState([]);
   const differences = reactExports.useMemo(() => {
@@ -30056,21 +30165,30 @@ function ReviewChangesModal({
       fullWidth: true,
       children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx(DialogTitle, { children: "Review Changes" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx(DialogContent, { dividers: true, children: differences.length === 0 ? /* @__PURE__ */ jsxRuntimeExports.jsxs(Box, { children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx(Typography, { color: "text.secondary", sx: { mb: 2 }, children: "No changes detected. You can still submit to continue processing." }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs(Typography, { variant: "body2", color: "text.secondary", children: [
-            "Total segments: ",
-            updatedData.corrected_segments.length
-          ] })
-        ] }) : /* @__PURE__ */ jsxRuntimeExports.jsxs(Box, { children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsxs(Typography, { variant: "body2", color: "text.secondary", sx: { mb: 2 }, children: [
-            differences.length,
-            " change",
-            differences.length !== 1 ? "s" : "",
-            " detected:"
+        /* @__PURE__ */ jsxRuntimeExports.jsxs(DialogContent, { dividers: true, children: [
+          differences.length === 0 ? /* @__PURE__ */ jsxRuntimeExports.jsxs(Box, { children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx(Typography, { color: "text.secondary", sx: { mb: 2 }, children: "No changes detected. You can still submit to continue processing." }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs(Typography, { variant: "body2", color: "text.secondary", children: [
+              "Total segments: ",
+              updatedData.corrected_segments.length
+            ] })
+          ] }) : /* @__PURE__ */ jsxRuntimeExports.jsxs(Box, { children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsxs(Typography, { variant: "body2", color: "text.secondary", sx: { mb: 2 }, children: [
+              differences.length,
+              " change",
+              differences.length !== 1 ? "s" : "",
+              " detected:"
+            ] }),
+            differences.map(renderDiff)
           ] }),
-          differences.map(renderDiff)
-        ] }) }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            PreviewVideoSection,
+            {
+              apiClient,
+              isModalOpen: open
+            }
+          )
+        ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs(DialogActions, { children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx(Button, { onClick: onClose, children: "Cancel" }),
           /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -30291,9 +30409,6 @@ function ModeSelector({ effectiveMode, onChange }) {
     )
   ] });
 }
-const PlayArrowIcon = createSvgIcon(/* @__PURE__ */ jsxRuntimeExports.jsx("path", {
-  d: "M8 5v14l11-7z"
-}), "PlayArrow");
 const PauseIcon = createSvgIcon(/* @__PURE__ */ jsxRuntimeExports.jsx("path", {
   d: "M6 19h4V5H6zm8-14v14h4V5z"
 }), "Pause");
@@ -30933,7 +31048,8 @@ function LyricsAnalyzer({ data: initialData, onFileLoad, apiClient, isReadOnly, 
         onClose: () => setIsReviewModalOpen(false),
         originalData,
         updatedData: data,
-        onSubmit: handleSubmitToServer
+        onSubmit: handleSubmitToServer,
+        apiClient
       }
     ),
     !isReadOnly && apiClient && /* @__PURE__ */ jsxRuntimeExports.jsxs(Box, { sx: { mt: 2, mb: 3, display: "flex", gap: 2 }, children: [
@@ -31109,4 +31225,4 @@ function App() {
 ReactDOM$1.createRoot(document.getElementById("root")).render(
   /* @__PURE__ */ jsxRuntimeExports.jsx(App, {})
 );
-//# sourceMappingURL=index-DUTfVrxN.js.map
+//# sourceMappingURL=index-R2zfAEx8.js.map

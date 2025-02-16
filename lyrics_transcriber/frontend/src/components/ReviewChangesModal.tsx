@@ -8,11 +8,13 @@ import {
     Typography,
     Paper,
     Collapse,
-    IconButton,
+    IconButton
 } from '@mui/material'
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
 import { CorrectionData } from '../types'
 import { useMemo, useState } from 'react'
+import { ApiClient } from '../api'
+import PreviewVideoSection from './PreviewVideoSection'
 
 interface ReviewChangesModalProps {
     open: boolean
@@ -20,6 +22,7 @@ interface ReviewChangesModalProps {
     originalData: CorrectionData
     updatedData: CorrectionData
     onSubmit: () => void
+    apiClient: ApiClient | null
 }
 
 interface DiffResult {
@@ -65,7 +68,8 @@ export default function ReviewChangesModal({
     onClose,
     originalData,
     updatedData,
-    onSubmit
+    onSubmit,
+    apiClient
 }: ReviewChangesModalProps) {
     const [expandedSegments, setExpandedSegments] = useState<number[]>([])
 
@@ -261,6 +265,11 @@ export default function ReviewChangesModal({
                         {differences.map(renderDiff)}
                     </Box>
                 )}
+                <PreviewVideoSection
+                    apiClient={apiClient}
+                    isModalOpen={open}
+                    updatedData={updatedData}
+                />
             </DialogContent>
             <DialogActions>
                 <Button onClick={onClose}>Cancel</Button>

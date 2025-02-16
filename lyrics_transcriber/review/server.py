@@ -1,213 +1,189 @@
 import logging
-from fastapi import FastAPI, Body
+from fastapi import FastAPI, Body, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from typing import Optional, Dict, Any
-from ..types import CorrectionResult, WordCorrection, LyricsSegment
+from lyrics_transcriber.types import CorrectionResult, WordCorrection, LyricsSegment
 import time
-import subprocess
 import os
-import atexit
 import urllib.parse
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
-from pathlib import Path
 import socket
 import hashlib
+from lyrics_transcriber.core.config import OutputConfig
+import uvicorn
+import webbrowser
+from threading import Thread
 
 logger = logging.getLogger(__name__)
 
-app = FastAPI()
 
-# Configure CORS for development
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=[f"http://localhost:{port}" for port in range(3000, 5174)]  # Common development ports
-    + [f"http://127.0.0.1:{port}" for port in range(3000, 5174)],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+class ReviewServer:
+    """Handles the review process through a web interface."""
 
-# Global state for the review process
-current_review: Optional[CorrectionResult] = None
-review_completed = False
-vite_process: Optional[subprocess.Popen] = None
-audio_filepath: Optional[str] = None  # Add this new global variable
+    def __init__(
+        self,
+        correction_result: CorrectionResult,
+        output_config: OutputConfig,
+        audio_filepath: str,
+        logger: Optional[logging.Logger] = None,
+    ):
+        """Initialize the review server."""
+        self.correction_result = correction_result
+        self.output_config = output_config
+        self.audio_filepath = audio_filepath
+        self.logger = logger or logging.getLogger(__name__)
+        self.review_completed = False
 
+        # Create FastAPI instance and configure
+        self.app = FastAPI()
+        self._configure_cors()
+        self._register_routes()
+        self._mount_frontend()
 
-def start_vite_server():
-    """Get path to the built frontend assets."""
-    global vite_process  # We'll keep this for backwards compatibility
+    def _configure_cors(self) -> None:
+        """Configure CORS middleware."""
+        self.app.add_middleware(
+            CORSMiddleware,
+            allow_origins=[f"http://localhost:{port}" for port in range(3000, 5174)]
+            + [f"http://127.0.0.1:{port}" for port in range(3000, 5174)],
+            allow_credentials=True,
+            allow_methods=["*"],
+            allow_headers=["*"],
+        )
 
-    # Get the path to the built frontend assets
-    current_dir = os.path.dirname(os.path.abspath(__file__))
-    frontend_dir = os.path.abspath(os.path.join(current_dir, "../frontend/dist"))
+    def _mount_frontend(self) -> None:
+        """Mount the frontend static files."""
+        current_dir = os.path.dirname(os.path.abspath(__file__))
+        frontend_dir = os.path.abspath(os.path.join(current_dir, "../frontend/dist"))
 
-    if not os.path.exists(frontend_dir):
-        raise FileNotFoundError(f"Frontend assets not found at {frontend_dir}. Ensure the package was built correctly.")
+        if not os.path.exists(frontend_dir):
+            raise FileNotFoundError(f"Frontend assets not found at {frontend_dir}")
 
-    # Mount the static files
-    app.mount("/", StaticFiles(directory=frontend_dir, html=True), name="frontend")
+        self.app.mount("/", StaticFiles(directory=frontend_dir, html=True), name="frontend")
 
-    logger.info(f"Mounted frontend assets from {frontend_dir}")
-    return None  # No process to return since we're serving static files
+    def _register_routes(self) -> None:
+        """Register API routes."""
+        self.app.add_api_route("/api/correction-data", self.get_correction_data, methods=["GET"])
+        self.app.add_api_route("/api/complete", self.complete_review, methods=["POST"])
+        self.app.add_api_route("/api/preview-video", self.generate_preview_video, methods=["POST"])
+        self.app.add_api_route("/api/preview-video/{preview_hash}", self.get_preview_video, methods=["GET"])
+        self.app.add_api_route("/api/audio/{audio_hash}", self.get_audio, methods=["GET"])
+        self.app.add_api_route("/api/ping", self.ping, methods=["GET"])
 
+    async def get_correction_data(self):
+        """Get the correction data."""
+        return self.correction_result.to_dict()
 
-@app.get("/api/correction-data")
-async def get_correction_data():
-    """Get the current correction data for review."""
-    if current_review is None:
-        return {"error": "No review in progress"}
-    return current_review.to_dict()
-
-
-@app.post("/api/complete")
-async def complete_review(updated_data: Dict[str, Any] = Body(...)):
-    """
-    Mark the review as complete and update the correction data.
-
-    Args:
-        updated_data: Dictionary containing corrections and corrected_segments
-    """
-    global review_completed, current_review
-
-    logger.info("Received updated correction data")
-
-    try:
-        # Only update the specific fields that were modified
-        if current_review is None:
-            raise ValueError("No review in progress")
-
-        # Update only the corrections and corrected_segments
-        current_review.corrections = [
-            WordCorrection(
-                original_word=c.get("original_word", ""),
-                corrected_word=c.get("corrected_word", ""),
-                original_position=c.get("original_position", 0),  # Ensure this is set
-                source=c.get("source", "review"),
-                reason=c.get("reason", "manual_review"),
-                segment_index=c.get("segment_index", 0),
-                confidence=c.get("confidence"),
-                alternatives=c.get("alternatives", {}),
-                is_deletion=c.get("is_deletion", False),
-                split_index=c.get("split_index"),
-                split_total=c.get("split_total"),
-                corrected_position=c.get("corrected_position"),
-                reference_positions=c.get("reference_positions"),
-                length=c.get("length", 1),
-                handler=c.get("handler"),
-                word_id=c.get("word_id"),
-                corrected_word_id=c.get("corrected_word_id"),
-            )
-            for c in updated_data["corrections"]
-        ]
-        current_review.corrected_segments = [LyricsSegment.from_dict(s) for s in updated_data["corrected_segments"]]
-        current_review.corrections_made = len(current_review.corrections)
-
-        logger.info(f"Successfully updated correction data with {len(current_review.corrections)} corrections")
-
-        review_completed = True
-        return {"status": "success"}
-    except Exception as e:
-        logger.error(f"Failed to update correction data: {str(e)}")
-        return {"status": "error", "message": str(e)}
-
-
-@app.get("/api/audio/{audio_hash}")
-async def get_audio(audio_hash: str):
-    """Stream the audio file for playback in the browser."""
-    if not audio_filepath or not os.path.exists(audio_filepath):
-        logger.error(f"Audio file not found at {audio_filepath}")
-        return {"error": "Audio file not found"}
-
-    # Verify the hash matches to prevent cache issues
-    if audio_hash != current_review.metadata.get("audio_hash"):
-        logger.error(f"Audio hash mismatch: expected {current_review.metadata.get('audio_hash')}, got {audio_hash}")
-        return {"error": "Invalid audio hash"}
-
-    return FileResponse(
-        audio_filepath,
-        media_type="audio/mpeg",
-        headers={"Accept-Ranges": "bytes", "Content-Disposition": f"attachment; filename={Path(audio_filepath).name}"},
-    )
-
-
-def start_review_server(correction_result: CorrectionResult) -> CorrectionResult:
-    """
-    Start the review server and wait for completion.
-
-    Args:
-        correction_result: The correction result to review
-
-    Returns:
-        The potentially modified correction result after review
-    """
-    import uvicorn
-    import webbrowser
-    from threading import Thread
-    import signal
-    import sys
-
-    global current_review, review_completed, audio_filepath
-    current_review = correction_result
-    review_completed = False
-
-    audio_filepath = correction_result.metadata.get("audio_filepath") if correction_result.metadata else None
-
-    # Generate audio hash if audio file exists
-    if audio_filepath and os.path.exists(audio_filepath):
-        with open(audio_filepath, "rb") as f:
-            audio_hash = hashlib.md5(f.read()).hexdigest()
-        if not correction_result.metadata:
-            correction_result.metadata = {}
-        correction_result.metadata["audio_hash"] = audio_hash
-
-    logger.info("Starting review server...")
-
-    # Start Vite dev server (now just mounts static files)
-    start_vite_server()
-    logger.info("Frontend assets mounted")
-
-    # Wait for default port (8000) to become available
-    DEFAULT_PORT = 8000
-    while True:
+    async def complete_review(self, updated_data: Dict[str, Any] = Body(...)):
+        """Complete the review process."""
         try:
-            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-                s.bind(("127.0.0.1", DEFAULT_PORT))
+            self.correction_result.corrections = [
+                WordCorrection(
+                    original_word=c.get("original_word", ""),
+                    corrected_word=c.get("corrected_word", ""),
+                    original_position=c.get("original_position", 0),
+                    source=c.get("source", "review"),
+                    reason=c.get("reason", "manual_review"),
+                    segment_index=c.get("segment_index", 0),
+                    confidence=c.get("confidence"),
+                    alternatives=c.get("alternatives", {}),
+                    is_deletion=c.get("is_deletion", False),
+                    split_index=c.get("split_index"),
+                    split_total=c.get("split_total"),
+                    corrected_position=c.get("corrected_position"),
+                    reference_positions=c.get("reference_positions"),
+                    length=c.get("length", 1),
+                    handler=c.get("handler"),
+                    word_id=c.get("word_id"),
+                    corrected_word_id=c.get("corrected_word_id"),
+                )
+                for c in updated_data["corrections"]
+            ]
+            self.correction_result.corrected_segments = [LyricsSegment.from_dict(s) for s in updated_data["corrected_segments"]]
+            self.correction_result.corrections_made = len(self.correction_result.corrections)
+
+            self.review_completed = True
+            return {"status": "success"}
+
+        except Exception as e:
+            self.logger.error(f"Failed to update correction data: {str(e)}")
+            return {"status": "error", "message": str(e)}
+
+    async def ping(self):
+        """Simple ping endpoint for testing."""
+        return {"status": "ok"}
+
+    async def get_audio(self, audio_hash: str):
+        """Stream the audio file."""
+        try:
+            if (
+                not self.audio_filepath
+                or not os.path.exists(self.audio_filepath)
+                or not self.correction_result.metadata
+                or self.correction_result.metadata.get("audio_hash") != audio_hash
+            ):
+                raise FileNotFoundError("Audio file not found")
+
+            return FileResponse(self.audio_filepath, media_type="audio/mpeg", filename=os.path.basename(self.audio_filepath))
+        except Exception as e:
+            raise HTTPException(status_code=404, detail="Audio file not found")
+
+    async def generate_preview_video(self, updated_data: Dict[str, Any] = Body(...)):
+        """Generate a preview video with the current corrections."""
+        try:
+            # Preview video generation is not implemented yet
+            self.logger.info("Preview video generation requested but not implemented")
+            return {"status": "error", "message": "Preview video generation not implemented"}
+        except Exception as e:
+            self.logger.error(f"Failed to generate preview video: {str(e)}")
+            raise HTTPException(status_code=500, detail=str(e))
+
+    async def get_preview_video(self, preview_hash: str):
+        """Stream the preview video."""
+        raise HTTPException(status_code=404, detail="Preview video not found")
+
+    def start(self) -> CorrectionResult:
+        """Start the review server and wait for completion."""
+        # Generate audio hash if audio file exists
+        if self.audio_filepath and os.path.exists(self.audio_filepath):
+            with open(self.audio_filepath, "rb") as f:
+                audio_hash = hashlib.md5(f.read()).hexdigest()
+            if not self.correction_result.metadata:
+                self.correction_result.metadata = {}
+            self.correction_result.metadata["audio_hash"] = audio_hash
+
+        # Wait for port 8000 to become available
+        while True:
+            try:
+                with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+                    s.bind(("127.0.0.1", 8000))
                 break
-        except OSError:
-            logger.info(f"Port {DEFAULT_PORT} is occupied, waiting 10 seconds before retrying...")
-            time.sleep(10)
+            except OSError:
+                time.sleep(10)
 
-    logger.info(f"Port {DEFAULT_PORT} is available, starting server")
+        # Start server
+        config = uvicorn.Config(self.app, host="127.0.0.1", port=8000)
+        server = uvicorn.Server(config)
+        server_thread = Thread(target=server.run, daemon=True)
+        server_thread.start()
+        time.sleep(1)
 
-    # Create server config with default port
-    config = uvicorn.Config(app, host="127.0.0.1", port=DEFAULT_PORT, log_level="info")
-    server = uvicorn.Server(config)
+        # Open browser
+        base_api_url = "http://localhost:8000/api"
+        encoded_api_url = urllib.parse.quote(base_api_url, safe="")
+        audio_hash_param = (
+            f"&audioHash={self.correction_result.metadata.get('audio_hash', '')}"
+            if self.correction_result.metadata and "audio_hash" in self.correction_result.metadata
+            else ""
+        )
+        webbrowser.open(f"http://localhost:8000?baseApiUrl={encoded_api_url}{audio_hash_param}")
 
-    # Start FastAPI server in a separate thread
-    server_thread = Thread(target=server.run, daemon=True)
-    server_thread.start()
-    logger.info("Server thread started")
+        # Wait for review to complete
+        while not self.review_completed:
+            time.sleep(0.1)
 
-    # Update URL to include audio hash
-    base_api_url = f"http://localhost:{DEFAULT_PORT}/api"
-    encoded_api_url = urllib.parse.quote(base_api_url, safe="")
-    audio_hash_param = (
-        f"&audioHash={correction_result.metadata.get('audio_hash', '')}"
-        if correction_result.metadata and "audio_hash" in correction_result.metadata
-        else ""
-    )
-    webbrowser.open(f"http://localhost:{DEFAULT_PORT}?baseApiUrl={encoded_api_url}{audio_hash_param}")
-    logger.info("Opened browser for review")
+        server.should_exit = True
+        server_thread.join(timeout=5)
 
-    # Wait for review to complete
-    start_time = time.time()
-    while not review_completed:
-        time.sleep(0.1)
-
-    logger.info("Review completed, shutting down server...")
-    server.should_exit = True
-    server_thread.join(timeout=5)  # Wait up to 5 seconds for server to shut down
-
-    return current_review
+        return self.correction_result

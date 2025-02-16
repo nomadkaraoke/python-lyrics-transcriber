@@ -459,6 +459,7 @@ export default function LyricsAnalyzer({ data: initialData, onFileLoad, apiClien
                 originalData={originalData}
                 updatedData={data}
                 onSubmit={handleSubmitToServer}
+                apiClient={apiClient}
             />
 
             {!isReadOnly && apiClient && (

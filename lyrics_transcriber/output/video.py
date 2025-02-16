@@ -88,6 +88,52 @@ class VideoGenerator:
                     pass
             raise
 
+    def generate_preview_video(self, ass_path: str, audio_path: str, output_prefix: str) -> str:
+        """Generate lower resolution MP4 preview video with lyrics overlay.
+
+        Args:
+            ass_path: Path to ASS subtitles file
+            audio_path: Path to audio file
+            output_prefix: Prefix for output filename
+
+        Returns:
+            Path to generated preview video file
+        """
+        self.logger.info("Generating preview video with lyrics overlay")
+        output_path = os.path.join(self.cache_dir, f"{output_prefix}_preview.mp4")
+
+        # Check input files exist before running FFmpeg
+        if not os.path.isfile(ass_path):
+            raise FileNotFoundError(f"Subtitles file not found: {ass_path}")
+        if not os.path.isfile(audio_path):
+            raise FileNotFoundError(f"Audio file not found: {audio_path}")
+
+        try:
+            # Create a temporary copy of the ASS file with a safe filename
+            temp_ass_path = os.path.join(self.cache_dir, "temp_preview_subtitles.ass")
+            import shutil
+
+            shutil.copy2(ass_path, temp_ass_path)
+            self.logger.debug(f"Created temporary ASS file: {temp_ass_path}")
+
+            cmd = self._build_preview_ffmpeg_command(temp_ass_path, audio_path, output_path)
+            self._run_ffmpeg_command(cmd)
+            self.logger.info(f"Preview video generated: {output_path}")
+
+            # Clean up temporary file
+            os.remove(temp_ass_path)
+            return output_path
+
+        except Exception as e:
+            self.logger.error(f"Failed to generate preview video: {str(e)}")
+            # Clean up temporary file in case of error
+            if "temp_ass_path" in locals():
+                try:
+                    os.remove(temp_ass_path)
+                except:
+                    pass
+            raise
+
     def _get_output_path(self, output_prefix: str, extension: str) -> str:
         """Generate full output path for a file."""
         return os.path.join(self.output_dir, f"{output_prefix}.{extension}")
@@ -186,6 +232,61 @@ class VideoGenerator:
             "-minrate", "5000k",  # Minimum bitrate
             "-maxrate", "20000k",  # Maximum bitrate
             "-bufsize", "10000k",  # Buffer size (2x base rate)
+            "-shortest",  # End encoding after shortest stream
+            "-y",  # Overwrite output without asking
+        ])
+        # fmt: on
+
+        # Add output path
+        cmd.append(output_path)
+
+        return cmd
+
+    def _build_preview_ffmpeg_command(self, ass_path: str, audio_path: str, output_path: str) -> List[str]:
+        """Build FFmpeg command for preview video generation with optimized settings."""
+        # Use 360p resolution for preview
+        width, height = 640, 360
+
+        # fmt: off
+        cmd = [
+            "ffmpeg",
+            "-hide_banner",
+            "-loglevel", "error",
+            "-r", "30",  # Set frame rate to 30 fps
+        ]
+
+        # Input source (background)
+        if self.background_image:
+            # Resize background image first
+            resized_bg = self._resize_background_image(self.background_image)
+            self.logger.debug(f"Using resized background image: {resized_bg}")
+            cmd.extend([
+                "-loop", "1",  # Loop the image
+                "-i", resized_bg,
+            ])
+        else:
+            self.logger.debug(
+                f"Using solid {self.background_color} background "
+                f"with resolution: {width}x{height}"
+            )
+            cmd.extend([
+                "-f", "lavfi",
+                "-i", f"color=c={self.background_color}:s={width}x{height}:r=30"
+            ])
+
+        # Add audio input and subtitle overlay
+        cmd.extend([
+            "-i", audio_path,
+            "-c:a", "aac",  # Use AAC for audio (better browser compatibility)
+            "-b:a", "128k",  # Lower audio bitrate for preview
+            "-vf", f"ass={ass_path}",  # Add subtitles
+            "-c:v", "libx264",  # Use H.264 for video
+            # Video quality settings for preview (lower quality, faster encoding)
+            "-preset", "ultrafast",  # Fastest encoding
+            "-b:v", "800k",  # Lower video bitrate for preview
+            "-maxrate", "1000k",
+            "-bufsize", "2000k",
+            "-movflags", "+faststart",  # Enable fast start for web playback
             "-shortest",  # End encoding after shortest stream
             "-y",  # Overwrite output without asking
         ])
