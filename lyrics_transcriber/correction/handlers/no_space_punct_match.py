@@ -20,24 +20,49 @@ class NoSpacePunctuationMatchHandler(GapCorrectionHandler):
         # Remove all punctuation including apostrophes
         return re.sub(r"[^\w\s]", "", text)
 
-    def can_handle(self, gap: GapSequence) -> Tuple[bool, Dict[str, Any]]:
+    def can_handle(self, gap: GapSequence, data: Optional[Dict[str, Any]] = None) -> Tuple[bool, Dict[str, Any]]:
         # Must have reference words
-        if not gap.reference_words:
-            self.logger.debug("No reference words available.")
+        if not gap.reference_word_ids:
+            self.logger.debug("No reference word IDs available.")
             return False, {}
 
+        # Get word lookup map from data
+        if not data or "word_map" not in data:
+            self.logger.error("No word_map provided in data")
+            return False, {}
+
+        word_map = data["word_map"]
+
+        # Get the actual words from word IDs
+        gap_words = []
+        for word_id in gap.transcribed_word_ids:
+            if word_id not in word_map:
+                self.logger.error(f"Word ID {word_id} not found in word_map")
+                return False, {}
+            gap_words.append(word_map[word_id].text)
+
         # Get the gap text without spaces and punctuation
-        gap_text = self._remove_spaces_and_punct(gap.words)
+        gap_text = self._remove_spaces_and_punct(gap_words)
 
         # Check if any reference source matches when spaces and punctuation are removed
-        for source, words in gap.reference_words.items():
-            ref_text = self._remove_spaces_and_punct(words)
+        for source, ref_word_ids in gap.reference_word_ids.items():
+            ref_words = []
+            for word_id in ref_word_ids:
+                if word_id not in word_map:
+                    self.logger.error(f"Reference word ID {word_id} not found in word_map")
+                    continue
+                ref_words.append(word_map[word_id].text)
+
+            if not ref_words:
+                continue
+
+            ref_text = self._remove_spaces_and_punct(ref_words)
             if gap_text == ref_text:
                 self.logger.debug("Found a matching reference source with spaces and punctuation removed.")
                 return True, {
                     "matching_source": source,
-                    "reference_words": words,
-                    "reference_words_original": gap.reference_words_original[source],
+                    "reference_word_ids": ref_word_ids,
+                    "word_map": word_map,
                 }
 
         self.logger.debug("No matching reference source found with spaces and punctuation removed.")
@@ -52,22 +77,23 @@ class NoSpacePunctuationMatchHandler(GapCorrectionHandler):
 
         corrections = []
         matching_source = data["matching_source"]
-        reference_words = data["reference_words"]
-        reference_words_original = data["reference_words_original"]
-
-        # Get original word IDs if available
-        original_word_ids = [word.id if hasattr(word, "id") else None for word in gap.words]
+        reference_word_ids = data["reference_word_ids"]
+        word_map = data["word_map"]
 
         # Calculate reference positions for the matching source
         reference_positions = WordOperations.calculate_reference_positions(gap, [matching_source])
 
         # Handle cases where number of words differ
-        if len(gap.words) > len(reference_words):
+        if len(gap.transcribed_word_ids) > len(reference_word_ids):
             # Multiple transcribed words -> fewer reference words
+            # Get the actual words from word IDs
+            gap_words = [word_map[word_id].text for word_id in gap.transcribed_word_ids]
+            ref_word = word_map[reference_word_ids[0]].text
+
             corrections.extend(
                 WordOperations.create_word_combine_corrections(
-                    original_words=gap.words,
-                    reference_word=reference_words_original[0],
+                    original_words=gap_words,
+                    reference_word=ref_word,
                     original_position=gap.transcription_position,
                     source=matching_source,
                     confidence=1.0,
@@ -75,44 +101,52 @@ class NoSpacePunctuationMatchHandler(GapCorrectionHandler):
                     delete_reason="Word removed as part of text match combination",
                     reference_positions=reference_positions,
                     handler="NoSpacePunctuationMatchHandler",
-                    original_word_ids=original_word_ids,
+                    original_word_ids=gap.transcribed_word_ids,
+                    corrected_word_id=reference_word_ids[0],  # Use the reference word's ID
                 )
             )
-            self.logger.debug(f"Combined words into '{reference_words_original[0]}'.")
+            self.logger.debug(f"Combined words into '{ref_word}'.")
 
-        elif len(gap.words) < len(reference_words):
+        elif len(gap.transcribed_word_ids) < len(reference_word_ids):
             # Single transcribed word -> multiple reference words
+            # Get the actual words
+            gap_word = word_map[gap.transcribed_word_ids[0]].text
+            ref_words = [word_map[word_id].text for word_id in reference_word_ids]
+
             corrections.extend(
                 WordOperations.create_word_split_corrections(
-                    original_word=gap.words[0],
-                    reference_words=reference_words_original,
+                    original_word=gap_word,
+                    reference_words=ref_words,
                     original_position=gap.transcription_position,
                     source=matching_source,
                     confidence=1.0,
                     reason="Split word based on text match",
                     reference_positions=reference_positions,
                     handler="NoSpacePunctuationMatchHandler",
-                    original_word_id=original_word_ids[0],
+                    original_word_id=gap.transcribed_word_ids[0],
+                    corrected_word_ids=reference_word_ids,  # Use the reference word IDs
                 )
             )
-            self.logger.debug(f"Split word '{gap.words[0]}' into {reference_words_original}.")
+            self.logger.debug(f"Split word '{gap_word}' into {ref_words}.")
 
         else:
             # One-to-one replacement
-            for i, (orig_word, ref_word, ref_word_original, word_id) in enumerate(
-                zip(gap.words, reference_words, reference_words_original, original_word_ids)
-            ):
-                if orig_word.lower() != ref_word.lower():
+            for i, (orig_word_id, ref_word_id) in enumerate(zip(gap.transcribed_word_ids, reference_word_ids)):
+                orig_word = word_map[orig_word_id]
+                ref_word = word_map[ref_word_id]
+
+                if orig_word.text.lower() != ref_word.text.lower():
                     correction = WordOperations.create_word_replacement_correction(
-                        original_word=orig_word,
-                        corrected_word=ref_word_original,
+                        original_word=orig_word.text,
+                        corrected_word=ref_word.text,
                         original_position=gap.transcription_position + i,
                         source=matching_source,
                         confidence=1.0,
                         reason=f"Source '{matching_source}' matched when spaces and punctuation removed",
                         reference_positions=reference_positions,
                         handler="NoSpacePunctuationMatchHandler",
-                        original_word_id=word_id,
+                        original_word_id=orig_word_id,
+                        corrected_word_id=ref_word_id,
                     )
                     corrections.append(correction)
                     self.logger.debug(f"Correction made: {correction}")

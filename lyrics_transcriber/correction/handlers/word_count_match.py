@@ -15,19 +15,19 @@ class WordCountMatchHandler(GapCorrectionHandler):
 
     def can_handle(self, gap: GapSequence) -> Tuple[bool, Dict[str, Any]]:
         # Must have reference words
-        if not gap.reference_words:
-            self.logger.debug("No reference words available.")
+        if not gap.reference_word_ids:
+            self.logger.debug("No reference word IDs available.")
             return False, {}
 
-        ref_words_lists = list(gap.reference_words.values())
+        ref_word_lists = list(gap.reference_word_ids.values())
 
         # All sources must have same number of words as gap
-        if not all(len(words) == gap.length for words in ref_words_lists):
+        if not all(len(words) == gap.length for words in ref_word_lists):
             self.logger.debug("Not all sources have the same number of words as the gap.")
             return False, {}
 
         # If we have multiple sources, they must all agree
-        if len(ref_words_lists) > 1 and not all(words == ref_words_lists[0] for words in ref_words_lists[1:]):
+        if len(ref_word_lists) > 1 and not all(words == ref_word_lists[0] for words in ref_word_lists[1:]):
             self.logger.debug("Not all sources agree on the words.")
             return False, {}
 
@@ -36,28 +36,43 @@ class WordCountMatchHandler(GapCorrectionHandler):
 
     def handle(self, gap: GapSequence, data: Optional[Dict[str, Any]] = None) -> List[WordCorrection]:
         corrections = []
-        source = list(gap.reference_words.keys())[0]
-        reference_words = gap.reference_words[source]
-        reference_words_original = gap.reference_words_original[source]
-        sources = ", ".join(gap.reference_words.keys())
+        
+        # Get word lookup map from data
+        word_map = data.get("word_map", {})
+        if not word_map:
+            self.logger.error("No word_map provided in data")
+            return []
+
+        source = list(gap.reference_word_ids.keys())[0]
+        reference_word_ids = gap.reference_word_ids[source]
+        sources = ", ".join(gap.reference_word_ids.keys())
 
         reference_positions = WordOperations.calculate_reference_positions(gap)
 
-        for i, (orig_word, ref_word, ref_word_original) in enumerate(zip(gap.words, reference_words, reference_words_original)):
-            if orig_word.lower() != ref_word.lower():
-                # Get the original word's ID from the gap sequence
-                original_word_id = gap.words[i].id if hasattr(gap.words[i], 'id') else None
-                
+        for i, (orig_word_id, ref_word_id) in enumerate(zip(gap.transcribed_word_ids, reference_word_ids)):
+            # Get the actual words from the word map
+            if orig_word_id not in word_map:
+                self.logger.error(f"Original word ID {orig_word_id} not found in word_map")
+                continue
+            orig_word = word_map[orig_word_id]
+
+            if ref_word_id not in word_map:
+                self.logger.error(f"Reference word ID {ref_word_id} not found in word_map")
+                continue
+            ref_word = word_map[ref_word_id]
+
+            if orig_word.text.lower() != ref_word.text.lower():
                 correction = WordOperations.create_word_replacement_correction(
-                    original_word=orig_word,
-                    corrected_word=ref_word_original,
+                    original_word=orig_word.text,
+                    corrected_word=ref_word.text,
                     original_position=gap.transcription_position + i,
                     source=sources,
                     confidence=1.0,
                     reason="Reference sources had same word count as gap",
                     reference_positions=reference_positions,
                     handler="WordCountMatchHandler",
-                    original_word_id=original_word_id,  # Pass the original word ID
+                    original_word_id=orig_word_id,
+                    corrected_word_id=ref_word_id,  # Use the reference word's ID
                 )
                 corrections.append(correction)
                 self.logger.debug(f"Correction made: {correction}")

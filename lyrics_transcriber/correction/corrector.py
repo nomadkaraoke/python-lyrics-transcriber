@@ -3,6 +3,10 @@ import logging
 from pathlib import Path
 from copy import deepcopy
 
+from lyrics_transcriber.correction.handlers.no_space_punct_match import NoSpacePunctuationMatchHandler
+from lyrics_transcriber.correction.handlers.relaxed_word_count_match import RelaxedWordCountMatchHandler
+from lyrics_transcriber.correction.handlers.syllables_match import SyllablesMatchHandler
+from lyrics_transcriber.correction.handlers.word_count_match import WordCountMatchHandler
 from lyrics_transcriber.types import (
     CorrectionStep,
     GapSequence,
@@ -38,10 +42,10 @@ class LyricsCorrector:
         # Default handlers in order of preference
         self.handlers = handlers or [
             ExtendAnchorHandler(logger=self.logger),
-            # WordCountMatchHandler(logger=self.logger),
-            # SyllablesMatchHandler(logger=self.logger),
-            # RelaxedWordCountMatchHandler(logger=self.logger),
-            # NoSpacePunctuationMatchHandler(logger=self.logger),
+            WordCountMatchHandler(logger=self.logger),
+            SyllablesMatchHandler(logger=self.logger),
+            RelaxedWordCountMatchHandler(logger=self.logger),
+            NoSpacePunctuationMatchHandler(logger=self.logger),
             # LLMHandler(logger=self.logger),
             # RepeatCorrectionHandler(logger=self.logger),
             # SoundAlikeHandler(logger=self.logger),
@@ -66,18 +70,20 @@ class LyricsCorrector:
             self.logger.error("No transcription results available")
             raise ValueError("No primary transcription data available")
 
+        # Store reference lyrics for use in word map
+        self.reference_lyrics = lyrics_results
+
         # Get primary transcription
         primary_transcription = sorted(transcription_results, key=lambda x: x.priority)[0].result
         transcribed_text = " ".join(" ".join(w.text for w in segment.words) for segment in primary_transcription.segments)
 
         # Find anchor sequences and gaps
         self.logger.debug("Finding anchor sequences and gaps")
-        anchor_sequences = self.anchor_finder.find_anchors(
-            transcribed_text, lyrics_results, primary_transcription  # Pass transcription result
-        )
-        gap_sequences = self.anchor_finder.find_gaps(
-            transcribed_text, anchor_sequences, lyrics_results, primary_transcription  # Pass transcription result
-        )
+        anchor_sequences = self.anchor_finder.find_anchors(transcribed_text, lyrics_results, primary_transcription)
+        gap_sequences = self.anchor_finder.find_gaps(transcribed_text, anchor_sequences, lyrics_results, primary_transcription)
+
+        # Store anchor sequences for use in correction handlers
+        self._anchor_sequences = anchor_sequences
 
         # Process corrections with metadata
         corrections, corrected_segments, correction_steps, word_id_map, segment_id_map = self._process_corrections(
@@ -142,8 +148,15 @@ class LyricsCorrector:
         word_id_map = {}
         segment_id_map = {}
 
-        # Create word map for handlers
-        word_map = {w.id: w for s in segments for w in s.words}
+        # Create word map for handlers - include both transcribed and reference words
+        word_map = {w.id: w for s in segments for w in s.words}  # Transcribed words
+
+        # Add reference words from all sources
+        for source, lyrics_data in self.reference_lyrics.items():
+            for segment in lyrics_data.segments:
+                for word in segment.words:
+                    if word.id not in word_map:  # Don't overwrite transcribed words
+                        word_map[word.id] = word
 
         for i, gap in enumerate(gap_sequences, 1):
             self.logger.info(f"Processing gap {i}/{len(gap_sequences)} at position {gap.transcription_position}")
@@ -152,30 +165,26 @@ class LyricsCorrector:
             gap_words = [word_map[word_id] for word_id in gap.transcribed_word_ids]
             self.logger.debug(f"Gap text: '{' '.join(w.text for w in gap_words)}'")
 
-            # Get affected segments and words
-            segments_before = self._get_affected_segments(gap, segments)
-            affected_word_ids = gap.transcribed_word_ids
-            affected_segment_ids = [s.id for s in segments_before]
-
             # Try each handler in order
             for handler in self.handlers:
                 handler_name = handler.__class__.__name__
                 can_handle, handler_data = handler.can_handle(gap)
 
                 if can_handle:
-                    # Add word map to handler data
+                    # Add word map and anchor sequences to handler data
                     handler_data = handler_data or {}
                     handler_data["word_map"] = word_map
+                    handler_data["anchor_sequences"] = self._anchor_sequences
 
                     corrections = handler.handle(gap, handler_data)
                     if corrections:
                         self.logger.info(f"Handler {handler_name} made {len(corrections)} corrections")
                         # Track affected IDs
                         affected_word_ids = [w.id for w in self._get_affected_words(gap, segments)]
-                        affected_segment_ids = [s.id for s in segments_before]
+                        affected_segment_ids = [s.id for s in self._get_affected_segments(gap, segments)]
 
                         # Apply corrections and get updated segments
-                        updated_segments = self._apply_corrections_to_segments(segments_before, corrections)
+                        updated_segments = self._apply_corrections_to_segments(self._get_affected_segments(gap, segments), corrections)
 
                         # Update ID maps
                         for correction in corrections:
@@ -183,16 +192,16 @@ class LyricsCorrector:
                                 word_id_map[correction.word_id] = correction.corrected_word_id
 
                         # Map segment IDs
-                        for old_seg, new_seg in zip(segments_before, updated_segments):
+                        for old_seg, new_seg in zip(self._get_affected_segments(gap, segments), updated_segments):
                             segment_id_map[old_seg.id] = new_seg.id
 
                         # Create correction step
                         step = CorrectionStep(
-                            gap_id=gap.id,
-                            handler=handler_name,
+                            handler_name=handler_name,
+                            affected_word_ids=affected_word_ids,
                             affected_segment_ids=affected_segment_ids,
                             corrections=corrections,
-                            segments_before=segments_before,
+                            segments_before=self._get_affected_segments(gap, segments),
                             segments_after=updated_segments,
                             created_word_ids=[w.id for w in self._get_new_words(updated_segments, affected_word_ids)],
                             deleted_word_ids=[id for id in affected_word_ids if not self._word_exists(id, updated_segments)],

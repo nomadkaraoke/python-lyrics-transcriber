@@ -102,18 +102,44 @@ class SyllablesMatchHandler(GapCorrectionHandler):
         )
         return [spacy_count, pyphen_count, nltk_count, syllables_count]
 
-    def can_handle(self, gap: GapSequence) -> Tuple[bool, Dict[str, Any]]:
+    def can_handle(self, gap: GapSequence, data: Optional[Dict[str, Any]] = None) -> Tuple[bool, Dict[str, Any]]:
         # Must have reference words
-        if not gap.reference_words:
-            self.logger.debug("No reference words available")
+        if not gap.reference_word_ids:
+            self.logger.debug("No reference word IDs available")
             return False, {}
 
+        # Get word lookup map from data
+        if not data or "word_map" not in data:
+            self.logger.error("No word_map provided in data")
+            return False, {}
+            
+        word_map = data["word_map"]
+
+        # Get actual words from word IDs
+        gap_words = []
+        for word_id in gap.transcribed_word_ids:
+            if word_id not in word_map:
+                self.logger.error(f"Word ID {word_id} not found in word_map")
+                return False, {}
+            gap_words.append(word_map[word_id].text)
+
         # Get syllable counts for gap text using different methods
-        gap_syllables = self._count_syllables(gap.words)
+        gap_syllables = self._count_syllables(gap_words)
 
         # Check if any reference source has matching syllable count with any method
-        for source, words in gap.reference_words.items():
-            ref_syllables = self._count_syllables(words)
+        for source, ref_word_ids in gap.reference_word_ids.items():
+            # Get reference words from word map
+            ref_words = []
+            for word_id in ref_word_ids:
+                if word_id not in word_map:
+                    self.logger.error(f"Reference word ID {word_id} not found in word_map")
+                    continue
+                ref_words.append(word_map[word_id].text)
+
+            if not ref_words:
+                continue
+
+            ref_syllables = self._count_syllables(ref_words)
 
             # If any counting method matches between gap and reference, we can handle it
             if any(gap_count == ref_count for gap_count in gap_syllables for ref_count in ref_syllables):
@@ -121,8 +147,8 @@ class SyllablesMatchHandler(GapCorrectionHandler):
                 return True, {
                     "gap_syllables": gap_syllables,
                     "matching_source": source,
-                    "reference_words": words,
-                    "reference_words_original": gap.reference_words_original[source],
+                    "reference_word_ids": ref_word_ids,
+                    "word_map": word_map,
                 }
 
         self.logger.debug("No reference source had matching syllable count")
@@ -137,32 +163,33 @@ class SyllablesMatchHandler(GapCorrectionHandler):
 
         corrections = []
         matching_source = data["matching_source"]
-        reference_words = data["reference_words"]
-        reference_words_original = data["reference_words_original"]
+        reference_word_ids = data["reference_word_ids"]
+        word_map = data["word_map"]
 
-        # Get original word IDs if available
-        original_word_ids = [word.id if hasattr(word, "id") else None for word in gap.words]
+        # Get the actual words from word IDs
+        gap_words = [word_map[word_id].text for word_id in gap.transcribed_word_ids]
+        ref_words = [word_map[word_id].text for word_id in reference_word_ids]
 
         # Use the centralized method to calculate reference positions
         reference_positions = WordOperations.calculate_reference_positions(gap, [matching_source])
 
         # Since we matched syllable counts for the entire gap, we should handle all words
-        if len(gap.words) > len(reference_words):
+        if len(gap_words) > len(ref_words):
             # Multiple transcribed words -> fewer reference words
             # Try to distribute the reference words across the gap words
-            words_per_ref = len(gap.words) / len(reference_words)
+            words_per_ref = len(gap_words) / len(ref_words)
 
-            for ref_idx, ref_word_original in enumerate(reference_words_original):
+            for ref_idx, ref_word_id in enumerate(reference_word_ids):
                 start_idx = int(ref_idx * words_per_ref)
                 end_idx = int((ref_idx + 1) * words_per_ref)
 
                 # Get the group of words to combine
-                words_to_combine = gap.words[start_idx:end_idx]
-                word_ids_to_combine = original_word_ids[start_idx:end_idx]
+                words_to_combine = gap_words[start_idx:end_idx]
+                word_ids_to_combine = gap.transcribed_word_ids[start_idx:end_idx]
                 corrections.extend(
                     WordOperations.create_word_combine_corrections(
                         original_words=words_to_combine,
-                        reference_word=ref_word_original,
+                        reference_word=word_map[ref_word_id].text,
                         original_position=gap.transcription_position + start_idx,
                         source=matching_source,
                         confidence=0.8,
@@ -171,22 +198,24 @@ class SyllablesMatchHandler(GapCorrectionHandler):
                         reference_positions=reference_positions,
                         handler="SyllablesMatchHandler",
                         original_word_ids=word_ids_to_combine,
+                        corrected_word_id=ref_word_id,  # Use reference word ID for combined word
                     )
                 )
 
-        elif len(gap.words) < len(reference_words):
+        elif len(gap_words) < len(ref_words):
             # Single transcribed word -> multiple reference words
-            words_per_gap = len(reference_words) / len(gap.words)
+            words_per_gap = len(ref_words) / len(gap_words)
 
-            for i, (orig_word, word_id) in enumerate(zip(gap.words, original_word_ids)):
+            for i, word_id in enumerate(gap.transcribed_word_ids):
                 start_idx = int(i * words_per_gap)
                 end_idx = int((i + 1) * words_per_gap)
-                ref_words_original_for_orig = reference_words_original[start_idx:end_idx]
+                ref_word_ids_for_split = reference_word_ids[start_idx:end_idx]
+                ref_words_for_split = [word_map[ref_id].text for ref_id in ref_word_ids_for_split]
 
                 corrections.extend(
                     WordOperations.create_word_split_corrections(
-                        original_word=orig_word,
-                        reference_words=ref_words_original_for_orig,
+                        original_word=word_map[word_id].text,
+                        reference_words=ref_words_for_split,
                         original_position=gap.transcription_position + i,
                         source=matching_source,
                         confidence=0.8,
@@ -194,26 +223,29 @@ class SyllablesMatchHandler(GapCorrectionHandler):
                         reference_positions=reference_positions,
                         handler="SyllablesMatchHandler",
                         original_word_id=word_id,
+                        corrected_word_ids=ref_word_ids_for_split,  # Use reference word IDs for split words
                     )
                 )
 
         else:
             # One-to-one replacement
-            for i, (orig_word, ref_word, ref_word_original, word_id) in enumerate(
-                zip(gap.words, reference_words, reference_words_original, original_word_ids)
-            ):
-                if orig_word.lower() != ref_word.lower():
+            for i, (orig_word_id, ref_word_id) in enumerate(zip(gap.transcribed_word_ids, reference_word_ids)):
+                orig_word = word_map[orig_word_id]
+                ref_word = word_map[ref_word_id]
+                
+                if orig_word.text.lower() != ref_word.text.lower():
                     corrections.append(
                         WordOperations.create_word_replacement_correction(
-                            original_word=orig_word,
-                            corrected_word=ref_word_original,
+                            original_word=orig_word.text,
+                            corrected_word=ref_word.text,
                             original_position=gap.transcription_position + i,
                             source=matching_source,
                             confidence=0.8,
                             reason=f"Source '{matching_source}' had matching syllable count",
                             reference_positions=reference_positions,
                             handler="SyllablesMatchHandler",
-                            original_word_id=word_id,
+                            original_word_id=orig_word_id,
+                            corrected_word_id=ref_word_id,
                         )
                     )
 

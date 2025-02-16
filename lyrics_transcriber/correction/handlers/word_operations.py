@@ -1,4 +1,4 @@
-from typing import List, Optional, Dict
+from typing import List, Optional, Dict, Any
 from lyrics_transcriber.types import WordCorrection, GapSequence
 from lyrics_transcriber.utils.word_utils import WordUtils
 
@@ -7,34 +7,51 @@ class WordOperations:
     """Utility class for common word manipulation operations used by correction handlers."""
 
     @staticmethod
-    def calculate_reference_positions(gap: GapSequence, sources: Optional[List[str]] = None) -> Dict[str, int]:
+    def calculate_reference_positions(
+        gap: GapSequence, sources: Optional[List[str]] = None, anchor_sequences: Optional[List[Any]] = None
+    ) -> Dict[str, int]:
         """Calculate reference positions for given sources based on preceding anchor.
 
         Args:
-            gap: The gap sequence containing the preceding anchor
+            gap: The gap sequence containing the preceding anchor ID
             sources: Optional list of sources to calculate positions for. If None, uses all sources.
+            anchor_sequences: List of anchor sequences to look up preceding anchor
 
         Returns:
             Dictionary mapping source names to their reference positions
         """
         reference_positions = {}
-        if gap.preceding_anchor_id:
-            # If no sources specified, use all sources from reference words
-            sources_to_check = sources or list(gap.reference_word_ids.keys())
 
-            for source in sources_to_check:
-                # Get reference positions from the anchor
-                if source in gap.preceding_anchor.reference_positions:
-                    # Calculate base position from anchor
-                    anchor_pos = gap.preceding_anchor.reference_positions[source]
-                    base_ref_pos = anchor_pos + len(gap.preceding_anchor.reference_word_ids[source])
+        if not gap.preceding_anchor_id or not anchor_sequences:
+            return reference_positions
 
-                    # Calculate word offset within the gap
-                    word_offset = 0
-                    
-                    # Add word offset to base position
-                    ref_pos = base_ref_pos + word_offset
-                    reference_positions[source] = ref_pos
+        # Find the preceding anchor in the sequences
+        preceding_anchor = next(
+            (scored_anchor.anchor for scored_anchor in anchor_sequences 
+             if scored_anchor.anchor.id == gap.preceding_anchor_id),
+            None
+        )
+
+        if not preceding_anchor:
+            return reference_positions
+
+        # If no sources specified, use all sources from reference words
+        sources_to_check = sources or list(gap.reference_word_ids.keys())
+
+        for source in sources_to_check:
+            # Get reference positions from the anchor
+            if source in preceding_anchor.reference_positions:
+                # Calculate base position from anchor
+                anchor_pos = preceding_anchor.reference_positions[source]
+                base_ref_pos = anchor_pos + len(preceding_anchor.reference_word_ids[source])
+
+                # Calculate word offset within the gap
+                word_offset = 0
+
+                # Add word offset to base position
+                ref_pos = base_ref_pos + word_offset
+                reference_positions[source] = ref_pos
+
         return reference_positions
 
     @staticmethod
@@ -48,6 +65,7 @@ class WordOperations:
         handler: str,
         reference_positions: Optional[Dict[str, int]] = None,
         original_word_id: Optional[str] = None,
+        corrected_word_id: Optional[str] = None,
     ) -> WordCorrection:
         """Creates a correction for replacing a single word with another word."""
         return WordCorrection(
@@ -63,7 +81,7 @@ class WordOperations:
             length=1,
             handler=handler,
             word_id=original_word_id,
-            corrected_word_id=WordUtils.generate_id() if corrected_word else None,
+            corrected_word_id=corrected_word_id if corrected_word_id is not None else (WordUtils.generate_id() if corrected_word else None),
         )
 
     @staticmethod
@@ -77,10 +95,13 @@ class WordOperations:
         handler: str,
         reference_positions: Optional[Dict[str, int]] = None,
         original_word_id: Optional[str] = None,
+        corrected_word_ids: Optional[List[str]] = None,
     ) -> List[WordCorrection]:
         """Creates corrections for splitting a single word into multiple words."""
         corrections = []
-        for split_idx, ref_word in enumerate(reference_words):
+        word_ids = corrected_word_ids or [WordUtils.generate_id() for _ in reference_words]
+
+        for split_idx, (ref_word, word_id) in enumerate(zip(reference_words, word_ids)):
             corrections.append(
                 WordCorrection(
                     original_word=original_word,
@@ -97,7 +118,7 @@ class WordOperations:
                     length=1,  # Each split word is length 1
                     handler=handler,
                     word_id=original_word_id if split_idx == 0 else None,
-                    corrected_word_id=WordUtils.generate_id(),
+                    corrected_word_id=word_id,
                 )
             )
         return corrections
@@ -114,10 +135,13 @@ class WordOperations:
         handler: str,
         reference_positions: Optional[Dict[str, int]] = None,
         original_word_ids: Optional[List[str]] = None,
+        corrected_word_id: Optional[str] = None,
     ) -> List[WordCorrection]:
         """Creates corrections for combining multiple words into a single word."""
         corrections = []
         word_ids = original_word_ids or [None] * len(original_words)
+
+        final_word_id = corrected_word_id or WordUtils.generate_id()
 
         # First word gets replaced
         corrections.append(
@@ -134,7 +158,7 @@ class WordOperations:
                 length=len(original_words),  # Combined word spans all original words
                 handler=handler,
                 word_id=word_ids[0],
-                corrected_word_id=WordUtils.generate_id(),
+                corrected_word_id=final_word_id,
             )
         )
 

@@ -88,6 +88,10 @@ class ExtendAnchorHandler(GapCorrectionHandler):
                 source for source, ref_word_ids in gap.reference_word_ids.items() if i < len(ref_word_ids) and word_id == ref_word_ids[i]
             ]
 
+            if not matching_sources:
+                self.logger.debug(f"Skipping word '{word.text}' at position {i} - no matching references")
+                continue
+
             if matching_sources:
                 # Word matches reference(s) at this position - validate it
                 confidence = len(matching_sources) / len(gap.reference_word_ids)
@@ -109,8 +113,8 @@ class ExtendAnchorHandler(GapCorrectionHandler):
 
                 corrections.append(
                     WordOperations.create_word_replacement_correction(
-                        original_word=word.text,  # Use the word text from the Word object
-                        corrected_word=word.text,  # Same word, just validating
+                        original_word=word.text,
+                        corrected_word=word.text,
                         original_position=gap.transcription_position + i,
                         source=sources,
                         confidence=confidence,
@@ -118,6 +122,7 @@ class ExtendAnchorHandler(GapCorrectionHandler):
                         reference_positions=reference_positions,
                         handler="ExtendAnchorHandler",
                         original_word_id=word_id,
+                        corrected_word_id=word_id,
                     )
                 )
                 self.logger.debug(f"Validated word '{word.text}' with confidence {confidence} from sources: {sources}")
