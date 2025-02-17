@@ -50,7 +50,7 @@ class LyricsCorrector:
             SyllablesMatchHandler(logger=self.logger),
             RelaxedWordCountMatchHandler(logger=self.logger),
             NoSpacePunctuationMatchHandler(logger=self.logger),
-            LLMHandler(logger=self.logger, cache_dir=self._cache_dir),
+            # LLMHandler(logger=self.logger, cache_dir=self._cache_dir),
             # RepeatCorrectionHandler(logger=self.logger),
             # SoundAlikeHandler(logger=self.logger),
             # LevenshteinHandler(logger=self.logger),

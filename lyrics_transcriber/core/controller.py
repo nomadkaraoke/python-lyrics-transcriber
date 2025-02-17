@@ -1,4 +1,3 @@
-import difflib
 import os
 import logging
 from dataclasses import dataclass, field
@@ -342,29 +341,9 @@ class LyricsTranscriber:
 
         # Add human review step
         if self.output_config.enable_review:
-            import json
-            from copy import deepcopy
-            from ..review.server import ReviewServer
-            from ..output.segment_resizer import SegmentResizer
+            from lyrics_transcriber.review.server import ReviewServer
 
             self.logger.info("Starting human review process")
-
-            def normalize_data(data_dict):
-                """Normalize numeric values in the data structure before JSON conversion."""
-                if isinstance(data_dict, dict):
-                    return {k: normalize_data(v) for k, v in data_dict.items()}
-                elif isinstance(data_dict, list):
-                    return [normalize_data(item) for item in data_dict]
-                elif isinstance(data_dict, float):
-                    # Convert whole number floats to integers
-                    if data_dict.is_integer():
-                        return int(data_dict)
-                    return data_dict
-                return data_dict
-
-            # Normalize and convert auto-corrected data
-            auto_data = normalize_data(deepcopy(self.results.transcription_corrected.to_dict()))
-            auto_corrected_json = json.dumps(auto_data, indent=4).splitlines()
 
             # Create and start review server
             review_server = ReviewServer(
@@ -375,26 +354,8 @@ class LyricsTranscriber:
             )
             reviewed_data = review_server.start()
 
-            # Ensure resized segments are populated after review
-            if not reviewed_data.resized_segments:
-                segment_resizer = SegmentResizer(max_line_length=self.output_config.max_line_length, logger=self.logger)
-                reviewed_data.resized_segments = segment_resizer.resize_segments(reviewed_data.corrected_segments)
-
-            # Normalize and convert reviewed data
-            human_data = normalize_data(deepcopy(reviewed_data.to_dict()))
-            human_corrected_json = json.dumps(human_data, indent=4).splitlines()
-
-            self.logger.info("Human review completed")
-
-            # Compare the normalized JSON strings
-            diff = list(
-                difflib.unified_diff(auto_corrected_json, human_corrected_json, fromfile="auto-corrected", tofile="human-corrected")
-            )
-
-            if diff:
-                self.logger.warning("Changes made by human review:")
-                for line in diff:
-                    self.logger.warning(line.rstrip())
+            self.logger.info("Human review completed, updated transcription_corrected with reviewed_data")
+            self.results.transcription_corrected = reviewed_data
 
     def generate_outputs(self) -> None:
         """Generate output files based on enabled features and available data."""

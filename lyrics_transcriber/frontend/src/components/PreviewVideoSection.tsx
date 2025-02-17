@@ -64,13 +64,9 @@ export default function PreviewVideoSection({
     if (!apiClient) return null;
 
     return (
-        <Box sx={{ mt: 3, mb: 2 }}>
-            <Typography variant="h6" gutterBottom>
-                Preview Video
-            </Typography>
-
+        <Box sx={{ mb: 2 }}>
             {previewState.status === 'loading' && (
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, p: 2 }}>
                     <CircularProgress size={24} />
                     <Typography>Generating preview video...</Typography>
                 </Box>
@@ -100,8 +96,8 @@ export default function PreviewVideoSection({
 
             {previewState.status === 'ready' && previewState.videoUrl && (
                 <Box sx={{
-                    width: 'calc(100% + 48px)',
-                    margin: '0 -24px',
+                    width: '100%',
+                    margin: '0',
                 }}>
                     <video
                         controls

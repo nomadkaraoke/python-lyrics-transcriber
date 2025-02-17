@@ -12663,7 +12663,7 @@ function getSvgIconUtilityClass(slot) {
   return generateUtilityClass("MuiSvgIcon", slot);
 }
 generateUtilityClasses("MuiSvgIcon", ["root", "colorPrimary", "colorSecondary", "colorAction", "colorError", "colorDisabled", "fontSizeInherit", "fontSizeSmall", "fontSizeMedium", "fontSizeLarge"]);
-const useUtilityClasses$y = (ownerState) => {
+const useUtilityClasses$x = (ownerState) => {
   const {
     color: color2,
     fontSize,
@@ -12808,7 +12808,7 @@ const SvgIcon = /* @__PURE__ */ reactExports.forwardRef(function SvgIcon2(inProp
   if (!inheritViewBox) {
     more.viewBox = viewBox;
   }
-  const classes = useUtilityClasses$y(ownerState);
+  const classes = useUtilityClasses$x(ownerState);
   return /* @__PURE__ */ jsxRuntimeExports.jsxs(SvgIconRoot, {
     as: component,
     className: clsx(classes.root, className),
@@ -13310,295 +13310,6 @@ function getTransitionProps(props, options) {
     easing: style2.transitionTimingFunction ?? (typeof easing2 === "object" ? easing2[options.mode] : easing2),
     delay: style2.transitionDelay
   };
-}
-function getCollapseUtilityClass(slot) {
-  return generateUtilityClass("MuiCollapse", slot);
-}
-generateUtilityClasses("MuiCollapse", ["root", "horizontal", "vertical", "entered", "hidden", "wrapper", "wrapperInner"]);
-const useUtilityClasses$x = (ownerState) => {
-  const {
-    orientation,
-    classes
-  } = ownerState;
-  const slots = {
-    root: ["root", `${orientation}`],
-    entered: ["entered"],
-    hidden: ["hidden"],
-    wrapper: ["wrapper", `${orientation}`],
-    wrapperInner: ["wrapperInner", `${orientation}`]
-  };
-  return composeClasses(slots, getCollapseUtilityClass, classes);
-};
-const CollapseRoot = styled("div", {
-  name: "MuiCollapse",
-  slot: "Root",
-  overridesResolver: (props, styles2) => {
-    const {
-      ownerState
-    } = props;
-    return [styles2.root, styles2[ownerState.orientation], ownerState.state === "entered" && styles2.entered, ownerState.state === "exited" && !ownerState.in && ownerState.collapsedSize === "0px" && styles2.hidden];
-  }
-})(memoTheme(({
-  theme
-}) => ({
-  height: 0,
-  overflow: "hidden",
-  transition: theme.transitions.create("height"),
-  variants: [{
-    props: {
-      orientation: "horizontal"
-    },
-    style: {
-      height: "auto",
-      width: 0,
-      transition: theme.transitions.create("width")
-    }
-  }, {
-    props: {
-      state: "entered"
-    },
-    style: {
-      height: "auto",
-      overflow: "visible"
-    }
-  }, {
-    props: {
-      state: "entered",
-      orientation: "horizontal"
-    },
-    style: {
-      width: "auto"
-    }
-  }, {
-    props: ({
-      ownerState
-    }) => ownerState.state === "exited" && !ownerState.in && ownerState.collapsedSize === "0px",
-    style: {
-      visibility: "hidden"
-    }
-  }]
-})));
-const CollapseWrapper = styled("div", {
-  name: "MuiCollapse",
-  slot: "Wrapper",
-  overridesResolver: (props, styles2) => styles2.wrapper
-})({
-  // Hack to get children with a negative margin to not falsify the height computation.
-  display: "flex",
-  width: "100%",
-  variants: [{
-    props: {
-      orientation: "horizontal"
-    },
-    style: {
-      width: "auto",
-      height: "100%"
-    }
-  }]
-});
-const CollapseWrapperInner = styled("div", {
-  name: "MuiCollapse",
-  slot: "WrapperInner",
-  overridesResolver: (props, styles2) => styles2.wrapperInner
-})({
-  width: "100%",
-  variants: [{
-    props: {
-      orientation: "horizontal"
-    },
-    style: {
-      width: "auto",
-      height: "100%"
-    }
-  }]
-});
-const Collapse = /* @__PURE__ */ reactExports.forwardRef(function Collapse2(inProps, ref) {
-  const props = useDefaultProps({
-    props: inProps,
-    name: "MuiCollapse"
-  });
-  const {
-    addEndListener,
-    children,
-    className,
-    collapsedSize: collapsedSizeProp = "0px",
-    component,
-    easing: easing2,
-    in: inProp,
-    onEnter,
-    onEntered,
-    onEntering,
-    onExit,
-    onExited,
-    onExiting,
-    orientation = "vertical",
-    style: style2,
-    timeout = duration.standard,
-    // eslint-disable-next-line react/prop-types
-    TransitionComponent = Transition,
-    ...other
-  } = props;
-  const ownerState = {
-    ...props,
-    orientation,
-    collapsedSize: collapsedSizeProp
-  };
-  const classes = useUtilityClasses$x(ownerState);
-  const theme = useTheme();
-  const timer = useTimeout();
-  const wrapperRef = reactExports.useRef(null);
-  const autoTransitionDuration = reactExports.useRef();
-  const collapsedSize = typeof collapsedSizeProp === "number" ? `${collapsedSizeProp}px` : collapsedSizeProp;
-  const isHorizontal = orientation === "horizontal";
-  const size = isHorizontal ? "width" : "height";
-  const nodeRef = reactExports.useRef(null);
-  const handleRef = useForkRef(ref, nodeRef);
-  const normalizedTransitionCallback = (callback) => (maybeIsAppearing) => {
-    if (callback) {
-      const node2 = nodeRef.current;
-      if (maybeIsAppearing === void 0) {
-        callback(node2);
-      } else {
-        callback(node2, maybeIsAppearing);
-      }
-    }
-  };
-  const getWrapperSize = () => wrapperRef.current ? wrapperRef.current[isHorizontal ? "clientWidth" : "clientHeight"] : 0;
-  const handleEnter = normalizedTransitionCallback((node2, isAppearing) => {
-    if (wrapperRef.current && isHorizontal) {
-      wrapperRef.current.style.position = "absolute";
-    }
-    node2.style[size] = collapsedSize;
-    if (onEnter) {
-      onEnter(node2, isAppearing);
-    }
-  });
-  const handleEntering = normalizedTransitionCallback((node2, isAppearing) => {
-    const wrapperSize = getWrapperSize();
-    if (wrapperRef.current && isHorizontal) {
-      wrapperRef.current.style.position = "";
-    }
-    const {
-      duration: transitionDuration,
-      easing: transitionTimingFunction
-    } = getTransitionProps({
-      style: style2,
-      timeout,
-      easing: easing2
-    }, {
-      mode: "enter"
-    });
-    if (timeout === "auto") {
-      const duration2 = theme.transitions.getAutoHeightDuration(wrapperSize);
-      node2.style.transitionDuration = `${duration2}ms`;
-      autoTransitionDuration.current = duration2;
-    } else {
-      node2.style.transitionDuration = typeof transitionDuration === "string" ? transitionDuration : `${transitionDuration}ms`;
-    }
-    node2.style[size] = `${wrapperSize}px`;
-    node2.style.transitionTimingFunction = transitionTimingFunction;
-    if (onEntering) {
-      onEntering(node2, isAppearing);
-    }
-  });
-  const handleEntered = normalizedTransitionCallback((node2, isAppearing) => {
-    node2.style[size] = "auto";
-    if (onEntered) {
-      onEntered(node2, isAppearing);
-    }
-  });
-  const handleExit = normalizedTransitionCallback((node2) => {
-    node2.style[size] = `${getWrapperSize()}px`;
-    if (onExit) {
-      onExit(node2);
-    }
-  });
-  const handleExited = normalizedTransitionCallback(onExited);
-  const handleExiting = normalizedTransitionCallback((node2) => {
-    const wrapperSize = getWrapperSize();
-    const {
-      duration: transitionDuration,
-      easing: transitionTimingFunction
-    } = getTransitionProps({
-      style: style2,
-      timeout,
-      easing: easing2
-    }, {
-      mode: "exit"
-    });
-    if (timeout === "auto") {
-      const duration2 = theme.transitions.getAutoHeightDuration(wrapperSize);
-      node2.style.transitionDuration = `${duration2}ms`;
-      autoTransitionDuration.current = duration2;
-    } else {
-      node2.style.transitionDuration = typeof transitionDuration === "string" ? transitionDuration : `${transitionDuration}ms`;
-    }
-    node2.style[size] = collapsedSize;
-    node2.style.transitionTimingFunction = transitionTimingFunction;
-    if (onExiting) {
-      onExiting(node2);
-    }
-  });
-  const handleAddEndListener = (next2) => {
-    if (timeout === "auto") {
-      timer.start(autoTransitionDuration.current || 0, next2);
-    }
-    if (addEndListener) {
-      addEndListener(nodeRef.current, next2);
-    }
-  };
-  return /* @__PURE__ */ jsxRuntimeExports.jsx(TransitionComponent, {
-    in: inProp,
-    onEnter: handleEnter,
-    onEntered: handleEntered,
-    onEntering: handleEntering,
-    onExit: handleExit,
-    onExited: handleExited,
-    onExiting: handleExiting,
-    addEndListener: handleAddEndListener,
-    nodeRef,
-    timeout: timeout === "auto" ? null : timeout,
-    ...other,
-    children: (state, {
-      ownerState: incomingOwnerState,
-      ...restChildProps
-    }) => /* @__PURE__ */ jsxRuntimeExports.jsx(CollapseRoot, {
-      as: component,
-      className: clsx(classes.root, className, {
-        "entered": classes.entered,
-        "exited": !inProp && collapsedSize === "0px" && classes.hidden
-      }[state]),
-      style: {
-        [isHorizontal ? "minWidth" : "minHeight"]: collapsedSize,
-        ...style2
-      },
-      ref: handleRef,
-      ownerState: {
-        ...ownerState,
-        state
-      },
-      ...restChildProps,
-      children: /* @__PURE__ */ jsxRuntimeExports.jsx(CollapseWrapper, {
-        ownerState: {
-          ...ownerState,
-          state
-        },
-        className: classes.wrapper,
-        ref: wrapperRef,
-        children: /* @__PURE__ */ jsxRuntimeExports.jsx(CollapseWrapperInner, {
-          ownerState: {
-            ...ownerState,
-            state
-          },
-          className: classes.wrapperInner,
-          children
-        })
-      })
-    })
-  });
-});
-if (Collapse) {
-  Collapse.muiSupportAuto = true;
 }
 function getPaperUtilityClass(slot) {
   return generateUtilityClass("MuiPaper", slot);
@@ -29923,9 +29634,6 @@ function EditModal({
     }
   );
 }
-const ExpandMoreIcon = createSvgIcon(/* @__PURE__ */ jsxRuntimeExports.jsx("path", {
-  d: "M16.59 8.59 12 13.17 7.41 8.59 6 10l6 6 6-6z"
-}), "ExpandMore");
 function PreviewVideoSection({
   apiClient,
   isModalOpen,
@@ -29968,9 +29676,8 @@ function PreviewVideoSection({
     }
   }, [isModalOpen, apiClient, updatedData]);
   if (!apiClient) return null;
-  return /* @__PURE__ */ jsxRuntimeExports.jsxs(Box, { sx: { mt: 3, mb: 2 }, children: [
-    /* @__PURE__ */ jsxRuntimeExports.jsx(Typography, { variant: "h6", gutterBottom: true, children: "Preview Video" }),
-    previewState.status === "loading" && /* @__PURE__ */ jsxRuntimeExports.jsxs(Box, { sx: { display: "flex", alignItems: "center", gap: 2, mb: 2 }, children: [
+  return /* @__PURE__ */ jsxRuntimeExports.jsxs(Box, { sx: { mb: 2 }, children: [
+    previewState.status === "loading" && /* @__PURE__ */ jsxRuntimeExports.jsxs(Box, { sx: { display: "flex", alignItems: "center", gap: 2, p: 2 }, children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx(CircularProgress, { size: 24 }),
       /* @__PURE__ */ jsxRuntimeExports.jsx(Typography, { children: "Generating preview video..." })
     ] }),
@@ -29993,8 +29700,8 @@ function PreviewVideoSection({
       }
     ) }),
     previewState.status === "ready" && previewState.videoUrl && /* @__PURE__ */ jsxRuntimeExports.jsx(Box, { sx: {
-      width: "calc(100% + 48px)",
-      margin: "0 -24px"
+      width: "100%",
+      margin: "0"
     }, children: /* @__PURE__ */ jsxRuntimeExports.jsx(
       "video",
       {
@@ -30033,7 +29740,6 @@ function ReviewChangesModal({
   onSubmit,
   apiClient
 }) {
-  const [expandedSegments, setExpandedSegments] = reactExports.useState([]);
   const differences = reactExports.useMemo(() => {
     var _a, _b;
     const diffs = [];
@@ -30106,69 +29812,66 @@ function ReviewChangesModal({
     }
     return diffs;
   }, [originalData, updatedData]);
-  const handleToggleSegment = (segmentIndex) => {
-    setExpandedSegments(
-      (prev2) => prev2.includes(segmentIndex) ? prev2.filter((i) => i !== segmentIndex) : [...prev2, segmentIndex]
-    );
-  };
-  const renderDiff = (diff) => {
-    const getColor = () => {
-      switch (diff.type) {
-        case "added":
-          return "success.main";
-        case "removed":
-          return "error.main";
-        case "modified":
-          return "warning.main";
-        default:
-          return "text.primary";
-      }
-    };
-    const isExpanded = diff.segmentIndex !== void 0 && expandedSegments.includes(diff.segmentIndex);
-    return /* @__PURE__ */ jsxRuntimeExports.jsxs(Paper, { sx: { p: 2, mb: 1 }, children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsxs(Box, { sx: { display: "flex", alignItems: "center", justifyContent: "space-between" }, children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsxs(Box, { children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsxs(Typography, { color: getColor(), sx: { fontWeight: "bold" }, children: [
-            diff.type.toUpperCase(),
+  const renderCompactDiff = (diff) => {
+    var _a, _b, _c;
+    if (diff.type !== "modified") {
+      return /* @__PURE__ */ jsxRuntimeExports.jsxs(
+        Typography,
+        {
+          color: diff.type === "added" ? "success.main" : "error.main",
+          sx: { mb: 0.5 },
+          children: [
+            diff.segmentIndex,
             ": ",
-            diff.path
-          ] }),
-          diff.oldValue && /* @__PURE__ */ jsxRuntimeExports.jsxs(Typography, { color: "error.main", sx: { ml: 2 }, children: [
-            "- ",
-            diff.oldValue
-          ] }),
-          diff.newValue && /* @__PURE__ */ jsxRuntimeExports.jsxs(Typography, { color: "success.main", sx: { ml: 2 }, children: [
-            "+ ",
-            diff.newValue
-          ] })
-        ] }),
-        diff.wordChanges && /* @__PURE__ */ jsxRuntimeExports.jsx(
-          IconButton,
-          {
-            onClick: () => handleToggleSegment(diff.segmentIndex),
-            sx: {
-              transform: isExpanded ? "rotate(180deg)" : "rotate(0deg)",
-              transition: "transform 0.2s"
-            },
-            children: /* @__PURE__ */ jsxRuntimeExports.jsx(ExpandMoreIcon, {})
-          }
-        )
+            diff.type === "added" ? "+ " : "- ",
+            diff.type === "added" ? diff.newValue : diff.oldValue
+          ]
+        },
+        diff.path
+      );
+    }
+    const oldText = ((_a = diff.oldValue) == null ? void 0 : _a.split('"')[1]) || "";
+    const newText = ((_b = diff.newValue) == null ? void 0 : _b.split('"')[1]) || "";
+    const oldWords = oldText.split(" ");
+    const newWords = newText.split(" ");
+    const timingMatch = (_c = diff.newValue) == null ? void 0 : _c.match(/\(([\d.]+) - ([\d.]+)\)/);
+    const timing = timingMatch ? `(${parseFloat(timingMatch[1]).toFixed(2)} - ${parseFloat(timingMatch[2]).toFixed(2)})` : "";
+    const unifiedDiff = [];
+    let i = 0, j = 0;
+    while (i < oldWords.length || j < newWords.length) {
+      if (i < oldWords.length && j < newWords.length && oldWords[i] === newWords[j]) {
+        unifiedDiff.push({ type: "unchanged", text: oldWords[i] });
+        i++;
+        j++;
+      } else if (i < oldWords.length && (!newWords[j] || oldWords[i] !== newWords[j])) {
+        unifiedDiff.push({ type: "deleted", text: oldWords[i] });
+        i++;
+      } else if (j < newWords.length) {
+        unifiedDiff.push({ type: "added", text: newWords[j] });
+        j++;
+      }
+    }
+    return /* @__PURE__ */ jsxRuntimeExports.jsxs(Box, { sx: { mb: 0.5, display: "flex", alignItems: "center" }, children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs(Typography, { variant: "body2", color: "text.secondary", sx: { mr: 1, minWidth: "30px" }, children: [
+        diff.segmentIndex,
+        ":"
       ] }),
-      diff.wordChanges && /* @__PURE__ */ jsxRuntimeExports.jsx(Collapse, { in: isExpanded, children: /* @__PURE__ */ jsxRuntimeExports.jsx(Box, { sx: { mt: 2, ml: 4 }, children: diff.wordChanges.map((wordDiff, index) => /* @__PURE__ */ jsxRuntimeExports.jsxs(Box, { children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsxs(Typography, { color: getColor(), variant: "body2", children: [
-          wordDiff.type.toUpperCase(),
-          ": ",
-          wordDiff.path
-        ] }),
-        wordDiff.oldValue && /* @__PURE__ */ jsxRuntimeExports.jsxs(Typography, { color: "error.main", variant: "body2", sx: { ml: 2 }, children: [
-          "- ",
-          wordDiff.oldValue
-        ] }),
-        wordDiff.newValue && /* @__PURE__ */ jsxRuntimeExports.jsxs(Typography, { color: "success.main", variant: "body2", sx: { ml: 2 }, children: [
-          "+ ",
-          wordDiff.newValue
-        ] })
-      ] }, index)) }) })
+      /* @__PURE__ */ jsxRuntimeExports.jsxs(Box, { sx: { display: "flex", flexWrap: "wrap", flexGrow: 1, alignItems: "center" }, children: [
+        unifiedDiff.map((word, idx) => /* @__PURE__ */ jsxRuntimeExports.jsx(
+          Typography,
+          {
+            component: "span",
+            color: word.type === "unchanged" ? "text.primary" : word.type === "deleted" ? "error.main" : "success.main",
+            sx: {
+              textDecoration: word.type === "deleted" ? "line-through" : "none",
+              mr: 0.5
+            },
+            children: word.text
+          },
+          idx
+        )),
+        /* @__PURE__ */ jsxRuntimeExports.jsx(Typography, { variant: "body2", color: "text.secondary", sx: { ml: 1 }, children: timing })
+      ] })
     ] }, diff.path);
   };
   return /* @__PURE__ */ jsxRuntimeExports.jsxs(
@@ -30180,31 +29883,43 @@ function ReviewChangesModal({
       fullWidth: true,
       children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx(DialogTitle, { children: "Review Changes" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs(DialogContent, { dividers: true, children: [
-          differences.length === 0 ? /* @__PURE__ */ jsxRuntimeExports.jsxs(Box, { children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx(Typography, { color: "text.secondary", sx: { mb: 2 }, children: "No changes detected. You can still submit to continue processing." }),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs(Typography, { variant: "body2", color: "text.secondary", children: [
-              "Total segments: ",
-              updatedData.corrected_segments.length
-            ] })
-          ] }) : /* @__PURE__ */ jsxRuntimeExports.jsxs(Box, { children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsxs(Typography, { variant: "body2", color: "text.secondary", sx: { mb: 2 }, children: [
-              differences.length,
-              " change",
-              differences.length !== 1 ? "s" : "",
-              " detected:"
-            ] }),
-            differences.map(renderDiff)
-          ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx(
-            PreviewVideoSection,
-            {
-              apiClient,
-              isModalOpen: open,
-              updatedData
-            }
-          )
-        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs(
+          DialogContent,
+          {
+            dividers: true,
+            sx: {
+              p: 0,
+              // Remove default padding
+              "&:first-of-type": { pt: 0 }
+              // Remove default top padding
+            },
+            children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx(
+                PreviewVideoSection,
+                {
+                  apiClient,
+                  isModalOpen: open,
+                  updatedData
+                }
+              ),
+              /* @__PURE__ */ jsxRuntimeExports.jsx(Box, { sx: { p: 2, mt: 0 }, children: differences.length === 0 ? /* @__PURE__ */ jsxRuntimeExports.jsxs(Box, { children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx(Typography, { color: "text.secondary", children: "No changes detected. You can still submit to continue processing." }),
+                /* @__PURE__ */ jsxRuntimeExports.jsxs(Typography, { variant: "body2", color: "text.secondary", children: [
+                  "Total segments: ",
+                  updatedData.corrected_segments.length
+                ] })
+              ] }) : /* @__PURE__ */ jsxRuntimeExports.jsxs(Box, { children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsxs(Typography, { variant: "body2", color: "text.secondary", sx: { mb: 1 }, children: [
+                  differences.length,
+                  " segment",
+                  differences.length !== 1 ? "s" : "",
+                  " modified:"
+                ] }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx(Paper, { sx: { p: 2 }, children: differences.map(renderCompactDiff) })
+              ] }) })
+            ]
+          }
+        ),
         /* @__PURE__ */ jsxRuntimeExports.jsxs(DialogActions, { children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx(Button, { onClick: onClose, children: "Cancel" }),
           /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -31244,4 +30959,4 @@ function App() {
 ReactDOM$1.createRoot(document.getElementById("root")).render(
   /* @__PURE__ */ jsxRuntimeExports.jsx(App, {})
 );
-//# sourceMappingURL=index-erQ3PBao.js.map
+//# sourceMappingURL=index-BQZZG4Oq.js.map

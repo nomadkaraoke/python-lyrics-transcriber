@@ -3,7 +3,6 @@ import logging
 import json
 from ollama import chat
 from datetime import datetime
-import string
 from pathlib import Path
 
 from lyrics_transcriber.types import GapSequence, WordCorrection
@@ -22,7 +21,6 @@ class LLMHandler(GapCorrectionHandler):
 
     def _format_prompt(self, gap: GapSequence, data: Optional[Dict[str, Any]] = None) -> str:
         """Format the prompt for the LLM with context about the gap and reference lyrics."""
-        # Get word map and metadata from data
         word_map = data.get("word_map", {})
         metadata = data.get("metadata", {}) if data else {}
 
@@ -30,68 +28,77 @@ class LLMHandler(GapCorrectionHandler):
             self.logger.error("No word_map provided in data")
             return ""
 
-        # Get transcribed words
-        transcribed_words = [word_map[word_id].text for word_id in gap.transcribed_word_ids if word_id in word_map]
+        # Format transcribed words with their IDs
+        transcribed_words = [{"id": word_id, "text": word_map[word_id].text} for word_id in gap.transcribed_word_ids if word_id in word_map]
 
         prompt = (
             "You are a lyrics correction expert. You will be given transcribed lyrics that may contain errors "
             "and reference lyrics from multiple sources. Your task is to analyze each word in the transcribed text "
             "and suggest specific corrections based on the reference lyrics.\n\n"
-            "For each word that needs correction:\n"
-            "1. If it should be replaced with a different word, use type='replace'\n"
-            "2. If it should be split into multiple words, use type='split'\n"
-            "3. If it and following words should be combined, use type='combine'\n"
-            "4. If it should be removed entirely, use type='delete'\n\n"
+            "Each word has a unique ID. When suggesting corrections, you must specify the ID of the word being corrected. "
+            "This ensures accuracy in applying your corrections.\n\n"
+            "For each correction, specify:\n"
+            "1. The word ID being corrected\n"
+            "2. The correction type ('replace', 'split', 'combine', or 'delete')\n"
+            "3. The corrected text\n"
+            "4. Your confidence level\n"
+            "5. The reason for the correction\n\n"
         )
 
         # Add song context if available
         if metadata and metadata.get("artist") and metadata.get("title"):
-            prompt += f"Song: {metadata['title']}\n" f"Artist: {metadata['artist']}\n\n"
+            prompt += f"Song: {metadata['title']}\nArtist: {metadata['artist']}\n\n"
 
-        prompt += "Context:\n" f"Transcribed words: '{' '.join(transcribed_words)}'\n" "Reference lyrics from different sources:\n"
+        # Format transcribed words with IDs
+        prompt += "Transcribed words:\n"
+        for word in transcribed_words:
+            prompt += f"- ID: {word['id']}, Text: '{word['text']}'\n"
 
-        # Add each reference source with words
+        prompt += "\nReference lyrics from different sources:\n"
+
+        # Add each reference source with words and their IDs
         for source, word_ids in gap.reference_word_ids.items():
-            reference_words = [word_map[word_id].text for word_id in word_ids if word_id in word_map]
-            prompt += f"- {source} immediate context: '{' '.join(reference_words)}'\n"
+            reference_words = [{"id": word_id, "text": word_map[word_id].text} for word_id in word_ids if word_id in word_map]
+            prompt += f"\n{source} immediate context:\n"
+            for word in reference_words:
+                prompt += f"- ID: {word['id']}, Text: '{word['text']}'\n"
 
             # Add full lyrics if available
             if metadata and metadata.get("full_reference_texts", {}).get(source):
-                prompt += f"Full {source} lyrics:\n{metadata['full_reference_texts'][source]}\n\n"
+                prompt += f"\nFull {source} lyrics:\n{metadata['full_reference_texts'][source]}\n"
 
         # Add context about surrounding anchors if available
-        anchor_sequences = data.get("anchor_sequences", [])
         if gap.preceding_anchor_id:
-            preceding_anchor = next((a.anchor for a in anchor_sequences if a.anchor.id == gap.preceding_anchor_id), None)
+            preceding_anchor = next((a.anchor for a in data.get("anchor_sequences", []) if a.anchor.id == gap.preceding_anchor_id), None)
             if preceding_anchor:
-                anchor_words = [word_map[word_id].text for word_id in preceding_anchor.transcribed_word_ids if word_id in word_map]
-                prompt += f"\nPreceding correct words: '{' '.join(anchor_words)}'"
-
-        if gap.following_anchor_id:
-            following_anchor = next((a.anchor for a in anchor_sequences if a.anchor.id == gap.following_anchor_id), None)
-            if following_anchor:
-                anchor_words = [word_map[word_id].text for word_id in following_anchor.transcribed_word_ids if word_id in word_map]
-                prompt += f"\nFollowing correct words: '{' '.join(anchor_words)}'"
+                anchor_words = [
+                    {"id": word_id, "text": word_map[word_id].text}
+                    for word_id in preceding_anchor.transcribed_word_ids
+                    if word_id in word_map
+                ]
+                prompt += "\nPreceding correct words:\n"
+                for word in anchor_words:
+                    prompt += f"- ID: {word['id']}, Text: '{word['text']}'\n"
 
         prompt += (
-            "\n\nProvide corrections in the following JSON format:\n"
+            "\nProvide corrections in the following JSON format:\n"
             "{\n"
             '  "corrections": [\n'
             "    {\n"
+            '      "word_id": "id_of_word_to_correct",\n'
             '      "type": "replace|split|combine|delete",\n'
-            '      "original_word": "word to correct",\n'
-            '      "corrected_word": "corrected word",\n'
-            '      "position": 0,  // position of word in transcribed sequence\n'
+            '      "corrected_text": "new text",\n'
+            '      "reference_word_id": "id_from_reference_lyrics",  // Optional, use when matching a specific reference word\n'
             '      "confidence": 0.9,\n'
             '      "reason": "explanation of correction"\n'
             "    }\n"
             "  ]\n"
             "}\n\n"
             "Important rules:\n"
-            "1. Create one correction object per word that needs changing\n"
-            "2. The position must be the index of the word in the transcribed sequence (0-based)\n"
-            "3. For 'split' type, corrected_word should contain the space-separated words\n"
-            "4. For 'combine' type, original_word should be the first word to combine\n"
+            "1. Always include the word_id for each correction\n"
+            "2. For 'split' type, corrected_text should contain the space-separated words\n"
+            "3. For 'combine' type, word_id should be the first word to combine\n"
+            "4. Include reference_word_id when the correction matches a specific reference word\n"
             "5. Only suggest corrections when you're confident they improve the lyrics\n"
             "6. Preserve any existing words that match the reference lyrics\n"
             "7. Respond ONLY with the JSON object, no other text"
@@ -171,113 +178,109 @@ class LLMHandler(GapCorrectionHandler):
                 return []
 
             corrections = []
-            try:
-                for correction in corrections_data["corrections"]:
-                    position = gap.transcription_position + correction["position"]
-                    self.logger.debug(f"Processing correction: {correction}")
+            for correction in corrections_data["corrections"]:
+                # Validate word_id exists in gap
+                if correction["word_id"] not in gap.transcribed_word_ids:
+                    self.logger.error(f"LLM suggested correction for word_id {correction['word_id']} which is not in the gap")
+                    continue
 
-                    # Validate the position is within the gap
-                    if correction["position"] >= len(gap.transcribed_word_ids):
-                        self.logger.error(f"Invalid position {correction['position']} for gap of length {len(gap.transcribed_word_ids)}")
+                # Get original word from word map
+                original_word = word_map[correction["word_id"]]
+                position = gap.transcription_position + gap.transcribed_word_ids.index(correction["word_id"])
+
+                self.logger.debug(f"Processing correction: {correction}")
+
+                if correction["type"] == "replace":
+                    self.logger.debug(
+                        f"Creating replacement: '{original_word.text}' -> '{correction['corrected_text']}' " f"at position {position}"
+                    )
+                    corrections.append(
+                        WordOperations.create_word_replacement_correction(
+                            original_word=original_word.text,
+                            corrected_word=correction["corrected_text"],
+                            original_position=position,
+                            source="LLM",
+                            confidence=correction["confidence"],
+                            reason=correction["reason"],
+                            handler="LLMHandler",
+                            reference_positions=reference_positions,
+                            original_word_id=correction["word_id"],
+                            corrected_word_id=correction.get("reference_word_id"),
+                        )
+                    )
+                elif correction["type"] == "split":
+                    split_words = correction["corrected_text"].split()
+                    self.logger.debug(f"Creating split: '{original_word.text}' -> {split_words} " f"at position {position}")
+
+                    # Get reference word IDs if provided
+                    reference_word_ids = correction.get("reference_word_ids", [None] * len(split_words))
+
+                    corrections.extend(
+                        WordOperations.create_word_split_corrections(
+                            original_word=original_word.text,
+                            reference_words=split_words,
+                            original_position=position,
+                            source="LLM",
+                            confidence=correction["confidence"],
+                            reason=correction["reason"],
+                            handler="LLMHandler",
+                            reference_positions=reference_positions,
+                            original_word_id=correction["word_id"],
+                            corrected_word_ids=reference_word_ids,
+                        )
+                    )
+                elif correction["type"] == "combine":
+                    # Get all word IDs to combine
+                    word_ids_to_combine = []
+                    current_idx = gap.transcribed_word_ids.index(correction["word_id"])
+                    words_needed = len(correction["corrected_text"].split())
+
+                    if current_idx + words_needed <= len(gap.transcribed_word_ids):
+                        word_ids_to_combine = gap.transcribed_word_ids[current_idx : current_idx + words_needed]
+                    else:
+                        self.logger.error(f"Not enough words available to combine at position {position}")
                         continue
 
-                    # Get original word ID and object
-                    original_word_id = gap.transcribed_word_ids[correction["position"]]
-                    original_word = word_map[original_word_id]
+                    words_to_combine = [word_map[word_id].text for word_id in word_ids_to_combine]
 
-                    # Clean words for comparison by removing punctuation and whitespace
-                    cleaned_original = original_word.text.strip().strip(string.punctuation)
-                    cleaned_correction = correction["original_word"].strip().strip(string.punctuation)
+                    self.logger.debug(
+                        f"Creating combine: {words_to_combine} -> '{correction['corrected_text']}' " f"at position {position}"
+                    )
 
-                    # Validate the original word matches
-                    if cleaned_correction.lower() != cleaned_original.lower():
-                        self.logger.error(
-                            f"Original word mismatch: LLM says '{correction['original_word']}' "
-                            f"but gap has '{original_word.text}' at position {correction['position']} "
-                            f"(cleaned: '{cleaned_correction}' vs '{cleaned_original}')"
+                    corrections.extend(
+                        WordOperations.create_word_combine_corrections(
+                            original_words=words_to_combine,
+                            reference_word=correction["corrected_text"],
+                            original_position=position,
+                            source="LLM",
+                            confidence=correction["confidence"],
+                            combine_reason=correction["reason"],
+                            delete_reason=f"Part of combining words: {correction['reason']}",
+                            handler="LLMHandler",
+                            reference_positions=reference_positions,
+                            original_word_ids=word_ids_to_combine,
+                            corrected_word_id=correction.get("reference_word_id"),
                         )
-                        continue
-
-                    if correction["type"] == "replace":
-                        self.logger.debug(
-                            f"Creating replacement: '{correction['original_word']}' -> '{correction['corrected_word']}' "
-                            f"at position {position}"
+                    )
+                elif correction["type"] == "delete":
+                    self.logger.debug(f"Creating deletion: '{original_word.text}' at position {position}")
+                    corrections.append(
+                        WordCorrection(
+                            original_word=original_word.text,
+                            corrected_word="",
+                            segment_index=0,
+                            original_position=position,
+                            confidence=correction["confidence"],
+                            source="LLM",
+                            reason=correction["reason"],
+                            alternatives={},
+                            is_deletion=True,
+                            handler="LLMHandler",
+                            reference_positions=reference_positions,
+                            word_id=correction["word_id"],
+                            corrected_word_id=None,  # Deleted words don't need a corrected ID
                         )
-                        corrections.append(
-                            WordOperations.create_word_replacement_correction(
-                                original_word=correction["original_word"],
-                                corrected_word=correction["corrected_word"],
-                                original_position=position,
-                                source="LLM",
-                                confidence=correction["confidence"],
-                                reason=correction["reason"],
-                                handler="LLMHandler",
-                                reference_positions=reference_positions,
-                                original_word_id=original_word_id,
-                            )
-                        )
-                    elif correction["type"] == "split":
-                        split_words = correction["corrected_word"].split()
-                        self.logger.debug(f"Creating split: '{correction['original_word']}' -> {split_words} " f"at position {position}")
-                        corrections.extend(
-                            WordOperations.create_word_split_corrections(
-                                original_word=correction["original_word"],
-                                reference_words=split_words,
-                                original_position=position,
-                                source="LLM",
-                                confidence=correction["confidence"],
-                                reason=correction["reason"],
-                                handler="LLMHandler",
-                                reference_positions=reference_positions,
-                                original_word_id=original_word_id,
-                            )
-                        )
-                    elif correction["type"] == "combine":
-                        words_to_combine = [
-                            word_map[word_id].text
-                            for word_id in gap.transcribed_word_ids[
-                                correction["position"] : correction["position"] + len(correction["original_word"].split())
-                            ]
-                        ]
-                        self.logger.debug(
-                            f"Creating combine: {words_to_combine} -> '{correction['corrected_word']}' " f"at position {position}"
-                        )
-                        corrections.extend(
-                            WordOperations.create_word_combine_corrections(
-                                original_words=words_to_combine,
-                                reference_word=correction["corrected_word"],
-                                original_position=position,
-                                source="LLM",
-                                confidence=correction["confidence"],
-                                combine_reason=correction["reason"],
-                                delete_reason=f"Part of combining words: {correction['reason']}",
-                                handler="LLMHandler",
-                                reference_positions=reference_positions,
-                            )
-                        )
-                    elif correction["type"] == "delete":
-                        self.logger.debug(f"Creating deletion: '{correction['original_word']}' at position {position}")
-                        corrections.append(
-                            WordCorrection(
-                                original_word=correction["original_word"],
-                                corrected_word="",
-                                segment_index=0,
-                                original_position=position,
-                                confidence=correction["confidence"],
-                                source="LLM",
-                                reason=correction["reason"],
-                                alternatives={},
-                                is_deletion=True,
-                                handler="LLMHandler",
-                                reference_positions=reference_positions,
-                                word_id=original_word_id,
-                            )
-                        )
-
-            except (KeyError, ValueError, IndexError) as e:
-                self.logger.error(f"Error processing corrections: {e}")
-                self.logger.error(f"Problematic correction data: {corrections_data}")
-                return []
+                    )
 
             self.logger.debug(f"Created {len(corrections)} corrections: {[f'{c.original_word}->{c.corrected_word}' for c in corrections]}")
             return corrections

@@ -496,7 +496,7 @@ class CDGGenerator:
                 text = text[1:]
 
             current_line += text + " "
-            self.logger.debug(f"format_lyrics: Current line: '{current_line}'")
+            # self.logger.debug(f"format_lyrics: Current line: '{current_line}'")
 
             is_last_before_instrumental = any(
                 inst["sync"] > sync_times[i] and (i == len(sync_times) - 1 or sync_times[i + 1] > inst["sync"]) for inst in instrumentals

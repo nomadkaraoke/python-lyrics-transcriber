@@ -1,25 +1,20 @@
 import logging
 from fastapi import FastAPI, Body, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from typing import Optional, Dict, Any
+from typing import Dict, Any
 from lyrics_transcriber.types import CorrectionResult, WordCorrection, LyricsSegment
 import time
 import os
 import urllib.parse
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
-import socket
 import hashlib
 from lyrics_transcriber.core.config import OutputConfig
 import uvicorn
 import webbrowser
 from threading import Thread
 from lyrics_transcriber.output.generator import OutputGenerator
-import asyncio
-from lyrics_transcriber.output.segment_resizer import SegmentResizer
 import json
-
-logger = logging.getLogger(__name__)
 
 
 class ReviewServer:
@@ -30,7 +25,7 @@ class ReviewServer:
         correction_result: CorrectionResult,
         output_config: OutputConfig,
         audio_filepath: str,
-        logger: Optional[logging.Logger] = None,
+        logger: logging.Logger,
     ):
         """Initialize the review server."""
         self.correction_result = correction_result
@@ -157,11 +152,6 @@ class ReviewServer:
             # Generate a unique hash for this preview
             preview_data = json.dumps(updated_data, sort_keys=True).encode("utf-8")
             preview_hash = hashlib.md5(preview_data).hexdigest()[:12]  # Use first 12 chars for shorter filename
-
-            # Resize segments if needed
-            if not temp_correction.resized_segments:
-                segment_resizer = SegmentResizer(max_line_length=self.output_config.max_line_length, logger=self.logger)
-                temp_correction.resized_segments = segment_resizer.resize_segments(temp_correction.corrected_segments)
 
             # Initialize output generator with preview settings
             preview_config = OutputConfig(

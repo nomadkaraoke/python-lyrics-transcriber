@@ -6,13 +6,10 @@ import {
     Button,
     Box,
     Typography,
-    Paper,
-    Collapse,
-    IconButton
+    Paper
 } from '@mui/material'
-import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
 import { CorrectionData } from '../types'
-import { useMemo, useState } from 'react'
+import { useMemo } from 'react'
 import { ApiClient } from '../api'
 import PreviewVideoSection from './PreviewVideoSection'
 
@@ -71,8 +68,6 @@ export default function ReviewChangesModal({
     onSubmit,
     apiClient
 }: ReviewChangesModalProps) {
-    const [expandedSegments, setExpandedSegments] = useState<number[]>([])
-
     const differences = useMemo(() => {
         const diffs: DiffResult[] = []
 
@@ -160,82 +155,81 @@ export default function ReviewChangesModal({
         return diffs
     }, [originalData, updatedData])
 
-    const handleToggleSegment = (segmentIndex: number) => {
-        setExpandedSegments(prev =>
-            prev.includes(segmentIndex)
-                ? prev.filter(i => i !== segmentIndex)
-                : [...prev, segmentIndex]
-        )
-    }
+    const renderCompactDiff = (diff: DiffResult) => {
+        if (diff.type !== 'modified') {
+            // For added/removed segments, show them as before but in a single line
+            return (
+                <Typography
+                    key={diff.path}
+                    color={diff.type === 'added' ? 'success.main' : 'error.main'}
+                    sx={{ mb: 0.5 }}
+                >
+                    {diff.segmentIndex}: {diff.type === 'added' ? '+ ' : '- '}
+                    {diff.type === 'added' ? diff.newValue : diff.oldValue}
+                </Typography>
+            )
+        }
 
-    const renderDiff = (diff: DiffResult) => {
-        const getColor = () => {
-            switch (diff.type) {
-                case 'added': return 'success.main'
-                case 'removed': return 'error.main'
-                case 'modified': return 'warning.main'
-                default: return 'text.primary'
+        // For modified segments, create a unified inline diff view
+        const oldText = diff.oldValue?.split('"')[1] || ''
+        const newText = diff.newValue?.split('"')[1] || ''
+        const oldWords = oldText.split(' ')
+        const newWords = newText.split(' ')
+
+        // Extract timing info and format with 2 decimal places
+        const timingMatch = diff.newValue?.match(/\(([\d.]+) - ([\d.]+)\)/)
+        const timing = timingMatch ?
+            `(${parseFloat(timingMatch[1]).toFixed(2)} - ${parseFloat(timingMatch[2]).toFixed(2)})` :
+            ''
+
+        // Create unified diff of words
+        const unifiedDiff = []
+        let i = 0, j = 0
+
+        while (i < oldWords.length || j < newWords.length) {
+            if (i < oldWords.length && j < newWords.length && oldWords[i] === newWords[j]) {
+                // Unchanged word
+                unifiedDiff.push({ type: 'unchanged', text: oldWords[i] })
+                i++
+                j++
+            } else if (i < oldWords.length && (!newWords[j] || oldWords[i] !== newWords[j])) {
+                // Deleted word
+                unifiedDiff.push({ type: 'deleted', text: oldWords[i] })
+                i++
+            } else if (j < newWords.length) {
+                // Added word
+                unifiedDiff.push({ type: 'added', text: newWords[j] })
+                j++
             }
         }
 
-        const isExpanded = diff.segmentIndex !== undefined &&
-            expandedSegments.includes(diff.segmentIndex)
-
         return (
-            <Paper key={diff.path} sx={{ p: 2, mb: 1 }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                    <Box>
-                        <Typography color={getColor()} sx={{ fontWeight: 'bold' }}>
-                            {diff.type.toUpperCase()}: {diff.path}
-                        </Typography>
-                        {diff.oldValue && (
-                            <Typography color="error.main" sx={{ ml: 2 }}>
-                                - {diff.oldValue}
-                            </Typography>
-                        )}
-                        {diff.newValue && (
-                            <Typography color="success.main" sx={{ ml: 2 }}>
-                                + {diff.newValue}
-                            </Typography>
-                        )}
-                    </Box>
-                    {diff.wordChanges && (
-                        <IconButton
-                            onClick={() => handleToggleSegment(diff.segmentIndex!)}
+            <Box key={diff.path} sx={{ mb: 0.5, display: 'flex', alignItems: 'center' }}>
+                <Typography variant="body2" color="text.secondary" sx={{ mr: 1, minWidth: '30px' }}>
+                    {diff.segmentIndex}:
+                </Typography>
+                <Box sx={{ display: 'flex', flexWrap: 'wrap', flexGrow: 1, alignItems: 'center' }}>
+                    {unifiedDiff.map((word, idx) => (
+                        <Typography
+                            key={idx}
+                            component="span"
+                            color={
+                                word.type === 'unchanged' ? 'text.primary' :
+                                    word.type === 'deleted' ? 'error.main' : 'success.main'
+                            }
                             sx={{
-                                transform: isExpanded ? 'rotate(180deg)' : 'rotate(0deg)',
-                                transition: 'transform 0.2s'
+                                textDecoration: word.type === 'deleted' ? 'line-through' : 'none',
+                                mr: 0.5
                             }}
                         >
-                            <ExpandMoreIcon />
-                        </IconButton>
-                    )}
+                            {word.text}
+                        </Typography>
+                    ))}
+                    <Typography variant="body2" color="text.secondary" sx={{ ml: 1 }}>
+                        {timing}
+                    </Typography>
                 </Box>
-
-                {diff.wordChanges && (
-                    <Collapse in={isExpanded}>
-                        <Box sx={{ mt: 2, ml: 4 }}>
-                            {diff.wordChanges.map((wordDiff, index) => (
-                                <Box key={index}>
-                                    <Typography color={getColor()} variant="body2">
-                                        {wordDiff.type.toUpperCase()}: {wordDiff.path}
-                                    </Typography>
-                                    {wordDiff.oldValue && (
-                                        <Typography color="error.main" variant="body2" sx={{ ml: 2 }}>
-                                            - {wordDiff.oldValue}
-                                        </Typography>
-                                    )}
-                                    {wordDiff.newValue && (
-                                        <Typography color="success.main" variant="body2" sx={{ ml: 2 }}>
-                                            + {wordDiff.newValue}
-                                        </Typography>
-                                    )}
-                                </Box>
-                            ))}
-                        </Box>
-                    </Collapse>
-                )}
-            </Paper>
+            </Box>
         )
     }
 
@@ -247,29 +241,40 @@ export default function ReviewChangesModal({
             fullWidth
         >
             <DialogTitle>Review Changes</DialogTitle>
-            <DialogContent dividers>
-                {differences.length === 0 ? (
-                    <Box>
-                        <Typography color="text.secondary" sx={{ mb: 2 }}>
-                            No changes detected. You can still submit to continue processing.
-                        </Typography>
-                        <Typography variant="body2" color="text.secondary">
-                            Total segments: {updatedData.corrected_segments.length}
-                        </Typography>
-                    </Box>
-                ) : (
-                    <Box>
-                        <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                            {differences.length} change{differences.length !== 1 ? 's' : ''} detected:
-                        </Typography>
-                        {differences.map(renderDiff)}
-                    </Box>
-                )}
+            <DialogContent
+                dividers
+                sx={{
+                    p: 0,  // Remove default padding
+                    '&:first-of-type': { pt: 0 }  // Remove default top padding
+                }}
+            >
                 <PreviewVideoSection
                     apiClient={apiClient}
                     isModalOpen={open}
                     updatedData={updatedData}
                 />
+
+                <Box sx={{ p: 2, mt: 0 }}>
+                    {differences.length === 0 ? (
+                        <Box>
+                            <Typography color="text.secondary">
+                                No changes detected. You can still submit to continue processing.
+                            </Typography>
+                            <Typography variant="body2" color="text.secondary">
+                                Total segments: {updatedData.corrected_segments.length}
+                            </Typography>
+                        </Box>
+                    ) : (
+                        <Box>
+                            <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                                {differences.length} segment{differences.length !== 1 ? 's' : ''} modified:
+                            </Typography>
+                            <Paper sx={{ p: 2 }}>
+                                {differences.map(renderCompactDiff)}
+                            </Paper>
+                        </Box>
+                    )}
+                </Box>
             </DialogContent>
             <DialogActions>
                 <Button onClick={onClose}>Cancel</Button>
