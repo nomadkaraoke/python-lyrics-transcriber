@@ -13,10 +13,13 @@ class RelaxedWordCountMatchHandler(GapCorrectionHandler):
         super().__init__(logger)
         self.logger = logger or logging.getLogger(__name__)
 
-    def can_handle(self, gap: GapSequence) -> Tuple[bool, Dict[str, Any]]:
+    def can_handle(self, gap: GapSequence, data: Optional[Dict[str, Any]] = None) -> Tuple[bool, Dict[str, Any]]:
         # Must have reference words
         if not gap.reference_word_ids:
             self.logger.debug("No reference word IDs available.")
+            return False, {}
+
+        if not self._validate_data(data):
             return False, {}
 
         # Check if any source has matching word count
@@ -26,6 +29,8 @@ class RelaxedWordCountMatchHandler(GapCorrectionHandler):
                 return True, {
                     "matching_source": source,
                     "reference_word_ids": ref_word_ids,
+                    "word_map": data["word_map"],
+                    "anchor_sequences": data.get("anchor_sequences", []),
                 }
 
         self.logger.debug("No source with matching word count found.")
@@ -33,22 +38,14 @@ class RelaxedWordCountMatchHandler(GapCorrectionHandler):
 
     def handle(self, gap: GapSequence, data: Optional[Dict[str, Any]] = None) -> List[WordCorrection]:
         """Handle the gap using word count matching."""
-        if not data:
-            can_handle, data = self.can_handle(gap)
-            if not can_handle:
-                return []
-
-        # Get word lookup map and anchor sequences from data
-        word_map = data.get("word_map", {})
-        anchor_sequences = data.get("anchor_sequences", [])
-
-        if not word_map:
-            self.logger.error("No word_map provided in data")
+        if not self._validate_data(data):
             return []
 
         corrections = []
         matching_source = data["matching_source"]
         reference_word_ids = data["reference_word_ids"]
+        word_map = data["word_map"]
+        anchor_sequences = data.get("anchor_sequences", [])
 
         # Use the centralized method to calculate reference positions
         reference_positions = WordOperations.calculate_reference_positions(

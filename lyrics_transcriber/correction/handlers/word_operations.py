@@ -27,9 +27,7 @@ class WordOperations:
 
         # Find the preceding anchor in the sequences
         preceding_anchor = next(
-            (scored_anchor.anchor for scored_anchor in anchor_sequences 
-             if scored_anchor.anchor.id == gap.preceding_anchor_id),
-            None
+            (scored_anchor.anchor for scored_anchor in anchor_sequences if scored_anchor.anchor.id == gap.preceding_anchor_id), None
         )
 
         if not preceding_anchor:
@@ -99,9 +97,12 @@ class WordOperations:
     ) -> List[WordCorrection]:
         """Creates corrections for splitting a single word into multiple words."""
         corrections = []
-        word_ids = corrected_word_ids or [WordUtils.generate_id() for _ in reference_words]
 
-        for split_idx, (ref_word, word_id) in enumerate(zip(reference_words, word_ids)):
+        # Generate word IDs if none provided
+        if corrected_word_ids is None:
+            corrected_word_ids = [WordUtils.generate_id() for _ in reference_words]
+
+        for split_idx, (ref_word, word_id) in enumerate(zip(reference_words, corrected_word_ids)):
             corrections.append(
                 WordCorrection(
                     original_word=original_word,
@@ -117,7 +118,7 @@ class WordOperations:
                     reference_positions=reference_positions,
                     length=1,  # Each split word is length 1
                     handler=handler,
-                    word_id=original_word_id if split_idx == 0 else None,
+                    word_id=WordUtils.generate_id(),  # Generate new ID for each split
                     corrected_word_id=word_id,
                 )
             )
@@ -157,7 +158,7 @@ class WordOperations:
                 reference_positions=reference_positions,
                 length=len(original_words),  # Combined word spans all original words
                 handler=handler,
-                word_id=word_ids[0],
+                word_id=WordUtils.generate_id(),  # Generate new ID for combined word
                 corrected_word_id=final_word_id,
             )
         )
@@ -178,8 +179,8 @@ class WordOperations:
                     reference_positions=reference_positions,
                     length=1,  # Deleted words are length 1
                     handler=handler,
-                    word_id=word_id,
-                    corrected_word_id=None,
+                    word_id=WordUtils.generate_id(),  # Generate new ID for each deleted word
+                    corrected_word_id=None,  # Deleted words don't need a corrected ID
                 )
             )
 

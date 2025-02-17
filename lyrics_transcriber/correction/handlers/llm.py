@@ -3,6 +3,7 @@ import logging
 import json
 from ollama import chat, ResponseError
 from datetime import datetime
+import string
 
 from lyrics_transcriber.types import GapSequence, WordCorrection
 from lyrics_transcriber.correction.handlers.base import GapCorrectionHandler
@@ -17,8 +18,19 @@ class LLMHandler(GapCorrectionHandler):
         self.logger = logger or logging.getLogger(__name__)
         self.model = "deepseek-r1:7b"
 
-    def _format_prompt(self, gap: GapSequence, metadata: Optional[Dict[str, Any]] = None) -> str:
+    def _format_prompt(self, gap: GapSequence, data: Optional[Dict[str, Any]] = None) -> str:
         """Format the prompt for the LLM with context about the gap and reference lyrics."""
+        # Get word map and metadata from data
+        word_map = data.get("word_map", {})
+        metadata = data.get("metadata", {}) if data else {}
+
+        if not word_map:
+            self.logger.error("No word_map provided in data")
+            return ""
+
+        # Get transcribed words
+        transcribed_words = [word_map[word_id].text for word_id in gap.transcribed_word_ids if word_id in word_map]
+
         prompt = (
             "You are a lyrics correction expert. You will be given transcribed lyrics that may contain errors "
             "and reference lyrics from multiple sources. Your task is to analyze each word in the transcribed text "
@@ -34,21 +46,30 @@ class LLMHandler(GapCorrectionHandler):
         if metadata and metadata.get("artist") and metadata.get("title"):
             prompt += f"Song: {metadata['title']}\n" f"Artist: {metadata['artist']}\n\n"
 
-        prompt += "Context:\n" f"Transcribed words: '{' '.join(gap.words)}'\n" "Reference lyrics from different sources:\n"
+        prompt += "Context:\n" f"Transcribed words: '{' '.join(transcribed_words)}'\n" "Reference lyrics from different sources:\n"
 
-        # Add each reference source with full lyrics
-        for source, words in gap.reference_words_original.items():
-            prompt += f"- {source} immediate context: '{' '.join(words)}'\n"
+        # Add each reference source with words
+        for source, word_ids in gap.reference_word_ids.items():
+            reference_words = [word_map[word_id].text for word_id in word_ids if word_id in word_map]
+            prompt += f"- {source} immediate context: '{' '.join(reference_words)}'\n"
 
             # Add full lyrics if available
             if metadata and metadata.get("full_reference_texts", {}).get(source):
                 prompt += f"Full {source} lyrics:\n{metadata['full_reference_texts'][source]}\n\n"
 
         # Add context about surrounding anchors if available
-        if gap.preceding_anchor:
-            prompt += f"\nPreceding correct words: '{' '.join(gap.preceding_anchor.words)}'"
-        if gap.following_anchor:
-            prompt += f"\nFollowing correct words: '{' '.join(gap.following_anchor.words)}'"
+        anchor_sequences = data.get("anchor_sequences", [])
+        if gap.preceding_anchor_id:
+            preceding_anchor = next((a.anchor for a in anchor_sequences if a.anchor.id == gap.preceding_anchor_id), None)
+            if preceding_anchor:
+                anchor_words = [word_map[word_id].text for word_id in preceding_anchor.transcribed_word_ids if word_id in word_map]
+                prompt += f"\nPreceding correct words: '{' '.join(anchor_words)}'"
+
+        if gap.following_anchor_id:
+            following_anchor = next((a.anchor for a in anchor_sequences if a.anchor.id == gap.following_anchor_id), None)
+            if following_anchor:
+                anchor_words = [word_map[word_id].text for word_id in following_anchor.transcribed_word_ids if word_id in word_map]
+                prompt += f"\nFollowing correct words: '{' '.join(anchor_words)}'"
 
         prompt += (
             "\n\nProvide corrections in the following JSON format:\n"
@@ -76,9 +97,9 @@ class LLMHandler(GapCorrectionHandler):
 
         return prompt
 
-    def can_handle(self, gap: GapSequence) -> Tuple[bool, Dict[str, Any]]:
+    def can_handle(self, gap: GapSequence, data: Optional[Dict[str, Any]] = None) -> Tuple[bool, Dict[str, Any]]:
         """LLM handler can attempt to handle any gap with reference words."""
-        if not gap.reference_words:
+        if not gap.reference_word_ids:
             self.logger.debug("No reference words available")
             return False, {}
 
@@ -96,14 +117,26 @@ class LLMHandler(GapCorrectionHandler):
 
     def handle(self, gap: GapSequence, data: Optional[Dict[str, Any]] = None) -> List[WordCorrection]:
         """Process the gap using the LLM and create corrections based on its response."""
+        if not data or "word_map" not in data:
+            self.logger.error("No word_map provided in data")
+            return []
+
+        word_map = data["word_map"]
+        transcribed_words = [word_map[word_id].text for word_id in gap.transcribed_word_ids if word_id in word_map]
+
+        # Calculate reference positions using the centralized method
+        reference_positions = WordOperations.calculate_reference_positions(gap, anchor_sequences=data.get("anchor_sequences", []))
+
         prompt = self._format_prompt(gap, data)
+        if not prompt:
+            return []
 
         # Get a unique index for this gap based on its position
         gap_index = gap.transcription_position
 
         try:
-            self.logger.debug(f"Processing gap words: {gap.words}")
-            self.logger.debug(f"Reference words: {gap.reference_words_original}")
+            self.logger.debug(f"Processing gap words: {transcribed_words}")
+            self.logger.debug(f"Reference word IDs: {gap.reference_word_ids}")
 
             response = chat(model=self.model, messages=[{"role": "user", "content": prompt}], format="json")
 
@@ -129,15 +162,24 @@ class LLMHandler(GapCorrectionHandler):
                     self.logger.debug(f"Processing correction: {correction}")
 
                     # Validate the position is within the gap
-                    if correction["position"] >= len(gap.words):
-                        self.logger.error(f"Invalid position {correction['position']} for gap of length {len(gap.words)}")
+                    if correction["position"] >= len(gap.transcribed_word_ids):
+                        self.logger.error(f"Invalid position {correction['position']} for gap of length {len(gap.transcribed_word_ids)}")
                         continue
 
-                    # Validate the original word matches what's in the gap
-                    if correction["original_word"].lower() != gap.words[correction["position"]].lower():
+                    # Get original word ID and object
+                    original_word_id = gap.transcribed_word_ids[correction["position"]]
+                    original_word = word_map[original_word_id]
+
+                    # Clean words for comparison by removing punctuation and whitespace
+                    cleaned_original = original_word.text.strip().strip(string.punctuation)
+                    cleaned_correction = correction["original_word"].strip().strip(string.punctuation)
+
+                    # Validate the original word matches
+                    if cleaned_correction.lower() != cleaned_original.lower():
                         self.logger.error(
                             f"Original word mismatch: LLM says '{correction['original_word']}' "
-                            f"but gap has '{gap.words[correction['position']]}' at position {correction['position']}"
+                            f"but gap has '{original_word.text}' at position {correction['position']} "
+                            f"(cleaned: '{cleaned_correction}' vs '{cleaned_original}')"
                         )
                         continue
 
@@ -155,6 +197,8 @@ class LLMHandler(GapCorrectionHandler):
                                 confidence=correction["confidence"],
                                 reason=correction["reason"],
                                 handler="LLMHandler",
+                                reference_positions=reference_positions,
+                                original_word_id=original_word_id,
                             )
                         )
                     elif correction["type"] == "split":
@@ -169,11 +213,16 @@ class LLMHandler(GapCorrectionHandler):
                                 confidence=correction["confidence"],
                                 reason=correction["reason"],
                                 handler="LLMHandler",
+                                reference_positions=reference_positions,
+                                original_word_id=original_word_id,
                             )
                         )
                     elif correction["type"] == "combine":
-                        words_to_combine = gap.words[
-                            correction["position"] : correction["position"] + len(correction["original_word"].split())
+                        words_to_combine = [
+                            word_map[word_id].text
+                            for word_id in gap.transcribed_word_ids[
+                                correction["position"] : correction["position"] + len(correction["original_word"].split())
+                            ]
                         ]
                         self.logger.debug(
                             f"Creating combine: {words_to_combine} -> '{correction['corrected_word']}' " f"at position {position}"
@@ -188,6 +237,7 @@ class LLMHandler(GapCorrectionHandler):
                                 combine_reason=correction["reason"],
                                 delete_reason=f"Part of combining words: {correction['reason']}",
                                 handler="LLMHandler",
+                                reference_positions=reference_positions,
                             )
                         )
                     elif correction["type"] == "delete":
@@ -204,6 +254,8 @@ class LLMHandler(GapCorrectionHandler):
                                 alternatives={},
                                 is_deletion=True,
                                 handler="LLMHandler",
+                                reference_positions=reference_positions,
+                                word_id=original_word_id,
                             )
                         )
 

@@ -112,7 +112,7 @@ class SyllablesMatchHandler(GapCorrectionHandler):
         if not data or "word_map" not in data:
             self.logger.error("No word_map provided in data")
             return False, {}
-            
+
         word_map = data["word_map"]
 
         # Get actual words from word IDs
@@ -198,7 +198,7 @@ class SyllablesMatchHandler(GapCorrectionHandler):
                         reference_positions=reference_positions,
                         handler="SyllablesMatchHandler",
                         original_word_ids=word_ids_to_combine,
-                        corrected_word_id=ref_word_id,  # Use reference word ID for combined word
+                        corrected_word_id=ref_word_id,
                     )
                 )
 
@@ -223,7 +223,7 @@ class SyllablesMatchHandler(GapCorrectionHandler):
                         reference_positions=reference_positions,
                         handler="SyllablesMatchHandler",
                         original_word_id=word_id,
-                        corrected_word_ids=ref_word_ids_for_split,  # Use reference word IDs for split words
+                        corrected_word_ids=ref_word_ids_for_split,
                     )
                 )
 
@@ -232,7 +232,7 @@ class SyllablesMatchHandler(GapCorrectionHandler):
             for i, (orig_word_id, ref_word_id) in enumerate(zip(gap.transcribed_word_ids, reference_word_ids)):
                 orig_word = word_map[orig_word_id]
                 ref_word = word_map[ref_word_id]
-                
+
                 if orig_word.text.lower() != ref_word.text.lower():
                     corrections.append(
                         WordOperations.create_word_replacement_correction(

@@ -13,10 +13,13 @@ class WordCountMatchHandler(GapCorrectionHandler):
         super().__init__(logger)
         self.logger = logger or logging.getLogger(__name__)
 
-    def can_handle(self, gap: GapSequence) -> Tuple[bool, Dict[str, Any]]:
+    def can_handle(self, gap: GapSequence, data: Optional[Dict[str, Any]] = None) -> Tuple[bool, Dict[str, Any]]:
         # Must have reference words
         if not gap.reference_word_ids:
             self.logger.debug("No reference word IDs available.")
+            return False, {}
+
+        if not self._validate_data(data):
             return False, {}
 
         ref_word_lists = list(gap.reference_word_ids.values())
@@ -32,17 +35,14 @@ class WordCountMatchHandler(GapCorrectionHandler):
             return False, {}
 
         self.logger.debug("All sources agree and have matching word counts.")
-        return True, {}
+        return True, {"word_map": data["word_map"]}
 
     def handle(self, gap: GapSequence, data: Optional[Dict[str, Any]] = None) -> List[WordCorrection]:
-        corrections = []
-        
-        # Get word lookup map from data
-        word_map = data.get("word_map", {})
-        if not word_map:
-            self.logger.error("No word_map provided in data")
+        if not self._validate_data(data):
             return []
 
+        corrections = []
+        word_map = data["word_map"]
         source = list(gap.reference_word_ids.keys())[0]
         reference_word_ids = gap.reference_word_ids[source]
         sources = ", ".join(gap.reference_word_ids.keys())

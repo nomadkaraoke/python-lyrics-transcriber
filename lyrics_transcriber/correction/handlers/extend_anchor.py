@@ -40,11 +40,15 @@ class ExtendAnchorHandler(GapCorrectionHandler):
     """
 
     def __init__(self, logger: Optional[logging.Logger] = None):
-        super().__init__(logger)
         self.logger = logger or logging.getLogger(__name__)
 
-    def can_handle(self, gap: GapSequence) -> Tuple[bool, Dict[str, Any]]:
-        """Check if this handler can process the gap."""
+    def can_handle(self, gap: GapSequence, data: Optional[Dict[str, Any]] = None) -> Tuple[bool, Dict[str, Any]]:
+        """Check if this gap can be handled by extending anchor sequences."""
+        # Check if we have anchor sequences
+        if not data or "anchor_sequences" not in data:
+            self.logger.debug("No anchor sequences available")
+            return False, {}
+
         # Must have reference word IDs
         if not gap.reference_word_ids:
             self.logger.debug("No reference word IDs available.")

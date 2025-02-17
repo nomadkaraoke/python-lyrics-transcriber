@@ -3,8 +3,12 @@ import logging
 from pathlib import Path
 from copy import deepcopy
 
+from lyrics_transcriber.correction.handlers.levenshtein import LevenshteinHandler
+from lyrics_transcriber.correction.handlers.llm import LLMHandler
 from lyrics_transcriber.correction.handlers.no_space_punct_match import NoSpacePunctuationMatchHandler
 from lyrics_transcriber.correction.handlers.relaxed_word_count_match import RelaxedWordCountMatchHandler
+from lyrics_transcriber.correction.handlers.repeat import RepeatCorrectionHandler
+from lyrics_transcriber.correction.handlers.sound_alike import SoundAlikeHandler
 from lyrics_transcriber.correction.handlers.syllables_match import SyllablesMatchHandler
 from lyrics_transcriber.correction.handlers.word_count_match import WordCountMatchHandler
 from lyrics_transcriber.types import (
@@ -46,10 +50,10 @@ class LyricsCorrector:
             SyllablesMatchHandler(logger=self.logger),
             RelaxedWordCountMatchHandler(logger=self.logger),
             NoSpacePunctuationMatchHandler(logger=self.logger),
-            # LLMHandler(logger=self.logger),
-            # RepeatCorrectionHandler(logger=self.logger),
-            # SoundAlikeHandler(logger=self.logger),
-            # LevenshteinHandler(logger=self.logger),
+            LLMHandler(logger=self.logger),
+            RepeatCorrectionHandler(logger=self.logger),
+            SoundAlikeHandler(logger=self.logger),
+            LevenshteinHandler(logger=self.logger),
         ]
 
     @property
@@ -158,6 +162,9 @@ class LyricsCorrector:
                     if word.id not in word_map:  # Don't overwrite transcribed words
                         word_map[word.id] = word
 
+        # Base handler data that all handlers need
+        base_handler_data = {"word_map": word_map, "anchor_sequences": self._anchor_sequences}
+
         for i, gap in enumerate(gap_sequences, 1):
             self.logger.info(f"Processing gap {i}/{len(gap_sequences)} at position {gap.transcription_position}")
 
@@ -168,13 +175,11 @@ class LyricsCorrector:
             # Try each handler in order
             for handler in self.handlers:
                 handler_name = handler.__class__.__name__
-                can_handle, handler_data = handler.can_handle(gap)
+                can_handle, handler_data = handler.can_handle(gap, base_handler_data)
 
                 if can_handle:
-                    # Add word map and anchor sequences to handler data
-                    handler_data = handler_data or {}
-                    handler_data["word_map"] = word_map
-                    handler_data["anchor_sequences"] = self._anchor_sequences
+                    # Merge base handler data with specific handler data
+                    handler_data = {**base_handler_data, **(handler_data or {})}
 
                     corrections = handler.handle(gap, handler_data)
                     if corrections:

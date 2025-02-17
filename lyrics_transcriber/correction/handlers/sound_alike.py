@@ -36,54 +36,86 @@ class SoundAlikeHandler(GapCorrectionHandler):
         self.logger = logger or logging.getLogger(__name__)
         self.similarity_threshold = similarity_threshold
 
-    def can_handle(self, gap: GapSequence) -> Tuple[bool, Dict[str, Any]]:
+    def can_handle(self, gap: GapSequence, data: Optional[Dict[str, Any]] = None) -> Tuple[bool, Dict[str, Any]]:
+        """Check if any gap word has a metaphone match with any reference word."""
+        if not self._validate_data(data):
+            return False, {}
+
+        word_map = data["word_map"]
+
         # Must have reference words
-        if not gap.reference_words:
+        if not gap.reference_word_ids:
             self.logger.debug("No reference words available")
             return False, {}
 
         # Gap must have words
-        if not gap.words:
+        if not gap.transcribed_word_ids:
             self.logger.debug("No gap words available")
             return False, {}
 
         # Check if any gap word has a metaphone match with any reference word
-        for word in gap.words:
-            word_codes = doublemetaphone(word)
-            self.logger.debug(f"Gap word '{word}' has metaphone codes: {word_codes}")
-            for ref_words in gap.reference_words.values():
-                for ref_word in ref_words:
-                    ref_codes = doublemetaphone(ref_word)
-                    self.logger.debug(f"Reference word '{ref_word}' has metaphone codes: {ref_codes}")
+        for word_id in gap.transcribed_word_ids:
+            if word_id not in word_map:
+                continue
+            word = word_map[word_id]
+            word_codes = doublemetaphone(word.text)
+            self.logger.debug(f"Gap word '{word.text}' has metaphone codes: {word_codes}")
+
+            for source, ref_word_ids in gap.reference_word_ids.items():
+                for ref_word_id in ref_word_ids:
+                    if ref_word_id not in word_map:
+                        continue
+                    ref_word = word_map[ref_word_id]
+                    ref_codes = doublemetaphone(ref_word.text)
+                    self.logger.debug(f"Reference word '{ref_word.text}' has metaphone codes: {ref_codes}")
                     if self._codes_match(word_codes, ref_codes):
-                        self.logger.debug(f"Found metaphone match between '{word}' and '{ref_word}'")
+                        self.logger.debug(f"Found metaphone match between '{word.text}' and '{ref_word.text}'")
                         return True, {}
+
         self.logger.debug("No metaphone matches found")
         return False, {}
 
     def handle(self, gap: GapSequence, data: Optional[Dict[str, Any]] = None) -> List[WordCorrection]:
+        """Process the gap and create corrections for sound-alike matches."""
+        if not self._validate_data(data):
+            return []
+
+        word_map = data["word_map"]
         corrections = []
 
-        # Use the centralized method to calculate reference positions for all sources
-        reference_positions = WordOperations.calculate_reference_positions(gap)
+        # Use the centralized method to calculate reference positions
+        reference_positions = WordOperations.calculate_reference_positions(gap, anchor_sequences=data.get("anchor_sequences", []))
 
         # For each word in the gap
-        for i, word in enumerate(gap.words):
-            word_codes = doublemetaphone(word)
-            self.logger.debug(f"Processing '{word}' (codes: {word_codes})")
+        for i, word_id in enumerate(gap.transcribed_word_ids):
+            if word_id not in word_map:
+                continue
+            word = word_map[word_id]
+            word_codes = doublemetaphone(word.text)
+            self.logger.debug(f"Processing '{word.text}' (codes: {word_codes})")
 
             # Skip if word exactly matches any reference
-            exact_match = any(i < len(ref_words) and word.lower() == ref_words[i].lower() for ref_words in gap.reference_words.values())
+            exact_match = False
+            for source, ref_word_ids in gap.reference_word_ids.items():
+                if i < len(ref_word_ids):
+                    ref_word_id = ref_word_ids[i]
+                    if ref_word_id in word_map:
+                        ref_word = word_map[ref_word_id]
+                        if word.text.lower() == ref_word.text.lower():
+                            exact_match = True
+                            break
             if exact_match:
                 continue
 
             # Find sound-alike matches in references
-            matches: Dict[str, Tuple[List[str], float]] = {}
+            matches: Dict[str, Tuple[List[str], float, str]] = {}  # Added word_id to tuple
 
-            for source, ref_words in gap.reference_words.items():
-                ref_words_original = gap.reference_words_original[source]  # Get original formatted words
-                for j, (ref_word, ref_word_original) in enumerate(zip(ref_words, ref_words_original)):
-                    ref_codes = doublemetaphone(ref_word)
+            for source, ref_word_ids in gap.reference_word_ids.items():
+                for j, ref_word_id in enumerate(ref_word_ids):
+                    if ref_word_id not in word_map:
+                        continue
+                    ref_word = word_map[ref_word_id]
+                    ref_codes = doublemetaphone(ref_word.text)
 
                     match_confidence = self._get_match_confidence(word_codes, ref_codes)
                     if match_confidence >= self.similarity_threshold:
@@ -94,22 +126,23 @@ class SoundAlikeHandler(GapCorrectionHandler):
                         adjusted_confidence = match_confidence * position_multiplier
 
                         if adjusted_confidence >= self.similarity_threshold:
-                            if ref_word_original not in matches:  # Use original formatted word as key
-                                matches[ref_word_original] = ([], adjusted_confidence)
-                            matches[ref_word_original][0].append(source)
+                            if ref_word.text not in matches:
+                                matches[ref_word.text] = ([], adjusted_confidence, ref_word_id)
+                            matches[ref_word.text][0].append(source)
 
             # Create correction for best match if any found
             if matches:
-                best_match, (sources, base_confidence) = max(matches.items(), key=lambda x: (len(x[1][0]), x[1][1]))
+                best_match, (sources, base_confidence, ref_word_id) = max(matches.items(), key=lambda x: (len(x[1][0]), x[1][1]))
 
-                source_confidence = len(sources) / len(gap.reference_words)
+                source_confidence = len(sources) / len(gap.reference_word_ids)
                 final_confidence = base_confidence * source_confidence
 
-                self.logger.debug(f"Found match: {word} -> {best_match} (confidence: {final_confidence:.2f}, sources: {sources})")
+                self.logger.debug(f"Found match: {word.text} -> {best_match} " f"(confidence: {final_confidence:.2f}, sources: {sources})")
+
                 corrections.append(
                     WordCorrection(
-                        original_word=word,
-                        corrected_word=best_match,  # Already using original formatted word
+                        original_word=word.text,
+                        corrected_word=best_match,
                         segment_index=0,
                         original_position=gap.transcription_position + i,
                         confidence=final_confidence,
@@ -117,8 +150,11 @@ class SoundAlikeHandler(GapCorrectionHandler):
                         reason=f"SoundAlikeHandler: Phonetic match ({final_confidence:.2f} confidence)",
                         alternatives={k: len(v[0]) for k, v in matches.items()},
                         is_deletion=False,
-                        reference_positions=reference_positions,  # Add reference positions
-                        length=1,  # Single word replacement
+                        reference_positions=reference_positions,
+                        length=1,
+                        handler="SoundAlikeHandler",
+                        word_id=word_id,
+                        corrected_word_id=ref_word_id,
                     )
                 )
 

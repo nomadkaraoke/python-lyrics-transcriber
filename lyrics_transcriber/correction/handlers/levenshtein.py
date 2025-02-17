@@ -38,23 +38,38 @@ class LevenshteinHandler(GapCorrectionHandler):
         self.similarity_threshold = similarity_threshold
         self.logger = logger or logging.getLogger(__name__)
 
-    def can_handle(self, gap: GapSequence) -> Tuple[bool, Dict[str, Any]]:
+    def can_handle(self, gap: GapSequence, data: Optional[Dict[str, Any]] = None) -> Tuple[bool, Dict[str, Any]]:
         """Check if we can handle this gap - we'll try if there are reference words."""
-        if not gap.reference_words:
+        if not data or "word_map" not in data:
+            self.logger.error("No word_map provided in data")
+            return False, {}
+
+        word_map = data["word_map"]
+
+        if not gap.reference_word_ids:
             self.logger.debug("No reference words available")
             return False, {}
 
-        if not gap.words:
+        if not gap.transcribed_word_ids:
             self.logger.debug("No gap words available")
             return False, {}
 
         # Check if any word has sufficient similarity to reference
-        for i, word in enumerate(gap.words):
-            for ref_words in gap.reference_words.values():
-                if i < len(ref_words):
-                    similarity = self._get_string_similarity(word, ref_words[i])
+        for i, word_id in enumerate(gap.transcribed_word_ids):
+            if word_id not in word_map:
+                continue
+            word = word_map[word_id]
+
+            for source, ref_word_ids in gap.reference_word_ids.items():
+                if i < len(ref_word_ids):
+                    ref_word_id = ref_word_ids[i]
+                    if ref_word_id not in word_map:
+                        continue
+                    ref_word = word_map[ref_word_id]
+
+                    similarity = self._get_string_similarity(word.text, ref_word.text)
                     if similarity >= self.similarity_threshold:
-                        self.logger.debug(f"Found similar word: '{word}' -> '{ref_words[i]}' ({similarity:.2f})")
+                        self.logger.debug(f"Found similar word: '{word.text}' -> '{ref_word.text}' ({similarity:.2f})")
                         return True, {}
 
         self.logger.debug("No words meet similarity threshold")
@@ -62,59 +77,85 @@ class LevenshteinHandler(GapCorrectionHandler):
 
     def handle(self, gap: GapSequence, data: Optional[Dict[str, Any]] = None) -> List[WordCorrection]:
         """Try to correct words based on string similarity."""
+        if not data or "word_map" not in data:
+            self.logger.error("No word_map provided in data")
+            return []
+
+        word_map = data["word_map"]
         corrections = []
 
         # Process each word in the gap
-        for i, word in enumerate(gap.words):
+        for i, word_id in enumerate(gap.transcribed_word_ids):
+            if word_id not in word_map:
+                continue
+            word = word_map[word_id]
+
             # Skip if word is empty or just punctuation
-            if not word.strip():
+            if not word.text.strip():
                 continue
 
             # Skip exact matches
-            if any(i < len(ref_words) and word.lower() == ref_words[i].lower() for ref_words in gap.reference_words.values()):
-                self.logger.debug(f"Skipping exact match: '{word}'")
+            exact_match = False
+            for source, ref_word_ids in gap.reference_word_ids.items():
+                if i < len(ref_word_ids):
+                    ref_word_id = ref_word_ids[i]
+                    if ref_word_id in word_map:
+                        ref_word = word_map[ref_word_id]
+                        if word.text.lower() == ref_word.text.lower():
+                            exact_match = True
+                            break
+            if exact_match:
                 continue
 
             # Find matching reference words at this position
-            matches = {}  # word -> (sources, similarity)
-            for source, ref_words in gap.reference_words.items():
-                ref_words_original = gap.reference_words_original[source]  # Get original formatted words
-                if i >= len(ref_words):
+            matches: Dict[str, Tuple[List[str], float, str]] = {}  # word -> (sources, similarity, word_id)
+
+            for source, ref_word_ids in gap.reference_word_ids.items():
+                if i >= len(ref_word_ids):
                     continue
 
-                ref_word = ref_words[i]
-                ref_word_original = ref_words_original[i]  # Get original formatted word
-                similarity = self._get_string_similarity(word, ref_word)
+                ref_word_id = ref_word_ids[i]
+                if ref_word_id not in word_map:
+                    continue
+                ref_word = word_map[ref_word_id]
+
+                similarity = self._get_string_similarity(word.text, ref_word.text)
 
                 if similarity >= self.similarity_threshold:
-                    self.logger.debug(f"Found match: '{word}' -> '{ref_word}' ({similarity:.2f})")
-                    if ref_word_original not in matches:  # Use original formatted word as key
-                        matches[ref_word_original] = ([], similarity)
-                    matches[ref_word_original][0].append(source)
+                    self.logger.debug(f"Found match: '{word.text}' -> '{ref_word.text}' ({similarity:.2f})")
+                    if ref_word.text not in matches:
+                        matches[ref_word.text] = ([], similarity, ref_word_id)
+                    matches[ref_word.text][0].append(source)
 
             # Create correction for best match if any found
             if matches:
-                best_match, (sources, similarity) = max(
+                best_match, (sources, similarity, ref_word_id) = max(
                     matches.items(), key=lambda x: (len(x[1][0]), x[1][1])  # Sort by number of sources, then similarity
                 )
 
-                source_confidence = len(sources) / len(gap.reference_words)
+                source_confidence = len(sources) / len(gap.reference_word_ids)
                 final_confidence = similarity * source_confidence
 
-                # Calculate reference positions for matching sources
-                reference_positions = WordOperations.calculate_reference_positions(gap, sources)
+                # Calculate reference positions
+                reference_positions = WordOperations.calculate_reference_positions(gap, anchor_sequences=data.get("anchor_sequences", []))
 
-                self.logger.debug(f"Creating correction: {word} -> {best_match} (confidence: {final_confidence})")
+                self.logger.debug(f"Creating correction: {word.text} -> {best_match} (confidence: {final_confidence})")
                 corrections.append(
-                    WordOperations.create_word_replacement_correction(
-                        original_word=word,
-                        corrected_word=best_match,  # Using original formatted word
+                    WordCorrection(
+                        original_word=word.text,
+                        corrected_word=best_match,
+                        segment_index=0,
                         original_position=gap.transcription_position + i,
-                        source=", ".join(sources),
                         confidence=final_confidence,
+                        source=", ".join(sources),
                         reason=f"String similarity ({final_confidence:.2f})",
+                        alternatives={k: len(v[0]) for k, v in matches.items()},
+                        is_deletion=False,
                         reference_positions=reference_positions,
+                        length=1,
                         handler="LevenshteinHandler",
+                        word_id=word_id,
+                        corrected_word_id=ref_word_id,
                     )
                 )
 
