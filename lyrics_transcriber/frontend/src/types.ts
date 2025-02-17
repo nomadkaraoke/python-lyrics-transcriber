@@ -22,7 +22,7 @@ export interface WordCorrection {
     corrected_word: string
     segment_id?: string
     word_id: string
-    corrected_word_id: string
+    corrected_word_id: string | null
     source: string
     confidence: number
     reason: string

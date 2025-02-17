@@ -1,9 +1,10 @@
-from typing import List, Optional, Tuple, Dict, Any
+from typing import List, Optional, Tuple, Dict, Any, Union
 import logging
 import json
-from ollama import chat, ResponseError
+from ollama import chat
 from datetime import datetime
 import string
+from pathlib import Path
 
 from lyrics_transcriber.types import GapSequence, WordCorrection
 from lyrics_transcriber.correction.handlers.base import GapCorrectionHandler
@@ -13,10 +14,11 @@ from lyrics_transcriber.correction.handlers.word_operations import WordOperation
 class LLMHandler(GapCorrectionHandler):
     """Uses an LLM to analyze and correct gaps by comparing with reference lyrics."""
 
-    def __init__(self, logger: Optional[logging.Logger] = None):
+    def __init__(self, logger: Optional[logging.Logger] = None, cache_dir: Optional[Union[str, Path]] = None):
         super().__init__(logger)
         self.logger = logger or logging.getLogger(__name__)
         self.model = "deepseek-r1:7b"
+        self.cache_dir = Path(cache_dir) if cache_dir else None
 
     def _format_prompt(self, gap: GapSequence, data: Optional[Dict[str, Any]] = None) -> str:
         """Format the prompt for the LLM with context about the gap and reference lyrics."""
@@ -105,15 +107,26 @@ class LLMHandler(GapCorrectionHandler):
 
         return True, {}
 
-    def _write_debug_info(self, prompt: str, response: str, gap_index: int) -> None:
+    def _write_debug_info(self, prompt: str, response: str, gap_index: int, audio_file_hash: Optional[str] = None) -> None:
         """Write prompt and response to debug files."""
+        if not self.cache_dir:
+            self.logger.warning("No cache directory provided, skipping LLM debug output")
+            return
+
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        filename = f"llm_debug/llm_debug_{gap_index}_{timestamp}.txt"
+        debug_dir = self.cache_dir / "llm_debug"
+        debug_dir.mkdir(exist_ok=True, parents=True)
+
+        hash_prefix = f"{audio_file_hash}_" if audio_file_hash else ""
+        filename = debug_dir / f"llm_debug_{hash_prefix}{gap_index}_{timestamp}.txt"
 
         debug_content = "=== LLM PROMPT ===\n" f"{prompt}\n\n" "=== LLM RESPONSE ===\n" f"{response}\n"
 
-        with open(filename, "w", encoding="utf-8") as f:
-            f.write(debug_content)
+        try:
+            with open(filename, "w", encoding="utf-8") as f:
+                f.write(debug_content)
+        except IOError as e:
+            self.logger.error(f"Failed to write LLM debug file: {e}")
 
     def handle(self, gap: GapSequence, data: Optional[Dict[str, Any]] = None) -> List[WordCorrection]:
         """Process the gap using the LLM and create corrections based on its response."""
@@ -125,7 +138,9 @@ class LLMHandler(GapCorrectionHandler):
         transcribed_words = [word_map[word_id].text for word_id in gap.transcribed_word_ids if word_id in word_map]
 
         # Calculate reference positions using the centralized method
-        reference_positions = WordOperations.calculate_reference_positions(gap, anchor_sequences=data.get("anchor_sequences", []))
+        reference_positions = (
+            WordOperations.calculate_reference_positions(gap, anchor_sequences=data.get("anchor_sequences", [])) or {}
+        )  # Ensure empty dict if None
 
         prompt = self._format_prompt(gap, data)
         if not prompt:
@@ -141,7 +156,7 @@ class LLMHandler(GapCorrectionHandler):
             response = chat(model=self.model, messages=[{"role": "user", "content": prompt}], format="json")
 
             # Write debug info to files
-            self._write_debug_info(prompt, response.message.content, gap_index)
+            self._write_debug_info(prompt, response.message.content, gap_index, audio_file_hash=data.get("audio_file_hash"))
 
             try:
                 corrections_data = json.loads(response.message.content)

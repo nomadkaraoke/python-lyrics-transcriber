@@ -232,37 +232,74 @@ class ReviewServer:
                 self.correction_result.metadata = {}
             self.correction_result.metadata["audio_hash"] = audio_hash
 
-        # Wait for port 8000 to become available
-        while True:
+        # Try to release the port if it's in use
+        try:
+            import socket
+
+            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            sock.settimeout(1)  # Short timeout for quick checks
+            result = sock.connect_ex(("127.0.0.1", 8000))
+            if result == 0:  # Port is in use
+                self.logger.warning("Port 8000 is in use, attempting to force close...")
+                # On Unix-like systems, try to kill the process using the port
+                if os.name != "nt":  # Not Windows
+                    os.system("lsof -ti:8000 | xargs kill -9 2>/dev/null")
+                time.sleep(2)  # Give the system time to release the port
+            sock.close()
+        except Exception as e:
+            self.logger.warning(f"Error checking port status: {e}")
+
+        server = None
+        server_thread = None
+
+        try:
+            # Start server
+            config = uvicorn.Config(self.app, host="127.0.0.1", port=8000)
+            server = uvicorn.Server(config)
+            server_thread = Thread(target=server.run, daemon=True)
+            server_thread.start()
+            time.sleep(1)
+
+            # Open browser
+            base_api_url = "http://localhost:8000/api"
+            encoded_api_url = urllib.parse.quote(base_api_url, safe="")
+            audio_hash_param = (
+                f"&audioHash={self.correction_result.metadata.get('audio_hash', '')}"
+                if self.correction_result.metadata and "audio_hash" in self.correction_result.metadata
+                else ""
+            )
+            webbrowser.open(f"http://localhost:8000?baseApiUrl={encoded_api_url}{audio_hash_param}")
+
+            # Wait for review to complete with interrupt handling
             try:
-                with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-                    s.bind(("127.0.0.1", 8000))
-                break
-            except OSError:
-                time.sleep(10)
+                while not self.review_completed:
+                    time.sleep(0.1)
+            except KeyboardInterrupt:
+                self.logger.info("Received interrupt, shutting down server...")
+                raise
+            finally:
+                # Ensure server shutdown in all cases
+                if server:
+                    server.should_exit = True
+                if server_thread and server_thread.is_alive():
+                    server_thread.join(timeout=2)
 
-        # Start server
-        config = uvicorn.Config(self.app, host="127.0.0.1", port=8000)
-        server = uvicorn.Server(config)
-        server_thread = Thread(target=server.run, daemon=True)
-        server_thread.start()
-        time.sleep(1)
+            return self.correction_result
 
-        # Open browser
-        base_api_url = "http://localhost:8000/api"
-        encoded_api_url = urllib.parse.quote(base_api_url, safe="")
-        audio_hash_param = (
-            f"&audioHash={self.correction_result.metadata.get('audio_hash', '')}"
-            if self.correction_result.metadata and "audio_hash" in self.correction_result.metadata
-            else ""
-        )
-        webbrowser.open(f"http://localhost:8000?baseApiUrl={encoded_api_url}{audio_hash_param}")
-
-        # Wait for review to complete
-        while not self.review_completed:
-            time.sleep(0.1)
-
-        server.should_exit = True
-        server_thread.join(timeout=5)
-
-        return self.correction_result
+        except Exception as e:
+            self.logger.error(f"Error during review server operation: {e}")
+            raise
+        finally:
+            # Additional cleanup to ensure port release
+            if server:
+                server.should_exit = True
+            if server_thread and server_thread.is_alive():
+                server_thread.join(timeout=2)
+            # Force close any remaining connections
+            try:
+                sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                sock.settimeout(1)
+                sock.connect(("127.0.0.1", 8000))
+                sock.close()
+            except:
+                pass  # Port is already closed, which is what we want

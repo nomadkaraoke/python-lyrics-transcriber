@@ -356,6 +356,13 @@ export default function EditModal({
                                 sx={{ width: '150px' }}
                                 size="small"
                             />
+                            <IconButton
+                                onClick={() => handleRemoveWord(index)}
+                                disabled={editedSegment.words.length <= 1}
+                                sx={{ color: 'error.main' }}
+                            >
+                                <DeleteIcon fontSize="small" />
+                            </IconButton>
                             <IconButton onClick={(e) => handleWordMenu(e, index)}>
                                 <MoreVertIcon />
                             </IconButton>

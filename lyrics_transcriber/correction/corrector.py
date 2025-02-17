@@ -41,7 +41,7 @@ class LyricsCorrector:
     ):
         self.logger = logger or logging.getLogger(__name__)
         self._anchor_finder = anchor_finder
-        self._cache_dir = cache_dir
+        self._cache_dir = Path(cache_dir)
 
         # Default handlers in order of preference
         self.handlers = handlers or [
@@ -50,10 +50,10 @@ class LyricsCorrector:
             SyllablesMatchHandler(logger=self.logger),
             RelaxedWordCountMatchHandler(logger=self.logger),
             NoSpacePunctuationMatchHandler(logger=self.logger),
-            LLMHandler(logger=self.logger),
-            RepeatCorrectionHandler(logger=self.logger),
-            SoundAlikeHandler(logger=self.logger),
-            LevenshteinHandler(logger=self.logger),
+            LLMHandler(logger=self.logger, cache_dir=self._cache_dir),
+            # RepeatCorrectionHandler(logger=self.logger),
+            # SoundAlikeHandler(logger=self.logger),
+            # LevenshteinHandler(logger=self.logger),
         ]
 
     @property
@@ -163,7 +163,11 @@ class LyricsCorrector:
                         word_map[word.id] = word
 
         # Base handler data that all handlers need
-        base_handler_data = {"word_map": word_map, "anchor_sequences": self._anchor_sequences}
+        base_handler_data = {
+            "word_map": word_map,
+            "anchor_sequences": self._anchor_sequences,
+            "audio_file_hash": metadata.get("audio_file_hash") if metadata else None,
+        }
 
         for i, gap in enumerate(gap_sequences, 1):
             self.logger.info(f"Processing gap {i}/{len(gap_sequences)} at position {gap.transcription_position}")

@@ -27816,7 +27816,7 @@ const WordCorrectionSchema = z.object({
   corrected_word: z.string(),
   segment_id: z.string().optional(),
   word_id: z.string(),
-  corrected_word_id: z.string(),
+  corrected_word_id: z.string().nullable(),
   source: z.string(),
   confidence: z.number(),
   reason: z.string(),
@@ -29791,6 +29791,15 @@ function EditModal({
                   size: "small"
                 }
               ),
+              /* @__PURE__ */ jsxRuntimeExports.jsx(
+                IconButton,
+                {
+                  onClick: () => handleRemoveWord(index),
+                  disabled: editedSegment.words.length <= 1,
+                  sx: { color: "error.main" },
+                  children: /* @__PURE__ */ jsxRuntimeExports.jsx(DeleteIcon, { fontSize: "small" })
+                }
+              ),
               /* @__PURE__ */ jsxRuntimeExports.jsx(IconButton, { onClick: (e) => handleWordMenu(e, index), children: /* @__PURE__ */ jsxRuntimeExports.jsx(MoreVertIcon, {}) })
             ] }, index);
           }) }),
@@ -31235,4 +31244,4 @@ function App() {
 ReactDOM$1.createRoot(document.getElementById("root")).render(
   /* @__PURE__ */ jsxRuntimeExports.jsx(App, {})
 );
-//# sourceMappingURL=index-zPz-YJq3.js.map
+//# sourceMappingURL=index-erQ3PBao.js.map

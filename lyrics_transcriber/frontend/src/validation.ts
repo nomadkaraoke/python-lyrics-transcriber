@@ -25,7 +25,7 @@ const WordCorrectionSchema = z.object({
     corrected_word: z.string(),
     segment_id: z.string().optional(),
     word_id: z.string(),
-    corrected_word_id: z.string(),
+    corrected_word_id: z.string().nullable(),
     source: z.string(),
     confidence: z.number(),
     reason: z.string(),

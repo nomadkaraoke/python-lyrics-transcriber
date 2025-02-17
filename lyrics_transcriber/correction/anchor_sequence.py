@@ -124,8 +124,8 @@ class AnchorSequenceFinder:
             self.logger.info("Loading anchors from cache")
             try:
                 # Log the raw dictionary data instead of the object
-                if cached_data:
-                    self.logger.debug(f"Cached data structure: {json.dumps(cached_data[0], indent=2)}")
+                # if cached_data:
+                #     self.logger.debug(f"Cached data structure: {json.dumps(cached_data[0], indent=2)}")
 
                 # Convert cached data back to ScoredAnchor objects
                 anchors = []
@@ -240,7 +240,6 @@ class AnchorSequenceFinder:
                 # Convert cached_data to dictionary before logging
                 if cached_data:
                     first_anchor = {"anchor": cached_data[0].anchor.to_dict(), "phrase_score": cached_data[0].phrase_score.to_dict()}
-                    self.logger.debug(f"Cached data structure: {json.dumps(first_anchor, indent=2)}")
                 return cached_data
             except Exception as e:
                 self.logger.error(f"Unexpected error loading cache: {type(e).__name__}: {e}")
