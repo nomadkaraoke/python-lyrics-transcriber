@@ -8,6 +8,8 @@ export interface ApiClient {
     getAudioUrl: (audioHash: string) => string;
     generatePreviewVideo: (data: CorrectionData) => Promise<PreviewVideoResponse>;
     getPreviewVideoUrl: (previewHash: string) => string;
+    updateHandlers: (enabledHandlers: string[]) => Promise<CorrectionData>;
+    isUpdatingHandlers?: boolean;
 }
 
 // Add new interface for the minimal update payload
@@ -27,6 +29,8 @@ export class LiveApiClient implements ApiClient {
     constructor(private baseUrl: string) {
         this.baseUrl = baseUrl.replace(/\/$/, '')
     }
+
+    public isUpdatingHandlers = false;
 
     async getCorrectionData(): Promise<CorrectionData> {
         const response = await fetch(`${this.baseUrl}/correction-data`);
@@ -96,6 +100,37 @@ export class LiveApiClient implements ApiClient {
     getPreviewVideoUrl(previewHash: string): string {
         return `${this.baseUrl}/preview-video/${previewHash}`;
     }
+
+    async updateHandlers(enabledHandlers: string[]): Promise<CorrectionData> {
+        console.log('API: Starting handler update...');
+        this.isUpdatingHandlers = true;
+        console.log('API: Set isUpdatingHandlers to', this.isUpdatingHandlers);
+        
+        try {
+            const response = await fetch(`${this.baseUrl}/handlers`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(enabledHandlers)
+            });
+
+            if (!response.ok) {
+                throw new Error(`API error: ${response.statusText}`);
+            }
+
+            const data = await response.json();
+            if (data.status === 'error') {
+                throw new Error(data.message || 'Failed to update handlers');
+            }
+
+            console.log('API: Handler update successful');
+            return validateCorrectionData(data.data);
+        } finally {
+            this.isUpdatingHandlers = false;
+            console.log('API: Set isUpdatingHandlers to', this.isUpdatingHandlers);
+        }
+    }
 }
 
 export class FileOnlyClient implements ApiClient {
@@ -119,6 +154,11 @@ export class FileOnlyClient implements ApiClient {
 
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     getPreviewVideoUrl(_previewHash: string): string {
+        throw new Error('Not supported in file-only mode');
+    }
+
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    async updateHandlers(_enabledHandlers: string[]): Promise<CorrectionData> {
         throw new Error('Not supported in file-only mode');
     }
 }

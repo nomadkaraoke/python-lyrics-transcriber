@@ -58,7 +58,6 @@ export interface GapSequence {
     id: string
     transcribed_word_ids: string[]
     transcription_position: number
-    corrections: WordCorrection[]
     preceding_anchor_id: string | null
     following_anchor_id: string | null
     reference_word_ids: {
@@ -95,6 +94,13 @@ export interface CorrectionStep {
     deleted_word_ids: string[]
 }
 
+export interface CorrectionHandler {
+    id: string
+    name: string
+    description: string
+    enabled: boolean
+}
+
 export interface CorrectionData {
     original_segments: LyricsSegment[]
     reference_lyrics: Record<string, ReferenceSource>
@@ -112,6 +118,8 @@ export interface CorrectionData {
         correction_ratio: number
         audio_filepath?: string
         audio_hash?: string
+        available_handlers?: CorrectionHandler[]
+        enabled_handlers?: string[]
     }
     correction_steps: CorrectionStep[]
     word_id_map: Record<string, string>

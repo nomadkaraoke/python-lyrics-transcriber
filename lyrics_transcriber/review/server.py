@@ -1,7 +1,7 @@
 import logging
 from fastapi import FastAPI, Body, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from typing import Dict, Any
+from typing import Dict, Any, List
 from lyrics_transcriber.types import CorrectionResult, WordCorrection, LyricsSegment
 import time
 import os
@@ -15,6 +15,8 @@ import webbrowser
 from threading import Thread
 from lyrics_transcriber.output.generator import OutputGenerator
 import json
+from lyrics_transcriber.correction.corrector import LyricsCorrector
+from lyrics_transcriber.types import TranscriptionResult, TranscriptionData
 
 
 class ReviewServer:
@@ -69,6 +71,7 @@ class ReviewServer:
         self.app.add_api_route("/api/preview-video/{preview_hash}", self.get_preview_video, methods=["GET"])
         self.app.add_api_route("/api/audio/{audio_hash}", self.get_audio, methods=["GET"])
         self.app.add_api_route("/api/ping", self.ping, methods=["GET"])
+        self.app.add_api_route("/api/handlers", self.update_handlers, methods=["POST"])
 
     async def get_correction_data(self):
         """Get the correction data."""
@@ -211,6 +214,46 @@ class ReviewServer:
         except Exception as e:
             self.logger.error(f"Failed to stream preview video: {str(e)}")
             raise HTTPException(status_code=404, detail="Preview video not found")
+
+    async def update_handlers(self, enabled_handlers: List[str] = Body(...)):
+        """Update enabled correction handlers and rerun correction."""
+        try:
+            # Store existing audio hash
+            audio_hash = self.correction_result.metadata.get("audio_hash") if self.correction_result.metadata else None
+
+            # Update metadata with new handler configuration
+            if not self.correction_result.metadata:
+                self.correction_result.metadata = {}
+            self.correction_result.metadata["enabled_handlers"] = enabled_handlers
+
+            # Rerun correction with updated handlers
+            corrector = LyricsCorrector(cache_dir=self.output_config.cache_dir, enabled_handlers=enabled_handlers, logger=self.logger)
+
+            # Create proper TranscriptionData from original segments
+            transcription_data = TranscriptionData(
+                segments=self.correction_result.original_segments,
+                words=[word for segment in self.correction_result.original_segments for word in segment.words],
+                text="\n".join(segment.text for segment in self.correction_result.original_segments),
+                source="original",
+            )
+
+            # Run correction
+            self.correction_result = corrector.run(
+                transcription_results=[TranscriptionResult(name="original", priority=1, result=transcription_data)],
+                lyrics_results=self.correction_result.reference_lyrics,
+                metadata=self.correction_result.metadata,
+            )
+
+            # Restore audio hash
+            if audio_hash:
+                if not self.correction_result.metadata:
+                    self.correction_result.metadata = {}
+                self.correction_result.metadata["audio_hash"] = audio_hash
+
+            return {"status": "success", "data": self.correction_result.to_dict()}
+        except Exception as e:
+            self.logger.error(f"Failed to update handlers: {str(e)}")
+            raise HTTPException(status_code=500, detail=str(e))
 
     def start(self) -> CorrectionResult:
         """Start the review server and wait for completion."""

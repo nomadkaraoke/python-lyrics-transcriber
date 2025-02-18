@@ -83,6 +83,8 @@ export default function LyricsAnalyzer({ data: initialData, onFileLoad, apiClien
     } | null>(null)
     const [isReviewModalOpen, setIsReviewModalOpen] = useState(false)
     const [currentAudioTime, setCurrentAudioTime] = useState(0)
+    const [isUpdatingHandlers, setIsUpdatingHandlers] = useState(false)
+    const [flashingHandler, setFlashingHandler] = useState<string | null>(null)
     const theme = useTheme()
     const isMobile = useMediaQuery(theme.breakpoints.down('md'))
 
@@ -382,8 +384,65 @@ export default function LyricsAnalyzer({ data: initialData, onFileLoad, apiClien
         }
     }, [data])
 
+    const handleHandlerToggle = useCallback(async (handler: string, enabled: boolean) => {
+        if (!apiClient) return
+
+        try {
+            setIsUpdatingHandlers(true);
+
+            // Get current enabled handlers
+            const currentEnabled = new Set(data.metadata.enabled_handlers || [])
+
+            // Update the set based on the toggle
+            if (enabled) {
+                currentEnabled.add(handler)
+            } else {
+                currentEnabled.delete(handler)
+            }
+
+            // Call API to update handlers
+            const newData = await apiClient.updateHandlers(Array.from(currentEnabled))
+
+            // Update local state with new correction data
+            setData(newData)
+
+            // Clear any existing modals or highlights
+            setModalContent(null)
+            setFlashingType(null)
+            setHighlightInfo(null)
+
+            // Flash the updated corrections
+            handleFlash('corrected')
+        } catch (error) {
+            console.error('Failed to update handlers:', error)
+            alert('Failed to update correction handlers. Please try again.')
+        } finally {
+            setIsUpdatingHandlers(false);
+        }
+    }, [apiClient, data.metadata.enabled_handlers, handleFlash])
+
+    const handleHandlerClick = useCallback((handler: string) => {
+        console.log('Handler clicked:', handler);
+        setFlashingHandler(handler);
+        setFlashingType('handler');
+        console.log('Set flashingHandler to:', handler);
+        console.log('Set flashingType to: handler');
+
+        // Clear the flash after a short delay
+        setTimeout(() => {
+            console.log('Clearing flash state');
+            setFlashingHandler(null);
+            setFlashingType(null);
+        }, 1500);
+    }, []);
+
     return (
-        <Box>
+        <Box sx={{
+            p: 3,
+            pb: 6,
+            maxWidth: '100%',
+            overflowX: 'hidden'
+        }}>
             <Header
                 isReadOnly={isReadOnly}
                 onFileLoad={onFileLoad}
@@ -398,6 +457,9 @@ export default function LyricsAnalyzer({ data: initialData, onFileLoad, apiClien
                 apiClient={apiClient}
                 audioHash={audioHash}
                 onTimeUpdate={setCurrentAudioTime}
+                onHandlerToggle={handleHandlerToggle}
+                isUpdatingHandlers={isUpdatingHandlers}
+                onHandlerClick={handleHandlerClick}
             />
 
             <Grid container spacing={2} direction={isMobile ? 'column' : 'row'}>
@@ -408,6 +470,7 @@ export default function LyricsAnalyzer({ data: initialData, onFileLoad, apiClien
                         onElementClick={setModalContent}
                         onWordClick={handleWordClick}
                         flashingType={flashingType}
+                        flashingHandler={flashingHandler}
                         highlightInfo={highlightInfo}
                         onPlaySegment={handlePlaySegment}
                         currentTime={currentAudioTime}
@@ -427,6 +490,7 @@ export default function LyricsAnalyzer({ data: initialData, onFileLoad, apiClien
                         currentSource={currentSource}
                         onSourceChange={setCurrentSource}
                         corrected_segments={data.corrected_segments}
+                        corrections={data.corrections}
                     />
                 </Grid>
             </Grid>

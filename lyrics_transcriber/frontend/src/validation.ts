@@ -77,7 +77,6 @@ const GapSequenceSchema = z.object({
     id: z.string(),
     transcribed_word_ids: z.array(z.string()),
     transcription_position: z.number(),
-    corrections: z.array(WordCorrectionSchema),
     preceding_anchor_id: z.string().nullable(),
     following_anchor_id: z.string().nullable(),
     reference_word_ids: z.record(z.array(z.string()))
@@ -94,6 +93,15 @@ const CorrectionStepSchema = z.object({
     deleted_word_ids: z.array(z.string())
 })
 
+// Add new schema for correction handlers
+const CorrectionHandlerSchema = z.object({
+    id: z.string(),
+    name: z.string(),
+    description: z.string(),
+    enabled: z.boolean()
+})
+
+// Update CorrectionDataSchema to include handler information
 const CorrectionDataSchema = z.object({
     original_segments: z.array(LyricsSegmentSchema),
     reference_lyrics: z.record(ReferenceSourceSchema),
@@ -110,7 +118,9 @@ const CorrectionDataSchema = z.object({
         total_words: z.number(),
         correction_ratio: z.number(),
         audio_filepath: z.string().optional(),
-        audio_hash: z.string().optional()
+        audio_hash: z.string().optional(),
+        available_handlers: z.array(CorrectionHandlerSchema).optional(),
+        enabled_handlers: z.array(z.string()).optional()
     }),
     correction_steps: z.array(CorrectionStepSchema),
     word_id_map: z.record(z.string()),

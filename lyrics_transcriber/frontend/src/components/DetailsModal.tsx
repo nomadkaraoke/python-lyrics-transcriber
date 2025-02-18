@@ -62,6 +62,12 @@ export default function DetailsModal({
     if (!content) return null
 
     const referenceWordsText = formatReferenceWords(content, referenceLyrics)
+    const relevantCorrections = content.type === 'gap' ? allCorrections.filter(c =>
+        c.word_id === content.data.wordId ||
+        c.corrected_word_id === content.data.wordId ||
+        content.data.transcribed_word_ids.includes(c.word_id)
+    ) : []
+    const isCorrected = content.type === 'gap' && relevantCorrections.length > 0
 
     const getCurrentWord = () => {
         if (content.type === 'gap') {
@@ -72,24 +78,11 @@ export default function DetailsModal({
         return ''
     }
 
-    const isCorrected = content.type === 'gap' && (
-        content.data.corrections?.length > 0 ||
-        allCorrections.some(c => c.corrected_word_id === content.data.wordId)
-    )
-
-    const getAllCorrections = () => {
-        if (content.type !== 'gap') return []
-
-        return [
-            ...(content.data.corrections || []),
-            ...allCorrections.filter(c => c.corrected_word_id === content.data.wordId)
-        ]
-    }
-
     const renderContent = () => {
+        const anchorWords = content.type === 'anchor' ? content.data.transcribed_word_ids?.length ?? 0 : 0
+
         switch (content.type) {
             case 'anchor':
-                const anchorWords = content.data.transcribed_word_ids?.length ?? 0
                 return (
                     <Grid container spacing={2}>
                         <GridItem
@@ -167,7 +160,7 @@ export default function DetailsModal({
                                 title="Correction Details"
                                 value={
                                     <>
-                                        {getAllCorrections().map((correction, index) => (
+                                        {relevantCorrections.map((correction, index) => (
                                             <Box key={index} sx={{ mb: 2, p: 1, border: '1px solid #ccc', borderRadius: '4px' }}>
                                                 <Typography variant="subtitle2" fontWeight="bold">Correction {index + 1}</Typography>
                                                 <Typography>Original: <strong>"{correction.original_word}"</strong></Typography>
@@ -187,7 +180,7 @@ export default function DetailsModal({
                                                         <Box sx={{ pl: 2 }}>
                                                             {Object.entries(correction.alternatives).map(([word, score]) => (
                                                                 <Typography key={word}>
-                                                                    "{word}": {score?.toFixed(3) ?? 'N/A'}
+                                                                    "{word}": {(score || 0).toFixed(3)}
                                                                 </Typography>
                                                             ))}
                                                         </Box>
@@ -216,7 +209,7 @@ export default function DetailsModal({
         >
             <DialogTitle>
                 {content.type === 'gap' && (
-                    content.data.corrections?.length ? 'Corrected ' : 'Uncorrected '
+                    isCorrected ? 'Corrected ' : 'Uncorrected '
                 )}
                 {content.type.charAt(0).toUpperCase() + content.type.slice(1)} Details - "{getCurrentWord()}"
                 <IconButton

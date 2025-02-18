@@ -41,12 +41,14 @@ export default function TranscriptionView({
     onElementClick,
     onWordClick,
     flashingType,
+    flashingHandler,
     highlightInfo,
     mode,
     onPlaySegment,
     currentTime = 0,
     anchors = []
 }: TranscriptionViewProps) {
+    console.log('TranscriptionView props:', { flashingType, flashingHandler });
     const [selectedSegmentIndex, setSelectedSegmentIndex] = useState<number | null>(null)
 
     return (
@@ -58,12 +60,9 @@ export default function TranscriptionView({
                 {data.corrected_segments.map((segment, segmentIndex) => {
                     const segmentWords: TranscriptionWordPosition[] = segment.words.map(word => {
                         // Find if this word is part of a correction
-                        const correction = (
-                            // Check gap sequence corrections
-                            data.gap_sequences?.flatMap(g => g.corrections || [])
-                                .find(c => c.corrected_word_id === word.id) ||
-                            // Also check main corrections array
-                            data.corrections?.find(c => c.corrected_word_id === word.id)
+                        const correction = data.corrections?.find(c => 
+                            c.corrected_word_id === word.id || 
+                            c.word_id === word.id
                         )
 
                         // Find if this word is part of an anchor sequence
@@ -82,9 +81,9 @@ export default function TranscriptionView({
                             )
 
                             // Check if this word is a corrected version
-                            const isCorrection = g.corrections?.some(c =>
-                                c.corrected_word_id === word.id ||
-                                c.word_id === word.id
+                            const isCorrection = data.corrections.some(c =>
+                                (c.corrected_word_id === word.id || c.word_id === word.id) &&
+                                g.transcribed_word_ids.includes(c.word_id)
                             )
 
                             return inTranscribed || inReference || isCorrection
@@ -132,11 +131,13 @@ export default function TranscriptionView({
                                     onElementClick={onElementClick}
                                     onWordClick={onWordClick}
                                     flashingType={flashingType}
+                                    flashingHandler={flashingHandler}
                                     highlightInfo={highlightInfo}
                                     mode={mode}
                                     preserveSegments={true}
                                     currentTime={currentTime}
                                     gaps={data.gap_sequences}
+                                    corrections={data.corrections}
                                 />
                             </TextContainer>
                         </Box>

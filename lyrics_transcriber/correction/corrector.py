@@ -36,6 +36,7 @@ class LyricsCorrector:
         self,
         cache_dir: Union[str, Path],
         handlers: Optional[List[GapCorrectionHandler]] = None,
+        enabled_handlers: Optional[List[str]] = None,
         anchor_finder: Optional[AnchorSequenceFinder] = None,
         logger: Optional[logging.Logger] = None,
     ):
@@ -43,18 +44,45 @@ class LyricsCorrector:
         self._anchor_finder = anchor_finder
         self._cache_dir = Path(cache_dir)
 
-        # Default handlers in order of preference
-        self.handlers = handlers or [
-            ExtendAnchorHandler(logger=self.logger),
-            WordCountMatchHandler(logger=self.logger),
-            SyllablesMatchHandler(logger=self.logger),
-            RelaxedWordCountMatchHandler(logger=self.logger),
-            NoSpacePunctuationMatchHandler(logger=self.logger),
-            # LLMHandler(logger=self.logger, cache_dir=self._cache_dir),
-            # RepeatCorrectionHandler(logger=self.logger),
-            # SoundAlikeHandler(logger=self.logger),
-            # LevenshteinHandler(logger=self.logger),
+        # Define default enabled handlers - excluding LLM, Repeat, SoundAlike, and Levenshtein
+        DEFAULT_ENABLED_HANDLERS = [
+            "ExtendAnchorHandler",
+            "WordCountMatchHandler",
+            "SyllablesMatchHandler",
+            "RelaxedWordCountMatchHandler",
+            "NoSpacePunctuationMatchHandler",
         ]
+
+        # Create all handlers but respect enabled_handlers if provided
+        all_handlers = [
+            ("ExtendAnchorHandler", ExtendAnchorHandler(logger=self.logger)),
+            ("WordCountMatchHandler", WordCountMatchHandler(logger=self.logger)),
+            ("SyllablesMatchHandler", SyllablesMatchHandler(logger=self.logger)),
+            ("RelaxedWordCountMatchHandler", RelaxedWordCountMatchHandler(logger=self.logger)),
+            ("NoSpacePunctuationMatchHandler", NoSpacePunctuationMatchHandler(logger=self.logger)),
+            ("LLMHandler", LLMHandler(logger=self.logger, cache_dir=self._cache_dir)),
+            ("RepeatCorrectionHandler", RepeatCorrectionHandler(logger=self.logger)),
+            ("SoundAlikeHandler", SoundAlikeHandler(logger=self.logger)),
+            ("LevenshteinHandler", LevenshteinHandler(logger=self.logger)),
+        ]
+
+        # Store all handler information
+        self.all_handlers = [
+            {
+                "id": handler_id,
+                "name": handler_id,
+                "description": handler.__class__.__doc__ or "",
+                "enabled": handler_id in (enabled_handlers if enabled_handlers is not None else DEFAULT_ENABLED_HANDLERS),
+            }
+            for handler_id, handler in all_handlers
+        ]
+
+        if handlers:
+            self.handlers = handlers
+        else:
+            # Use provided enabled_handlers if available, otherwise use defaults
+            handler_filter = enabled_handlers if enabled_handlers is not None else DEFAULT_ENABLED_HANDLERS
+            self.handlers = [h[1] for h in all_handlers if h[0] in handler_filter]
 
     @property
     def anchor_finder(self) -> AnchorSequenceFinder:
@@ -99,6 +127,9 @@ class LyricsCorrector:
         corrections_made = len(corrections)
         correction_ratio = 1 - (corrections_made / total_words if total_words > 0 else 0)
 
+        # Get the currently enabled handler IDs using full class names
+        enabled_handlers = [handler.__class__.__name__ for handler in self.handlers]
+
         return CorrectionResult(
             original_segments=primary_transcription.segments,
             corrected_segments=corrected_segments,
@@ -114,6 +145,8 @@ class LyricsCorrector:
                 "gap_sequences_count": len(gap_sequences),
                 "total_words": total_words,
                 "correction_ratio": correction_ratio,
+                "available_handlers": self.all_handlers,
+                "enabled_handlers": enabled_handlers,
             },
             correction_steps=correction_steps,
             word_id_map=word_id_map,

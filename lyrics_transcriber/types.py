@@ -352,7 +352,6 @@ class GapSequence:
     preceding_anchor_id: Optional[str]  # ID of preceding AnchorSequence
     following_anchor_id: Optional[str]  # ID of following AnchorSequence
     reference_word_ids: Dict[str, List[str]]  # Source -> list of Word IDs from reference
-    corrections: List[WordCorrection] = field(default_factory=list)
     _corrected_positions: Set[int] = field(default_factory=set, repr=False)
     _position_offset: int = field(default=0, repr=False)  # Track cumulative position changes
 
@@ -376,7 +375,6 @@ class GapSequence:
             "preceding_anchor_id": self.preceding_anchor_id,
             "following_anchor_id": self.following_anchor_id,
             "reference_word_ids": self.reference_word_ids,
-            "corrections": [c.to_dict() for c in self.corrections],
         }
 
     @classmethod
@@ -390,10 +388,6 @@ class GapSequence:
             following_anchor_id=data["following_anchor_id"],
             reference_word_ids=data["reference_word_ids"],
         )
-        # Add any corrections from the data
-        if "corrections" in data:
-            for correction_data in data["corrections"]:
-                gap.add_correction(WordCorrection.from_dict(correction_data))
         return gap
 
 

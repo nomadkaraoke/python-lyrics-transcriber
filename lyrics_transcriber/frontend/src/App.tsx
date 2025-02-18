@@ -60,8 +60,9 @@ export default function App() {
         const text = await file.text()
         const parsedData = JSON.parse(text) as CorrectionData
         console.log('File data loaded:', {
-          sampleCorrection: parsedData.gap_sequences?.[0]?.corrections?.[0],
-          sampleWord: parsedData.corrected_segments?.[0]?.words?.[0]
+          sampleGap: parsedData.gap_sequences?.[0],
+          sampleWord: parsedData.corrected_segments?.[0]?.words?.[0],
+          sampleCorrection: parsedData.corrections?.[0]
         })
 
         // Validate the structure

@@ -1,8 +1,8 @@
-import { AnchorSequence, GapSequence, HighlightInfo, InteractionMode, CorrectionData, LyricsSegment, ReferenceSource } from '../../types'
+import { AnchorSequence, GapSequence, HighlightInfo, InteractionMode, CorrectionData, LyricsSegment, ReferenceSource, WordCorrection } from '../../types'
 import { ModalContent } from '../LyricsAnalyzer'
 
 // Add FlashType definition directly in shared types
-export type FlashType = 'anchor' | 'corrected' | 'uncorrected' | 'word' | null
+export type FlashType = 'anchor' | 'corrected' | 'uncorrected' | 'word' | 'handler' | null
 
 // Common word click handling
 export interface WordClickInfo {
@@ -76,6 +76,7 @@ export interface TranscriptionViewProps {
     onPlaySegment?: (startTime: number) => void
     currentTime?: number
     anchors?: AnchorSequence[]
+    flashingHandler?: string | null
 }
 
 // Add LinePosition type here since it's used in multiple places
@@ -93,6 +94,7 @@ export interface ReferenceViewProps extends BaseViewProps {
     currentSource: string
     onSourceChange: (source: string) => void
     corrected_segments: LyricsSegment[]
+    corrections: WordCorrection[]
 }
 
 // Update HighlightedTextProps to include linePositions

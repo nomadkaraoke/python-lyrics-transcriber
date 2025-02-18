@@ -1,5 +1,5 @@
 import { useCallback } from 'react'
-import { AnchorSequence, GapSequence, InteractionMode } from '../../../types'
+import { AnchorSequence, GapSequence, InteractionMode, WordCorrection } from '../../../types'
 import { ModalContent } from '../../LyricsAnalyzer'
 import { WordClickInfo } from '../types'
 
@@ -11,6 +11,7 @@ export interface UseWordClickProps {
     currentSource?: string
     gaps?: GapSequence[]
     anchors?: AnchorSequence[]
+    corrections?: WordCorrection[]
 }
 
 export function useWordClick({
@@ -20,7 +21,8 @@ export function useWordClick({
     isReference = false,
     currentSource = '',
     gaps = [],
-    anchors = []
+    anchors = [],
+    corrections = []
 }: UseWordClickProps) {
     const handleWordClick = useCallback((
         word: string,
@@ -35,11 +37,21 @@ export function useWordClick({
                 : anchor.transcribed_word_ids.includes(wordId)
         )
 
-        // Check if word belongs to gap
-        const belongsToGap = gap && (
+        // Find matching gap if not provided
+        const matchingGap = gap || gaps.find(g =>
+            g.transcribed_word_ids.includes(wordId) ||
+            Object.values(g.reference_word_ids).some(ids => ids.includes(wordId))
+        )
+
+        // Check if word belongs to gap - include both original and corrected words
+        const belongsToGap = matchingGap && (
             isReference
-                ? gap.reference_word_ids[currentSource]?.includes(wordId)
-                : gap.transcribed_word_ids.includes(wordId)
+                ? matchingGap.reference_word_ids[currentSource]?.includes(wordId)
+                : (matchingGap.transcribed_word_ids.includes(wordId) ||
+                    corrections.some(c =>
+                        c.corrected_word_id === wordId ||
+                        c.word_id === wordId
+                    ))
         )
 
         // Debug info
@@ -57,11 +69,16 @@ export function useWordClick({
                 referenceWordIds: anchor.reference_word_ids,
                 belongsToAnchor
             },
-            gapInfo: gap && {
-                id: gap.id,
-                transcribedWordIds: gap.transcribed_word_ids,
-                referenceWordIds: gap.reference_word_ids,
-                belongsToGap
+            gapInfo: matchingGap && {
+                id: matchingGap.id,
+                transcribedWordIds: matchingGap.transcribed_word_ids,
+                referenceWordIds: matchingGap.reference_word_ids,
+                belongsToGap,
+                relatedCorrections: corrections.filter(c =>
+                    matchingGap.transcribed_word_ids.includes(c.word_id) ||
+                    c.corrected_word_id === wordId ||
+                    c.word_id === wordId
+                )
             }
         })
 
@@ -69,14 +86,14 @@ export function useWordClick({
         if (isReference && currentSource) {
             const matchingGap = gaps?.find(g =>
                 g.reference_word_ids[currentSource]?.includes(wordId)
-            );
+            )
 
             if (matchingGap) {
                 console.log('Found matching gap for reference click:', {
                     wordId,
                     gap: matchingGap
-                });
-                gap = matchingGap;
+                })
+                gap = matchingGap
             }
         }
 
@@ -95,8 +112,10 @@ export function useWordClick({
                     anchor: undefined,
                     gap
                 })
-            } else if (gap?.corrections?.some(c => c.corrected_word_id === wordId) ||
-                gap?.corrections?.some(c => c.word_id === wordId)) {
+            } else if (corrections.some(c => 
+                (c.corrected_word_id === wordId || c.word_id === wordId) &&
+                gap?.transcribed_word_ids.includes(c.word_id)
+            )) {
                 // If the word is part of a correction, mark it as a gap
                 onWordClick?.({
                     word_id: wordId,
@@ -139,7 +158,6 @@ export function useWordClick({
                     id: `synthetic-${wordId}`,
                     transcribed_word_ids: [wordId],
                     transcription_position: -1,
-                    corrections: [],
                     preceding_anchor_id: null,
                     following_anchor_id: null,
                     reference_word_ids: {}
@@ -155,7 +173,7 @@ export function useWordClick({
                 })
             }
         }
-    }, [mode, onWordClick, onElementClick, isReference, currentSource, gaps, anchors])
+    }, [mode, onWordClick, onElementClick, isReference, currentSource, gaps, anchors, corrections])
 
     return { handleWordClick }
 } 

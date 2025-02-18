@@ -1,12 +1,20 @@
 import { Typography, Box } from '@mui/material'
-import { Word as WordComponent } from './Word'
+import { WordComponent } from './Word'
 import { useWordClick } from '../hooks/useWordClick'
-import { AnchorSequence, GapSequence, HighlightInfo, InteractionMode, LyricsSegment, Word } from '../../../types'
+import {
+    AnchorSequence,
+    GapSequence,
+    HighlightInfo,
+    InteractionMode,
+    LyricsSegment,
+    Word,
+    WordCorrection
+} from '../../../types'
 import { ModalContent } from '../../LyricsAnalyzer'
 import type { FlashType, LinePosition, TranscriptionWordPosition, WordClickInfo } from '../types'
 import React from 'react'
-import ContentCopyIcon from '@mui/icons-material/ContentCopy';
-import IconButton from '@mui/material/IconButton';
+import ContentCopyIcon from '@mui/icons-material/ContentCopy'
+import IconButton from '@mui/material/IconButton'
 import { getWordsFromIds } from '../utils/wordUtils'
 
 export interface HighlightedTextProps {
@@ -26,6 +34,8 @@ export interface HighlightedTextProps {
     currentTime?: number
     referenceCorrections?: Map<string, string>
     gaps?: GapSequence[]
+    flashingHandler?: string | null
+    corrections?: WordCorrection[]
 }
 
 export function HighlightedText({
@@ -44,8 +54,12 @@ export function HighlightedText({
     linePositions = [],
     currentTime = 0,
     referenceCorrections = new Map(),
-    gaps = []
+    gaps = [],
+    flashingHandler,
+    corrections = [],
 }: HighlightedTextProps) {
+    console.log('HighlightedText props:', { flashingType, flashingHandler });
+
     const { handleWordClick } = useWordClick({
         mode,
         onElementClick,
@@ -53,20 +67,42 @@ export function HighlightedText({
         isReference,
         currentSource,
         gaps,
-        anchors
+        anchors,
+        corrections
     })
 
     const shouldWordFlash = (wordPos: TranscriptionWordPosition | { word: string; id: string }): boolean => {
-        if (!flashingType) return false
+        if (!flashingType) {
+            console.log('No flashingType');
+            return false;
+        }
 
         if ('type' in wordPos) {
+            // Add handler-specific flashing
+            if (flashingType === 'handler' && flashingHandler) {
+                console.log('Checking handler flash for word:', wordPos.word.text);
+                console.log('Current flashingHandler:', flashingHandler);
+                console.log('Word ID:', wordPos.word.id);
+
+                const shouldFlash = corrections.some(correction =>
+                    correction.handler === flashingHandler &&
+                    (correction.corrected_word_id === wordPos.word.id ||
+                        correction.word_id === wordPos.word.id)
+                );
+
+                console.log('Should flash:', shouldFlash);
+                return shouldFlash;
+            }
+
             const gap = wordPos.sequence as GapSequence
             const isCorrected = (
-                // Check gap corrections
-                (wordPos.type === 'gap' &&
-                    gap?.corrections?.some(correction =>
-                        correction.word_id === wordPos.word.id)) ||
-                // Also check main corrections array
+                // Check corrections array for this word
+                corrections.some(correction =>
+                    (correction.word_id === wordPos.word.id ||
+                        correction.corrected_word_id === wordPos.word.id) &&
+                    gap.transcribed_word_ids.includes(correction.word_id)
+                ) ||
+                // Also check if marked as corrected in wordPos
                 wordPos.isCorrected
             )
 
@@ -78,22 +114,22 @@ export function HighlightedText({
                     // For anchors
                     (highlightInfo?.type === 'anchor' && wordPos.type === 'anchor' &&
                         (isReference && currentSource && highlightInfo.sequence
-                            ? getWordsFromIds(segments || [], 
+                            ? getWordsFromIds(segments || [],
                                 (highlightInfo.sequence as AnchorSequence).reference_word_ids[currentSource] || []
-                              ).some(w => w.id === wordPos.word.id)
-                            : getWordsFromIds(segments || [], 
+                            ).some(w => w.id === wordPos.word.id)
+                            : getWordsFromIds(segments || [],
                                 (highlightInfo.sequence as AnchorSequence).transcribed_word_ids
-                              ).some(w => w.id === wordPos.word.id)
+                            ).some(w => w.id === wordPos.word.id)
                         )) ||
                     // For gaps
                     (highlightInfo?.type === 'gap' && wordPos.type === 'gap' &&
                         (isReference && currentSource && highlightInfo.sequence
-                            ? getWordsFromIds(segments || [], 
+                            ? getWordsFromIds(segments || [],
                                 (highlightInfo.sequence as GapSequence).reference_word_ids[currentSource] || []
-                              ).some(w => w.id === wordPos.word.id)
-                            : getWordsFromIds(segments || [], 
+                            ).some(w => w.id === wordPos.word.id)
+                            : getWordsFromIds(segments || [],
                                 (highlightInfo.sequence as GapSequence).transcribed_word_ids
-                              ).some(w => w.id === wordPos.word.id))
+                            ).some(w => w.id === wordPos.word.id))
                     ) ||
                     // For corrections
                     (highlightInfo?.type === 'correction' && isReference && currentSource &&

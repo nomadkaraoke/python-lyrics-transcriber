@@ -324,16 +324,17 @@ class LyricsTranscriber:
             "full_reference_texts": {source: lyrics.get_full_text() for source, lyrics in self.results.lyrics_results.items()},
         }
 
-        corrected_data = self.corrector.run(
+        # Get enabled handlers from metadata if available
+        enabled_handlers = metadata.get("enabled_handlers", None)
+
+        # Create corrector with enabled handlers
+        corrector = LyricsCorrector(cache_dir=self.output_config.cache_dir, enabled_handlers=enabled_handlers, logger=self.logger)
+
+        corrected_data = corrector.run(
             transcription_results=self.results.transcription_results,
             lyrics_results=self.results.lyrics_results,
-            metadata=metadata,  # Pass the metadata through
+            metadata=metadata,
         )
-
-        # Add audio filepath to metadata
-        if not corrected_data.metadata:
-            corrected_data.metadata = {}
-        corrected_data.metadata["audio_filepath"] = self.audio_filepath
 
         # Store corrected results
         self.results.transcription_corrected = corrected_data

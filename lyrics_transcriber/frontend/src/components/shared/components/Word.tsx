@@ -3,7 +3,7 @@ import { COLORS } from '../constants'
 import { HighlightedWord } from '../styles'
 import { WordProps } from '../types'
 
-export const Word = React.memo(function Word({
+export const WordComponent = React.memo(function Word({
     word,
     shouldFlash,
     isAnchor,

@@ -4,7 +4,6 @@ import { ReferenceViewProps } from './shared/types'
 import { calculateReferenceLinePositions } from './shared/utils/referenceLineCalculator'
 import { SourceSelector } from './shared/components/SourceSelector'
 import { HighlightedText } from './shared/components/HighlightedText'
-import { WordCorrection } from '@/types'
 import { TranscriptionWordPosition } from './shared/types'
 import { getWordsFromIds } from './shared/utils/wordUtils'
 
@@ -19,7 +18,8 @@ export default function ReferenceView({
     onSourceChange,
     highlightInfo,
     mode,
-    gaps
+    gaps,
+    corrections
 }: ReferenceViewProps) {
     // Get available sources from referenceSources object
     const availableSources = useMemo(() =>
@@ -94,6 +94,12 @@ export default function ReferenceView({
             );
 
             referenceWords.forEach(word => {
+                // Find if this word has a correction
+                const isWordCorrected = corrections?.some(correction =>
+                    correction.reference_positions?.[effectiveCurrentSource]?.toString() === word.id &&
+                    gap.transcribed_word_ids.includes(correction.word_id)
+                );
+
                 const wordPosition: TranscriptionWordPosition = {
                     word: {
                         id: word.id,
@@ -104,9 +110,7 @@ export default function ReferenceView({
                     type: 'gap',
                     sequence: gap,
                     isInRange: true,
-                    isCorrected: gap.corrections?.some(
-                        correction => correction.reference_positions?.[effectiveCurrentSource]?.toString() === word.id
-                    )
+                    isCorrected: isWordCorrected
                 };
                 allPositions.get(gapPosition)!.push(wordPosition);
             });
@@ -121,7 +125,7 @@ export default function ReferenceView({
             });
 
         return positions;
-    }, [anchors, gaps, effectiveCurrentSource, referenceSources]);
+    }, [anchors, gaps, effectiveCurrentSource, referenceSources, corrections]);
 
     const { linePositions } = useMemo(() =>
         calculateReferenceLinePositions(
@@ -134,17 +138,17 @@ export default function ReferenceView({
 
     // Create a mapping of reference words to their corrections
     const referenceCorrections = useMemo(() => {
-        const corrections = new Map<string, string>();
-        gaps?.forEach(gap => {
-            gap.corrections?.forEach((correction: WordCorrection) => {
-                const referencePosition = correction.reference_positions?.[effectiveCurrentSource];
-                if (referencePosition !== undefined) {
-                    corrections.set(referencePosition.toString(), correction.corrected_word);
-                }
-            });
+        const correctionMap = new Map<string, string>();
+
+        corrections?.forEach(correction => {
+            const referencePosition = correction.reference_positions?.[effectiveCurrentSource];
+            if (referencePosition !== undefined) {
+                correctionMap.set(referencePosition.toString(), correction.corrected_word);
+            }
         });
-        return corrections;
-    }, [gaps, effectiveCurrentSource]);
+
+        return correctionMap;
+    }, [corrections, effectiveCurrentSource]);
 
     // Get the segments for the current source
     const currentSourceSegments = referenceSources[effectiveCurrentSource]?.segments || [];
