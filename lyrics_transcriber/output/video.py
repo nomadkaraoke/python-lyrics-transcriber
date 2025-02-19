@@ -63,8 +63,12 @@ class VideoGenerator:
             raise FileNotFoundError(f"Audio file not found: {audio_path}")
 
         try:
-            # Create a temporary copy of the ASS file with a safe filename
-            temp_ass_path = os.path.join(self.cache_dir, "temp_subtitles.ass")
+            # Create a temporary copy of the ASS file with a unique filename
+            import time
+
+            safe_prefix = "".join(c if c.isalnum() else "_" for c in output_prefix)
+            timestamp = int(time.time() * 1000)
+            temp_ass_path = os.path.join(self.cache_dir, f"temp_subtitles_{safe_prefix}_{timestamp}.ass")
             import shutil
 
             shutil.copy2(ass_path, temp_ass_path)
@@ -75,13 +79,14 @@ class VideoGenerator:
             self.logger.info(f"Video generated: {output_path}")
 
             # Clean up temporary file
-            os.remove(temp_ass_path)
+            if os.path.exists(temp_ass_path):
+                os.remove(temp_ass_path)
             return output_path
 
         except Exception as e:
             self.logger.error(f"Failed to generate video: {str(e)}")
             # Clean up temporary file in case of error
-            if "temp_ass_path" in locals():
+            if "temp_ass_path" in locals() and os.path.exists(temp_ass_path):
                 try:
                     os.remove(temp_ass_path)
                 except:
@@ -109,8 +114,12 @@ class VideoGenerator:
             raise FileNotFoundError(f"Audio file not found: {audio_path}")
 
         try:
-            # Create a temporary copy of the ASS file with a safe filename
-            temp_ass_path = os.path.join(self.cache_dir, "temp_preview_subtitles.ass")
+            # Create a temporary copy of the ASS file with a unique filename
+            import time
+
+            safe_prefix = "".join(c if c.isalnum() else "_" for c in output_prefix)
+            timestamp = int(time.time() * 1000)
+            temp_ass_path = os.path.join(self.cache_dir, f"temp_preview_subtitles_{safe_prefix}_{timestamp}.ass")
             import shutil
 
             shutil.copy2(ass_path, temp_ass_path)
@@ -121,13 +130,14 @@ class VideoGenerator:
             self.logger.info(f"Preview video generated: {output_path}")
 
             # Clean up temporary file
-            os.remove(temp_ass_path)
+            if os.path.exists(temp_ass_path):
+                os.remove(temp_ass_path)
             return output_path
 
         except Exception as e:
             self.logger.error(f"Failed to generate preview video: {str(e)}")
             # Clean up temporary file in case of error
-            if "temp_ass_path" in locals():
+            if "temp_ass_path" in locals() and os.path.exists(temp_ass_path):
                 try:
                     os.remove(temp_ass_path)
                 except:
