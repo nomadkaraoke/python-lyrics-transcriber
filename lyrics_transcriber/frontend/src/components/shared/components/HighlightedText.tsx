@@ -58,8 +58,6 @@ export function HighlightedText({
     flashingHandler,
     corrections = [],
 }: HighlightedTextProps) {
-    console.log('HighlightedText props:', { flashingType, flashingHandler });
-
     const { handleWordClick } = useWordClick({
         mode,
         onElementClick,
@@ -73,7 +71,6 @@ export function HighlightedText({
 
     const shouldWordFlash = (wordPos: TranscriptionWordPosition | { word: string; id: string }): boolean => {
         if (!flashingType) {
-            console.log('No flashingType');
             return false;
         }
 

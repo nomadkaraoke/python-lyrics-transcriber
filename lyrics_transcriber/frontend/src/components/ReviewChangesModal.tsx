@@ -9,7 +9,7 @@ import {
     Paper
 } from '@mui/material'
 import { CorrectionData } from '../types'
-import { useMemo } from 'react'
+import { useMemo, useRef, useEffect } from 'react'
 import { ApiClient } from '../api'
 import PreviewVideoSection from './PreviewVideoSection'
 
@@ -20,6 +20,7 @@ interface ReviewChangesModalProps {
     updatedData: CorrectionData
     onSubmit: () => void
     apiClient: ApiClient | null
+    setModalSpacebarHandler: (handler: (() => (e: KeyboardEvent) => void) | undefined) => void
 }
 
 interface DiffResult {
@@ -66,8 +67,36 @@ export default function ReviewChangesModal({
     originalData,
     updatedData,
     onSubmit,
-    apiClient
+    apiClient,
+    setModalSpacebarHandler
 }: ReviewChangesModalProps) {
+    // Add ref to video element
+    const videoRef = useRef<HTMLVideoElement>(null)
+
+    // Add effect to handle spacebar
+    useEffect(() => {
+        if (open) {
+            setModalSpacebarHandler(() => (e: KeyboardEvent) => {
+                e.preventDefault()
+                e.stopPropagation()
+
+                if (videoRef.current) {
+                    if (videoRef.current.paused) {
+                        videoRef.current.play()
+                    } else {
+                        videoRef.current.pause()
+                    }
+                }
+            })
+        } else {
+            setModalSpacebarHandler(undefined)
+        }
+
+        return () => {
+            setModalSpacebarHandler(undefined)
+        }
+    }, [open, setModalSpacebarHandler])
+
     const differences = useMemo(() => {
         const diffs: DiffResult[] = []
 
@@ -252,6 +281,7 @@ export default function ReviewChangesModal({
                     apiClient={apiClient}
                     isModalOpen={open}
                     updatedData={updatedData}
+                    videoRef={videoRef}  // Pass the ref to PreviewVideoSection
                 />
 
                 <Box sx={{ p: 2, mt: 0 }}>

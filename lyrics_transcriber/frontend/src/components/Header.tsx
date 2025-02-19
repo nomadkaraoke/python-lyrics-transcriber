@@ -86,8 +86,6 @@ export default function Header({
     const addedCount = data.corrections.filter(c => c.split_total).length
     const deletedCount = data.corrections.filter(c => c.is_deletion).length
 
-    console.log('Header: Render with isUpdatingHandlers =', isUpdatingHandlers)
-
     return (
         <>
             {isReadOnly && (

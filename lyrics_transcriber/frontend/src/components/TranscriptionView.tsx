@@ -48,7 +48,6 @@ export default function TranscriptionView({
     currentTime = 0,
     anchors = []
 }: TranscriptionViewProps) {
-    console.log('TranscriptionView props:', { flashingType, flashingHandler });
     const [selectedSegmentIndex, setSelectedSegmentIndex] = useState<number | null>(null)
 
     return (

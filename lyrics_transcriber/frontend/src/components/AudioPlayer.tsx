@@ -33,16 +33,21 @@ export default function AudioPlayer({ apiClient, onTimeUpdate, audioHash }: Audi
         }
 
         audio.addEventListener('play', () => {
+            setIsPlaying(true)
+            window.isAudioPlaying = true
             updateTime()
         })
 
         audio.addEventListener('pause', () => {
+            setIsPlaying(false)
+            window.isAudioPlaying = false
             cancelAnimationFrame(animationFrameId)
         })
 
         audio.addEventListener('ended', () => {
             cancelAnimationFrame(animationFrameId)
             setIsPlaying(false)
+            window.isAudioPlaying = false
             setCurrentTime(0)
         })
 
@@ -55,6 +60,7 @@ export default function AudioPlayer({ apiClient, onTimeUpdate, audioHash }: Audi
             audio.pause()
             audio.src = ''
             audioRef.current = null
+            window.isAudioPlaying = false
         }
     }, [apiClient, onTimeUpdate, audioHash])
 
@@ -107,6 +113,7 @@ export default function AudioPlayer({ apiClient, onTimeUpdate, audioHash }: Audi
     useEffect(() => {
         if (!apiClient) return
 
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const win = window as any
         win.seekAndPlayAudio = seekAndPlay
         win.toggleAudioPlayback = togglePlayback

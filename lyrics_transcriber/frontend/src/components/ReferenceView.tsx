@@ -1,11 +1,26 @@
 import { useMemo } from 'react'
-import { Paper, Typography, Box } from '@mui/material'
+import { Paper, Typography, Box, IconButton } from '@mui/material'
 import { ReferenceViewProps } from './shared/types'
 import { calculateReferenceLinePositions } from './shared/utils/referenceLineCalculator'
 import { SourceSelector } from './shared/components/SourceSelector'
 import { HighlightedText } from './shared/components/HighlightedText'
 import { TranscriptionWordPosition } from './shared/types'
 import { getWordsFromIds } from './shared/utils/wordUtils'
+import ContentCopyIcon from '@mui/icons-material/ContentCopy'
+import { styled } from '@mui/material/styles'
+
+const SegmentControls = styled(Box)({
+    display: 'flex',
+    alignItems: 'center',
+    gap: '4px',
+    paddingTop: '3px',
+    paddingRight: '8px'
+})
+
+const TextContainer = styled(Box)({
+    flex: 1,
+    minWidth: 0,
+})
 
 export default function ReferenceView({
     referenceSources,
@@ -153,6 +168,11 @@ export default function ReferenceView({
     // Get the segments for the current source
     const currentSourceSegments = referenceSources[effectiveCurrentSource]?.segments || [];
 
+    // Helper function to copy text to clipboard
+    const copyToClipboard = (text: string) => {
+        navigator.clipboard.writeText(text);
+    };
+
     return (
         <Paper sx={{ p: 2 }}>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
@@ -166,22 +186,39 @@ export default function ReferenceView({
                 />
             </Box>
             <Box sx={{ display: 'flex', flexDirection: 'column' }}>
-                <HighlightedText
-                    wordPositions={referenceWordPositions}
-                    segments={currentSourceSegments}
-                    anchors={anchors}
-                    onElementClick={onElementClick}
-                    onWordClick={onWordClick}
-                    flashingType={flashingType}
-                    highlightInfo={highlightInfo}
-                    mode={mode}
-                    isReference={true}
-                    currentSource={effectiveCurrentSource}
-                    linePositions={linePositions}
-                    referenceCorrections={referenceCorrections}
-                    gaps={gaps}
-                    preserveSegments={true}
-                />
+                {currentSourceSegments.map((segment, index) => (
+                    <Box key={index} sx={{ display: 'flex', alignItems: 'flex-start', width: '100%' }}>
+                        <SegmentControls>
+                            <IconButton
+                                size="small"
+                                onClick={() => copyToClipboard(segment.words.map(w => w.text).join(' '))}
+                                sx={{ padding: '2px' }}
+                            >
+                                <ContentCopyIcon fontSize="small" />
+                            </IconButton>
+                        </SegmentControls>
+                        <TextContainer>
+                            <HighlightedText
+                                wordPositions={referenceWordPositions.filter(wp => 
+                                    segment.words.some(w => w.id === wp.word.id)
+                                )}
+                                segments={[segment]}
+                                anchors={anchors}
+                                onElementClick={onElementClick}
+                                onWordClick={onWordClick}
+                                flashingType={flashingType}
+                                highlightInfo={highlightInfo}
+                                mode={mode}
+                                isReference={true}
+                                currentSource={effectiveCurrentSource}
+                                linePositions={linePositions}
+                                referenceCorrections={referenceCorrections}
+                                gaps={gaps}
+                                preserveSegments={true}
+                            />
+                        </TextContainer>
+                    </Box>
+                ))}
             </Box>
         </Paper>
     )

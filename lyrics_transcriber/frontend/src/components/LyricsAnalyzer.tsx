@@ -22,7 +22,7 @@ import {
     updateSegment
 } from './shared/utils/segmentOperations'
 import { loadSavedData, saveData, clearSavedData } from './shared/utils/localStorage'
-import { setupKeyboardHandlers } from './shared/utils/keyboardHandlers'
+import { setupKeyboardHandlers, setModalHandler } from './shared/utils/keyboardHandlers'
 import Header from './Header'
 import { findWordById, getWordsFromIds } from './shared/utils/wordUtils'
 
@@ -121,19 +121,24 @@ export default function LyricsAnalyzer({ data: initialData, onFileLoad, apiClien
 
     // Keyboard handlers
     useEffect(() => {
+        console.log('Setting up keyboard handlers in LyricsAnalyzer')
+
         const { handleKeyDown, handleKeyUp } = setupKeyboardHandlers({
             setIsShiftPressed,
             setIsCtrlPressed
         })
 
+        console.log('Adding keyboard event listeners')
         window.addEventListener('keydown', handleKeyDown)
         window.addEventListener('keyup', handleKeyUp)
+
         return () => {
+            console.log('Removing keyboard event listeners')
             window.removeEventListener('keydown', handleKeyDown)
             window.removeEventListener('keyup', handleKeyUp)
             document.body.style.userSelect = ''
         }
-    }, [])
+    }, [setIsShiftPressed, setIsCtrlPressed])
 
     // Calculate effective mode based on modifier key states
     const effectiveMode = isShiftPressed ? 'highlight' :
@@ -436,6 +441,12 @@ export default function LyricsAnalyzer({ data: initialData, onFileLoad, apiClien
         }, 1500);
     }, []);
 
+    // Wrap setModalSpacebarHandler in useCallback
+    const handleSetModalSpacebarHandler = useCallback((handler: (() => (e: KeyboardEvent) => void) | undefined) => {
+        // Update the global modal handler
+        setModalHandler(handler ? handler() : undefined, !!handler)
+    }, [])
+
     return (
         <Box sx={{
             p: 3,
@@ -505,7 +516,10 @@ export default function LyricsAnalyzer({ data: initialData, onFileLoad, apiClien
 
             <EditModal
                 open={Boolean(editModalSegment)}
-                onClose={() => setEditModalSegment(null)}
+                onClose={() => {
+                    setEditModalSegment(null)
+                    handleSetModalSpacebarHandler(undefined)
+                }}
                 segment={editModalSegment?.segment ?? null}
                 segmentIndex={editModalSegment?.index ?? null}
                 originalSegment={editModalSegment?.originalSegment ?? null}
@@ -515,6 +529,7 @@ export default function LyricsAnalyzer({ data: initialData, onFileLoad, apiClien
                 onSplitSegment={handleSplitSegment}
                 onPlaySegment={handlePlaySegment}
                 currentTime={currentAudioTime}
+                setModalSpacebarHandler={handleSetModalSpacebarHandler}
             />
 
             <ReviewChangesModal
@@ -524,6 +539,7 @@ export default function LyricsAnalyzer({ data: initialData, onFileLoad, apiClien
                 updatedData={data}
                 onSubmit={handleSubmitToServer}
                 apiClient={apiClient}
+                setModalSpacebarHandler={handleSetModalSpacebarHandler}
             />
 
             {!isReadOnly && apiClient && (

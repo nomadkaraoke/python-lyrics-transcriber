@@ -20,8 +20,10 @@ import RestoreIcon from '@mui/icons-material/RestoreFromTrash'
 import MoreVertIcon from '@mui/icons-material/MoreVert'
 import AutoFixHighIcon from '@mui/icons-material/AutoFixHigh'
 import PlayCircleOutlineIcon from '@mui/icons-material/PlayCircleOutline'
+import CancelIcon from '@mui/icons-material/Cancel'
+import StopIcon from '@mui/icons-material/Stop'
 import { LyricsSegment, Word } from '../types'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import TimelineEditor from './TimelineEditor'
 import { nanoid } from 'nanoid'
 
@@ -37,6 +39,7 @@ interface EditModalProps {
     onDelete?: (segmentIndex: number) => void
     onAddSegment?: (segmentIndex: number) => void
     onSplitSegment?: (segmentIndex: number, afterWordIndex: number) => void
+    setModalSpacebarHandler: (handler: (() => (e: KeyboardEvent) => void) | undefined) => void
 }
 
 export default function EditModal({
@@ -51,42 +54,21 @@ export default function EditModal({
     onDelete,
     onAddSegment,
     onSplitSegment,
+    setModalSpacebarHandler,
 }: EditModalProps) {
+    // All useState hooks
     const [editedSegment, setEditedSegment] = useState<LyricsSegment | null>(segment)
     const [menuAnchorEl, setMenuAnchorEl] = useState<null | HTMLElement>(null)
     const [selectedWordIndex, setSelectedWordIndex] = useState<number | null>(null)
     const [replacementText, setReplacementText] = useState('')
+    const [isManualSyncing, setIsManualSyncing] = useState(false)
+    const [syncWordIndex, setSyncWordIndex] = useState<number>(-1)
+    const [isPlaying, setIsPlaying] = useState(false)
 
-    // Reset edited segment when modal opens with new segment
-    useEffect(() => {
-        setEditedSegment(segment)
-    }, [segment])
+    // Define updateSegment first since other hooks depend on it
+    const updateSegment = useCallback((newWords: Word[]) => {
+        if (!editedSegment) return;
 
-    // Add a function to get safe time values
-    const getSafeTimeRange = (segment: LyricsSegment | null) => {
-        if (!segment) return { start: 0, end: 1 }; // Default 1-second range
-
-        const start = segment.start_time ?? 0;
-        const end = segment.end_time ?? (start + 1);
-        return { start, end };
-    }
-
-    if (!segment || segmentIndex === null || !editedSegment || !originalSegment) return null
-
-    // Get safe time values for TimelineEditor
-    const timeRange = getSafeTimeRange(editedSegment)
-
-    const handleWordChange = (index: number, updates: Partial<Word>) => {
-        const newWords = [...editedSegment.words]
-        newWords[index] = {
-            ...newWords[index],
-            ...updates
-        }
-        updateSegment(newWords)
-    }
-
-    const updateSegment = (newWords: Word[]) => {
-        // Filter out null values before finding min/max
         const validStartTimes = newWords.map(w => w.start_time).filter((t): t is number => t !== null)
         const validEndTimes = newWords.map(w => w.end_time).filter((t): t is number => t !== null)
 
@@ -100,6 +82,134 @@ export default function EditModal({
             start_time: segmentStartTime,
             end_time: segmentEndTime
         })
+    }, [editedSegment])
+
+    // Other useCallback hooks
+    const cleanupManualSync = useCallback(() => {
+        setIsManualSyncing(false)
+        setSyncWordIndex(-1)
+    }, [])
+
+    const handleClose = useCallback(() => {
+        cleanupManualSync()
+        onClose()
+    }, [onClose, cleanupManualSync])
+
+    // All useEffect hooks
+    useEffect(() => {
+        setEditedSegment(segment)
+    }, [segment])
+
+    // Update the spacebar handler when modal state changes
+    useEffect(() => {
+        if (open) {
+            setModalSpacebarHandler(() => (e: KeyboardEvent) => {
+                e.preventDefault()
+                e.stopPropagation()
+
+                if (isManualSyncing && editedSegment) {
+                    // Handle manual sync mode
+                    if (syncWordIndex < editedSegment.words.length) {
+                        const newWords = [...editedSegment.words]
+                        const currentWord = newWords[syncWordIndex]
+                        const prevWord = syncWordIndex > 0 ? newWords[syncWordIndex - 1] : null
+
+                        currentWord.start_time = currentTime
+
+                        if (prevWord) {
+                            prevWord.end_time = currentTime - 0.01
+                        }
+
+                        if (syncWordIndex === editedSegment.words.length - 1) {
+                            currentWord.end_time = editedSegment.end_time
+                            setIsManualSyncing(false)
+                            setSyncWordIndex(-1)
+                            updateSegment(newWords)
+                        } else {
+                            setSyncWordIndex(syncWordIndex + 1)
+                            updateSegment(newWords)
+                        }
+                    }
+                } else if (editedSegment && onPlaySegment) {
+                    // Toggle segment playback when not in manual sync mode
+                    const startTime = editedSegment.start_time ?? 0
+                    const endTime = editedSegment.end_time ?? 0
+
+                    if (currentTime >= startTime && currentTime <= endTime) {
+                        if (window.toggleAudioPlayback) {
+                            window.toggleAudioPlayback()
+                        }
+                    } else {
+                        onPlaySegment(startTime)
+                    }
+                }
+            })
+        } else {
+            setModalSpacebarHandler(undefined)
+        }
+
+        return () => {
+            setModalSpacebarHandler(undefined)
+        }
+    }, [
+        open,
+        isManualSyncing,
+        editedSegment,
+        syncWordIndex,
+        currentTime,
+        onPlaySegment,
+        updateSegment,
+        setModalSpacebarHandler
+    ])
+
+    // Auto-stop sync if we go past the end time
+    useEffect(() => {
+        if (!editedSegment) return
+
+        const endTime = editedSegment.end_time ?? 0
+
+        if (window.isAudioPlaying && currentTime > endTime) {
+            console.log('Stopping playback: current time exceeded end time')
+            window.toggleAudioPlayback?.()
+            setIsManualSyncing(false)
+            setSyncWordIndex(-1)
+        }
+
+    }, [isManualSyncing, editedSegment, currentTime, setSyncWordIndex])
+
+    // Update isPlaying when currentTime changes
+    useEffect(() => {
+        if (editedSegment) {
+            const startTime = editedSegment.start_time ?? 0
+            const endTime = editedSegment.end_time ?? 0
+            const isWithinSegment = currentTime >= startTime && currentTime <= endTime
+
+            // Only consider it playing if it's within the segment AND audio is actually playing
+            setIsPlaying(isWithinSegment && window.isAudioPlaying === true)
+        }
+    }, [currentTime, editedSegment])
+
+    // Add a function to get safe time values
+    const getSafeTimeRange = (segment: LyricsSegment | null) => {
+        if (!segment) return { start: 0, end: 1 }; // Default 1-second range
+        const start = segment.start_time ?? 0;
+        const end = segment.end_time ?? (start + 1);
+        return { start, end };
+    }
+
+    // Early return after all hooks and function definitions
+    if (!segment || segmentIndex === null || !editedSegment || !originalSegment) return null
+
+    // Get safe time values for TimelineEditor
+    const timeRange = getSafeTimeRange(editedSegment)
+
+    const handleWordChange = (index: number, updates: Partial<Word>) => {
+        const newWords = [...editedSegment.words]
+        newWords[index] = {
+            ...newWords[index],
+            ...updates
+        }
+        updateSegment(newWords)
     }
 
     const handleAddWord = (index?: number) => {
@@ -285,10 +395,42 @@ export default function EditModal({
         }
     }
 
+    // Add this new function to handle manual sync
+    const startManualSync = () => {
+        if (isManualSyncing) {
+            setIsManualSyncing(false)
+            setSyncWordIndex(-1)
+            return
+        }
+
+        if (!editedSegment || !onPlaySegment) return
+
+        setIsManualSyncing(true)
+        setSyncWordIndex(0)
+        // Start playing 3 seconds before segment start
+        const startTime = (editedSegment.start_time ?? 0) - 3
+        onPlaySegment(startTime)
+    }
+
+    // Handle play/stop button click
+    const handlePlayButtonClick = () => {
+        if (!segment?.start_time || !onPlaySegment) return
+
+        if (isPlaying) {
+            // Stop playback
+            if (window.toggleAudioPlayback) {
+                window.toggleAudioPlayback()
+            }
+        } else {
+            // Start playback
+            onPlaySegment(segment.start_time)
+        }
+    }
+
     return (
         <Dialog
             open={open}
-            onClose={onClose}
+            onClose={handleClose}
             maxWidth="md"
             fullWidth
             onKeyDown={handleKeyDown}
@@ -299,10 +441,14 @@ export default function EditModal({
                     {segment?.start_time !== null && onPlaySegment && (
                         <IconButton
                             size="small"
-                            onClick={() => onPlaySegment(segment.start_time!)}
+                            onClick={handlePlayButtonClick}
                             sx={{ padding: '4px' }}
                         >
-                            <PlayCircleOutlineIcon />
+                            {isPlaying ? (
+                                <StopIcon />
+                            ) : (
+                                <PlayCircleOutlineIcon />
+                            )}
                         </IconButton>
                     )}
                 </Box>
@@ -322,11 +468,30 @@ export default function EditModal({
                     />
                 </Box>
 
-                <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                    Original Time Range: {originalSegment.start_time?.toFixed(2) ?? 'N/A'} - {originalSegment.end_time?.toFixed(2) ?? 'N/A'}
-                    <br />
-                    Current Time Range: {editedSegment.start_time?.toFixed(2) ?? 'N/A'} - {editedSegment.end_time?.toFixed(2) ?? 'N/A'}
-                </Typography>
+                <Box sx={{ mb: 2, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <Typography variant="body2" color="text.secondary">
+                        Original Time Range: {originalSegment.start_time?.toFixed(2) ?? 'N/A'} - {originalSegment.end_time?.toFixed(2) ?? 'N/A'}
+                        <br />
+                        Current Time Range: {editedSegment.start_time?.toFixed(2) ?? 'N/A'} - {editedSegment.end_time?.toFixed(2) ?? 'N/A'}
+                    </Typography>
+
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                        <Button
+                            variant={isManualSyncing ? "outlined" : "contained"}
+                            onClick={startManualSync}
+                            disabled={!onPlaySegment}
+                            startIcon={isManualSyncing ? <CancelIcon /> : <PlayCircleOutlineIcon />}
+                            color={isManualSyncing ? "error" : "primary"}
+                        >
+                            {isManualSyncing ? "Cancel Sync" : "Manual Sync"}
+                        </Button>
+                        {isManualSyncing && (
+                            <Typography variant="body2">
+                                Press spacebar for word {syncWordIndex + 1} of {editedSegment?.words.length}
+                            </Typography>
+                        )}
+                    </Box>
+                </Box>
 
                 <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, mb: 3 }}>
                     {editedSegment.words.map((word, index) => (
@@ -413,8 +578,11 @@ export default function EditModal({
                         Delete Segment
                     </Button>
                 </Box>
-                <Button onClick={onClose}>Cancel</Button>
-                <Button onClick={handleSave} variant="contained">
+                <Button onClick={handleClose}>Cancel</Button>
+                <Button onClick={() => {
+                    cleanupManualSync()
+                    onSave(editedSegment)
+                }}>
                     Save Changes
                 </Button>
             </DialogActions>

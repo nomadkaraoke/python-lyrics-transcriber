@@ -7,12 +7,14 @@ interface PreviewVideoSectionProps {
     apiClient: ApiClient | null
     isModalOpen: boolean
     updatedData: CorrectionData
+    videoRef?: React.RefObject<HTMLVideoElement>
 }
 
 export default function PreviewVideoSection({
     apiClient,
     isModalOpen,
-    updatedData
+    updatedData,
+    videoRef
 }: PreviewVideoSectionProps) {
     const [previewState, setPreviewState] = useState<{
         status: 'loading' | 'ready' | 'error';
@@ -100,6 +102,7 @@ export default function PreviewVideoSection({
                     margin: '0',
                 }}>
                     <video
+                        ref={videoRef}
                         controls
                         src={previewState.videoUrl}
                         style={{
