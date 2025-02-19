@@ -1,22 +1,25 @@
 from typing import List, Optional, Tuple, Dict, Any, Union
 import logging
 import json
-from ollama import chat
 from datetime import datetime
 from pathlib import Path
 
 from lyrics_transcriber.types import GapSequence, WordCorrection
 from lyrics_transcriber.correction.handlers.base import GapCorrectionHandler
 from lyrics_transcriber.correction.handlers.word_operations import WordOperations
+from lyrics_transcriber.correction.handlers.llm_providers import LLMProvider
 
 
 class LLMHandler(GapCorrectionHandler):
     """Uses an LLM to analyze and correct gaps by comparing with reference lyrics."""
 
-    def __init__(self, logger: Optional[logging.Logger] = None, cache_dir: Optional[Union[str, Path]] = None):
+    def __init__(
+        self, provider: LLMProvider, name: str, logger: Optional[logging.Logger] = None, cache_dir: Optional[Union[str, Path]] = None
+    ):
         super().__init__(logger)
         self.logger = logger or logging.getLogger(__name__)
-        self.model = "deepseek-r1:7b"
+        self.provider = provider
+        self.name = name
         self.cache_dir = Path(cache_dir) if cache_dir else None
 
     def _format_prompt(self, gap: GapSequence, data: Optional[Dict[str, Any]] = None) -> str:
@@ -160,16 +163,16 @@ class LLMHandler(GapCorrectionHandler):
             self.logger.debug(f"Processing gap words: {transcribed_words}")
             self.logger.debug(f"Reference word IDs: {gap.reference_word_ids}")
 
-            response = chat(model=self.model, messages=[{"role": "user", "content": prompt}], format="json")
+            response = self.provider.generate_response(prompt)
 
             # Write debug info to files
-            self._write_debug_info(prompt, response.message.content, gap_index, audio_file_hash=data.get("audio_file_hash"))
+            self._write_debug_info(prompt, response, gap_index, audio_file_hash=data.get("audio_file_hash"))
 
             try:
-                corrections_data = json.loads(response.message.content)
+                corrections_data = json.loads(response)
             except json.JSONDecodeError as e:
                 self.logger.error(f"Failed to parse LLM response as JSON: {e}")
-                self.logger.error(f"Raw response content: {response.message.content}")
+                self.logger.error(f"Raw response content: {response}")
                 return []
 
             # Check if corrections exist and are non-empty
@@ -202,7 +205,7 @@ class LLMHandler(GapCorrectionHandler):
                             source="LLM",
                             confidence=correction["confidence"],
                             reason=correction["reason"],
-                            handler="LLMHandler",
+                            handler=self.name,
                             reference_positions=reference_positions,
                             original_word_id=correction["word_id"],
                             corrected_word_id=correction.get("reference_word_id"),
@@ -223,7 +226,7 @@ class LLMHandler(GapCorrectionHandler):
                             source="LLM",
                             confidence=correction["confidence"],
                             reason=correction["reason"],
-                            handler="LLMHandler",
+                            handler=self.name,
                             reference_positions=reference_positions,
                             original_word_id=correction["word_id"],
                             corrected_word_ids=reference_word_ids,
@@ -256,7 +259,7 @@ class LLMHandler(GapCorrectionHandler):
                             confidence=correction["confidence"],
                             combine_reason=correction["reason"],
                             delete_reason=f"Part of combining words: {correction['reason']}",
-                            handler="LLMHandler",
+                            handler=self.name,
                             reference_positions=reference_positions,
                             original_word_ids=word_ids_to_combine,
                             corrected_word_id=correction.get("reference_word_id"),
@@ -275,10 +278,10 @@ class LLMHandler(GapCorrectionHandler):
                             reason=correction["reason"],
                             alternatives={},
                             is_deletion=True,
-                            handler="LLMHandler",
+                            handler=self.name,
                             reference_positions=reference_positions,
                             word_id=correction["word_id"],
-                            corrected_word_id=None,  # Deleted words don't need a corrected ID
+                            corrected_word_id=None,
                         )
                     )
 

@@ -117,6 +117,15 @@ class OutputGenerator:
 
                 # For preview, we only need to generate ASS and video
                 if preview_mode:
+                    # Scale down top padding for preview if it exists
+                    if 'karaoke' in self.config.styles and 'top_padding' in self.config.styles['karaoke']:
+                        self.logger.info(f"Preview mode: Found top_padding: {self.config.styles['karaoke']['top_padding']}")
+                        original_padding = self.config.styles['karaoke']['top_padding']
+                        if original_padding is not None:
+                            # Scale down from 4K (2160p) to 360p - factor of 1/6
+                            self.config.styles['karaoke']['top_padding'] = original_padding / 6
+                            self.logger.info(f"Preview mode: Scaled down top_padding to: {self.config.styles['karaoke']['top_padding']}")
+
                     # Generate ASS subtitles for preview
                     outputs.ass = self.subtitle.generate_ass(transcription_corrected.resized_segments, output_prefix, audio_filepath)
 

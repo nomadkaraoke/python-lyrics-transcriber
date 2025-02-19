@@ -34,6 +34,7 @@ uvicorn = ">=0.34"
 fonttools = ">=4.55"
 ollama = "^0.4.7"
 shortuuid = "^1.0.13"
+openai = "^1.63.2"
 
 [tool.poetry.group.dev.dependencies]
 black = ">=23"
