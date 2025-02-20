@@ -37,6 +37,7 @@ class OutputGenerator:
         self,
         config: OutputConfig,
         logger: Optional[logging.Logger] = None,
+        preview_mode: bool = False,
     ):
         """
         Initialize OutputGenerator with configuration.
@@ -44,14 +45,16 @@ class OutputGenerator:
         Args:
             config: OutputConfig instance with required paths and settings
             logger: Optional logger instance
+            preview_mode: Boolean indicating if the generator is in preview mode
         """
         self.config = config
         self.logger = logger or logging.getLogger(__name__)
 
-        self.logger.debug(f"Initializing OutputGenerator with config: {self.config}")
+        self.logger.info(f"Initializing OutputGenerator with config: {self.config}")
 
         # Set video resolution parameters
         self.video_resolution_num, self.font_size, self.line_height = self._get_video_params(self.config.video_resolution)
+        self.logger.info(f"Video resolution: {self.video_resolution_num}, font size: {self.font_size}, line height: {self.line_height}")
 
         self.segment_resizer = SegmentResizer(max_line_length=self.config.max_line_length, logger=self.logger)
 
@@ -71,7 +74,33 @@ class OutputGenerator:
         if self.config.generate_cdg:
             self.cdg = CDGGenerator(self.config.output_dir, self.logger)
 
+        self.preview_mode = preview_mode
         if self.config.render_video:
+            # Apply preview mode scaling if needed
+            if self.preview_mode:
+                # Scale down from 4K (2160p) to 360p - factor of 1/6
+                scale_factor = 1 / 6
+
+                # Scale down top padding for preview if it exists
+                if "karaoke" in self.config.styles and "top_padding" in self.config.styles["karaoke"]:
+                    self.logger.info(f"Preview mode: Found top_padding: {self.config.styles['karaoke']['top_padding']}")
+                    original_padding = self.config.styles["karaoke"]["top_padding"]
+                    if original_padding is not None:
+                        # Scale down from 4K (2160p) to 360p - factor of 1/6
+                        self.config.styles["karaoke"]["top_padding"] = original_padding * scale_factor
+                        self.logger.info(f"Preview mode: Scaled down top_padding to: {self.config.styles['karaoke']['top_padding']}")
+
+                # Scale down font size for preview if it exists
+                if "karaoke" in self.config.styles and "font_size" in self.config.styles["karaoke"]:
+                    self.logger.info(f"Preview mode: Found font_size: {self.config.styles['karaoke']['font_size']}")
+                    original_font_size = self.config.styles["karaoke"]["font_size"]
+                    if original_font_size is not None:
+                        # Scale down from 4K (2160p) to 360p - factor of 1/6
+                        self.font_size = original_font_size * scale_factor
+                        self.config.styles["karaoke"]["font_size"] = self.font_size
+                        self.logger.info(f"Preview mode: Scaled down font_size to: {self.font_size}")
+
+            # Initialize subtitle generator with potentially scaled values
             self.subtitle = SubtitlesGenerator(
                 output_dir=self.config.output_dir,
                 video_resolution=self.video_resolution_num,
@@ -102,7 +131,6 @@ class OutputGenerator:
         audio_filepath: str,
         artist: Optional[str] = None,
         title: Optional[str] = None,
-        preview_mode: bool = False,
     ) -> OutputPaths:
         """Generate all requested output formats."""
         outputs = OutputPaths()
@@ -116,16 +144,7 @@ class OutputGenerator:
                 transcription_corrected.resized_segments = resized_segments
 
                 # For preview, we only need to generate ASS and video
-                if preview_mode:
-                    # Scale down top padding for preview if it exists
-                    if 'karaoke' in self.config.styles and 'top_padding' in self.config.styles['karaoke']:
-                        self.logger.info(f"Preview mode: Found top_padding: {self.config.styles['karaoke']['top_padding']}")
-                        original_padding = self.config.styles['karaoke']['top_padding']
-                        if original_padding is not None:
-                            # Scale down from 4K (2160p) to 360p - factor of 1/6
-                            self.config.styles['karaoke']['top_padding'] = original_padding / 6
-                            self.logger.info(f"Preview mode: Scaled down top_padding to: {self.config.styles['karaoke']['top_padding']}")
-
+                if self.preview_mode:
                     # Generate ASS subtitles for preview
                     outputs.ass = self.subtitle.generate_ass(transcription_corrected.resized_segments, output_prefix, audio_filepath)
 

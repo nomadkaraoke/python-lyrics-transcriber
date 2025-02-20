@@ -166,7 +166,7 @@ class ReviewServer:
                 styles=self.output_config.styles,
                 max_line_length=self.output_config.max_line_length,
             )
-            output_generator = OutputGenerator(config=preview_config, logger=self.logger)
+            output_generator = OutputGenerator(config=preview_config, logger=self.logger, preview_mode=True)
 
             # Generate preview outputs with unique prefix
             preview_outputs = output_generator.generate_outputs(
@@ -174,7 +174,6 @@ class ReviewServer:
                 lyrics_results={},  # Empty dict since we don't need lyrics results for preview
                 output_prefix=f"preview_{preview_hash}",  # Include hash in filename
                 audio_filepath=self.audio_filepath,
-                preview_mode=True,
             )
 
             if not preview_outputs.video:
