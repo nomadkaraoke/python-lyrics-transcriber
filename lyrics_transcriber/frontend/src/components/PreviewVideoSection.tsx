@@ -104,6 +104,7 @@ export default function PreviewVideoSection({
                     <video
                         ref={videoRef}
                         controls
+                        autoPlay
                         src={previewState.videoUrl}
                         style={{
                             display: 'block',

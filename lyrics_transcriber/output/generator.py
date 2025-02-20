@@ -52,6 +52,15 @@ class OutputGenerator:
 
         self.logger.info(f"Initializing OutputGenerator with config: {self.config}")
 
+        if self.config.render_video or self.config.generate_cdg:
+            # Load output styles from JSON
+            try:
+                with open(self.config.output_styles_json, "r") as f:
+                    self.config.styles = json.load(f)
+                self.logger.debug(f"Loaded output styles from: {self.config.output_styles_json}")
+            except Exception as e:
+                raise ValueError(f"Failed to load output styles file: {str(e)}")
+
         # Set video resolution parameters
         self.video_resolution_num, self.font_size, self.line_height = self._get_video_params(self.config.video_resolution)
         self.logger.info(f"Video resolution: {self.video_resolution_num}, font size: {self.font_size}, line height: {self.line_height}")
@@ -61,15 +70,6 @@ class OutputGenerator:
         # Initialize generators
         self.plain_text = PlainTextGenerator(self.config.output_dir, self.logger)
         self.lyrics_file = LyricsFileGenerator(self.config.output_dir, self.logger)
-
-        if self.config.render_video or self.config.generate_cdg:
-            # Load output styles from JSON
-            try:
-                with open(self.config.output_styles_json, "r") as f:
-                    self.config.styles = json.load(f)
-                self.logger.debug(f"Loaded output styles from: {self.config.output_styles_json}")
-            except Exception as e:
-                raise ValueError(f"Failed to load output styles file: {str(e)}")
 
         if self.config.generate_cdg:
             self.cdg = CDGGenerator(self.config.output_dir, self.logger)

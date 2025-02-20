@@ -32767,6 +32767,7 @@ function PreviewVideoSection({
       {
         ref: videoRef,
         controls: true,
+        autoPlay: true,
         src: previewState.videoUrl,
         style: {
           display: "block",
@@ -34164,4 +34165,4 @@ function App() {
 ReactDOM$1.createRoot(document.getElementById("root")).render(
   /* @__PURE__ */ jsxRuntimeExports.jsx(App, {})
 );
-//# sourceMappingURL=index-D0Gr3Ep7.js.map
+//# sourceMappingURL=index-B0gvFB3J.js.map

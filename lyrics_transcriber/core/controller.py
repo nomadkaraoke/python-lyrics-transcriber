@@ -1,5 +1,6 @@
 import os
 import logging
+import json
 from dataclasses import dataclass, field
 from typing import Dict, Optional, List
 from lyrics_transcriber.types import LyricsData, TranscriptionResult, CorrectionResult
@@ -224,7 +225,29 @@ class LyricsTranscriber:
 
         self.logger.info(f"LyricsTranscriber controller beginning processing for {self.artist} - {self.title}")
 
-        # Step 1: Fetch lyrics if enabled and artist/title are provided
+        # Check for existing corrections JSON
+        corrections_json_path = os.path.join(self.output_config.output_dir, f"{self.output_prefix} (Lyrics Corrections).json")
+
+        if os.path.exists(corrections_json_path):
+            self.logger.info(f"Found existing corrections JSON: {corrections_json_path}")
+            try:
+                with open(corrections_json_path, "r", encoding="utf-8") as f:
+                    corrections_data = json.load(f)
+
+                # Reconstruct CorrectionResult from JSON
+                self.results.transcription_corrected = CorrectionResult.from_dict(corrections_data)
+                self.logger.info("Successfully loaded existing corrections data")
+
+                # Skip to output generation
+                self.generate_outputs()
+                self.logger.info("Processing completed successfully using existing corrections")
+                return self.results
+
+            except Exception as e:
+                self.logger.error(f"Failed to load existing corrections JSON: {str(e)}")
+                # Continue with normal processing if loading fails
+
+        # Normal processing flow continues...
         if self.output_config.fetch_lyrics and self.artist and self.title:
             self.fetch_lyrics()
         else:
