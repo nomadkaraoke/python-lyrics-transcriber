@@ -10757,7 +10757,7 @@ function createStyled2(input = {}) {
       skipSx: inputSkipSx,
       // TODO v6: remove `lowercaseFirstLetter()` in the next major release
       // For more details: https://github.com/mui/material-ui/pull/37908
-      overridesResolver: overridesResolver2 = defaultOverridesResolver(lowercaseFirstLetter(componentSlot)),
+      overridesResolver = defaultOverridesResolver(lowercaseFirstLetter(componentSlot)),
       ...options
     } = inputOptions;
     const skipVariantsResolver = inputSkipVariantsResolver !== void 0 ? inputSkipVariantsResolver : (
@@ -10801,7 +10801,7 @@ function createStyled2(input = {}) {
       const expressionsBody = expressionsInput.map(transformStyle);
       const expressionsTail = [];
       expressionsHead.push(styleAttachTheme);
-      if (componentName && overridesResolver2) {
+      if (componentName && overridesResolver) {
         expressionsTail.push(function styleThemeOverrides(props) {
           var _a, _b;
           const theme = props.theme;
@@ -10813,7 +10813,7 @@ function createStyled2(input = {}) {
           for (const slotKey in styleOverrides) {
             resolvedStyleOverrides[slotKey] = processStyle(props, styleOverrides[slotKey]);
           }
-          return overridesResolver2(props, resolvedStyleOverrides);
+          return overridesResolver(props, resolvedStyleOverrides);
         });
       }
       if (componentName && !skipVariantsResolver) {
@@ -12663,7 +12663,7 @@ function getSvgIconUtilityClass(slot) {
   return generateUtilityClass("MuiSvgIcon", slot);
 }
 generateUtilityClasses("MuiSvgIcon", ["root", "colorPrimary", "colorSecondary", "colorAction", "colorError", "colorDisabled", "fontSizeInherit", "fontSizeSmall", "fontSizeMedium", "fontSizeLarge"]);
-const useUtilityClasses$C = (ownerState) => {
+const useUtilityClasses$B = (ownerState) => {
   const {
     color: color2,
     fontSize,
@@ -12808,7 +12808,7 @@ const SvgIcon = /* @__PURE__ */ reactExports.forwardRef(function SvgIcon2(inProp
   if (!inheritViewBox) {
     more.viewBox = viewBox;
   }
-  const classes = useUtilityClasses$C(ownerState);
+  const classes = useUtilityClasses$B(ownerState);
   return /* @__PURE__ */ jsxRuntimeExports.jsxs(SvgIconRoot, {
     as: component,
     className: clsx(classes.root, className),
@@ -13315,7 +13315,7 @@ function getPaperUtilityClass(slot) {
   return generateUtilityClass("MuiPaper", slot);
 }
 generateUtilityClasses("MuiPaper", ["root", "rounded", "outlined", "elevation", "elevation0", "elevation1", "elevation2", "elevation3", "elevation4", "elevation5", "elevation6", "elevation7", "elevation8", "elevation9", "elevation10", "elevation11", "elevation12", "elevation13", "elevation14", "elevation15", "elevation16", "elevation17", "elevation18", "elevation19", "elevation20", "elevation21", "elevation22", "elevation23", "elevation24"]);
-const useUtilityClasses$B = (ownerState) => {
+const useUtilityClasses$A = (ownerState) => {
   const {
     square,
     elevation,
@@ -13388,7 +13388,7 @@ const Paper = /* @__PURE__ */ reactExports.forwardRef(function Paper2(inProps, r
     square,
     variant
   };
-  const classes = useUtilityClasses$B(ownerState);
+  const classes = useUtilityClasses$A(ownerState);
   return /* @__PURE__ */ jsxRuntimeExports.jsx(PaperRoot, {
     as: component,
     ownerState,
@@ -13849,7 +13849,7 @@ function getButtonBaseUtilityClass(slot) {
   return generateUtilityClass("MuiButtonBase", slot);
 }
 const buttonBaseClasses = generateUtilityClasses("MuiButtonBase", ["root", "disabled", "focusVisible"]);
-const useUtilityClasses$A = (ownerState) => {
+const useUtilityClasses$z = (ownerState) => {
   const {
     disabled,
     focusVisible,
@@ -14066,7 +14066,7 @@ const ButtonBase = /* @__PURE__ */ reactExports.forwardRef(function ButtonBase2(
     tabIndex,
     focusVisible
   };
-  const classes = useUtilityClasses$A(ownerState);
+  const classes = useUtilityClasses$z(ownerState);
   return /* @__PURE__ */ jsxRuntimeExports.jsxs(ButtonBaseRoot, {
     as: ComponentProp,
     className: clsx(classes.root, className),
@@ -14164,7 +14164,7 @@ const rotateAnimation = typeof circularRotateKeyframe !== "string" ? css`
 const dashAnimation = typeof circularDashKeyframe !== "string" ? css`
         animation: ${circularDashKeyframe} 1.4s ease-in-out infinite;
       ` : null;
-const useUtilityClasses$z = (ownerState) => {
+const useUtilityClasses$y = (ownerState) => {
   const {
     classes,
     variant,
@@ -14287,7 +14287,7 @@ const CircularProgress = /* @__PURE__ */ reactExports.forwardRef(function Circul
     value,
     variant
   };
-  const classes = useUtilityClasses$z(ownerState);
+  const classes = useUtilityClasses$y(ownerState);
   const circleStyle = {};
   const rootStyle = {};
   const rootProps = {};
@@ -14332,7 +14332,7 @@ function getIconButtonUtilityClass(slot) {
   return generateUtilityClass("MuiIconButton", slot);
 }
 const iconButtonClasses = generateUtilityClasses("MuiIconButton", ["root", "disabled", "colorInherit", "colorPrimary", "colorSecondary", "colorError", "colorInfo", "colorSuccess", "colorWarning", "edgeStart", "edgeEnd", "sizeSmall", "sizeMedium", "sizeLarge", "loading", "loadingIndicator", "loadingWrapper"]);
-const useUtilityClasses$y = (ownerState) => {
+const useUtilityClasses$x = (ownerState) => {
   const {
     classes,
     disabled,
@@ -14518,7 +14518,7 @@ const IconButton = /* @__PURE__ */ reactExports.forwardRef(function IconButton2(
     loadingIndicator,
     size
   };
-  const classes = useUtilityClasses$y(ownerState);
+  const classes = useUtilityClasses$x(ownerState);
   return /* @__PURE__ */ jsxRuntimeExports.jsxs(IconButtonRoot, {
     id,
     className: clsx(classes.root, className),
@@ -14557,7 +14557,7 @@ const InfoOutlinedIcon = createSvgIcon(/* @__PURE__ */ jsxRuntimeExports.jsx("pa
 const ClearIcon = createSvgIcon(/* @__PURE__ */ jsxRuntimeExports.jsx("path", {
   d: "M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"
 }), "Close");
-const useUtilityClasses$x = (ownerState) => {
+const useUtilityClasses$w = (ownerState) => {
   const {
     variant,
     color: color2,
@@ -14712,7 +14712,7 @@ const Alert = /* @__PURE__ */ reactExports.forwardRef(function Alert2(inProps, r
     variant,
     colorSeverity: color2 || severity
   };
-  const classes = useUtilityClasses$x(ownerState);
+  const classes = useUtilityClasses$w(ownerState);
   const externalForwardedProps = {
     slots: {
       closeButton: components.CloseButton,
@@ -14811,7 +14811,7 @@ const v6Colors = {
   textDisabled: true
 };
 const extendSxProp = internal_createExtendSxProp();
-const useUtilityClasses$w = (ownerState) => {
+const useUtilityClasses$v = (ownerState) => {
   const {
     align,
     gutterBottom,
@@ -14954,7 +14954,7 @@ const Typography = /* @__PURE__ */ reactExports.forwardRef(function Typography2(
     variantMapping
   };
   const Component = component || (paragraph ? "p" : variantMapping[variant] || defaultVariantMapping[variant]) || "span";
-  const classes = useUtilityClasses$w(ownerState);
+  const classes = useUtilityClasses$v(ownerState);
   return /* @__PURE__ */ jsxRuntimeExports.jsx(TypographyRoot, {
     as: Component,
     ref,
@@ -16378,7 +16378,7 @@ function resolveAnchorEl$1(anchorEl) {
 function isHTMLElement(element) {
   return element.nodeType !== void 0;
 }
-const useUtilityClasses$v = (ownerState) => {
+const useUtilityClasses$u = (ownerState) => {
   const {
     classes
   } = ownerState;
@@ -16479,7 +16479,7 @@ const PopperTooltip = /* @__PURE__ */ reactExports.forwardRef(function PopperToo
   if (TransitionProps !== null) {
     childProps.TransitionProps = TransitionProps;
   }
-  const classes = useUtilityClasses$v(props);
+  const classes = useUtilityClasses$u(props);
   const Root = slots.root ?? "div";
   const rootProps = useSlotProps({
     elementType: Root,
@@ -16831,7 +16831,7 @@ const inputOverridesResolver = (props, styles2) => {
   } = props;
   return [styles2.input, ownerState.size === "small" && styles2.inputSizeSmall, ownerState.multiline && styles2.inputMultiline, ownerState.type === "search" && styles2.inputTypeSearch, ownerState.startAdornment && styles2.inputAdornedStart, ownerState.endAdornment && styles2.inputAdornedEnd, ownerState.hiddenLabel && styles2.inputHiddenLabel];
 };
-const useUtilityClasses$u = (ownerState) => {
+const useUtilityClasses$t = (ownerState) => {
   const {
     classes,
     color: color2,
@@ -17217,7 +17217,7 @@ const InputBase = /* @__PURE__ */ reactExports.forwardRef(function InputBase2(in
     startAdornment,
     type
   };
-  const classes = useUtilityClasses$u(ownerState);
+  const classes = useUtilityClasses$t(ownerState);
   const Root = slots.root || components.Root || InputBaseRoot;
   const rootProps = slotProps.root || componentsProps.root || {};
   const Input3 = slots.input || components.Input || InputBaseInput;
@@ -17422,7 +17422,7 @@ function getBackdropUtilityClass(slot) {
   return generateUtilityClass("MuiBackdrop", slot);
 }
 generateUtilityClasses("MuiBackdrop", ["root", "invisible"]);
-const useUtilityClasses$t = (ownerState) => {
+const useUtilityClasses$s = (ownerState) => {
   const {
     classes,
     invisible
@@ -17485,7 +17485,7 @@ const Backdrop = /* @__PURE__ */ reactExports.forwardRef(function Backdrop2(inPr
     component,
     invisible
   };
-  const classes = useUtilityClasses$t(ownerState);
+  const classes = useUtilityClasses$s(ownerState);
   const backwardCompatibleSlots = {
     transition: TransitionComponentProp,
     root: components.Root,
@@ -17538,7 +17538,7 @@ function getButtonUtilityClass(slot) {
 const buttonClasses = generateUtilityClasses("MuiButton", ["root", "text", "textInherit", "textPrimary", "textSecondary", "textSuccess", "textError", "textInfo", "textWarning", "outlined", "outlinedInherit", "outlinedPrimary", "outlinedSecondary", "outlinedSuccess", "outlinedError", "outlinedInfo", "outlinedWarning", "contained", "containedInherit", "containedPrimary", "containedSecondary", "containedSuccess", "containedError", "containedInfo", "containedWarning", "disableElevation", "focusVisible", "disabled", "colorInherit", "colorPrimary", "colorSecondary", "colorSuccess", "colorError", "colorInfo", "colorWarning", "textSizeSmall", "textSizeMedium", "textSizeLarge", "outlinedSizeSmall", "outlinedSizeMedium", "outlinedSizeLarge", "containedSizeSmall", "containedSizeMedium", "containedSizeLarge", "sizeMedium", "sizeSmall", "sizeLarge", "fullWidth", "startIcon", "endIcon", "icon", "iconSizeSmall", "iconSizeMedium", "iconSizeLarge", "loading", "loadingWrapper", "loadingIconPlaceholder", "loadingIndicator", "loadingPositionCenter", "loadingPositionStart", "loadingPositionEnd"]);
 const ButtonGroupContext = /* @__PURE__ */ reactExports.createContext({});
 const ButtonGroupButtonContext = /* @__PURE__ */ reactExports.createContext(void 0);
-const useUtilityClasses$s = (ownerState) => {
+const useUtilityClasses$r = (ownerState) => {
   const {
     color: color2,
     disableElevation,
@@ -18040,7 +18040,7 @@ const Button = /* @__PURE__ */ reactExports.forwardRef(function Button2(inProps,
     type,
     variant
   };
-  const classes = useUtilityClasses$s(ownerState);
+  const classes = useUtilityClasses$r(ownerState);
   const startIcon = (startIconProp || loading && loadingPosition === "start") && /* @__PURE__ */ jsxRuntimeExports.jsx(ButtonStartIcon, {
     className: classes.startIcon,
     ownerState,
@@ -18091,7 +18091,7 @@ function getSwitchBaseUtilityClass(slot) {
   return generateUtilityClass("PrivateSwitchBase", slot);
 }
 generateUtilityClasses("PrivateSwitchBase", ["root", "checked", "disabled", "input", "edgeStart", "edgeEnd"]);
-const useUtilityClasses$r = (ownerState) => {
+const useUtilityClasses$q = (ownerState) => {
   const {
     classes,
     checked,
@@ -18227,7 +18227,7 @@ const SwitchBase = /* @__PURE__ */ reactExports.forwardRef(function SwitchBase2(
     disableFocusRipple,
     edge
   };
-  const classes = useUtilityClasses$r(ownerState);
+  const classes = useUtilityClasses$q(ownerState);
   return /* @__PURE__ */ jsxRuntimeExports.jsxs(SwitchBaseRoot, {
     component: "span",
     className: clsx(classes.root, className),
@@ -18822,7 +18822,7 @@ function getModalUtilityClass(slot) {
   return generateUtilityClass("MuiModal", slot);
 }
 generateUtilityClasses("MuiModal", ["root", "hidden", "backdrop"]);
-const useUtilityClasses$q = (ownerState) => {
+const useUtilityClasses$p = (ownerState) => {
   const {
     open,
     exited,
@@ -18933,7 +18933,7 @@ const Modal = /* @__PURE__ */ reactExports.forwardRef(function Modal2(inProps, r
     ...propsWithDefaults,
     exited
   };
-  const classes = useUtilityClasses$q(ownerState);
+  const classes = useUtilityClasses$p(ownerState);
   const childProps = {};
   if (children.props.tabIndex === void 0) {
     childProps.tabIndex = "-1";
@@ -19026,7 +19026,7 @@ const DialogBackdrop = styled(Backdrop, {
   // Improve scrollable dialog support.
   zIndex: -1
 });
-const useUtilityClasses$p = (ownerState) => {
+const useUtilityClasses$o = (ownerState) => {
   const {
     classes,
     scroll,
@@ -19231,7 +19231,7 @@ const Dialog = /* @__PURE__ */ reactExports.forwardRef(function Dialog2(inProps,
     maxWidth: maxWidth2,
     scroll
   };
-  const classes = useUtilityClasses$p(ownerState);
+  const classes = useUtilityClasses$o(ownerState);
   const backdropClick = reactExports.useRef();
   const handleMouseDown = (event) => {
     backdropClick.current = event.target === event.currentTarget;
@@ -19353,7 +19353,7 @@ function getDialogActionsUtilityClass(slot) {
   return generateUtilityClass("MuiDialogActions", slot);
 }
 generateUtilityClasses("MuiDialogActions", ["root", "spacing"]);
-const useUtilityClasses$o = (ownerState) => {
+const useUtilityClasses$n = (ownerState) => {
   const {
     classes,
     disableSpacing
@@ -19403,7 +19403,7 @@ const DialogActions = /* @__PURE__ */ reactExports.forwardRef(function DialogAct
     ...props,
     disableSpacing
   };
-  const classes = useUtilityClasses$o(ownerState);
+  const classes = useUtilityClasses$n(ownerState);
   return /* @__PURE__ */ jsxRuntimeExports.jsx(DialogActionsRoot, {
     className: clsx(classes.root, className),
     ownerState,
@@ -19419,7 +19419,7 @@ function getDialogTitleUtilityClass(slot) {
   return generateUtilityClass("MuiDialogTitle", slot);
 }
 const dialogTitleClasses = generateUtilityClasses("MuiDialogTitle", ["root"]);
-const useUtilityClasses$n = (ownerState) => {
+const useUtilityClasses$m = (ownerState) => {
   const {
     classes,
     dividers
@@ -19480,7 +19480,7 @@ const DialogContent = /* @__PURE__ */ reactExports.forwardRef(function DialogCon
     ...props,
     dividers
   };
-  const classes = useUtilityClasses$n(ownerState);
+  const classes = useUtilityClasses$m(ownerState);
   return /* @__PURE__ */ jsxRuntimeExports.jsx(DialogContentRoot, {
     className: clsx(classes.root, className),
     ownerState,
@@ -19488,7 +19488,7 @@ const DialogContent = /* @__PURE__ */ reactExports.forwardRef(function DialogCon
     ...other
   });
 });
-const useUtilityClasses$m = (ownerState) => {
+const useUtilityClasses$l = (ownerState) => {
   const {
     classes
   } = ownerState;
@@ -19516,7 +19516,7 @@ const DialogTitle = /* @__PURE__ */ reactExports.forwardRef(function DialogTitle
     ...other
   } = props;
   const ownerState = props;
-  const classes = useUtilityClasses$m(ownerState);
+  const classes = useUtilityClasses$l(ownerState);
   const {
     titleId = idProp
   } = reactExports.useContext(DialogContext);
@@ -19530,8 +19530,7 @@ const DialogTitle = /* @__PURE__ */ reactExports.forwardRef(function DialogTitle
     ...other
   });
 });
-const dividerClasses = generateUtilityClasses("MuiDivider", ["root", "absolute", "fullWidth", "inset", "middle", "flexItem", "light", "vertical", "withChildren", "withChildrenVertical", "textAlignRight", "textAlignLeft", "wrapper", "wrapperVertical"]);
-const useUtilityClasses$l = (ownerState) => {
+const useUtilityClasses$k = (ownerState) => {
   const {
     classes,
     disableUnderline,
@@ -19813,7 +19812,7 @@ const FilledInput = /* @__PURE__ */ reactExports.forwardRef(function FilledInput
     multiline,
     type
   };
-  const classes = useUtilityClasses$l(props);
+  const classes = useUtilityClasses$k(props);
   const filledInputComponentsProps = {
     root: {
       ownerState
@@ -19845,7 +19844,7 @@ function getFormControlUtilityClasses(slot) {
   return generateUtilityClass("MuiFormControl", slot);
 }
 generateUtilityClasses("MuiFormControl", ["root", "marginNone", "marginNormal", "marginDense", "fullWidth", "disabled"]);
-const useUtilityClasses$k = (ownerState) => {
+const useUtilityClasses$j = (ownerState) => {
   const {
     classes,
     margin: margin2,
@@ -19935,7 +19934,7 @@ const FormControl = /* @__PURE__ */ reactExports.forwardRef(function FormControl
     size,
     variant
   };
-  const classes = useUtilityClasses$k(ownerState);
+  const classes = useUtilityClasses$j(ownerState);
   const [adornedStart, setAdornedStart] = reactExports.useState(() => {
     let initialAdornedStart = false;
     if (children) {
@@ -20019,7 +20018,7 @@ function getFormControlLabelUtilityClasses(slot) {
   return generateUtilityClass("MuiFormControlLabel", slot);
 }
 const formControlLabelClasses = generateUtilityClasses("MuiFormControlLabel", ["root", "labelPlacementStart", "labelPlacementTop", "labelPlacementBottom", "disabled", "label", "error", "required", "asterisk"]);
-const useUtilityClasses$j = (ownerState) => {
+const useUtilityClasses$i = (ownerState) => {
   const {
     classes,
     disabled,
@@ -20155,7 +20154,7 @@ const FormControlLabel = /* @__PURE__ */ reactExports.forwardRef(function FormCo
     required,
     error: fcs.error
   };
-  const classes = useUtilityClasses$j(ownerState);
+  const classes = useUtilityClasses$i(ownerState);
   const externalForwardedProps = {
     slots,
     slotProps: {
@@ -20197,7 +20196,7 @@ function getFormHelperTextUtilityClasses(slot) {
 }
 const formHelperTextClasses = generateUtilityClasses("MuiFormHelperText", ["root", "error", "disabled", "sizeSmall", "sizeMedium", "contained", "focused", "filled", "required"]);
 var _span$2;
-const useUtilityClasses$i = (ownerState) => {
+const useUtilityClasses$h = (ownerState) => {
   const {
     classes,
     contained,
@@ -20292,7 +20291,7 @@ const FormHelperText = /* @__PURE__ */ reactExports.forwardRef(function FormHelp
     required: fcs.required
   };
   delete ownerState.ownerState;
-  const classes = useUtilityClasses$i(ownerState);
+  const classes = useUtilityClasses$h(ownerState);
   return /* @__PURE__ */ jsxRuntimeExports.jsx(FormHelperTextRoot, {
     as: component,
     className: clsx(classes.root, className),
@@ -20313,7 +20312,7 @@ function getFormLabelUtilityClasses(slot) {
   return generateUtilityClass("MuiFormLabel", slot);
 }
 const formLabelClasses = generateUtilityClasses("MuiFormLabel", ["root", "colorSecondary", "focused", "disabled", "error", "filled", "required", "asterisk"]);
-const useUtilityClasses$h = (ownerState) => {
+const useUtilityClasses$g = (ownerState) => {
   const {
     classes,
     color: color2,
@@ -20411,7 +20410,7 @@ const FormLabel = /* @__PURE__ */ reactExports.forwardRef(function FormLabel2(in
     focused: fcs.focused,
     required: fcs.required
   };
-  const classes = useUtilityClasses$h(ownerState);
+  const classes = useUtilityClasses$g(ownerState);
   return /* @__PURE__ */ jsxRuntimeExports.jsxs(FormLabelRoot, {
     as: component,
     ownerState,
@@ -20739,7 +20738,7 @@ function resolveSpacingClasses(spacing, breakpoints) {
   });
   return classes;
 }
-const useUtilityClasses$g = (ownerState) => {
+const useUtilityClasses$f = (ownerState) => {
   const {
     classes,
     container,
@@ -20817,7 +20816,7 @@ const Grid = /* @__PURE__ */ reactExports.forwardRef(function Grid2(inProps, ref
     ...breakpointsValues,
     breakpoints: breakpoints.keys
   };
-  const classes = useUtilityClasses$g(ownerState);
+  const classes = useUtilityClasses$f(ownerState);
   return /* @__PURE__ */ jsxRuntimeExports.jsx(GridContext.Provider, {
     value: columns,
     children: /* @__PURE__ */ jsxRuntimeExports.jsx(GridRoot, {
@@ -20992,7 +20991,7 @@ if (Grow) {
 const useMediaQuery = unstable_createUseMediaQuery({
   themeId: THEME_ID
 });
-const useUtilityClasses$f = (ownerState) => {
+const useUtilityClasses$e = (ownerState) => {
   const {
     classes,
     disableUnderline
@@ -21125,7 +21124,7 @@ const Input = /* @__PURE__ */ reactExports.forwardRef(function Input2(inProps, r
     type = "text",
     ...other
   } = props;
-  const classes = useUtilityClasses$f(props);
+  const classes = useUtilityClasses$e(props);
   const ownerState = {
     disableUnderline
   };
@@ -21157,7 +21156,7 @@ function getInputLabelUtilityClasses(slot) {
   return generateUtilityClass("MuiInputLabel", slot);
 }
 generateUtilityClasses("MuiInputLabel", ["root", "focused", "disabled", "error", "required", "asterisk", "formControl", "sizeSmall", "shrink", "animated", "standard", "filled", "outlined"]);
-const useUtilityClasses$e = (ownerState) => {
+const useUtilityClasses$d = (ownerState) => {
   const {
     classes,
     formControl,
@@ -21346,7 +21345,7 @@ const InputLabel = /* @__PURE__ */ reactExports.forwardRef(function InputLabel2(
     required: fcs.required,
     focused: fcs.focused
   };
-  const classes = useUtilityClasses$e(ownerState);
+  const classes = useUtilityClasses$d(ownerState);
   return /* @__PURE__ */ jsxRuntimeExports.jsx(InputLabelRoot, {
     "data-shrink": shrink,
     ref,
@@ -21361,7 +21360,7 @@ function getListUtilityClass(slot) {
   return generateUtilityClass("MuiList", slot);
 }
 generateUtilityClasses("MuiList", ["root", "padding", "dense", "subheader"]);
-const useUtilityClasses$d = (ownerState) => {
+const useUtilityClasses$c = (ownerState) => {
   const {
     classes,
     disablePadding,
@@ -21427,7 +21426,7 @@ const List = /* @__PURE__ */ reactExports.forwardRef(function List2(inProps, ref
     dense,
     disablePadding
   };
-  const classes = useUtilityClasses$d(ownerState);
+  const classes = useUtilityClasses$c(ownerState);
   return /* @__PURE__ */ jsxRuntimeExports.jsx(ListContext.Provider, {
     value: context,
     children: /* @__PURE__ */ jsxRuntimeExports.jsxs(ListRoot, {
@@ -21440,8 +21439,6 @@ const List = /* @__PURE__ */ reactExports.forwardRef(function List2(inProps, ref
     })
   });
 });
-const listItemIconClasses = generateUtilityClasses("MuiListItemIcon", ["root", "alignItemsFlexStart"]);
-const listItemTextClasses = generateUtilityClasses("MuiListItemText", ["root", "multiline", "dense", "inset", "primary", "secondary"]);
 function nextItem(list, item, disableListWrap) {
   if (list === item) {
     return list.firstChild;
@@ -21667,7 +21664,7 @@ function getTransformOriginValue(transformOrigin) {
 function resolveAnchorEl(anchorEl) {
   return typeof anchorEl === "function" ? anchorEl() : anchorEl;
 }
-const useUtilityClasses$c = (ownerState) => {
+const useUtilityClasses$b = (ownerState) => {
   const {
     classes
   } = ownerState;
@@ -21749,7 +21746,7 @@ const Popover = /* @__PURE__ */ reactExports.forwardRef(function Popover2(inProp
     transitionDuration: transitionDurationProp,
     TransitionProps
   };
-  const classes = useUtilityClasses$c(ownerState);
+  const classes = useUtilityClasses$b(ownerState);
   const getAnchorOffset = reactExports.useCallback(() => {
     if (anchorReference === "anchorPosition") {
       return anchorPosition;
@@ -21947,7 +21944,7 @@ const LTR_ORIGIN = {
   vertical: "top",
   horizontal: "left"
 };
-const useUtilityClasses$b = (ownerState) => {
+const useUtilityClasses$a = (ownerState) => {
   const {
     classes
   } = ownerState;
@@ -22021,7 +22018,7 @@ const Menu = /* @__PURE__ */ reactExports.forwardRef(function Menu2(inProps, ref
     TransitionProps,
     variant
   };
-  const classes = useUtilityClasses$b(ownerState);
+  const classes = useUtilityClasses$a(ownerState);
   const autoFocusItem = autoFocus && !disableAutoFocusItem && open;
   const menuListActionsRef = reactExports.useRef(null);
   const handleEntering = (element, isAppearing) => {
@@ -22103,195 +22100,6 @@ const Menu = /* @__PURE__ */ reactExports.forwardRef(function Menu2(inProps, ref
       ...MenuListProps,
       className: clsx(classes.list, MenuListProps.className),
       children
-    })
-  });
-});
-function getMenuItemUtilityClass(slot) {
-  return generateUtilityClass("MuiMenuItem", slot);
-}
-const menuItemClasses = generateUtilityClasses("MuiMenuItem", ["root", "focusVisible", "dense", "disabled", "divider", "gutters", "selected"]);
-const overridesResolver = (props, styles2) => {
-  const {
-    ownerState
-  } = props;
-  return [styles2.root, ownerState.dense && styles2.dense, ownerState.divider && styles2.divider, !ownerState.disableGutters && styles2.gutters];
-};
-const useUtilityClasses$a = (ownerState) => {
-  const {
-    disabled,
-    dense,
-    divider,
-    disableGutters,
-    selected,
-    classes
-  } = ownerState;
-  const slots = {
-    root: ["root", dense && "dense", disabled && "disabled", !disableGutters && "gutters", divider && "divider", selected && "selected"]
-  };
-  const composedClasses = composeClasses(slots, getMenuItemUtilityClass, classes);
-  return {
-    ...classes,
-    ...composedClasses
-  };
-};
-const MenuItemRoot = styled(ButtonBase, {
-  shouldForwardProp: (prop) => rootShouldForwardProp(prop) || prop === "classes",
-  name: "MuiMenuItem",
-  slot: "Root",
-  overridesResolver
-})(memoTheme(({
-  theme
-}) => ({
-  ...theme.typography.body1,
-  display: "flex",
-  justifyContent: "flex-start",
-  alignItems: "center",
-  position: "relative",
-  textDecoration: "none",
-  minHeight: 48,
-  paddingTop: 6,
-  paddingBottom: 6,
-  boxSizing: "border-box",
-  whiteSpace: "nowrap",
-  "&:hover": {
-    textDecoration: "none",
-    backgroundColor: (theme.vars || theme).palette.action.hover,
-    // Reset on touch devices, it doesn't add specificity
-    "@media (hover: none)": {
-      backgroundColor: "transparent"
-    }
-  },
-  [`&.${menuItemClasses.selected}`]: {
-    backgroundColor: theme.vars ? `rgba(${theme.vars.palette.primary.mainChannel} / ${theme.vars.palette.action.selectedOpacity})` : alpha(theme.palette.primary.main, theme.palette.action.selectedOpacity),
-    [`&.${menuItemClasses.focusVisible}`]: {
-      backgroundColor: theme.vars ? `rgba(${theme.vars.palette.primary.mainChannel} / calc(${theme.vars.palette.action.selectedOpacity} + ${theme.vars.palette.action.focusOpacity}))` : alpha(theme.palette.primary.main, theme.palette.action.selectedOpacity + theme.palette.action.focusOpacity)
-    }
-  },
-  [`&.${menuItemClasses.selected}:hover`]: {
-    backgroundColor: theme.vars ? `rgba(${theme.vars.palette.primary.mainChannel} / calc(${theme.vars.palette.action.selectedOpacity} + ${theme.vars.palette.action.hoverOpacity}))` : alpha(theme.palette.primary.main, theme.palette.action.selectedOpacity + theme.palette.action.hoverOpacity),
-    // Reset on touch devices, it doesn't add specificity
-    "@media (hover: none)": {
-      backgroundColor: theme.vars ? `rgba(${theme.vars.palette.primary.mainChannel} / ${theme.vars.palette.action.selectedOpacity})` : alpha(theme.palette.primary.main, theme.palette.action.selectedOpacity)
-    }
-  },
-  [`&.${menuItemClasses.focusVisible}`]: {
-    backgroundColor: (theme.vars || theme).palette.action.focus
-  },
-  [`&.${menuItemClasses.disabled}`]: {
-    opacity: (theme.vars || theme).palette.action.disabledOpacity
-  },
-  [`& + .${dividerClasses.root}`]: {
-    marginTop: theme.spacing(1),
-    marginBottom: theme.spacing(1)
-  },
-  [`& + .${dividerClasses.inset}`]: {
-    marginLeft: 52
-  },
-  [`& .${listItemTextClasses.root}`]: {
-    marginTop: 0,
-    marginBottom: 0
-  },
-  [`& .${listItemTextClasses.inset}`]: {
-    paddingLeft: 36
-  },
-  [`& .${listItemIconClasses.root}`]: {
-    minWidth: 36
-  },
-  variants: [{
-    props: ({
-      ownerState
-    }) => !ownerState.disableGutters,
-    style: {
-      paddingLeft: 16,
-      paddingRight: 16
-    }
-  }, {
-    props: ({
-      ownerState
-    }) => ownerState.divider,
-    style: {
-      borderBottom: `1px solid ${(theme.vars || theme).palette.divider}`,
-      backgroundClip: "padding-box"
-    }
-  }, {
-    props: ({
-      ownerState
-    }) => !ownerState.dense,
-    style: {
-      [theme.breakpoints.up("sm")]: {
-        minHeight: "auto"
-      }
-    }
-  }, {
-    props: ({
-      ownerState
-    }) => ownerState.dense,
-    style: {
-      minHeight: 32,
-      // https://m2.material.io/components/menus#specs > Dense
-      paddingTop: 4,
-      paddingBottom: 4,
-      ...theme.typography.body2,
-      [`& .${listItemIconClasses.root} svg`]: {
-        fontSize: "1.25rem"
-      }
-    }
-  }]
-})));
-const MenuItem = /* @__PURE__ */ reactExports.forwardRef(function MenuItem2(inProps, ref) {
-  const props = useDefaultProps({
-    props: inProps,
-    name: "MuiMenuItem"
-  });
-  const {
-    autoFocus = false,
-    component = "li",
-    dense = false,
-    divider = false,
-    disableGutters = false,
-    focusVisibleClassName,
-    role = "menuitem",
-    tabIndex: tabIndexProp,
-    className,
-    ...other
-  } = props;
-  const context = reactExports.useContext(ListContext);
-  const childContext = reactExports.useMemo(() => ({
-    dense: dense || context.dense || false,
-    disableGutters
-  }), [context.dense, dense, disableGutters]);
-  const menuItemRef = reactExports.useRef(null);
-  useEnhancedEffect(() => {
-    if (autoFocus) {
-      if (menuItemRef.current) {
-        menuItemRef.current.focus();
-      }
-    }
-  }, [autoFocus]);
-  const ownerState = {
-    ...props,
-    dense: childContext.dense,
-    divider,
-    disableGutters
-  };
-  const classes = useUtilityClasses$a(props);
-  const handleRef = useForkRef(menuItemRef, ref);
-  let tabIndex;
-  if (!props.disabled) {
-    tabIndex = tabIndexProp !== void 0 ? tabIndexProp : -1;
-  }
-  return /* @__PURE__ */ jsxRuntimeExports.jsx(ListContext.Provider, {
-    value: childContext,
-    children: /* @__PURE__ */ jsxRuntimeExports.jsx(MenuItemRoot, {
-      ref: handleRef,
-      role,
-      tabIndex,
-      component,
-      focusVisibleClassName: clsx(classes.focusVisible, focusVisibleClassName),
-      className: clsx(classes.root, className),
-      ...other,
-      ownerState,
-      classes
     })
   });
 });
@@ -31852,9 +31660,6 @@ const SplitIcon = createSvgIcon(/* @__PURE__ */ jsxRuntimeExports.jsx("path", {
 const RestoreIcon = createSvgIcon(/* @__PURE__ */ jsxRuntimeExports.jsx("path", {
   d: "M19 4h-3.5l-1-1h-5l-1 1H5v2h14zM6 7v12c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7zm8 7v4h-4v-4H8l4-4 4 4z"
 }), "RestoreFromTrash");
-const MoreVertIcon = createSvgIcon(/* @__PURE__ */ jsxRuntimeExports.jsx("path", {
-  d: "M12 8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2m0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2m0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2"
-}), "MoreVert");
 const AutoFixHighIcon = createSvgIcon(/* @__PURE__ */ jsxRuntimeExports.jsx("path", {
   d: "M7.5 5.6 10 7 8.6 4.5 10 2 7.5 3.4 5 2l1.4 2.5L5 7zm12 9.8L17 14l1.4 2.5L17 19l2.5-1.4L22 19l-1.4-2.5L22 14zM22 2l-2.5 1.4L17 2l1.4 2.5L17 7l2.5-1.4L22 7l-1.4-2.5zm-7.63 5.29a.996.996 0 0 0-1.41 0L1.29 18.96c-.39.39-.39 1.02 0 1.41l2.34 2.34c.39.39 1.02.39 1.41 0L16.7 11.05c.39-.39.39-1.02 0-1.41zm-1.03 5.49-2.12-2.12 2.44-2.44 2.12 2.12z"
 }), "AutoFixHigh");
@@ -32167,6 +31972,181 @@ let nanoid = (size = 21) => {
   }
   return id;
 };
+const WordDivider = ({
+  onAddWord,
+  onMergeWords,
+  onAddSegmentBefore,
+  onAddSegmentAfter,
+  onSplitSegment,
+  canMerge = false,
+  isFirst = false,
+  isLast = false,
+  sx = {}
+}) => /* @__PURE__ */ jsxRuntimeExports.jsx(
+  Box,
+  {
+    sx: {
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      height: "20px",
+      my: -0.5,
+      width: "50%",
+      backgroundColor: "#fff",
+      ...sx
+    },
+    children: /* @__PURE__ */ jsxRuntimeExports.jsxs(Box, { sx: {
+      display: "flex",
+      alignItems: "center",
+      gap: 1,
+      backgroundColor: "#fff",
+      padding: "0 8px",
+      zIndex: 1
+    }, children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx(
+        Button,
+        {
+          onClick: onAddWord,
+          title: "Add Word",
+          size: "small",
+          startIcon: /* @__PURE__ */ jsxRuntimeExports.jsx(AddIcon, {}),
+          sx: {
+            minHeight: 0,
+            padding: "2px 8px",
+            color: "primary.main",
+            "& .MuiButton-startIcon": {
+              marginRight: 0.5
+            },
+            "& .MuiSvgIcon-root": {
+              fontSize: "1.2rem"
+            }
+          },
+          children: /* @__PURE__ */ jsxRuntimeExports.jsx(Typography, { sx: {
+            color: "rgba(0, 0, 0, 0.6)",
+            fontFamily: '"Roboto", "Helvetica", "Arial", sans-serif',
+            fontWeight: 400,
+            fontSize: "0.875rem",
+            lineHeight: "1.4375em",
+            textTransform: "none"
+          }, children: "Add Word" })
+        }
+      ),
+      isFirst && /* @__PURE__ */ jsxRuntimeExports.jsx(
+        Button,
+        {
+          onClick: onAddSegmentBefore,
+          title: "Add Segment",
+          size: "small",
+          startIcon: /* @__PURE__ */ jsxRuntimeExports.jsx(AddIcon, { sx: { transform: "rotate(90deg)" } }),
+          sx: {
+            minHeight: 0,
+            padding: "2px 8px",
+            color: "success.main",
+            "& .MuiButton-startIcon": {
+              marginRight: 0.5
+            },
+            "& .MuiSvgIcon-root": {
+              fontSize: "1.2rem"
+            }
+          },
+          children: /* @__PURE__ */ jsxRuntimeExports.jsx(Typography, { sx: {
+            color: "rgba(0, 0, 0, 0.6)",
+            fontFamily: '"Roboto", "Helvetica", "Arial", sans-serif',
+            fontWeight: 400,
+            fontSize: "0.875rem",
+            lineHeight: "1.4375em",
+            textTransform: "none"
+          }, children: "Add Segment" })
+        }
+      ),
+      onMergeWords && !isLast && /* @__PURE__ */ jsxRuntimeExports.jsx(
+        Button,
+        {
+          onClick: onMergeWords,
+          title: "Merge Words",
+          size: "small",
+          startIcon: /* @__PURE__ */ jsxRuntimeExports.jsx(MergeIcon, { sx: { transform: "rotate(90deg)" } }),
+          disabled: !canMerge,
+          sx: {
+            minHeight: 0,
+            padding: "2px 8px",
+            color: "primary.main",
+            "& .MuiButton-startIcon": {
+              marginRight: 0.5
+            },
+            "& .MuiSvgIcon-root": {
+              fontSize: "1.2rem"
+            }
+          },
+          children: /* @__PURE__ */ jsxRuntimeExports.jsx(Typography, { sx: {
+            color: "rgba(0, 0, 0, 0.6)",
+            fontFamily: '"Roboto", "Helvetica", "Arial", sans-serif',
+            fontWeight: 400,
+            fontSize: "0.875rem",
+            lineHeight: "1.4375em",
+            textTransform: "none"
+          }, children: "Merge Words" })
+        }
+      ),
+      onSplitSegment && !isLast && /* @__PURE__ */ jsxRuntimeExports.jsx(
+        Button,
+        {
+          onClick: onSplitSegment,
+          title: "Split Segment",
+          size: "small",
+          startIcon: /* @__PURE__ */ jsxRuntimeExports.jsx(SplitIcon, { sx: { transform: "rotate(90deg)" } }),
+          sx: {
+            minHeight: 0,
+            padding: "2px 8px",
+            color: "warning.main",
+            "& .MuiButton-startIcon": {
+              marginRight: 0.5
+            },
+            "& .MuiSvgIcon-root": {
+              fontSize: "1.2rem"
+            }
+          },
+          children: /* @__PURE__ */ jsxRuntimeExports.jsx(Typography, { sx: {
+            color: "rgba(0, 0, 0, 0.6)",
+            fontFamily: '"Roboto", "Helvetica", "Arial", sans-serif',
+            fontWeight: 400,
+            fontSize: "0.875rem",
+            lineHeight: "1.4375em",
+            textTransform: "none"
+          }, children: "Split Segment" })
+        }
+      ),
+      isLast && /* @__PURE__ */ jsxRuntimeExports.jsx(
+        Button,
+        {
+          onClick: onAddSegmentAfter,
+          title: "Add Segment",
+          size: "small",
+          startIcon: /* @__PURE__ */ jsxRuntimeExports.jsx(AddIcon, { sx: { transform: "rotate(90deg)" } }),
+          sx: {
+            minHeight: 0,
+            padding: "2px 8px",
+            color: "success.main",
+            "& .MuiButton-startIcon": {
+              marginRight: 0.5
+            },
+            "& .MuiSvgIcon-root": {
+              fontSize: "1.2rem"
+            }
+          },
+          children: /* @__PURE__ */ jsxRuntimeExports.jsx(Typography, { sx: {
+            color: "rgba(0, 0, 0, 0.6)",
+            fontFamily: '"Roboto", "Helvetica", "Arial", sans-serif',
+            fontWeight: 400,
+            fontSize: "0.875rem",
+            lineHeight: "1.4375em",
+            textTransform: "none"
+          }, children: "Add Segment" })
+        }
+      )
+    ] })
+  }
+);
 function EditModal({
   open,
   onClose,
@@ -32183,8 +32163,6 @@ function EditModal({
 }) {
   var _a, _b, _c, _d;
   const [editedSegment, setEditedSegment] = reactExports.useState(segment);
-  const [menuAnchorEl, setMenuAnchorEl] = reactExports.useState(null);
-  const [selectedWordIndex, setSelectedWordIndex] = reactExports.useState(null);
   const [replacementText, setReplacementText] = reactExports.useState("");
   const [isManualSyncing, setIsManualSyncing] = reactExports.useState(false);
   const [syncWordIndex, setSyncWordIndex] = reactExports.useState(-1);
@@ -32334,34 +32312,25 @@ function EditModal({
     const word = editedSegment.words[index];
     const startTime = word.start_time ?? 0;
     const endTime = word.end_time ?? startTime + 0.5;
-    const midTime = (startTime + endTime) / 2;
-    const words = word.text.split(/\s+/);
+    const totalDuration = endTime - startTime;
+    const words = word.text.split(/\s+/).filter((w) => w.length > 0);
     if (words.length <= 1) {
       const firstHalf = word.text.slice(0, Math.ceil(word.text.length / 2));
       const secondHalf = word.text.slice(Math.ceil(word.text.length / 2));
       words[0] = firstHalf;
       words[1] = secondHalf;
     }
-    const newWords = [...editedSegment.words];
-    newWords.splice(
-      index,
-      1,
-      {
-        id: nanoid(),
-        text: words[0],
-        start_time: startTime,
-        end_time: midTime,
-        confidence: 1
-      },
-      {
-        id: nanoid(),
-        text: words[1],
-        start_time: midTime,
-        end_time: endTime,
-        confidence: 1
-      }
-    );
-    updateSegment2(newWords);
+    const timePerWord = totalDuration / words.length;
+    const newWords = words.map((text, i) => ({
+      id: nanoid(),
+      text,
+      start_time: startTime + i * timePerWord,
+      end_time: startTime + (i + 1) * timePerWord,
+      confidence: 1
+    }));
+    const allWords = [...editedSegment.words];
+    allWords.splice(index, 1, ...newWords);
+    updateSegment2(allWords);
   };
   const handleMergeWords = (index) => {
     if (index >= editedSegment.words.length - 1) return;
@@ -32383,14 +32352,6 @@ function EditModal({
   };
   const handleReset = () => {
     setEditedSegment(JSON.parse(JSON.stringify(originalSegment)));
-  };
-  const handleWordMenu = (event, index) => {
-    setMenuAnchorEl(event.currentTarget);
-    setSelectedWordIndex(index);
-  };
-  const handleMenuClose = () => {
-    setMenuAnchorEl(null);
-    setSelectedWordIndex(null);
   };
   const handleSave = () => {
     var _a2, _b2;
@@ -32484,6 +32445,14 @@ function EditModal({
       maxWidth: "md",
       fullWidth: true,
       onKeyDown: handleKeyDown,
+      PaperProps: {
+        sx: {
+          height: "90vh",
+          // Take up 90% of viewport height
+          margin: "5vh 0"
+          // Add 5vh margin top and bottom
+        }
+      },
       children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs(DialogTitle, { sx: { display: "flex", alignItems: "center", gap: 1 }, children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs(Box, { sx: { flex: 1, display: "flex", alignItems: "center", gap: 1 }, children: [
@@ -32501,123 +32470,180 @@ function EditModal({
           ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsx(IconButton, { onClick: onClose, sx: { ml: "auto" }, children: /* @__PURE__ */ jsxRuntimeExports.jsx(CloseIcon, {}) })
         ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs(DialogContent, { dividers: true, children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx(Box, { sx: { mb: 2 }, children: /* @__PURE__ */ jsxRuntimeExports.jsx(
-            TimelineEditor,
-            {
-              words: editedSegment.words,
-              startTime: timeRange.start,
-              endTime: timeRange.end,
-              onWordUpdate: handleWordChange,
-              currentTime,
-              onPlaySegment
-            }
-          ) }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs(Box, { sx: { mb: 2, display: "flex", alignItems: "center", justifyContent: "space-between" }, children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsxs(Typography, { variant: "body2", color: "text.secondary", children: [
-              "Original Time Range: ",
-              ((_a = originalSegment.start_time) == null ? void 0 : _a.toFixed(2)) ?? "N/A",
-              " - ",
-              ((_b = originalSegment.end_time) == null ? void 0 : _b.toFixed(2)) ?? "N/A",
-              /* @__PURE__ */ jsxRuntimeExports.jsx("br", {}),
-              "Current Time Range: ",
-              ((_c = editedSegment.start_time) == null ? void 0 : _c.toFixed(2)) ?? "N/A",
-              " - ",
-              ((_d = editedSegment.end_time) == null ? void 0 : _d.toFixed(2)) ?? "N/A"
-            ] }),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs(Box, { sx: { display: "flex", alignItems: "center", gap: 2 }, children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx(
-                Button,
+        /* @__PURE__ */ jsxRuntimeExports.jsxs(
+          DialogContent,
+          {
+            dividers: true,
+            sx: {
+              display: "flex",
+              flexDirection: "column",
+              flexGrow: 1,
+              // Allow content to fill available space
+              overflow: "hidden"
+              // Prevent double scrollbars
+            },
+            children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx(Box, { sx: { mb: 2 }, children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+                TimelineEditor,
                 {
-                  variant: isManualSyncing ? "outlined" : "contained",
-                  onClick: startManualSync,
-                  disabled: !onPlaySegment,
-                  startIcon: isManualSyncing ? /* @__PURE__ */ jsxRuntimeExports.jsx(CancelIcon, {}) : /* @__PURE__ */ jsxRuntimeExports.jsx(PlayCircleOutlineIcon, {}),
-                  color: isManualSyncing ? "error" : "primary",
-                  children: isManualSyncing ? "Cancel Sync" : "Manual Sync"
+                  words: editedSegment.words,
+                  startTime: timeRange.start,
+                  endTime: timeRange.end,
+                  onWordUpdate: handleWordChange,
+                  currentTime,
+                  onPlaySegment
                 }
-              ),
-              isManualSyncing && /* @__PURE__ */ jsxRuntimeExports.jsxs(Typography, { variant: "body2", children: [
-                "Press spacebar for word ",
-                syncWordIndex + 1,
-                " of ",
-                editedSegment == null ? void 0 : editedSegment.words.length
+              ) }),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs(Box, { sx: { mb: 2, display: "flex", alignItems: "center", justifyContent: "space-between" }, children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsxs(Typography, { variant: "body2", color: "text.secondary", children: [
+                  "Original Time Range: ",
+                  ((_a = originalSegment.start_time) == null ? void 0 : _a.toFixed(2)) ?? "N/A",
+                  " - ",
+                  ((_b = originalSegment.end_time) == null ? void 0 : _b.toFixed(2)) ?? "N/A",
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("br", {}),
+                  "Current Time Range: ",
+                  ((_c = editedSegment.start_time) == null ? void 0 : _c.toFixed(2)) ?? "N/A",
+                  " - ",
+                  ((_d = editedSegment.end_time) == null ? void 0 : _d.toFixed(2)) ?? "N/A"
+                ] }),
+                /* @__PURE__ */ jsxRuntimeExports.jsxs(Box, { sx: { display: "flex", alignItems: "center", gap: 2 }, children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx(
+                    Button,
+                    {
+                      variant: isManualSyncing ? "outlined" : "contained",
+                      onClick: startManualSync,
+                      disabled: !onPlaySegment,
+                      startIcon: isManualSyncing ? /* @__PURE__ */ jsxRuntimeExports.jsx(CancelIcon, {}) : /* @__PURE__ */ jsxRuntimeExports.jsx(PlayCircleOutlineIcon, {}),
+                      color: isManualSyncing ? "error" : "primary",
+                      children: isManualSyncing ? "Cancel Sync" : "Manual Sync"
+                    }
+                  ),
+                  isManualSyncing && /* @__PURE__ */ jsxRuntimeExports.jsxs(Typography, { variant: "body2", children: [
+                    "Press spacebar for word ",
+                    syncWordIndex + 1,
+                    " of ",
+                    editedSegment == null ? void 0 : editedSegment.words.length
+                  ] })
+                ] })
+              ] }),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs(Box, { sx: {
+                display: "flex",
+                flexDirection: "column",
+                gap: 0.5,
+                mb: 3,
+                pt: 1,
+                flexGrow: 1,
+                overflowY: "auto"
+              }, children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  WordDivider,
+                  {
+                    onAddWord: () => handleAddWord(-1),
+                    onAddSegmentBefore: () => onAddSegment == null ? void 0 : onAddSegment(segmentIndex),
+                    isFirst: true,
+                    sx: { ml: 15 }
+                  }
+                ),
+                editedSegment.words.map((word, index) => {
+                  var _a2, _b2;
+                  return /* @__PURE__ */ jsxRuntimeExports.jsxs(Box, { children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsxs(Box, { sx: { display: "flex", gap: 2, alignItems: "center" }, children: [
+                      /* @__PURE__ */ jsxRuntimeExports.jsx(
+                        TextField,
+                        {
+                          label: `Word ${index}`,
+                          value: word.text,
+                          onChange: (e) => handleWordChange(index, { text: e.target.value }),
+                          fullWidth: true,
+                          size: "small"
+                        }
+                      ),
+                      /* @__PURE__ */ jsxRuntimeExports.jsx(
+                        TextField,
+                        {
+                          label: "Start Time",
+                          value: ((_a2 = word.start_time) == null ? void 0 : _a2.toFixed(2)) ?? "",
+                          onChange: (e) => handleWordChange(index, { start_time: parseFloat(e.target.value) }),
+                          type: "number",
+                          inputProps: { step: 0.01 },
+                          sx: { width: "150px" },
+                          size: "small"
+                        }
+                      ),
+                      /* @__PURE__ */ jsxRuntimeExports.jsx(
+                        TextField,
+                        {
+                          label: "End Time",
+                          value: ((_b2 = word.end_time) == null ? void 0 : _b2.toFixed(2)) ?? "",
+                          onChange: (e) => handleWordChange(index, { end_time: parseFloat(e.target.value) }),
+                          type: "number",
+                          inputProps: { step: 0.01 },
+                          sx: { width: "150px" },
+                          size: "small"
+                        }
+                      ),
+                      /* @__PURE__ */ jsxRuntimeExports.jsx(
+                        IconButton,
+                        {
+                          onClick: () => handleSplitWord(index),
+                          title: "Split Word",
+                          sx: { color: "primary.main" },
+                          size: "small",
+                          children: /* @__PURE__ */ jsxRuntimeExports.jsx(SplitIcon, { fontSize: "small" })
+                        }
+                      ),
+                      /* @__PURE__ */ jsxRuntimeExports.jsx(
+                        IconButton,
+                        {
+                          onClick: () => handleRemoveWord(index),
+                          disabled: editedSegment.words.length <= 1,
+                          title: "Remove Word",
+                          sx: { color: "error.main" },
+                          size: "small",
+                          children: /* @__PURE__ */ jsxRuntimeExports.jsx(DeleteIcon, { fontSize: "small" })
+                        }
+                      )
+                    ] }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx(
+                      WordDivider,
+                      {
+                        onAddWord: () => handleAddWord(index),
+                        onMergeWords: () => handleMergeWords(index),
+                        onSplitSegment: () => handleSplitSegment(index),
+                        onAddSegmentAfter: index === editedSegment.words.length - 1 ? () => onAddSegment == null ? void 0 : onAddSegment(segmentIndex + 1) : void 0,
+                        canMerge: index < editedSegment.words.length - 1,
+                        isLast: index === editedSegment.words.length - 1,
+                        sx: { ml: 15 }
+                      }
+                    )
+                  ] }, word.id);
+                })
+              ] }),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs(Box, { sx: { display: "flex", gap: 2, mt: 2 }, children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  TextField,
+                  {
+                    value: replacementText,
+                    onChange: (e) => setReplacementText(e.target.value),
+                    placeholder: "Replace all words",
+                    size: "small",
+                    sx: { flexGrow: 1, maxWidth: "calc(100% - 140px)" }
+                  }
+                ),
+                /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  Button,
+                  {
+                    onClick: handleReplaceAllWords,
+                    startIcon: /* @__PURE__ */ jsxRuntimeExports.jsx(AutoFixHighIcon, {}),
+                    size: "small",
+                    sx: { whiteSpace: "nowrap" },
+                    children: "Replace All"
+                  }
+                )
               ] })
-            ] })
-          ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx(Box, { sx: { display: "flex", flexDirection: "column", gap: 1, mb: 3 }, children: editedSegment.words.map((word, index) => {
-            var _a2, _b2;
-            return /* @__PURE__ */ jsxRuntimeExports.jsxs(Box, { sx: { display: "flex", gap: 2, alignItems: "center" }, children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx(
-                TextField,
-                {
-                  label: `Word ${index}`,
-                  value: word.text,
-                  onChange: (e) => handleWordChange(index, { text: e.target.value }),
-                  fullWidth: true,
-                  size: "small"
-                }
-              ),
-              /* @__PURE__ */ jsxRuntimeExports.jsx(
-                TextField,
-                {
-                  label: "Start Time",
-                  value: ((_a2 = word.start_time) == null ? void 0 : _a2.toFixed(2)) ?? "",
-                  onChange: (e) => handleWordChange(index, { start_time: parseFloat(e.target.value) }),
-                  type: "number",
-                  inputProps: { step: 0.01 },
-                  sx: { width: "150px" },
-                  size: "small"
-                }
-              ),
-              /* @__PURE__ */ jsxRuntimeExports.jsx(
-                TextField,
-                {
-                  label: "End Time",
-                  value: ((_b2 = word.end_time) == null ? void 0 : _b2.toFixed(2)) ?? "",
-                  onChange: (e) => handleWordChange(index, { end_time: parseFloat(e.target.value) }),
-                  type: "number",
-                  inputProps: { step: 0.01 },
-                  sx: { width: "150px" },
-                  size: "small"
-                }
-              ),
-              /* @__PURE__ */ jsxRuntimeExports.jsx(
-                IconButton,
-                {
-                  onClick: () => handleRemoveWord(index),
-                  disabled: editedSegment.words.length <= 1,
-                  sx: { color: "error.main" },
-                  children: /* @__PURE__ */ jsxRuntimeExports.jsx(DeleteIcon, { fontSize: "small" })
-                }
-              ),
-              /* @__PURE__ */ jsxRuntimeExports.jsx(IconButton, { onClick: (e) => handleWordMenu(e, index), children: /* @__PURE__ */ jsxRuntimeExports.jsx(MoreVertIcon, {}) })
-            ] }, index);
-          }) }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs(Box, { sx: { display: "flex", gap: 2 }, children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx(
-              TextField,
-              {
-                label: "Replace all words",
-                value: replacementText,
-                onChange: (e) => setReplacementText(e.target.value),
-                fullWidth: true,
-                placeholder: "Type or paste replacement words here",
-                size: "small"
-              }
-            ),
-            /* @__PURE__ */ jsxRuntimeExports.jsx(
-              Button,
-              {
-                variant: "contained",
-                startIcon: /* @__PURE__ */ jsxRuntimeExports.jsx(AutoFixHighIcon, {}),
-                onClick: handleReplaceAllWords,
-                disabled: !replacementText.trim(),
-                children: "Replace All"
-              }
-            )
-          ] })
-        ] }),
+            ]
+          }
+        ),
         /* @__PURE__ */ jsxRuntimeExports.jsxs(DialogActions, { children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx(
             Button,
@@ -32628,91 +32654,18 @@ function EditModal({
               children: "Reset"
             }
           ),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs(Box, { sx: { mr: "auto", display: "flex", gap: 1 }, children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx(
-              Button,
-              {
-                startIcon: /* @__PURE__ */ jsxRuntimeExports.jsx(AddIcon, {}),
-                onClick: () => segmentIndex !== null && (onAddSegment == null ? void 0 : onAddSegment(segmentIndex)),
-                color: "primary",
-                children: "Add Segment Before"
-              }
-            ),
-            /* @__PURE__ */ jsxRuntimeExports.jsx(
-              Button,
-              {
-                startIcon: /* @__PURE__ */ jsxRuntimeExports.jsx(DeleteIcon, {}),
-                onClick: handleDelete,
-                color: "error",
-                children: "Delete Segment"
-              }
-            )
-          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(Box, { sx: { mr: "auto" }, children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+            Button,
+            {
+              startIcon: /* @__PURE__ */ jsxRuntimeExports.jsx(DeleteIcon, {}),
+              onClick: handleDelete,
+              color: "error",
+              children: "Delete Segment"
+            }
+          ) }),
           /* @__PURE__ */ jsxRuntimeExports.jsx(Button, { onClick: handleClose, children: "Cancel" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx(Button, { onClick: () => {
-            cleanupManualSync();
-            onSave(editedSegment);
-          }, children: "Save Changes" })
-        ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs(
-          Menu,
-          {
-            anchorEl: menuAnchorEl,
-            open: Boolean(menuAnchorEl),
-            onClose: handleMenuClose,
-            children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsxs(MenuItem, { onClick: () => {
-                handleAddWord(selectedWordIndex);
-                handleMenuClose();
-              }, children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx(AddIcon, { sx: { mr: 1 } }),
-                " Add Word After"
-              ] }),
-              /* @__PURE__ */ jsxRuntimeExports.jsxs(MenuItem, { onClick: () => {
-                handleSplitWord(selectedWordIndex);
-                handleMenuClose();
-              }, children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx(SplitIcon, { sx: { mr: 1 } }),
-                " Split Word"
-              ] }),
-              /* @__PURE__ */ jsxRuntimeExports.jsxs(MenuItem, { onClick: () => {
-                handleSplitSegment(selectedWordIndex);
-                handleMenuClose();
-              }, children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx(SplitIcon, { sx: { mr: 1 } }),
-                " Split Segment After Word"
-              ] }),
-              /* @__PURE__ */ jsxRuntimeExports.jsxs(
-                MenuItem,
-                {
-                  onClick: () => {
-                    handleMergeWords(selectedWordIndex);
-                    handleMenuClose();
-                  },
-                  disabled: selectedWordIndex === editedSegment.words.length - 1,
-                  children: [
-                    /* @__PURE__ */ jsxRuntimeExports.jsx(MergeIcon, { sx: { mr: 1 } }),
-                    " Merge with Next"
-                  ]
-                }
-              ),
-              /* @__PURE__ */ jsxRuntimeExports.jsxs(
-                MenuItem,
-                {
-                  onClick: () => {
-                    handleRemoveWord(selectedWordIndex);
-                    handleMenuClose();
-                  },
-                  disabled: editedSegment.words.length <= 1,
-                  children: [
-                    /* @__PURE__ */ jsxRuntimeExports.jsx(DeleteIcon, { sx: { mr: 1 }, color: "error" }),
-                    " Remove"
-                  ]
-                }
-              )
-            ]
-          }
-        )
+          /* @__PURE__ */ jsxRuntimeExports.jsx(Button, { onClick: handleSave, children: "Save Changes" })
+        ] })
       ]
     }
   );
@@ -33643,6 +33596,7 @@ function AddLyricsModal({
     }
   };
   const handleClose = () => {
+    if (isSubmitting) return;
     setSource("");
     setLyrics("");
     setError(null);
@@ -33655,6 +33609,7 @@ function AddLyricsModal({
       onClose: handleClose,
       maxWidth: "md",
       fullWidth: true,
+      disableEscapeKeyDown: isSubmitting,
       children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx(DialogTitle, { children: "Add Reference Lyrics" }),
         /* @__PURE__ */ jsxRuntimeExports.jsx(DialogContent, { children: /* @__PURE__ */ jsxRuntimeExports.jsxs(Box, { sx: { display: "flex", flexDirection: "column", gap: 2, mt: 1 }, children: [
@@ -34316,4 +34271,4 @@ function App() {
 ReactDOM$1.createRoot(document.getElementById("root")).render(
   /* @__PURE__ */ jsxRuntimeExports.jsx(App, {})
 );
-//# sourceMappingURL=index-Cl37y2OS.js.map
+//# sourceMappingURL=index-M5yBStmc.js.map

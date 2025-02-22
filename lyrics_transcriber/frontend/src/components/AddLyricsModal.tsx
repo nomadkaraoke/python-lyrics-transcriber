@@ -51,6 +51,9 @@ export default function AddLyricsModal({
     }
 
     const handleClose = () => {
+        // Don't allow closing if currently submitting
+        if (isSubmitting) return
+
         setSource('')
         setLyrics('')
         setError(null)
@@ -63,6 +66,7 @@ export default function AddLyricsModal({
             onClose={handleClose}
             maxWidth="md"
             fullWidth
+            disableEscapeKeyDown={isSubmitting}
         >
             <DialogTitle>Add Reference Lyrics</DialogTitle>
             <DialogContent>

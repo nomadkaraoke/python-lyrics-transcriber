@@ -96,14 +96,17 @@ class AnchorSequenceFinder:
 
     def _get_cache_key(self, transcribed: str, references: Dict[str, LyricsData], transcription_result: TranscriptionResult) -> str:
         """Generate a unique cache key for the input combination."""
-        # Create a string that uniquely identifies the inputs, but only using stable content
-        # Use only the text content, not IDs or other potentially varying metadata
+        # Create a string that uniquely identifies the inputs, including word IDs
         ref_texts = []
         for source, lyrics in sorted(references.items()):
-            text = " ".join(w.text for s in lyrics.segments for w in s.words)
-            ref_texts.append(f"{source}:{text}")
+            # Include both text and ID for each word to ensure cache uniqueness
+            words_with_ids = [f"{w.text}:{w.id}" for s in lyrics.segments for w in s.words]
+            ref_texts.append(f"{source}:{','.join(words_with_ids)}")
 
-        input_str = f"{transcribed}|" f"{','.join(ref_texts)}"
+        # Also include transcription word IDs to ensure complete matching
+        trans_words_with_ids = [f"{w.text}:{w.id}" for s in transcription_result.segments for w in s.words]
+
+        input_str = f"{transcribed}|" f"{','.join(trans_words_with_ids)}|" f"{','.join(ref_texts)}"
         return hashlib.md5(input_str.encode()).hexdigest()
 
     def _save_to_cache(self, cache_path: Path, anchors: List[ScoredAnchor]) -> None:

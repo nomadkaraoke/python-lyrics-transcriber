@@ -7,9 +7,7 @@ import {
     Box,
     TextField,
     Button,
-    Typography,
-    Menu,
-    MenuItem,
+    Typography
 } from '@mui/material'
 import CloseIcon from '@mui/icons-material/Close'
 import AddIcon from '@mui/icons-material/Add'
@@ -17,7 +15,6 @@ import DeleteIcon from '@mui/icons-material/Delete'
 import MergeIcon from '@mui/icons-material/CallMerge'
 import SplitIcon from '@mui/icons-material/CallSplit'
 import RestoreIcon from '@mui/icons-material/RestoreFromTrash'
-import MoreVertIcon from '@mui/icons-material/MoreVert'
 import AutoFixHighIcon from '@mui/icons-material/AutoFixHigh'
 import PlayCircleOutlineIcon from '@mui/icons-material/PlayCircleOutline'
 import CancelIcon from '@mui/icons-material/Cancel'
@@ -42,6 +39,201 @@ interface EditModalProps {
     setModalSpacebarHandler: (handler: (() => (e: KeyboardEvent) => void) | undefined) => void
 }
 
+// New component for the action divider
+const WordDivider = ({
+    onAddWord,
+    onMergeWords,
+    onAddSegmentBefore,
+    onAddSegmentAfter,
+    onSplitSegment,
+    canMerge = false,
+    isFirst = false,
+    isLast = false,
+    sx = {}
+}: {
+    onAddWord: () => void,
+    onMergeWords?: () => void,
+    onAddSegmentBefore?: () => void,
+    onAddSegmentAfter?: () => void,
+    onSplitSegment?: () => void,
+    canMerge?: boolean,
+    isFirst?: boolean,
+    isLast?: boolean,
+    sx?: any
+}) => (
+    <Box
+        sx={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            height: '20px',
+            my: -0.5,
+            width: '50%',
+            backgroundColor: '#fff',
+            ...sx
+        }}
+    >
+        <Box sx={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 1,
+            backgroundColor: '#fff',
+            padding: '0 8px',
+            zIndex: 1
+        }}>
+            <Button
+                onClick={onAddWord}
+                title="Add Word"
+                size="small"
+                startIcon={<AddIcon />}
+                sx={{
+                    minHeight: 0,
+                    padding: '2px 8px',
+                    color: 'primary.main',
+                    '& .MuiButton-startIcon': {
+                        marginRight: 0.5
+                    },
+                    '& .MuiSvgIcon-root': {
+                        fontSize: '1.2rem'
+                    }
+                }}
+            >
+                <Typography sx={{
+                    color: 'rgba(0, 0, 0, 0.6)',
+                    fontFamily: '"Roboto", "Helvetica", "Arial", sans-serif',
+                    fontWeight: 400,
+                    fontSize: '0.875rem',
+                    lineHeight: '1.4375em',
+                    textTransform: 'none'
+                }}>
+                    Add Word
+                </Typography>
+            </Button>
+            {isFirst && (
+                <Button
+                    onClick={onAddSegmentBefore}
+                    title="Add Segment"
+                    size="small"
+                    startIcon={<AddIcon sx={{ transform: 'rotate(90deg)' }} />}
+                    sx={{
+                        minHeight: 0,
+                        padding: '2px 8px',
+                        color: 'success.main',
+                        '& .MuiButton-startIcon': {
+                            marginRight: 0.5
+                        },
+                        '& .MuiSvgIcon-root': {
+                            fontSize: '1.2rem'
+                        }
+                    }}
+                >
+                    <Typography sx={{
+                        color: 'rgba(0, 0, 0, 0.6)',
+                        fontFamily: '"Roboto", "Helvetica", "Arial", sans-serif',
+                        fontWeight: 400,
+                        fontSize: '0.875rem',
+                        lineHeight: '1.4375em',
+                        textTransform: 'none'
+                    }}>
+                        Add Segment
+                    </Typography>
+                </Button>
+            )}
+            {onMergeWords && !isLast && (
+                <Button
+                    onClick={onMergeWords}
+                    title="Merge Words"
+                    size="small"
+                    startIcon={<MergeIcon sx={{ transform: 'rotate(90deg)' }} />}
+                    disabled={!canMerge}
+                    sx={{
+                        minHeight: 0,
+                        padding: '2px 8px',
+                        color: 'primary.main',
+                        '& .MuiButton-startIcon': {
+                            marginRight: 0.5
+                        },
+                        '& .MuiSvgIcon-root': {
+                            fontSize: '1.2rem'
+                        }
+                    }}
+                >
+                    <Typography sx={{
+                        color: 'rgba(0, 0, 0, 0.6)',
+                        fontFamily: '"Roboto", "Helvetica", "Arial", sans-serif',
+                        fontWeight: 400,
+                        fontSize: '0.875rem',
+                        lineHeight: '1.4375em',
+                        textTransform: 'none'
+                    }}>
+                        Merge Words
+                    </Typography>
+                </Button>
+            )}
+            {onSplitSegment && !isLast && (
+                <Button
+                    onClick={onSplitSegment}
+                    title="Split Segment"
+                    size="small"
+                    startIcon={<SplitIcon sx={{ transform: 'rotate(90deg)' }} />}
+                    sx={{
+                        minHeight: 0,
+                        padding: '2px 8px',
+                        color: 'warning.main',
+                        '& .MuiButton-startIcon': {
+                            marginRight: 0.5
+                        },
+                        '& .MuiSvgIcon-root': {
+                            fontSize: '1.2rem'
+                        }
+                    }}
+                >
+                    <Typography sx={{
+                        color: 'rgba(0, 0, 0, 0.6)',
+                        fontFamily: '"Roboto", "Helvetica", "Arial", sans-serif',
+                        fontWeight: 400,
+                        fontSize: '0.875rem',
+                        lineHeight: '1.4375em',
+                        textTransform: 'none'
+                    }}>
+                        Split Segment
+                    </Typography>
+                </Button>
+            )}
+            {isLast && (
+                <Button
+                    onClick={onAddSegmentAfter}
+                    title="Add Segment"
+                    size="small"
+                    startIcon={<AddIcon sx={{ transform: 'rotate(90deg)' }} />}
+                    sx={{
+                        minHeight: 0,
+                        padding: '2px 8px',
+                        color: 'success.main',
+                        '& .MuiButton-startIcon': {
+                            marginRight: 0.5
+                        },
+                        '& .MuiSvgIcon-root': {
+                            fontSize: '1.2rem'
+                        }
+                    }}
+                >
+                    <Typography sx={{
+                        color: 'rgba(0, 0, 0, 0.6)',
+                        fontFamily: '"Roboto", "Helvetica", "Arial", sans-serif',
+                        fontWeight: 400,
+                        fontSize: '0.875rem',
+                        lineHeight: '1.4375em',
+                        textTransform: 'none'
+                    }}>
+                        Add Segment
+                    </Typography>
+                </Button>
+            )}
+        </Box>
+    </Box>
+);
+
 export default function EditModal({
     open,
     onClose,
@@ -58,8 +250,6 @@ export default function EditModal({
 }: EditModalProps) {
     // All useState hooks
     const [editedSegment, setEditedSegment] = useState<LyricsSegment | null>(segment)
-    const [menuAnchorEl, setMenuAnchorEl] = useState<null | HTMLElement>(null)
-    const [selectedWordIndex, setSelectedWordIndex] = useState<number | null>(null)
     const [replacementText, setReplacementText] = useState('')
     const [isManualSyncing, setIsManualSyncing] = useState(false)
     const [syncWordIndex, setSyncWordIndex] = useState<number>(-1)
@@ -256,36 +446,36 @@ export default function EditModal({
         const word = editedSegment.words[index]
         const startTime = word.start_time ?? 0
         const endTime = word.end_time ?? startTime + 0.5
-        const midTime = (startTime + endTime) / 2
-        const words = word.text.split(/\s+/)
+        const totalDuration = endTime - startTime
+
+        // Split on any number of spaces and filter out empty strings
+        const words = word.text.split(/\s+/).filter(w => w.length > 0)
 
         if (words.length <= 1) {
-            // Split single word in half
+            // If no spaces found, split the word in half as before
             const firstHalf = word.text.slice(0, Math.ceil(word.text.length / 2))
             const secondHalf = word.text.slice(Math.ceil(word.text.length / 2))
             words[0] = firstHalf
             words[1] = secondHalf
         }
 
-        const newWords = [...editedSegment.words]
-        newWords.splice(index, 1,
-            {
-                id: nanoid(),
-                text: words[0],
-                start_time: startTime,
-                end_time: midTime,
-                confidence: 1.0
-            },
-            {
-                id: nanoid(),
-                text: words[1],
-                start_time: midTime,
-                end_time: endTime,
-                confidence: 1.0
-            }
-        )
+        // Calculate time per word
+        const timePerWord = totalDuration / words.length
 
-        updateSegment(newWords)
+        // Create new word objects with evenly distributed times
+        const newWords = words.map((text, i) => ({
+            id: nanoid(),
+            text,
+            start_time: startTime + (i * timePerWord),
+            end_time: startTime + ((i + 1) * timePerWord),
+            confidence: 1.0
+        }))
+
+        // Replace the original word with the new words
+        const allWords = [...editedSegment.words]
+        allWords.splice(index, 1, ...newWords)
+
+        updateSegment(allWords)
     }
 
     const handleMergeWords = (index: number) => {
@@ -313,16 +503,6 @@ export default function EditModal({
 
     const handleReset = () => {
         setEditedSegment(JSON.parse(JSON.stringify(originalSegment)))
-    }
-
-    const handleWordMenu = (event: React.MouseEvent<HTMLElement>, index: number) => {
-        setMenuAnchorEl(event.currentTarget)
-        setSelectedWordIndex(index)
-    }
-
-    const handleMenuClose = () => {
-        setMenuAnchorEl(null)
-        setSelectedWordIndex(null)
     }
 
     const handleSave = () => {
@@ -434,6 +614,12 @@ export default function EditModal({
             maxWidth="md"
             fullWidth
             onKeyDown={handleKeyDown}
+            PaperProps={{
+                sx: {
+                    height: '90vh',  // Take up 90% of viewport height
+                    margin: '5vh 0'  // Add 5vh margin top and bottom
+                }
+            }}
         >
             <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                 <Box sx={{ flex: 1, display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -456,7 +642,15 @@ export default function EditModal({
                     <CloseIcon />
                 </IconButton>
             </DialogTitle>
-            <DialogContent dividers>
+            <DialogContent
+                dividers
+                sx={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    flexGrow: 1,     // Allow content to fill available space
+                    overflow: 'hidden'  // Prevent double scrollbars
+                }}
+            >
                 <Box sx={{ mb: 2 }}>
                     <TimelineEditor
                         words={editedSegment.words}
@@ -493,62 +687,101 @@ export default function EditModal({
                     </Box>
                 </Box>
 
-                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, mb: 3 }}>
+                <Box sx={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: 0.5,
+                    mb: 3,
+                    pt: 1,
+                    flexGrow: 1,
+                    overflowY: 'auto'
+                }}>
+                    {/* Initial divider with Add Segment Before button */}
+                    <WordDivider
+                        onAddWord={() => handleAddWord(-1)}
+                        onAddSegmentBefore={() => onAddSegment?.(segmentIndex)}
+                        isFirst={true}
+                        sx={{ ml: 15 }}
+                    />
+
                     {editedSegment.words.map((word, index) => (
-                        <Box key={index} sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
-                            <TextField
-                                label={`Word ${index}`}
-                                value={word.text}
-                                onChange={(e) => handleWordChange(index, { text: e.target.value })}
-                                fullWidth
-                                size="small"
+                        <Box key={word.id}>
+                            <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+                                <TextField
+                                    label={`Word ${index}`}
+                                    value={word.text}
+                                    onChange={(e) => handleWordChange(index, { text: e.target.value })}
+                                    fullWidth
+                                    size="small"
+                                />
+                                <TextField
+                                    label="Start Time"
+                                    value={word.start_time?.toFixed(2) ?? ''}
+                                    onChange={(e) => handleWordChange(index, { start_time: parseFloat(e.target.value) })}
+                                    type="number"
+                                    inputProps={{ step: 0.01 }}
+                                    sx={{ width: '150px' }}
+                                    size="small"
+                                />
+                                <TextField
+                                    label="End Time"
+                                    value={word.end_time?.toFixed(2) ?? ''}
+                                    onChange={(e) => handleWordChange(index, { end_time: parseFloat(e.target.value) })}
+                                    type="number"
+                                    inputProps={{ step: 0.01 }}
+                                    sx={{ width: '150px' }}
+                                    size="small"
+                                />
+                                <IconButton
+                                    onClick={() => handleSplitWord(index)}
+                                    title="Split Word"
+                                    sx={{ color: 'primary.main' }}
+                                    size="small"
+                                >
+                                    <SplitIcon fontSize="small" />
+                                </IconButton>
+                                <IconButton
+                                    onClick={() => handleRemoveWord(index)}
+                                    disabled={editedSegment.words.length <= 1}
+                                    title="Remove Word"
+                                    sx={{ color: 'error.main' }}
+                                    size="small"
+                                >
+                                    <DeleteIcon fontSize="small" />
+                                </IconButton>
+                            </Box>
+
+                            {/* Update the WordDivider usage to include split segment */}
+                            <WordDivider
+                                onAddWord={() => handleAddWord(index)}
+                                onMergeWords={() => handleMergeWords(index)}
+                                onSplitSegment={() => handleSplitSegment(index)}
+                                onAddSegmentAfter={
+                                    index === editedSegment.words.length - 1
+                                        ? () => onAddSegment?.(segmentIndex + 1)
+                                        : undefined
+                                }
+                                canMerge={index < editedSegment.words.length - 1}
+                                isLast={index === editedSegment.words.length - 1}
+                                sx={{ ml: 15 }}
                             />
-                            <TextField
-                                label="Start Time"
-                                value={word.start_time?.toFixed(2) ?? ''}
-                                onChange={(e) => handleWordChange(index, { start_time: parseFloat(e.target.value) })}
-                                type="number"
-                                inputProps={{ step: 0.01 }}
-                                sx={{ width: '150px' }}
-                                size="small"
-                            />
-                            <TextField
-                                label="End Time"
-                                value={word.end_time?.toFixed(2) ?? ''}
-                                onChange={(e) => handleWordChange(index, { end_time: parseFloat(e.target.value) })}
-                                type="number"
-                                inputProps={{ step: 0.01 }}
-                                sx={{ width: '150px' }}
-                                size="small"
-                            />
-                            <IconButton
-                                onClick={() => handleRemoveWord(index)}
-                                disabled={editedSegment.words.length <= 1}
-                                sx={{ color: 'error.main' }}
-                            >
-                                <DeleteIcon fontSize="small" />
-                            </IconButton>
-                            <IconButton onClick={(e) => handleWordMenu(e, index)}>
-                                <MoreVertIcon />
-                            </IconButton>
                         </Box>
                     ))}
                 </Box>
 
-                <Box sx={{ display: 'flex', gap: 2 }}>
+                <Box sx={{ display: 'flex', gap: 2, mt: 2 }}>
                     <TextField
-                        label="Replace all words"
                         value={replacementText}
                         onChange={(e) => setReplacementText(e.target.value)}
-                        fullWidth
-                        placeholder="Type or paste replacement words here"
+                        placeholder="Replace all words"
                         size="small"
+                        sx={{ flexGrow: 1, maxWidth: 'calc(100% - 140px)' }}  // Reserve space for the button
                     />
                     <Button
-                        variant="contained"
-                        startIcon={<AutoFixHighIcon />}
                         onClick={handleReplaceAllWords}
-                        disabled={!replacementText.trim()}
+                        startIcon={<AutoFixHighIcon />}
+                        size="small"
+                        sx={{ whiteSpace: 'nowrap' }}
                     >
                         Replace All
                     </Button>
@@ -562,14 +795,7 @@ export default function EditModal({
                 >
                     Reset
                 </Button>
-                <Box sx={{ mr: 'auto', display: 'flex', gap: 1 }}>
-                    <Button
-                        startIcon={<AddIcon />}
-                        onClick={() => segmentIndex !== null && onAddSegment?.(segmentIndex)}
-                        color="primary"
-                    >
-                        Add Segment Before
-                    </Button>
+                <Box sx={{ mr: 'auto' }}>
                     <Button
                         startIcon={<DeleteIcon />}
                         onClick={handleDelete}
@@ -579,56 +805,8 @@ export default function EditModal({
                     </Button>
                 </Box>
                 <Button onClick={handleClose}>Cancel</Button>
-                <Button onClick={() => {
-                    cleanupManualSync()
-                    onSave(editedSegment)
-                }}>
-                    Save Changes
-                </Button>
+                <Button onClick={handleSave}>Save Changes</Button>
             </DialogActions>
-
-            <Menu
-                anchorEl={menuAnchorEl}
-                open={Boolean(menuAnchorEl)}
-                onClose={handleMenuClose}
-            >
-                <MenuItem onClick={() => {
-                    handleAddWord(selectedWordIndex!)
-                    handleMenuClose()
-                }}>
-                    <AddIcon sx={{ mr: 1 }} /> Add Word After
-                </MenuItem>
-                <MenuItem onClick={() => {
-                    handleSplitWord(selectedWordIndex!)
-                    handleMenuClose()
-                }}>
-                    <SplitIcon sx={{ mr: 1 }} /> Split Word
-                </MenuItem>
-                <MenuItem onClick={() => {
-                    handleSplitSegment(selectedWordIndex!)
-                    handleMenuClose()
-                }}>
-                    <SplitIcon sx={{ mr: 1 }} /> Split Segment After Word
-                </MenuItem>
-                <MenuItem
-                    onClick={() => {
-                        handleMergeWords(selectedWordIndex!)
-                        handleMenuClose()
-                    }}
-                    disabled={selectedWordIndex === editedSegment.words.length - 1}
-                >
-                    <MergeIcon sx={{ mr: 1 }} /> Merge with Next
-                </MenuItem>
-                <MenuItem
-                    onClick={() => {
-                        handleRemoveWord(selectedWordIndex!)
-                        handleMenuClose()
-                    }}
-                    disabled={editedSegment.words.length <= 1}
-                >
-                    <DeleteIcon sx={{ mr: 1 }} color="error" /> Remove
-                </MenuItem>
-            </Menu>
         </Dialog>
     )
 } 

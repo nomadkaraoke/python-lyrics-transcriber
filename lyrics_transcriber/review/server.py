@@ -239,12 +239,50 @@ class ReviewServer:
                 source="original",
             )
 
-            # Run correction
+            # Get currently enabled handlers from metadata
+            enabled_handlers = None
+            if self.correction_result.metadata:
+                if "enabled_handlers" in self.correction_result.metadata:
+                    enabled_handlers = self.correction_result.metadata["enabled_handlers"]
+                    self.logger.info(f"Found existing enabled handlers in metadata: {enabled_handlers}")
+                elif "available_handlers" in self.correction_result.metadata:
+                    # If no enabled_handlers but we have available_handlers, enable all default handlers
+                    enabled_handlers = [
+                        handler["id"] 
+                        for handler in self.correction_result.metadata["available_handlers"] 
+                        if handler.get("enabled", True)
+                    ]
+                    self.logger.info(f"No enabled handlers found in metadata, using default enabled handlers: {enabled_handlers}")
+                else:
+                    self.logger.warning("No handler configuration found in metadata")
+
+            # Rerun correction with updated reference lyrics
+            self.logger.info("Initializing LyricsCorrector for re-correction")
+            self.logger.info(f"Passing enabled handlers to corrector: {enabled_handlers or '[]'}")
+            corrector = LyricsCorrector(
+                cache_dir=self.output_config.cache_dir,
+                enabled_handlers=enabled_handlers,  # Pass the preserved handlers or None to use defaults
+                logger=self.logger
+            )
+
+            self.logger.info(f"Active correction handlers: {[h.__class__.__name__ for h in corrector.handlers]}")
+            self.logger.info("Running correction with updated reference lyrics")
             self.correction_result = corrector.run(
                 transcription_results=[TranscriptionResult(name="original", priority=1, result=transcription_data)],
                 lyrics_results=self.correction_result.reference_lyrics,
                 metadata=self.correction_result.metadata,
             )
+
+            # Update metadata with the new handler state from corrector
+            if not self.correction_result.metadata:
+                self.correction_result.metadata = {}
+            self.correction_result.metadata.update({
+                "available_handlers": corrector.all_handlers,
+                "enabled_handlers": [getattr(handler, "name", handler.__class__.__name__) for handler in corrector.handlers]
+            })
+
+            self.logger.info("Correction process completed")
+            self.logger.info(f"Updated metadata with {len(corrector.handlers)} enabled handlers: {self.correction_result.metadata['enabled_handlers']}")
 
             # Restore audio hash
             if audio_hash:
@@ -317,6 +355,9 @@ class ReviewServer:
     async def add_lyrics(self, data: Dict[str, str] = Body(...)):
         """Add new lyrics source and rerun correction."""
         try:
+            # Store existing audio hash
+            audio_hash = self.correction_result.metadata.get("audio_hash") if self.correction_result.metadata else None
+
             source = data.get("source", "").strip()
             lyrics_text = data.get("lyrics", "").strip()
 
@@ -353,21 +394,56 @@ class ReviewServer:
                 source="original",
             )
 
+            # Get currently enabled handlers from metadata
+            enabled_handlers = None
+            if self.correction_result.metadata:
+                if "enabled_handlers" in self.correction_result.metadata:
+                    enabled_handlers = self.correction_result.metadata["enabled_handlers"]
+                    self.logger.info(f"Found existing enabled handlers in metadata: {enabled_handlers}")
+                elif "available_handlers" in self.correction_result.metadata:
+                    # If no enabled_handlers but we have available_handlers, enable all default handlers
+                    enabled_handlers = [
+                        handler["id"] 
+                        for handler in self.correction_result.metadata["available_handlers"] 
+                        if handler.get("enabled", True)
+                    ]
+                    self.logger.info(f"No enabled handlers found in metadata, using default enabled handlers: {enabled_handlers}")
+                else:
+                    self.logger.warning("No handler configuration found in metadata")
+
             # Rerun correction with updated reference lyrics
             self.logger.info("Initializing LyricsCorrector for re-correction")
+            self.logger.info(f"Passing enabled handlers to corrector: {enabled_handlers or '[]'}")
             corrector = LyricsCorrector(
                 cache_dir=self.output_config.cache_dir,
-                enabled_handlers=self.correction_result.metadata.get("enabled_handlers"),
-                logger=self.logger,
+                enabled_handlers=enabled_handlers,  # Pass the preserved handlers or None to use defaults
+                logger=self.logger
             )
 
+            self.logger.info(f"Active correction handlers: {[h.__class__.__name__ for h in corrector.handlers]}")
             self.logger.info("Running correction with updated reference lyrics")
             self.correction_result = corrector.run(
                 transcription_results=[TranscriptionResult(name="original", priority=1, result=transcription_data)],
                 lyrics_results=self.correction_result.reference_lyrics,
                 metadata=self.correction_result.metadata,
             )
+
+            # Update metadata with the new handler state from corrector
+            if not self.correction_result.metadata:
+                self.correction_result.metadata = {}
+            self.correction_result.metadata.update({
+                "available_handlers": corrector.all_handlers,
+                "enabled_handlers": [getattr(handler, "name", handler.__class__.__name__) for handler in corrector.handlers]
+            })
+
+            # Restore audio hash
+            if audio_hash:
+                if not self.correction_result.metadata:
+                    self.correction_result.metadata = {}
+                self.correction_result.metadata["audio_hash"] = audio_hash
+
             self.logger.info("Correction process completed")
+            self.logger.info(f"Updated metadata with {len(corrector.handlers)} enabled handlers: {self.correction_result.metadata['enabled_handlers']}")
 
             return {"status": "success", "data": self.correction_result.to_dict()}
 
