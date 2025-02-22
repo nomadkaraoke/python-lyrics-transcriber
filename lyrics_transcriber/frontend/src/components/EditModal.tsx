@@ -22,6 +22,7 @@ import { useState, useEffect, useCallback } from 'react'
 import TimelineEditor from './TimelineEditor'
 import { nanoid } from 'nanoid'
 import WordDivider from './WordDivider'
+import useManualSync from '../hooks/useManualSync'
 
 interface EditModalProps {
     open: boolean
@@ -52,14 +53,11 @@ export default function EditModal({
     onSplitSegment,
     setModalSpacebarHandler,
 }: EditModalProps) {
-    // All useState hooks
     const [editedSegment, setEditedSegment] = useState<LyricsSegment | null>(segment)
     const [replacementText, setReplacementText] = useState('')
-    const [isManualSyncing, setIsManualSyncing] = useState(false)
-    const [syncWordIndex, setSyncWordIndex] = useState<number>(-1)
     const [isPlaying, setIsPlaying] = useState(false)
 
-    // Define updateSegment first since other hooks depend on it
+    // Define updateSegment first since the hook depends on it
     const updateSegment = useCallback((newWords: Word[]) => {
         if (!editedSegment) return;
 
@@ -78,66 +76,29 @@ export default function EditModal({
         })
     }, [editedSegment])
 
-    // Other useCallback hooks
-    const cleanupManualSync = useCallback(() => {
-        setIsManualSyncing(false)
-        setSyncWordIndex(-1)
-    }, [])
+    // Use the new hook
+    const {
+        isManualSyncing,
+        syncWordIndex,
+        startManualSync,
+        cleanupManualSync,
+        handleSpacebar
+    } = useManualSync({
+        editedSegment,
+        currentTime,
+        onPlaySegment,
+        updateSegment
+    })
 
     const handleClose = useCallback(() => {
         cleanupManualSync()
         onClose()
     }, [onClose, cleanupManualSync])
 
-    // All useEffect hooks
-    useEffect(() => {
-        setEditedSegment(segment)
-    }, [segment])
-
     // Update the spacebar handler when modal state changes
     useEffect(() => {
         if (open) {
-            setModalSpacebarHandler(() => (e: KeyboardEvent) => {
-                e.preventDefault()
-                e.stopPropagation()
-
-                if (isManualSyncing && editedSegment) {
-                    // Handle manual sync mode
-                    if (syncWordIndex < editedSegment.words.length) {
-                        const newWords = [...editedSegment.words]
-                        const currentWord = newWords[syncWordIndex]
-                        const prevWord = syncWordIndex > 0 ? newWords[syncWordIndex - 1] : null
-
-                        currentWord.start_time = currentTime
-
-                        if (prevWord) {
-                            prevWord.end_time = currentTime - 0.01
-                        }
-
-                        if (syncWordIndex === editedSegment.words.length - 1) {
-                            currentWord.end_time = editedSegment.end_time
-                            setIsManualSyncing(false)
-                            setSyncWordIndex(-1)
-                            updateSegment(newWords)
-                        } else {
-                            setSyncWordIndex(syncWordIndex + 1)
-                            updateSegment(newWords)
-                        }
-                    }
-                } else if (editedSegment && onPlaySegment) {
-                    // Toggle segment playback when not in manual sync mode
-                    const startTime = editedSegment.start_time ?? 0
-                    const endTime = editedSegment.end_time ?? 0
-
-                    if (currentTime >= startTime && currentTime <= endTime) {
-                        if (window.toggleAudioPlayback) {
-                            window.toggleAudioPlayback()
-                        }
-                    } else {
-                        onPlaySegment(startTime)
-                    }
-                }
-            })
+            setModalSpacebarHandler(() => handleSpacebar)
         } else {
             setModalSpacebarHandler(undefined)
         }
@@ -145,16 +106,23 @@ export default function EditModal({
         return () => {
             setModalSpacebarHandler(undefined)
         }
-    }, [
-        open,
-        isManualSyncing,
-        editedSegment,
-        syncWordIndex,
-        currentTime,
-        onPlaySegment,
-        updateSegment,
-        setModalSpacebarHandler
-    ])
+    }, [open, handleSpacebar, setModalSpacebarHandler])
+
+    // Update isPlaying when currentTime changes
+    useEffect(() => {
+        if (editedSegment) {
+            const startTime = editedSegment.start_time ?? 0
+            const endTime = editedSegment.end_time ?? 0
+            const isWithinSegment = currentTime >= startTime && currentTime <= endTime
+
+            setIsPlaying(isWithinSegment && window.isAudioPlaying === true)
+        }
+    }, [currentTime, editedSegment])
+
+    // All useEffect hooks
+    useEffect(() => {
+        setEditedSegment(segment)
+    }, [segment])
 
     // Auto-stop sync if we go past the end time
     useEffect(() => {
@@ -165,23 +133,10 @@ export default function EditModal({
         if (window.isAudioPlaying && currentTime > endTime) {
             console.log('Stopping playback: current time exceeded end time')
             window.toggleAudioPlayback?.()
-            setIsManualSyncing(false)
-            setSyncWordIndex(-1)
+            cleanupManualSync()
         }
 
-    }, [isManualSyncing, editedSegment, currentTime, setSyncWordIndex])
-
-    // Update isPlaying when currentTime changes
-    useEffect(() => {
-        if (editedSegment) {
-            const startTime = editedSegment.start_time ?? 0
-            const endTime = editedSegment.end_time ?? 0
-            const isWithinSegment = currentTime >= startTime && currentTime <= endTime
-
-            // Only consider it playing if it's within the segment AND audio is actually playing
-            setIsPlaying(isWithinSegment && window.isAudioPlaying === true)
-        }
-    }, [currentTime, editedSegment])
+    }, [isManualSyncing, editedSegment, currentTime, cleanupManualSync])
 
     // Add a function to get safe time values
     const getSafeTimeRange = (segment: LyricsSegment | null) => {
@@ -379,23 +334,6 @@ export default function EditModal({
         }
     }
 
-    // Add this new function to handle manual sync
-    const startManualSync = () => {
-        if (isManualSyncing) {
-            setIsManualSyncing(false)
-            setSyncWordIndex(-1)
-            return
-        }
-
-        if (!editedSegment || !onPlaySegment) return
-
-        setIsManualSyncing(true)
-        setSyncWordIndex(0)
-        // Start playing 3 seconds before segment start
-        const startTime = (editedSegment.start_time ?? 0) - 3
-        onPlaySegment(startTime)
-    }
-
     // Handle play/stop button click
     const handlePlayButtonClick = () => {
         if (!segment?.start_time || !onPlaySegment) return
@@ -468,9 +406,9 @@ export default function EditModal({
 
                 <Box sx={{ mb: 2, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                     <Typography variant="body2" color="text.secondary">
-                        Original Time Range: {originalSegment.start_time?.toFixed(2) ?? 'N/A'} - {originalSegment.end_time?.toFixed(2) ?? 'N/A'}
+                        Original Time Range: {originalSegment?.start_time?.toFixed(2) ?? 'N/A'} - {originalSegment?.end_time?.toFixed(2) ?? 'N/A'}
                         <br />
-                        Current Time Range: {editedSegment.start_time?.toFixed(2) ?? 'N/A'} - {editedSegment.end_time?.toFixed(2) ?? 'N/A'}
+                        Current Time Range: {editedSegment?.start_time?.toFixed(2) ?? 'N/A'} - {editedSegment?.end_time?.toFixed(2) ?? 'N/A'}
                     </Typography>
 
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>

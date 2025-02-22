@@ -32097,6 +32097,80 @@ function WordDivider({
     }
   );
 }
+function useManualSync({
+  editedSegment,
+  currentTime,
+  onPlaySegment,
+  updateSegment: updateSegment2
+}) {
+  const [isManualSyncing, setIsManualSyncing] = reactExports.useState(false);
+  const [syncWordIndex, setSyncWordIndex] = reactExports.useState(-1);
+  const cleanupManualSync = reactExports.useCallback(() => {
+    setIsManualSyncing(false);
+    setSyncWordIndex(-1);
+  }, []);
+  const handleSpacebar = reactExports.useCallback((e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (isManualSyncing && editedSegment) {
+      if (syncWordIndex < editedSegment.words.length) {
+        const newWords = [...editedSegment.words];
+        const currentWord = newWords[syncWordIndex];
+        const prevWord = syncWordIndex > 0 ? newWords[syncWordIndex - 1] : null;
+        currentWord.start_time = currentTime;
+        if (prevWord) {
+          prevWord.end_time = currentTime - 0.01;
+        }
+        if (syncWordIndex === editedSegment.words.length - 1) {
+          currentWord.end_time = editedSegment.end_time;
+          setIsManualSyncing(false);
+          setSyncWordIndex(-1);
+          updateSegment2(newWords);
+        } else {
+          setSyncWordIndex(syncWordIndex + 1);
+          updateSegment2(newWords);
+        }
+      }
+    } else if (editedSegment && onPlaySegment) {
+      const startTime = editedSegment.start_time ?? 0;
+      const endTime = editedSegment.end_time ?? 0;
+      if (currentTime >= startTime && currentTime <= endTime) {
+        if (window.toggleAudioPlayback) {
+          window.toggleAudioPlayback();
+        }
+      } else {
+        onPlaySegment(startTime);
+      }
+    }
+  }, [isManualSyncing, editedSegment, syncWordIndex, currentTime, onPlaySegment, updateSegment2]);
+  const startManualSync = reactExports.useCallback(() => {
+    if (isManualSyncing) {
+      cleanupManualSync();
+      return;
+    }
+    if (!editedSegment || !onPlaySegment) return;
+    setIsManualSyncing(true);
+    setSyncWordIndex(0);
+    onPlaySegment((editedSegment.start_time ?? 0) - 3);
+  }, [isManualSyncing, editedSegment, onPlaySegment, cleanupManualSync]);
+  reactExports.useEffect(() => {
+    var _a;
+    if (!editedSegment) return;
+    const endTime = editedSegment.end_time ?? 0;
+    if (window.isAudioPlaying && currentTime > endTime) {
+      console.log("Stopping playback: current time exceeded end time");
+      (_a = window.toggleAudioPlayback) == null ? void 0 : _a.call(window);
+      cleanupManualSync();
+    }
+  }, [isManualSyncing, editedSegment, currentTime, cleanupManualSync]);
+  return {
+    isManualSyncing,
+    syncWordIndex,
+    startManualSync,
+    cleanupManualSync,
+    handleSpacebar
+  };
+}
 function EditModal({
   open,
   onClose,
@@ -32114,8 +32188,6 @@ function EditModal({
   var _a, _b, _c, _d;
   const [editedSegment, setEditedSegment] = reactExports.useState(segment);
   const [replacementText, setReplacementText] = reactExports.useState("");
-  const [isManualSyncing, setIsManualSyncing] = reactExports.useState(false);
-  const [syncWordIndex, setSyncWordIndex] = reactExports.useState(-1);
   const [isPlaying, setIsPlaying] = reactExports.useState(false);
   const updateSegment2 = reactExports.useCallback((newWords) => {
     if (!editedSegment) return;
@@ -32131,80 +32203,32 @@ function EditModal({
       end_time: segmentEndTime
     });
   }, [editedSegment]);
-  const cleanupManualSync = reactExports.useCallback(() => {
-    setIsManualSyncing(false);
-    setSyncWordIndex(-1);
-  }, []);
+  const {
+    isManualSyncing,
+    syncWordIndex,
+    startManualSync,
+    cleanupManualSync,
+    handleSpacebar
+  } = useManualSync({
+    editedSegment,
+    currentTime,
+    onPlaySegment,
+    updateSegment: updateSegment2
+  });
   const handleClose = reactExports.useCallback(() => {
     cleanupManualSync();
     onClose();
   }, [onClose, cleanupManualSync]);
   reactExports.useEffect(() => {
-    setEditedSegment(segment);
-  }, [segment]);
-  reactExports.useEffect(() => {
     if (open) {
-      setModalSpacebarHandler(() => (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        if (isManualSyncing && editedSegment) {
-          if (syncWordIndex < editedSegment.words.length) {
-            const newWords = [...editedSegment.words];
-            const currentWord = newWords[syncWordIndex];
-            const prevWord = syncWordIndex > 0 ? newWords[syncWordIndex - 1] : null;
-            currentWord.start_time = currentTime;
-            if (prevWord) {
-              prevWord.end_time = currentTime - 0.01;
-            }
-            if (syncWordIndex === editedSegment.words.length - 1) {
-              currentWord.end_time = editedSegment.end_time;
-              setIsManualSyncing(false);
-              setSyncWordIndex(-1);
-              updateSegment2(newWords);
-            } else {
-              setSyncWordIndex(syncWordIndex + 1);
-              updateSegment2(newWords);
-            }
-          }
-        } else if (editedSegment && onPlaySegment) {
-          const startTime = editedSegment.start_time ?? 0;
-          const endTime = editedSegment.end_time ?? 0;
-          if (currentTime >= startTime && currentTime <= endTime) {
-            if (window.toggleAudioPlayback) {
-              window.toggleAudioPlayback();
-            }
-          } else {
-            onPlaySegment(startTime);
-          }
-        }
-      });
+      setModalSpacebarHandler(() => handleSpacebar);
     } else {
       setModalSpacebarHandler(void 0);
     }
     return () => {
       setModalSpacebarHandler(void 0);
     };
-  }, [
-    open,
-    isManualSyncing,
-    editedSegment,
-    syncWordIndex,
-    currentTime,
-    onPlaySegment,
-    updateSegment2,
-    setModalSpacebarHandler
-  ]);
-  reactExports.useEffect(() => {
-    var _a2;
-    if (!editedSegment) return;
-    const endTime = editedSegment.end_time ?? 0;
-    if (window.isAudioPlaying && currentTime > endTime) {
-      console.log("Stopping playback: current time exceeded end time");
-      (_a2 = window.toggleAudioPlayback) == null ? void 0 : _a2.call(window);
-      setIsManualSyncing(false);
-      setSyncWordIndex(-1);
-    }
-  }, [isManualSyncing, editedSegment, currentTime, setSyncWordIndex]);
+  }, [open, handleSpacebar, setModalSpacebarHandler]);
   reactExports.useEffect(() => {
     if (editedSegment) {
       const startTime = editedSegment.start_time ?? 0;
@@ -32213,6 +32237,19 @@ function EditModal({
       setIsPlaying(isWithinSegment && window.isAudioPlaying === true);
     }
   }, [currentTime, editedSegment]);
+  reactExports.useEffect(() => {
+    setEditedSegment(segment);
+  }, [segment]);
+  reactExports.useEffect(() => {
+    var _a2;
+    if (!editedSegment) return;
+    const endTime = editedSegment.end_time ?? 0;
+    if (window.isAudioPlaying && currentTime > endTime) {
+      console.log("Stopping playback: current time exceeded end time");
+      (_a2 = window.toggleAudioPlayback) == null ? void 0 : _a2.call(window);
+      cleanupManualSync();
+    }
+  }, [isManualSyncing, editedSegment, currentTime, cleanupManualSync]);
   const getSafeTimeRange = (segment2) => {
     if (!segment2) return { start: 0, end: 1 };
     const start2 = segment2.start_time ?? 0;
@@ -32365,18 +32402,6 @@ function EditModal({
       onSplitSegment == null ? void 0 : onSplitSegment(segmentIndex, wordIndex);
     }
   };
-  const startManualSync = () => {
-    if (isManualSyncing) {
-      setIsManualSyncing(false);
-      setSyncWordIndex(-1);
-      return;
-    }
-    if (!editedSegment || !onPlaySegment) return;
-    setIsManualSyncing(true);
-    setSyncWordIndex(0);
-    const startTime = (editedSegment.start_time ?? 0) - 3;
-    onPlaySegment(startTime);
-  };
   const handlePlayButtonClick = () => {
     if (!(segment == null ? void 0 : segment.start_time) || !onPlaySegment) return;
     if (isPlaying) {
@@ -32447,14 +32472,14 @@ function EditModal({
               /* @__PURE__ */ jsxRuntimeExports.jsxs(Box, { sx: { mb: 2, display: "flex", alignItems: "center", justifyContent: "space-between" }, children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsxs(Typography, { variant: "body2", color: "text.secondary", children: [
                   "Original Time Range: ",
-                  ((_a = originalSegment.start_time) == null ? void 0 : _a.toFixed(2)) ?? "N/A",
+                  ((_a = originalSegment == null ? void 0 : originalSegment.start_time) == null ? void 0 : _a.toFixed(2)) ?? "N/A",
                   " - ",
-                  ((_b = originalSegment.end_time) == null ? void 0 : _b.toFixed(2)) ?? "N/A",
+                  ((_b = originalSegment == null ? void 0 : originalSegment.end_time) == null ? void 0 : _b.toFixed(2)) ?? "N/A",
                   /* @__PURE__ */ jsxRuntimeExports.jsx("br", {}),
                   "Current Time Range: ",
-                  ((_c = editedSegment.start_time) == null ? void 0 : _c.toFixed(2)) ?? "N/A",
+                  ((_c = editedSegment == null ? void 0 : editedSegment.start_time) == null ? void 0 : _c.toFixed(2)) ?? "N/A",
                   " - ",
-                  ((_d = editedSegment.end_time) == null ? void 0 : _d.toFixed(2)) ?? "N/A"
+                  ((_d = editedSegment == null ? void 0 : editedSegment.end_time) == null ? void 0 : _d.toFixed(2)) ?? "N/A"
                 ] }),
                 /* @__PURE__ */ jsxRuntimeExports.jsxs(Box, { sx: { display: "flex", alignItems: "center", gap: 2 }, children: [
                   /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -34221,4 +34246,4 @@ function App() {
 ReactDOM$1.createRoot(document.getElementById("root")).render(
   /* @__PURE__ */ jsxRuntimeExports.jsx(App, {})
 );
-//# sourceMappingURL=index-C_qY5sHL.js.map
+//# sourceMappingURL=index-DmPGxC0w.js.map
