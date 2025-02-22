@@ -30547,6 +30547,27 @@ class LiveApiClient {
       console.log("API: Set isUpdatingHandlers to", this.isUpdatingHandlers);
     }
   }
+  async addLyrics(source, lyrics) {
+    const payload = {
+      source,
+      lyrics
+    };
+    const response = await fetch(`${this.baseUrl}/add-lyrics`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify(payload)
+    });
+    if (!response.ok) {
+      throw new Error(`API error: ${response.statusText}`);
+    }
+    const data = await response.json();
+    if (data.status === "error") {
+      throw new Error(data.message || "Failed to add lyrics");
+    }
+    return validateCorrectionData(data.data);
+  }
 }
 class FileOnlyClient {
   async getCorrectionData() {
@@ -30569,6 +30590,9 @@ class FileOnlyClient {
   }
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   async updateHandlers(_enabledHandlers) {
+    throw new Error("Not supported in file-only mode");
+  }
+  async addLyrics() {
     throw new Error("Not supported in file-only mode");
   }
 }
@@ -33391,7 +33415,8 @@ function Header({
   onTimeUpdate,
   onHandlerToggle,
   isUpdatingHandlers,
-  onHandlerClick
+  onHandlerClick,
+  onAddLyrics
 }) {
   var _a, _b, _c;
   const theme = useTheme();
@@ -33551,26 +33576,130 @@ function Header({
       flexDirection: isMobile ? "column" : "row",
       gap: 5,
       alignItems: "flex-start",
-      justifyContent: "flex-start",
-      mb: 3
+      justifyContent: "space-between",
+      mb: 3,
+      width: "100%"
     }, children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx(
-        ModeSelector,
+      /* @__PURE__ */ jsxRuntimeExports.jsxs(Box, { sx: {
+        display: "flex",
+        gap: 5,
+        flexDirection: isMobile ? "column" : "row",
+        alignItems: "flex-start"
+      }, children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx(
+          ModeSelector,
+          {
+            effectiveMode,
+            onChange: onModeChange
+          }
+        ),
+        /* @__PURE__ */ jsxRuntimeExports.jsx(
+          AudioPlayer,
+          {
+            apiClient,
+            onTimeUpdate,
+            audioHash
+          }
+        )
+      ] }),
+      !isReadOnly && apiClient && /* @__PURE__ */ jsxRuntimeExports.jsx(
+        Button,
         {
-          effectiveMode,
-          onChange: onModeChange
-        }
-      ),
-      /* @__PURE__ */ jsxRuntimeExports.jsx(
-        AudioPlayer,
-        {
-          apiClient,
-          onTimeUpdate,
-          audioHash
+          variant: "outlined",
+          onClick: onAddLyrics,
+          sx: { minWidth: "fit-content" },
+          children: "Add Reference Lyrics"
         }
       )
     ] })
   ] });
+}
+function AddLyricsModal({
+  open,
+  onClose,
+  onSubmit,
+  isSubmitting
+}) {
+  const [source, setSource] = reactExports.useState("");
+  const [lyrics, setLyrics] = reactExports.useState("");
+  const [error, setError] = reactExports.useState(null);
+  const handleSubmit = async () => {
+    if (!source.trim()) {
+      setError("Please enter a source name");
+      return;
+    }
+    if (!lyrics.trim()) {
+      setError("Please enter lyrics text");
+      return;
+    }
+    try {
+      await onSubmit(source.trim(), lyrics.trim());
+      setSource("");
+      setLyrics("");
+      setError(null);
+      onClose();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to add lyrics");
+    }
+  };
+  const handleClose = () => {
+    setSource("");
+    setLyrics("");
+    setError(null);
+    onClose();
+  };
+  return /* @__PURE__ */ jsxRuntimeExports.jsxs(
+    Dialog,
+    {
+      open,
+      onClose: handleClose,
+      maxWidth: "md",
+      fullWidth: true,
+      children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx(DialogTitle, { children: "Add Reference Lyrics" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx(DialogContent, { children: /* @__PURE__ */ jsxRuntimeExports.jsxs(Box, { sx: { display: "flex", flexDirection: "column", gap: 2, mt: 1 }, children: [
+          error && /* @__PURE__ */ jsxRuntimeExports.jsx(Typography, { color: "error", variant: "body2", children: error }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            TextField,
+            {
+              label: "Source Name",
+              value: source,
+              onChange: (e) => setSource(e.target.value),
+              disabled: isSubmitting,
+              fullWidth: true,
+              placeholder: "e.g., Official Lyrics, Album Booklet"
+            }
+          ),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            TextField,
+            {
+              label: "Lyrics",
+              value: lyrics,
+              onChange: (e) => setLyrics(e.target.value),
+              disabled: isSubmitting,
+              fullWidth: true,
+              multiline: true,
+              rows: 10,
+              placeholder: "Paste lyrics text here (one line per segment)"
+            }
+          )
+        ] }) }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs(DialogActions, { children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx(Button, { onClick: handleClose, disabled: isSubmitting, children: "Cancel" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            Button,
+            {
+              onClick: handleSubmit,
+              variant: "contained",
+              disabled: isSubmitting,
+              startIcon: isSubmitting ? /* @__PURE__ */ jsxRuntimeExports.jsx(CircularProgress, { size: 20 }) : void 0,
+              children: isSubmitting ? "Adding..." : "Add Lyrics"
+            }
+          )
+        ] })
+      ]
+    }
+  );
 }
 function LyricsAnalyzer({ data: initialData, onFileLoad, apiClient, isReadOnly, audioHash }) {
   const [modalContent, setModalContent] = reactExports.useState(null);
@@ -33594,6 +33723,8 @@ function LyricsAnalyzer({ data: initialData, onFileLoad, apiClient, isReadOnly, 
   const [currentAudioTime, setCurrentAudioTime] = reactExports.useState(0);
   const [isUpdatingHandlers, setIsUpdatingHandlers] = reactExports.useState(false);
   const [flashingHandler, setFlashingHandler] = reactExports.useState(null);
+  const [isAddingLyrics, setIsAddingLyrics] = reactExports.useState(false);
+  const [isAddLyricsModalOpen, setIsAddLyricsModalOpen] = reactExports.useState(false);
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("md"));
   reactExports.useEffect(() => {
@@ -33888,6 +34019,16 @@ function LyricsAnalyzer({ data: initialData, onFileLoad, apiClient, isReadOnly, 
   const handleSetModalSpacebarHandler = reactExports.useCallback((handler) => {
     setModalHandler(handler ? handler() : void 0, !!handler);
   }, []);
+  const handleAddLyrics = reactExports.useCallback(async (source, lyrics) => {
+    if (!apiClient) return;
+    try {
+      setIsAddingLyrics(true);
+      const newData = await apiClient.addLyrics(source, lyrics);
+      setData(newData);
+    } finally {
+      setIsAddingLyrics(false);
+    }
+  }, [apiClient]);
   return /* @__PURE__ */ jsxRuntimeExports.jsxs(Box, { sx: {
     p: 3,
     pb: 6,
@@ -33912,7 +34053,8 @@ function LyricsAnalyzer({ data: initialData, onFileLoad, apiClient, isReadOnly, 
         onTimeUpdate: setCurrentAudioTime,
         onHandlerToggle: handleHandlerToggle,
         isUpdatingHandlers,
-        onHandlerClick: handleHandlerClick
+        onHandlerClick: handleHandlerClick,
+        onAddLyrics: () => setIsAddLyricsModalOpen(true)
       }
     ),
     /* @__PURE__ */ jsxRuntimeExports.jsxs(Grid, { container: true, spacing: 2, direction: isMobile ? "column" : "row", children: [
@@ -33989,6 +34131,15 @@ function LyricsAnalyzer({ data: initialData, onFileLoad, apiClient, isReadOnly, 
         onSubmit: handleSubmitToServer,
         apiClient,
         setModalSpacebarHandler: handleSetModalSpacebarHandler
+      }
+    ),
+    /* @__PURE__ */ jsxRuntimeExports.jsx(
+      AddLyricsModal,
+      {
+        open: isAddLyricsModalOpen,
+        onClose: () => setIsAddLyricsModalOpen(false),
+        onSubmit: handleAddLyrics,
+        isSubmitting: isAddingLyrics
       }
     ),
     !isReadOnly && apiClient && /* @__PURE__ */ jsxRuntimeExports.jsxs(Box, { sx: { mt: 2, mb: 3, display: "flex", gap: 2 }, children: [
@@ -34165,4 +34316,4 @@ function App() {
 ReactDOM$1.createRoot(document.getElementById("root")).render(
   /* @__PURE__ */ jsxRuntimeExports.jsx(App, {})
 );
-//# sourceMappingURL=index-B0gvFB3J.js.map
+//# sourceMappingURL=index-Cl37y2OS.js.map

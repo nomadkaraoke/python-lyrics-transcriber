@@ -25,6 +25,7 @@ import { loadSavedData, saveData, clearSavedData } from './shared/utils/localSto
 import { setupKeyboardHandlers, setModalHandler } from './shared/utils/keyboardHandlers'
 import Header from './Header'
 import { findWordById, getWordsFromIds } from './shared/utils/wordUtils'
+import AddLyricsModal from './AddLyricsModal'
 
 // Add type for window augmentation at the top of the file
 declare global {
@@ -85,6 +86,8 @@ export default function LyricsAnalyzer({ data: initialData, onFileLoad, apiClien
     const [currentAudioTime, setCurrentAudioTime] = useState(0)
     const [isUpdatingHandlers, setIsUpdatingHandlers] = useState(false)
     const [flashingHandler, setFlashingHandler] = useState<string | null>(null)
+    const [isAddingLyrics, setIsAddingLyrics] = useState(false)
+    const [isAddLyricsModalOpen, setIsAddLyricsModalOpen] = useState(false)
     const theme = useTheme()
     const isMobile = useMediaQuery(theme.breakpoints.down('md'))
 
@@ -447,6 +450,19 @@ export default function LyricsAnalyzer({ data: initialData, onFileLoad, apiClien
         setModalHandler(handler ? handler() : undefined, !!handler)
     }, [])
 
+    // Add new handler for adding lyrics
+    const handleAddLyrics = useCallback(async (source: string, lyrics: string) => {
+        if (!apiClient) return
+
+        try {
+            setIsAddingLyrics(true)
+            const newData = await apiClient.addLyrics(source, lyrics)
+            setData(newData)
+        } finally {
+            setIsAddingLyrics(false)
+        }
+    }, [apiClient])
+
     return (
         <Box sx={{
             p: 3,
@@ -471,6 +487,7 @@ export default function LyricsAnalyzer({ data: initialData, onFileLoad, apiClien
                 onHandlerToggle={handleHandlerToggle}
                 isUpdatingHandlers={isUpdatingHandlers}
                 onHandlerClick={handleHandlerClick}
+                onAddLyrics={() => setIsAddLyricsModalOpen(true)}
             />
 
             <Grid container spacing={2} direction={isMobile ? 'column' : 'row'}>
@@ -540,6 +557,13 @@ export default function LyricsAnalyzer({ data: initialData, onFileLoad, apiClien
                 onSubmit={handleSubmitToServer}
                 apiClient={apiClient}
                 setModalSpacebarHandler={handleSetModalSpacebarHandler}
+            />
+
+            <AddLyricsModal
+                open={isAddLyricsModalOpen}
+                onClose={() => setIsAddLyricsModalOpen(false)}
+                onSubmit={handleAddLyrics}
+                isSubmitting={isAddingLyrics}
             />
 
             {!isReadOnly && apiClient && (

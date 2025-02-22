@@ -26,6 +26,7 @@ interface HeaderProps {
     onHandlerToggle: (handler: string, enabled: boolean) => void
     isUpdatingHandlers: boolean
     onHandlerClick?: (handler: string) => void
+    onAddLyrics?: () => void
 }
 
 export default function Header({
@@ -40,7 +41,8 @@ export default function Header({
     onTimeUpdate,
     onHandlerToggle,
     isUpdatingHandlers,
-    onHandlerClick
+    onHandlerClick,
+    onAddLyrics
 }: HeaderProps) {
     const theme = useTheme()
     const isMobile = useMediaQuery(theme.breakpoints.down('md'))
@@ -231,18 +233,35 @@ export default function Header({
                 flexDirection: isMobile ? 'column' : 'row',
                 gap: 5,
                 alignItems: 'flex-start',
-                justifyContent: 'flex-start',
-                mb: 3
+                justifyContent: 'space-between',
+                mb: 3,
+                width: '100%'
             }}>
-                <ModeSelector
-                    effectiveMode={effectiveMode}
-                    onChange={onModeChange}
-                />
-                <AudioPlayer
-                    apiClient={apiClient}
-                    onTimeUpdate={onTimeUpdate}
-                    audioHash={audioHash}
-                />
+                <Box sx={{
+                    display: 'flex',
+                    gap: 5,
+                    flexDirection: isMobile ? 'column' : 'row',
+                    alignItems: 'flex-start'
+                }}>
+                    <ModeSelector
+                        effectiveMode={effectiveMode}
+                        onChange={onModeChange}
+                    />
+                    <AudioPlayer
+                        apiClient={apiClient}
+                        onTimeUpdate={onTimeUpdate}
+                        audioHash={audioHash}
+                    />
+                </Box>
+                {!isReadOnly && apiClient && (
+                    <Button
+                        variant="outlined"
+                        onClick={onAddLyrics}
+                        sx={{ minWidth: 'fit-content' }}
+                    >
+                        Add Reference Lyrics
+                    </Button>
+                )}
             </Box>
         </>
     )

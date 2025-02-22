@@ -10,6 +10,7 @@ export interface ApiClient {
     getPreviewVideoUrl: (previewHash: string) => string;
     updateHandlers: (enabledHandlers: string[]) => Promise<CorrectionData>;
     isUpdatingHandlers?: boolean;
+    addLyrics: (source: string, lyrics: string) => Promise<CorrectionData>;
 }
 
 // Add new interface for the minimal update payload
@@ -23,6 +24,12 @@ interface PreviewVideoResponse {
     status: "success" | "error";
     preview_hash?: string;
     message?: string;
+}
+
+// Add new interface for adding lyrics
+interface AddLyricsRequest {
+    source: string;
+    lyrics: string;
 }
 
 export class LiveApiClient implements ApiClient {
@@ -131,6 +138,32 @@ export class LiveApiClient implements ApiClient {
             console.log('API: Set isUpdatingHandlers to', this.isUpdatingHandlers);
         }
     }
+
+    async addLyrics(source: string, lyrics: string): Promise<CorrectionData> {
+        const payload: AddLyricsRequest = {
+            source,
+            lyrics
+        };
+
+        const response = await fetch(`${this.baseUrl}/add-lyrics`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(payload)
+        });
+
+        if (!response.ok) {
+            throw new Error(`API error: ${response.statusText}`);
+        }
+
+        const data = await response.json();
+        if (data.status === 'error') {
+            throw new Error(data.message || 'Failed to add lyrics');
+        }
+
+        return validateCorrectionData(data.data);
+    }
 }
 
 export class FileOnlyClient implements ApiClient {
@@ -159,6 +192,10 @@ export class FileOnlyClient implements ApiClient {
 
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     async updateHandlers(_enabledHandlers: string[]): Promise<CorrectionData> {
+        throw new Error('Not supported in file-only mode');
+    }
+
+    async addLyrics(): Promise<CorrectionData> {
         throw new Error('Not supported in file-only mode');
     }
 }

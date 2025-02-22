@@ -2,8 +2,8 @@ import logging
 import socket
 from fastapi import FastAPI, Body, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from typing import Dict, Any, List
-from lyrics_transcriber.types import CorrectionResult, WordCorrection, LyricsSegment
+from typing import Dict, Any, List, Optional
+from lyrics_transcriber.types import CorrectionResult, WordCorrection, LyricsSegment, LyricsData, LyricsMetadata, Word
 import time
 import os
 import urllib.parse
@@ -18,6 +18,7 @@ from lyrics_transcriber.output.generator import OutputGenerator
 import json
 from lyrics_transcriber.correction.corrector import LyricsCorrector
 from lyrics_transcriber.types import TranscriptionResult, TranscriptionData
+from lyrics_transcriber.lyrics.user_input_provider import UserInputProvider
 
 
 class ReviewServer:
@@ -73,6 +74,7 @@ class ReviewServer:
         self.app.add_api_route("/api/audio/{audio_hash}", self.get_audio, methods=["GET"])
         self.app.add_api_route("/api/ping", self.ping, methods=["GET"])
         self.app.add_api_route("/api/handlers", self.update_handlers, methods=["POST"])
+        self.app.add_api_route("/api/add-lyrics", self.add_lyrics, methods=["POST"])
 
     async def get_correction_data(self):
         """Get the correction data."""
@@ -253,6 +255,126 @@ class ReviewServer:
             return {"status": "success", "data": self.correction_result.to_dict()}
         except Exception as e:
             self.logger.error(f"Failed to update handlers: {str(e)}")
+            raise HTTPException(status_code=500, detail=str(e))
+
+    def _create_lyrics_data_from_text(self, text: str, source: str) -> LyricsData:
+        """Create LyricsData object from plain text lyrics."""
+        self.logger.info(f"Creating LyricsData for source '{source}'")
+
+        # Split text into lines and create segments
+        lines = [line.strip() for line in text.split("\n") if line.strip()]
+        self.logger.info(f"Found {len(lines)} non-empty lines in input text")
+
+        segments = []
+        for i, line in enumerate(lines):
+            # Split line into words
+            word_texts = line.strip().split()
+            words = []
+
+            for j, word_text in enumerate(word_texts):
+                word = Word(
+                    id=f"manual_{source}_word_{i}_{j}",  # Create unique ID for each word
+                    text=word_text,
+                    start_time=0.0,  # Placeholder timing
+                    end_time=0.0,
+                    confidence=1.0,  # Reference lyrics are considered ground truth
+                    created_during_correction=False,
+                )
+                words.append(word)
+
+            segments.append(
+                LyricsSegment(
+                    id=f"manual_{source}_{i}",
+                    text=line,
+                    words=words,  # Now including the word objects
+                    start_time=0.0,  # Placeholder timing
+                    end_time=0.0,
+                )
+            )
+
+        # Create metadata
+        self.logger.info("Creating metadata for LyricsData")
+        metadata = LyricsMetadata(
+            source=source,
+            track_name=self.correction_result.metadata.get("title", "") or "",
+            artist_names=self.correction_result.metadata.get("artist", "") or "",
+            is_synced=False,
+            lyrics_provider="manual",
+            lyrics_provider_id="",
+            album_name=None,
+            duration_ms=None,
+            explicit=None,
+            language=None,
+            provider_metadata={},
+        )
+        self.logger.info(f"Created metadata: {metadata}")
+
+        lyrics_data = LyricsData(segments=segments, metadata=metadata, source=source)
+        self.logger.info(f"Created LyricsData with {len(segments)} segments and {sum(len(s.words) for s in segments)} total words")
+
+        return lyrics_data
+
+    async def add_lyrics(self, data: Dict[str, str] = Body(...)):
+        """Add new lyrics source and rerun correction."""
+        try:
+            source = data.get("source", "").strip()
+            lyrics_text = data.get("lyrics", "").strip()
+
+            self.logger.info(f"Received request to add lyrics source '{source}' with {len(lyrics_text)} characters")
+
+            if not source or not lyrics_text:
+                self.logger.warning("Invalid request: missing source or lyrics text")
+                raise HTTPException(status_code=400, detail="Source name and lyrics text are required")
+
+            # Validate source name isn't already used
+            if source in self.correction_result.reference_lyrics:
+                self.logger.warning(f"Source name '{source}' is already in use")
+                raise HTTPException(status_code=400, detail=f"Source name '{source}' is already in use")
+
+            # Create lyrics data using the provider
+            self.logger.info("Creating LyricsData using UserInputProvider")
+            provider = UserInputProvider(
+                lyrics_text=lyrics_text, source_name=source, metadata=self.correction_result.metadata or {}, logger=self.logger
+            )
+            lyrics_data = provider._convert_result_format({"text": lyrics_text, "metadata": self.correction_result.metadata or {}})
+            self.logger.info(f"Created LyricsData with {len(lyrics_data.segments)} segments")
+
+            # Add to reference lyrics
+            self.logger.info(f"Adding new source '{source}' to reference_lyrics")
+            self.correction_result.reference_lyrics[source] = lyrics_data
+            self.logger.info(f"Now have {len(self.correction_result.reference_lyrics)} total reference sources")
+
+            # Create TranscriptionData from original segments
+            self.logger.info("Creating TranscriptionData from original segments")
+            transcription_data = TranscriptionData(
+                segments=self.correction_result.original_segments,
+                words=[word for segment in self.correction_result.original_segments for word in segment.words],
+                text="\n".join(segment.text for segment in self.correction_result.original_segments),
+                source="original",
+            )
+
+            # Rerun correction with updated reference lyrics
+            self.logger.info("Initializing LyricsCorrector for re-correction")
+            corrector = LyricsCorrector(
+                cache_dir=self.output_config.cache_dir,
+                enabled_handlers=self.correction_result.metadata.get("enabled_handlers"),
+                logger=self.logger,
+            )
+
+            self.logger.info("Running correction with updated reference lyrics")
+            self.correction_result = corrector.run(
+                transcription_results=[TranscriptionResult(name="original", priority=1, result=transcription_data)],
+                lyrics_results=self.correction_result.reference_lyrics,
+                metadata=self.correction_result.metadata,
+            )
+            self.logger.info("Correction process completed")
+
+            return {"status": "success", "data": self.correction_result.to_dict()}
+
+        except HTTPException:
+            raise
+        except Exception as e:
+            self.logger.error(f"Failed to add lyrics: {str(e)}", exc_info=True)
             raise HTTPException(status_code=500, detail=str(e))
 
     def start(self) -> CorrectionResult:
