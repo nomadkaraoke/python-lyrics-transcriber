@@ -74,7 +74,7 @@ export default function LyricsAnalyzer({ data: initialData, onFileLoad, apiClien
     const [isReviewComplete, setIsReviewComplete] = useState(false)
     const [data, setData] = useState(initialData)
     const [originalData] = useState(() => JSON.parse(JSON.stringify(initialData)))
-    const [interactionMode, setInteractionMode] = useState<InteractionMode>('details')
+    const [interactionMode, setInteractionMode] = useState<InteractionMode>('edit')
     const [isShiftPressed, setIsShiftPressed] = useState(false)
     const [isCtrlPressed, setIsCtrlPressed] = useState(false)
     const [editModalSegment, setEditModalSegment] = useState<{
@@ -88,6 +88,7 @@ export default function LyricsAnalyzer({ data: initialData, onFileLoad, apiClien
     const [flashingHandler, setFlashingHandler] = useState<string | null>(null)
     const [isAddingLyrics, setIsAddingLyrics] = useState(false)
     const [isAddLyricsModalOpen, setIsAddLyricsModalOpen] = useState(false)
+    const [isAnyModalOpen, setIsAnyModalOpen] = useState(false)
     const theme = useTheme()
     const isMobile = useMediaQuery(theme.breakpoints.down('md'))
 
@@ -131,21 +132,39 @@ export default function LyricsAnalyzer({ data: initialData, onFileLoad, apiClien
             setIsCtrlPressed
         })
 
-        console.log('Adding keyboard event listeners')
-        window.addEventListener('keydown', handleKeyDown)
-        window.addEventListener('keyup', handleKeyUp)
+        // Only add keyboard listeners if no modal is open
+        if (!isAnyModalOpen) {
+            console.log('Adding keyboard event listeners')
+            window.addEventListener('keydown', handleKeyDown)
+            window.addEventListener('keyup', handleKeyUp)
 
-        return () => {
-            console.log('Removing keyboard event listeners')
-            window.removeEventListener('keydown', handleKeyDown)
-            window.removeEventListener('keyup', handleKeyUp)
-            document.body.style.userSelect = ''
+            return () => {
+                console.log('Removing keyboard event listeners')
+                window.removeEventListener('keydown', handleKeyDown)
+                window.removeEventListener('keyup', handleKeyUp)
+                document.body.style.userSelect = ''
+            }
+        } else {
+            // Reset modifier states when a modal opens
+            setIsShiftPressed(false)
+            setIsCtrlPressed(false)
         }
-    }, [setIsShiftPressed, setIsCtrlPressed])
+    }, [setIsShiftPressed, setIsCtrlPressed, isAnyModalOpen])
+
+    // Update modal state tracking
+    useEffect(() => {
+        const modalOpen = Boolean(
+            modalContent ||
+            editModalSegment ||
+            isReviewModalOpen ||
+            isAddLyricsModalOpen
+        )
+        setIsAnyModalOpen(modalOpen)
+    }, [modalContent, editModalSegment, isReviewModalOpen, isAddLyricsModalOpen])
 
     // Calculate effective mode based on modifier key states
     const effectiveMode = isShiftPressed ? 'highlight' :
-        isCtrlPressed ? 'edit' :
+        isCtrlPressed ? 'details' :
             interactionMode
 
     const handleFlash = useCallback((type: FlashType, info?: HighlightInfo) => {

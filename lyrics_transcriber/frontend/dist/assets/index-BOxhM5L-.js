@@ -33178,6 +33178,10 @@ function ModeSelector({ effectiveMode, onChange }) {
         onChange: (_, newMode) => newMode && onChange(newMode),
         size: "small",
         children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs(ToggleButton, { value: "edit", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx(EditIcon, { sx: { mr: 1 } }),
+            "Edit"
+          ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs(ToggleButton, { value: "details", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx(InfoIcon, { sx: { mr: 1 } }),
             "Details"
@@ -33185,10 +33189,6 @@ function ModeSelector({ effectiveMode, onChange }) {
           /* @__PURE__ */ jsxRuntimeExports.jsxs(ToggleButton, { value: "highlight", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx(HighlightIcon, { sx: { mr: 1 } }),
             "Highlight"
-          ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs(ToggleButton, { value: "edit", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx(EditIcon, { sx: { mr: 1 } }),
-            "Edit"
           ] })
         ]
       }
@@ -33645,7 +33645,7 @@ function LyricsAnalyzer({ data: initialData, onFileLoad, apiClient, isReadOnly, 
   const [isReviewComplete, setIsReviewComplete] = reactExports.useState(false);
   const [data, setData] = reactExports.useState(initialData);
   const [originalData] = reactExports.useState(() => JSON.parse(JSON.stringify(initialData)));
-  const [interactionMode, setInteractionMode] = reactExports.useState("details");
+  const [interactionMode, setInteractionMode] = reactExports.useState("edit");
   const [isShiftPressed, setIsShiftPressed] = reactExports.useState(false);
   const [isCtrlPressed, setIsCtrlPressed] = reactExports.useState(false);
   const [editModalSegment, setEditModalSegment] = reactExports.useState(null);
@@ -33655,6 +33655,7 @@ function LyricsAnalyzer({ data: initialData, onFileLoad, apiClient, isReadOnly, 
   const [flashingHandler, setFlashingHandler] = reactExports.useState(null);
   const [isAddingLyrics, setIsAddingLyrics] = reactExports.useState(false);
   const [isAddLyricsModalOpen, setIsAddLyricsModalOpen] = reactExports.useState(false);
+  const [isAnyModalOpen, setIsAnyModalOpen] = reactExports.useState(false);
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("md"));
   reactExports.useEffect(() => {
@@ -33689,17 +33690,28 @@ function LyricsAnalyzer({ data: initialData, onFileLoad, apiClient, isReadOnly, 
       setIsShiftPressed,
       setIsCtrlPressed
     });
-    console.log("Adding keyboard event listeners");
-    window.addEventListener("keydown", handleKeyDown);
-    window.addEventListener("keyup", handleKeyUp);
-    return () => {
-      console.log("Removing keyboard event listeners");
-      window.removeEventListener("keydown", handleKeyDown);
-      window.removeEventListener("keyup", handleKeyUp);
-      document.body.style.userSelect = "";
-    };
-  }, [setIsShiftPressed, setIsCtrlPressed]);
-  const effectiveMode = isShiftPressed ? "highlight" : isCtrlPressed ? "edit" : interactionMode;
+    if (!isAnyModalOpen) {
+      console.log("Adding keyboard event listeners");
+      window.addEventListener("keydown", handleKeyDown);
+      window.addEventListener("keyup", handleKeyUp);
+      return () => {
+        console.log("Removing keyboard event listeners");
+        window.removeEventListener("keydown", handleKeyDown);
+        window.removeEventListener("keyup", handleKeyUp);
+        document.body.style.userSelect = "";
+      };
+    } else {
+      setIsShiftPressed(false);
+      setIsCtrlPressed(false);
+    }
+  }, [setIsShiftPressed, setIsCtrlPressed, isAnyModalOpen]);
+  reactExports.useEffect(() => {
+    const modalOpen = Boolean(
+      modalContent || editModalSegment || isReviewModalOpen || isAddLyricsModalOpen
+    );
+    setIsAnyModalOpen(modalOpen);
+  }, [modalContent, editModalSegment, isReviewModalOpen, isAddLyricsModalOpen]);
+  const effectiveMode = isShiftPressed ? "highlight" : isCtrlPressed ? "details" : interactionMode;
   const handleFlash = reactExports.useCallback((type, info) => {
     setFlashingType(null);
     setHighlightInfo(null);
@@ -34246,4 +34258,4 @@ function App() {
 ReactDOM$1.createRoot(document.getElementById("root")).render(
   /* @__PURE__ */ jsxRuntimeExports.jsx(App, {})
 );
-//# sourceMappingURL=index-DmPGxC0w.js.map
+//# sourceMappingURL=index-BOxhM5L-.js.map

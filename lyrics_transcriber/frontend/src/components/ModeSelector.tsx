@@ -21,6 +21,10 @@ export default function ModeSelector({ effectiveMode, onChange }: ModeSelectorPr
                 onChange={(_, newMode) => newMode && onChange(newMode)}
                 size="small"
             >
+                <ToggleButton value="edit">
+                    <EditIcon sx={{ mr: 1 }} />
+                    Edit
+                </ToggleButton>
                 <ToggleButton value="details">
                     <InfoIcon sx={{ mr: 1 }} />
                     Details
@@ -28,10 +32,6 @@ export default function ModeSelector({ effectiveMode, onChange }: ModeSelectorPr
                 <ToggleButton value="highlight">
                     <HighlightIcon sx={{ mr: 1 }} />
                     Highlight
-                </ToggleButton>
-                <ToggleButton value="edit">
-                    <EditIcon sx={{ mr: 1 }} />
-                    Edit
                 </ToggleButton>
             </ToggleButtonGroup>
         </Box>
