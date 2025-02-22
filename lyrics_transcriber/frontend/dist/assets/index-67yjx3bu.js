@@ -32508,7 +32508,15 @@ function EditModal({
                 mb: 3,
                 pt: 1,
                 flexGrow: 1,
-                overflowY: "auto"
+                overflowY: "auto",
+                "&::-webkit-scrollbar": {
+                  display: "none"
+                  // Hide scrollbar for WebKit browsers (Chrome, Safari, etc.)
+                },
+                msOverflowStyle: "none",
+                // Hide scrollbar for IE and Edge
+                scrollbarWidth: "none"
+                // Hide scrollbar for Firefox
               }, children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx(
                   WordDivider,
@@ -34258,4 +34266,4 @@ function App() {
 ReactDOM$1.createRoot(document.getElementById("root")).render(
   /* @__PURE__ */ jsxRuntimeExports.jsx(App, {})
 );
-//# sourceMappingURL=index-BOxhM5L-.js.map
+//# sourceMappingURL=index-67yjx3bu.js.map

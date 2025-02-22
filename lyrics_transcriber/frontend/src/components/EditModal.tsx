@@ -436,7 +436,12 @@ export default function EditModal({
                     mb: 3,
                     pt: 1,
                     flexGrow: 1,
-                    overflowY: 'auto'
+                    overflowY: 'auto',
+                    '&::-webkit-scrollbar': {
+                        display: 'none'  // Hide scrollbar for WebKit browsers (Chrome, Safari, etc.)
+                    },
+                    msOverflowStyle: 'none',  // Hide scrollbar for IE and Edge
+                    scrollbarWidth: 'none',   // Hide scrollbar for Firefox
                 }}>
                     {/* Initial divider with Add Segment Before button */}
                     <WordDivider
