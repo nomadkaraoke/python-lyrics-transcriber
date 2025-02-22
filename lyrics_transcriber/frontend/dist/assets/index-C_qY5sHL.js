@@ -31645,15 +31645,9 @@ function TranscriptionView({
     )
   ] });
 }
-const AddIcon = createSvgIcon(/* @__PURE__ */ jsxRuntimeExports.jsx("path", {
-  d: "M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6z"
-}), "Add");
 const DeleteIcon = createSvgIcon(/* @__PURE__ */ jsxRuntimeExports.jsx("path", {
   d: "M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6zM19 4h-3.5l-1-1h-5l-1 1H5v2h14z"
 }), "Delete");
-const MergeIcon = createSvgIcon(/* @__PURE__ */ jsxRuntimeExports.jsx("path", {
-  d: "M17 20.41 18.41 19 15 15.59 13.59 17zM7.5 8H11v5.59L5.59 19 7 20.41l6-6V8h3.5L12 3.5z"
-}), "CallMerge");
 const SplitIcon = createSvgIcon(/* @__PURE__ */ jsxRuntimeExports.jsx("path", {
   d: "m14 4 2.29 2.29-2.88 2.88 1.42 1.42 2.88-2.88L20 10V4zm-4 0H4v6l2.29-2.29 4.71 4.7V20h2v-8.41l-5.29-5.3z"
 }), "CallSplit");
@@ -31972,7 +31966,31 @@ let nanoid = (size = 21) => {
   }
   return id;
 };
-const WordDivider = ({
+const AddIcon = createSvgIcon(/* @__PURE__ */ jsxRuntimeExports.jsx("path", {
+  d: "M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6z"
+}), "Add");
+const MergeIcon = createSvgIcon(/* @__PURE__ */ jsxRuntimeExports.jsx("path", {
+  d: "M17 20.41 18.41 19 15 15.59 13.59 17zM7.5 8H11v5.59L5.59 19 7 20.41l6-6V8h3.5L12 3.5z"
+}), "CallMerge");
+const buttonTextStyle = {
+  color: "rgba(0, 0, 0, 0.6)",
+  fontFamily: '"Roboto", "Helvetica", "Arial", sans-serif',
+  fontWeight: 400,
+  fontSize: "0.875rem",
+  lineHeight: "1.4375em",
+  textTransform: "none"
+};
+const buttonBaseStyle = {
+  minHeight: 0,
+  padding: "2px 8px",
+  "& .MuiButton-startIcon": {
+    marginRight: 0.5
+  },
+  "& .MuiSvgIcon-root": {
+    fontSize: "1.2rem"
+  }
+};
+function WordDivider({
   onAddWord,
   onMergeWords,
   onAddSegmentBefore,
@@ -31982,171 +32000,103 @@ const WordDivider = ({
   isFirst = false,
   isLast = false,
   sx = {}
-}) => /* @__PURE__ */ jsxRuntimeExports.jsx(
-  Box,
-  {
-    sx: {
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "center",
-      height: "20px",
-      my: -0.5,
-      width: "50%",
-      backgroundColor: "#fff",
-      ...sx
-    },
-    children: /* @__PURE__ */ jsxRuntimeExports.jsxs(Box, { sx: {
-      display: "flex",
-      alignItems: "center",
-      gap: 1,
-      backgroundColor: "#fff",
-      padding: "0 8px",
-      zIndex: 1
-    }, children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx(
-        Button,
-        {
-          onClick: onAddWord,
-          title: "Add Word",
-          size: "small",
-          startIcon: /* @__PURE__ */ jsxRuntimeExports.jsx(AddIcon, {}),
-          sx: {
-            minHeight: 0,
-            padding: "2px 8px",
-            color: "primary.main",
-            "& .MuiButton-startIcon": {
-              marginRight: 0.5
+}) {
+  return /* @__PURE__ */ jsxRuntimeExports.jsx(
+    Box,
+    {
+      sx: {
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        height: "20px",
+        my: -0.5,
+        width: "50%",
+        backgroundColor: "#fff",
+        ...sx
+      },
+      children: /* @__PURE__ */ jsxRuntimeExports.jsxs(Box, { sx: {
+        display: "flex",
+        alignItems: "center",
+        gap: 1,
+        backgroundColor: "#fff",
+        padding: "0 8px",
+        zIndex: 1
+      }, children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx(
+          Button,
+          {
+            onClick: onAddWord,
+            title: "Add Word",
+            size: "small",
+            startIcon: /* @__PURE__ */ jsxRuntimeExports.jsx(AddIcon, {}),
+            sx: {
+              ...buttonBaseStyle,
+              color: "primary.main"
             },
-            "& .MuiSvgIcon-root": {
-              fontSize: "1.2rem"
-            }
-          },
-          children: /* @__PURE__ */ jsxRuntimeExports.jsx(Typography, { sx: {
-            color: "rgba(0, 0, 0, 0.6)",
-            fontFamily: '"Roboto", "Helvetica", "Arial", sans-serif',
-            fontWeight: 400,
-            fontSize: "0.875rem",
-            lineHeight: "1.4375em",
-            textTransform: "none"
-          }, children: "Add Word" })
-        }
-      ),
-      isFirst && /* @__PURE__ */ jsxRuntimeExports.jsx(
-        Button,
-        {
-          onClick: onAddSegmentBefore,
-          title: "Add Segment",
-          size: "small",
-          startIcon: /* @__PURE__ */ jsxRuntimeExports.jsx(AddIcon, { sx: { transform: "rotate(90deg)" } }),
-          sx: {
-            minHeight: 0,
-            padding: "2px 8px",
-            color: "success.main",
-            "& .MuiButton-startIcon": {
-              marginRight: 0.5
+            children: /* @__PURE__ */ jsxRuntimeExports.jsx(Typography, { sx: buttonTextStyle, children: "Add Word" })
+          }
+        ),
+        isFirst && /* @__PURE__ */ jsxRuntimeExports.jsx(
+          Button,
+          {
+            onClick: onAddSegmentBefore,
+            title: "Add Segment",
+            size: "small",
+            startIcon: /* @__PURE__ */ jsxRuntimeExports.jsx(AddIcon, { sx: { transform: "rotate(90deg)" } }),
+            sx: {
+              ...buttonBaseStyle,
+              color: "success.main"
             },
-            "& .MuiSvgIcon-root": {
-              fontSize: "1.2rem"
-            }
-          },
-          children: /* @__PURE__ */ jsxRuntimeExports.jsx(Typography, { sx: {
-            color: "rgba(0, 0, 0, 0.6)",
-            fontFamily: '"Roboto", "Helvetica", "Arial", sans-serif',
-            fontWeight: 400,
-            fontSize: "0.875rem",
-            lineHeight: "1.4375em",
-            textTransform: "none"
-          }, children: "Add Segment" })
-        }
-      ),
-      onMergeWords && !isLast && /* @__PURE__ */ jsxRuntimeExports.jsx(
-        Button,
-        {
-          onClick: onMergeWords,
-          title: "Merge Words",
-          size: "small",
-          startIcon: /* @__PURE__ */ jsxRuntimeExports.jsx(MergeIcon, { sx: { transform: "rotate(90deg)" } }),
-          disabled: !canMerge,
-          sx: {
-            minHeight: 0,
-            padding: "2px 8px",
-            color: "primary.main",
-            "& .MuiButton-startIcon": {
-              marginRight: 0.5
+            children: /* @__PURE__ */ jsxRuntimeExports.jsx(Typography, { sx: buttonTextStyle, children: "Add Segment" })
+          }
+        ),
+        onMergeWords && !isLast && /* @__PURE__ */ jsxRuntimeExports.jsx(
+          Button,
+          {
+            onClick: onMergeWords,
+            title: "Merge Words",
+            size: "small",
+            startIcon: /* @__PURE__ */ jsxRuntimeExports.jsx(MergeIcon, { sx: { transform: "rotate(90deg)" } }),
+            disabled: !canMerge,
+            sx: {
+              ...buttonBaseStyle,
+              color: "primary.main"
             },
-            "& .MuiSvgIcon-root": {
-              fontSize: "1.2rem"
-            }
-          },
-          children: /* @__PURE__ */ jsxRuntimeExports.jsx(Typography, { sx: {
-            color: "rgba(0, 0, 0, 0.6)",
-            fontFamily: '"Roboto", "Helvetica", "Arial", sans-serif',
-            fontWeight: 400,
-            fontSize: "0.875rem",
-            lineHeight: "1.4375em",
-            textTransform: "none"
-          }, children: "Merge Words" })
-        }
-      ),
-      onSplitSegment && !isLast && /* @__PURE__ */ jsxRuntimeExports.jsx(
-        Button,
-        {
-          onClick: onSplitSegment,
-          title: "Split Segment",
-          size: "small",
-          startIcon: /* @__PURE__ */ jsxRuntimeExports.jsx(SplitIcon, { sx: { transform: "rotate(90deg)" } }),
-          sx: {
-            minHeight: 0,
-            padding: "2px 8px",
-            color: "warning.main",
-            "& .MuiButton-startIcon": {
-              marginRight: 0.5
+            children: /* @__PURE__ */ jsxRuntimeExports.jsx(Typography, { sx: buttonTextStyle, children: "Merge Words" })
+          }
+        ),
+        onSplitSegment && !isLast && /* @__PURE__ */ jsxRuntimeExports.jsx(
+          Button,
+          {
+            onClick: onSplitSegment,
+            title: "Split Segment",
+            size: "small",
+            startIcon: /* @__PURE__ */ jsxRuntimeExports.jsx(SplitIcon, { sx: { transform: "rotate(90deg)" } }),
+            sx: {
+              ...buttonBaseStyle,
+              color: "warning.main"
             },
-            "& .MuiSvgIcon-root": {
-              fontSize: "1.2rem"
-            }
-          },
-          children: /* @__PURE__ */ jsxRuntimeExports.jsx(Typography, { sx: {
-            color: "rgba(0, 0, 0, 0.6)",
-            fontFamily: '"Roboto", "Helvetica", "Arial", sans-serif',
-            fontWeight: 400,
-            fontSize: "0.875rem",
-            lineHeight: "1.4375em",
-            textTransform: "none"
-          }, children: "Split Segment" })
-        }
-      ),
-      isLast && /* @__PURE__ */ jsxRuntimeExports.jsx(
-        Button,
-        {
-          onClick: onAddSegmentAfter,
-          title: "Add Segment",
-          size: "small",
-          startIcon: /* @__PURE__ */ jsxRuntimeExports.jsx(AddIcon, { sx: { transform: "rotate(90deg)" } }),
-          sx: {
-            minHeight: 0,
-            padding: "2px 8px",
-            color: "success.main",
-            "& .MuiButton-startIcon": {
-              marginRight: 0.5
+            children: /* @__PURE__ */ jsxRuntimeExports.jsx(Typography, { sx: buttonTextStyle, children: "Split Segment" })
+          }
+        ),
+        isLast && /* @__PURE__ */ jsxRuntimeExports.jsx(
+          Button,
+          {
+            onClick: onAddSegmentAfter,
+            title: "Add Segment",
+            size: "small",
+            startIcon: /* @__PURE__ */ jsxRuntimeExports.jsx(AddIcon, { sx: { transform: "rotate(90deg)" } }),
+            sx: {
+              ...buttonBaseStyle,
+              color: "success.main"
             },
-            "& .MuiSvgIcon-root": {
-              fontSize: "1.2rem"
-            }
-          },
-          children: /* @__PURE__ */ jsxRuntimeExports.jsx(Typography, { sx: {
-            color: "rgba(0, 0, 0, 0.6)",
-            fontFamily: '"Roboto", "Helvetica", "Arial", sans-serif',
-            fontWeight: 400,
-            fontSize: "0.875rem",
-            lineHeight: "1.4375em",
-            textTransform: "none"
-          }, children: "Add Segment" })
-        }
-      )
-    ] })
-  }
-);
+            children: /* @__PURE__ */ jsxRuntimeExports.jsx(Typography, { sx: buttonTextStyle, children: "Add Segment" })
+          }
+        )
+      ] })
+    }
+  );
+}
 function EditModal({
   open,
   onClose,
@@ -34271,4 +34221,4 @@ function App() {
 ReactDOM$1.createRoot(document.getElementById("root")).render(
   /* @__PURE__ */ jsxRuntimeExports.jsx(App, {})
 );
-//# sourceMappingURL=index-M5yBStmc.js.map
+//# sourceMappingURL=index-C_qY5sHL.js.map

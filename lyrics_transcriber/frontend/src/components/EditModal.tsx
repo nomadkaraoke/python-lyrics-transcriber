@@ -10,9 +10,7 @@ import {
     Typography
 } from '@mui/material'
 import CloseIcon from '@mui/icons-material/Close'
-import AddIcon from '@mui/icons-material/Add'
 import DeleteIcon from '@mui/icons-material/Delete'
-import MergeIcon from '@mui/icons-material/CallMerge'
 import SplitIcon from '@mui/icons-material/CallSplit'
 import RestoreIcon from '@mui/icons-material/RestoreFromTrash'
 import AutoFixHighIcon from '@mui/icons-material/AutoFixHigh'
@@ -23,6 +21,7 @@ import { LyricsSegment, Word } from '../types'
 import { useState, useEffect, useCallback } from 'react'
 import TimelineEditor from './TimelineEditor'
 import { nanoid } from 'nanoid'
+import WordDivider from './WordDivider'
 
 interface EditModalProps {
     open: boolean
@@ -38,201 +37,6 @@ interface EditModalProps {
     onSplitSegment?: (segmentIndex: number, afterWordIndex: number) => void
     setModalSpacebarHandler: (handler: (() => (e: KeyboardEvent) => void) | undefined) => void
 }
-
-// New component for the action divider
-const WordDivider = ({
-    onAddWord,
-    onMergeWords,
-    onAddSegmentBefore,
-    onAddSegmentAfter,
-    onSplitSegment,
-    canMerge = false,
-    isFirst = false,
-    isLast = false,
-    sx = {}
-}: {
-    onAddWord: () => void,
-    onMergeWords?: () => void,
-    onAddSegmentBefore?: () => void,
-    onAddSegmentAfter?: () => void,
-    onSplitSegment?: () => void,
-    canMerge?: boolean,
-    isFirst?: boolean,
-    isLast?: boolean,
-    sx?: any
-}) => (
-    <Box
-        sx={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            height: '20px',
-            my: -0.5,
-            width: '50%',
-            backgroundColor: '#fff',
-            ...sx
-        }}
-    >
-        <Box sx={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 1,
-            backgroundColor: '#fff',
-            padding: '0 8px',
-            zIndex: 1
-        }}>
-            <Button
-                onClick={onAddWord}
-                title="Add Word"
-                size="small"
-                startIcon={<AddIcon />}
-                sx={{
-                    minHeight: 0,
-                    padding: '2px 8px',
-                    color: 'primary.main',
-                    '& .MuiButton-startIcon': {
-                        marginRight: 0.5
-                    },
-                    '& .MuiSvgIcon-root': {
-                        fontSize: '1.2rem'
-                    }
-                }}
-            >
-                <Typography sx={{
-                    color: 'rgba(0, 0, 0, 0.6)',
-                    fontFamily: '"Roboto", "Helvetica", "Arial", sans-serif',
-                    fontWeight: 400,
-                    fontSize: '0.875rem',
-                    lineHeight: '1.4375em',
-                    textTransform: 'none'
-                }}>
-                    Add Word
-                </Typography>
-            </Button>
-            {isFirst && (
-                <Button
-                    onClick={onAddSegmentBefore}
-                    title="Add Segment"
-                    size="small"
-                    startIcon={<AddIcon sx={{ transform: 'rotate(90deg)' }} />}
-                    sx={{
-                        minHeight: 0,
-                        padding: '2px 8px',
-                        color: 'success.main',
-                        '& .MuiButton-startIcon': {
-                            marginRight: 0.5
-                        },
-                        '& .MuiSvgIcon-root': {
-                            fontSize: '1.2rem'
-                        }
-                    }}
-                >
-                    <Typography sx={{
-                        color: 'rgba(0, 0, 0, 0.6)',
-                        fontFamily: '"Roboto", "Helvetica", "Arial", sans-serif',
-                        fontWeight: 400,
-                        fontSize: '0.875rem',
-                        lineHeight: '1.4375em',
-                        textTransform: 'none'
-                    }}>
-                        Add Segment
-                    </Typography>
-                </Button>
-            )}
-            {onMergeWords && !isLast && (
-                <Button
-                    onClick={onMergeWords}
-                    title="Merge Words"
-                    size="small"
-                    startIcon={<MergeIcon sx={{ transform: 'rotate(90deg)' }} />}
-                    disabled={!canMerge}
-                    sx={{
-                        minHeight: 0,
-                        padding: '2px 8px',
-                        color: 'primary.main',
-                        '& .MuiButton-startIcon': {
-                            marginRight: 0.5
-                        },
-                        '& .MuiSvgIcon-root': {
-                            fontSize: '1.2rem'
-                        }
-                    }}
-                >
-                    <Typography sx={{
-                        color: 'rgba(0, 0, 0, 0.6)',
-                        fontFamily: '"Roboto", "Helvetica", "Arial", sans-serif',
-                        fontWeight: 400,
-                        fontSize: '0.875rem',
-                        lineHeight: '1.4375em',
-                        textTransform: 'none'
-                    }}>
-                        Merge Words
-                    </Typography>
-                </Button>
-            )}
-            {onSplitSegment && !isLast && (
-                <Button
-                    onClick={onSplitSegment}
-                    title="Split Segment"
-                    size="small"
-                    startIcon={<SplitIcon sx={{ transform: 'rotate(90deg)' }} />}
-                    sx={{
-                        minHeight: 0,
-                        padding: '2px 8px',
-                        color: 'warning.main',
-                        '& .MuiButton-startIcon': {
-                            marginRight: 0.5
-                        },
-                        '& .MuiSvgIcon-root': {
-                            fontSize: '1.2rem'
-                        }
-                    }}
-                >
-                    <Typography sx={{
-                        color: 'rgba(0, 0, 0, 0.6)',
-                        fontFamily: '"Roboto", "Helvetica", "Arial", sans-serif',
-                        fontWeight: 400,
-                        fontSize: '0.875rem',
-                        lineHeight: '1.4375em',
-                        textTransform: 'none'
-                    }}>
-                        Split Segment
-                    </Typography>
-                </Button>
-            )}
-            {isLast && (
-                <Button
-                    onClick={onAddSegmentAfter}
-                    title="Add Segment"
-                    size="small"
-                    startIcon={<AddIcon sx={{ transform: 'rotate(90deg)' }} />}
-                    sx={{
-                        minHeight: 0,
-                        padding: '2px 8px',
-                        color: 'success.main',
-                        '& .MuiButton-startIcon': {
-                            marginRight: 0.5
-                        },
-                        '& .MuiSvgIcon-root': {
-                            fontSize: '1.2rem'
-                        }
-                    }}
-                >
-                    <Typography sx={{
-                        color: 'rgba(0, 0, 0, 0.6)',
-                        fontFamily: '"Roboto", "Helvetica", "Arial", sans-serif',
-                        fontWeight: 400,
-                        fontSize: '0.875rem',
-                        lineHeight: '1.4375em',
-                        textTransform: 'none'
-                    }}>
-                        Add Segment
-                    </Typography>
-                </Button>
-            )}
-        </Box>
-    </Box>
-);
 
 export default function EditModal({
     open,
