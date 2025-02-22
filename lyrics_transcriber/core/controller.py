@@ -321,6 +321,9 @@ class LyricsTranscriber:
                 sorted_results = sorted(self.results.transcription_results, key=lambda x: x.priority)
                 best_transcription = sorted_results[0]
 
+                # Count total words in the transcription
+                total_words = sum(len(segment.words) for segment in best_transcription.result.segments)
+
                 # Create a CorrectionResult with no corrections
                 self.results.transcription_corrected = CorrectionResult(
                     original_segments=best_transcription.result.segments,
@@ -331,39 +334,47 @@ class LyricsTranscriber:
                     reference_lyrics={},
                     anchor_sequences=[],
                     gap_sequences=[],
-                    resized_segments=[],  # Will be populated later
+                    resized_segments=[],
+                    correction_steps=[],
+                    word_id_map={},
+                    segment_id_map={},
                     metadata={
                         "correction_type": "none",
                         "reason": "no_reference_lyrics",
-                        "audio_filepath": self.audio_filepath,  # Add audio filepath
+                        "audio_filepath": self.audio_filepath,
+                        "anchor_sequences_count": 0,
+                        "gap_sequences_count": 0,
+                        "total_words": total_words,
+                        "correction_ratio": 0.0,
+                        "available_handlers": [],
+                        "enabled_handlers": [],
                     },
                 )
-            return
+        else:
+            # Create metadata dict with song info
+            metadata = {
+                "artist": self.artist,
+                "title": self.title,
+                "full_reference_texts": {source: lyrics.get_full_text() for source, lyrics in self.results.lyrics_results.items()},
+            }
 
-        # Create metadata dict with song info
-        metadata = {
-            "artist": self.artist,
-            "title": self.title,
-            "full_reference_texts": {source: lyrics.get_full_text() for source, lyrics in self.results.lyrics_results.items()},
-        }
+            # Get enabled handlers from metadata if available
+            enabled_handlers = metadata.get("enabled_handlers", None)
 
-        # Get enabled handlers from metadata if available
-        enabled_handlers = metadata.get("enabled_handlers", None)
+            # Create corrector with enabled handlers
+            corrector = LyricsCorrector(cache_dir=self.output_config.cache_dir, enabled_handlers=enabled_handlers, logger=self.logger)
 
-        # Create corrector with enabled handlers
-        corrector = LyricsCorrector(cache_dir=self.output_config.cache_dir, enabled_handlers=enabled_handlers, logger=self.logger)
+            corrected_data = corrector.run(
+                transcription_results=self.results.transcription_results,
+                lyrics_results=self.results.lyrics_results,
+                metadata=metadata,
+            )
 
-        corrected_data = corrector.run(
-            transcription_results=self.results.transcription_results,
-            lyrics_results=self.results.lyrics_results,
-            metadata=metadata,
-        )
+            # Store corrected results
+            self.results.transcription_corrected = corrected_data
+            self.logger.info("Lyrics correction completed")
 
-        # Store corrected results
-        self.results.transcription_corrected = corrected_data
-        self.logger.info("Lyrics correction completed")
-
-        # Add human review step
+        # Add human review step (moved outside the else block)
         if self.output_config.enable_review:
             from lyrics_transcriber.review.server import ReviewServer
 
