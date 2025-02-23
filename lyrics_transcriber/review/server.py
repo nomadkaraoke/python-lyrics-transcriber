@@ -256,6 +256,11 @@ class ReviewServer:
                 else:
                     self.logger.warning("No handler configuration found in metadata")
 
+            # Log reference sources before correction
+            for source, lyrics in self.correction_result.reference_lyrics.items():
+                word_count = sum(len(s.words) for s in lyrics.segments)
+                self.logger.info(f"Reference source '{source}': {word_count} words in {len(lyrics.segments)} segments")
+
             # Rerun correction with updated reference lyrics
             self.logger.info("Initializing LyricsCorrector for re-correction")
             self.logger.info(f"Passing enabled handlers to corrector: {enabled_handlers or '[]'}")
@@ -410,6 +415,11 @@ class ReviewServer:
                     self.logger.info(f"No enabled handlers found in metadata, using default enabled handlers: {enabled_handlers}")
                 else:
                     self.logger.warning("No handler configuration found in metadata")
+
+            # Log reference sources before correction
+            for source, lyrics in self.correction_result.reference_lyrics.items():
+                word_count = sum(len(s.words) for s in lyrics.segments)
+                self.logger.info(f"Reference source '{source}': {word_count} words in {len(lyrics.segments)} segments")
 
             # Rerun correction with updated reference lyrics
             self.logger.info("Initializing LyricsCorrector for re-correction")

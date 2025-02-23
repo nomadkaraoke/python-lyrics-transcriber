@@ -12,6 +12,7 @@ import { CorrectionData } from '../types'
 import { useMemo, useRef, useEffect } from 'react'
 import { ApiClient } from '../api'
 import PreviewVideoSection from './PreviewVideoSection'
+import { CloudUpload, ArrowBack } from '@mui/icons-material'
 
 interface ReviewChangesModalProps {
     open: boolean
@@ -72,6 +73,13 @@ export default function ReviewChangesModal({
 }: ReviewChangesModalProps) {
     // Add ref to video element
     const videoRef = useRef<HTMLVideoElement>(null)
+
+    // Stop audio playback when modal opens
+    useEffect(() => {
+        if (open && window.isAudioPlaying && window.toggleAudioPlayback) {
+            window.toggleAudioPlayback()
+        }
+    }, [open])
 
     // Add effect to handle spacebar
     useEffect(() => {
@@ -269,7 +277,7 @@ export default function ReviewChangesModal({
             maxWidth="md"
             fullWidth
         >
-            <DialogTitle>Review Changes</DialogTitle>
+            <DialogTitle>Preview Video (With Vocals)</DialogTitle>
             <DialogContent
                 dividers
                 sx={{
@@ -288,7 +296,7 @@ export default function ReviewChangesModal({
                     {differences.length === 0 ? (
                         <Box>
                             <Typography color="text.secondary">
-                                No changes detected. You can still submit to continue processing.
+                                No manual corrections detected. If everything looks good in the preview, click submit and the server will generate the final karaoke video.
                             </Typography>
                             <Typography variant="body2" color="text.secondary">
                                 Total segments: {updatedData.corrected_segments.length}
@@ -307,12 +315,21 @@ export default function ReviewChangesModal({
                 </Box>
             </DialogContent>
             <DialogActions>
-                <Button onClick={onClose}>Cancel</Button>
+                <Button 
+                    onClick={onClose}
+                    color="warning"
+                    startIcon={<ArrowBack />}
+                    sx={{ mr: 'auto' }}
+                >
+                    Cancel
+                </Button>
                 <Button
                     onClick={onSubmit}
                     variant="contained"
+                    color="success"
+                    endIcon={<CloudUpload />}
                 >
-                    Submit to Server
+                    Complete Review
                 </Button>
             </DialogActions>
         </Dialog>

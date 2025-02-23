@@ -47,14 +47,14 @@ class BaseLyricsProvider(ABC):
         converted_cache_path = self._get_cache_path(cache_key, "converted")
         converted_data = self._load_from_cache(converted_cache_path)
         if converted_data:
-            self.logger.info(f"Using cached converted lyrics for {artist} - {title}")
+            self.logger.info(f"Using cached converted lyrics for {artist} - {title} from file: {converted_cache_path}")
             return LyricsData.from_dict(converted_data)
 
         # Check raw cache next
         raw_cache_path = self._get_cache_path(cache_key, "raw")
         raw_data = self._load_from_cache(raw_cache_path)
         if raw_data:
-            self.logger.info(f"Using cached raw lyrics for {artist} - {title}")
+            self.logger.info(f"Using cached raw lyrics for {artist} - {title} from file: {raw_cache_path}")
             converted_result = self._convert_result_format(raw_data)
             self._save_to_cache(converted_cache_path, converted_result.to_dict())
             return converted_result

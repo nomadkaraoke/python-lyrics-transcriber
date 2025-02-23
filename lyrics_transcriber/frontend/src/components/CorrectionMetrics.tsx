@@ -14,7 +14,8 @@ function Metric({ color, label, value, description, details, onClick }: MetricPr
     return (
         <Paper
             sx={{
-                p: 2,
+                p: 1,
+                height: '200px',
                 cursor: onClick ? 'pointer' : 'default',
                 '&:hover': onClick ? {
                     bgcolor: 'action.hover'

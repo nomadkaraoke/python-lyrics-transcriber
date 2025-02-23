@@ -26,6 +26,7 @@ import { setupKeyboardHandlers, setModalHandler, getModalState } from './shared/
 import Header from './Header'
 import { findWordById, getWordsFromIds } from './shared/utils/wordUtils'
 import AddLyricsModal from './AddLyricsModal'
+import { RestoreFromTrash, OndemandVideo } from '@mui/icons-material'
 
 // Add type for window augmentation at the top of the file
 declare global {
@@ -532,6 +533,32 @@ export default function LyricsAnalyzer({ data: initialData, onFileLoad, apiClien
                         currentTime={currentAudioTime}
                         anchors={data.anchor_sequences}
                     />
+                    {!isReadOnly && apiClient && (
+                        <Box sx={{
+                            mt: 2,
+                            mb: 3,
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            width: '100%'
+                        }}>
+                            <Button
+                                variant="outlined"
+                                color="warning"
+                                onClick={handleResetCorrections}
+                                startIcon={<RestoreFromTrash />}
+                            >
+                                Reset Corrections
+                            </Button>
+                            <Button
+                                variant="contained"
+                                onClick={handleFinishReview}
+                                disabled={isReviewComplete}
+                                endIcon={<OndemandVideo />}
+                            >
+                                {isReviewComplete ? 'Review Complete' : 'Preview Video'}
+                            </Button>
+                        </Box>
+                    )}
                 </Grid>
                 <Grid item xs={12} md={6}>
                     <ReferenceView
@@ -593,25 +620,6 @@ export default function LyricsAnalyzer({ data: initialData, onFileLoad, apiClien
                 onSubmit={handleAddLyrics}
                 isSubmitting={isAddingLyrics}
             />
-
-            {!isReadOnly && apiClient && (
-                <Box sx={{ mt: 2, mb: 3, display: 'flex', gap: 2 }}>
-                    <Button
-                        variant="contained"
-                        onClick={handleFinishReview}
-                        disabled={isReviewComplete}
-                    >
-                        {isReviewComplete ? 'Review Complete' : 'Finish Review'}
-                    </Button>
-                    <Button
-                        variant="outlined"
-                        color="warning"
-                        onClick={handleResetCorrections}
-                    >
-                        Reset Corrections
-                    </Button>
-                </Box>
-            )}
         </Box>
     )
 } 

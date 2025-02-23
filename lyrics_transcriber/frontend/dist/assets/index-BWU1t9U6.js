@@ -30431,7 +30431,8 @@ function Metric({ color: color2, label, value, description, details, onClick }) 
     Paper,
     {
       sx: {
-        p: 2,
+        p: 1,
+        height: "200px",
         cursor: onClick ? "pointer" : "default",
         "&:hover": onClick ? {
           bgcolor: "action.hover"
@@ -31420,7 +31421,7 @@ function ReferenceView({
   };
   return /* @__PURE__ */ jsxRuntimeExports.jsxs(Paper, { sx: { p: 2 }, children: [
     /* @__PURE__ */ jsxRuntimeExports.jsxs(Box, { sx: { display: "flex", justifyContent: "space-between", alignItems: "center", mb: 2 }, children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx(Typography, { variant: "h6", children: "Reference Text" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx(Typography, { variant: "h6", children: "Reference Lyrics" }),
       /* @__PURE__ */ jsxRuntimeExports.jsx(
         SourceSelector,
         {
@@ -31651,7 +31652,7 @@ const DeleteIcon = createSvgIcon(/* @__PURE__ */ jsxRuntimeExports.jsx("path", {
 const SplitIcon = createSvgIcon(/* @__PURE__ */ jsxRuntimeExports.jsx("path", {
   d: "m14 4 2.29 2.29-2.88 2.88 1.42 1.42 2.88-2.88L20 10V4zm-4 0H4v6l2.29-2.29 4.71 4.7V20h2v-8.41l-5.29-5.3z"
 }), "CallSplit");
-const RestoreIcon = createSvgIcon(/* @__PURE__ */ jsxRuntimeExports.jsx("path", {
+const RestoreFromTrash = createSvgIcon(/* @__PURE__ */ jsxRuntimeExports.jsx("path", {
   d: "M19 4h-3.5l-1-1h-5l-1 1H5v2h14zM6 7v12c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7zm8 7v4h-4v-4H8l4-4 4 4z"
 }), "RestoreFromTrash");
 const AutoFixHighIcon = createSvgIcon(/* @__PURE__ */ jsxRuntimeExports.jsx("path", {
@@ -32656,7 +32657,7 @@ function EditModal({
           /* @__PURE__ */ jsxRuntimeExports.jsx(
             Button,
             {
-              startIcon: /* @__PURE__ */ jsxRuntimeExports.jsx(RestoreIcon, {}),
+              startIcon: /* @__PURE__ */ jsxRuntimeExports.jsx(RestoreFromTrash, {}),
               onClick: handleReset,
               color: "warning",
               children: "Reset"
@@ -32764,6 +32765,36 @@ function PreviewVideoSection({
     ) })
   ] });
 }
+const ArrowBack = createSvgIcon(/* @__PURE__ */ jsxRuntimeExports.jsx("path", {
+  d: "M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20z"
+}), "ArrowBack");
+const CloudUpload = createSvgIcon(/* @__PURE__ */ jsxRuntimeExports.jsx("path", {
+  d: "M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96M14 13v4h-4v-4H7l5-5 5 5z"
+}), "CloudUpload");
+const EditIcon = createSvgIcon(/* @__PURE__ */ jsxRuntimeExports.jsx("path", {
+  d: "M3 17.25V21h3.75L17.81 9.94l-3.75-3.75zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34a.996.996 0 0 0-1.41 0l-1.83 1.83 3.75 3.75z"
+}), "Edit");
+const HighlightIcon = createSvgIcon(/* @__PURE__ */ jsxRuntimeExports.jsx("path", {
+  d: "m6 14 3 3v5h6v-5l3-3V9H6zm5-12h2v3h-2zM3.5 5.88l1.41-1.41 2.12 2.12L5.62 8zm13.46.71 2.12-2.12 1.41 1.41L18.38 8z"
+}), "Highlight");
+const InfoIcon = createSvgIcon(/* @__PURE__ */ jsxRuntimeExports.jsx("path", {
+  d: "M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2m1 15h-2v-6h2zm0-8h-2V7h2z"
+}), "Info");
+const LockIcon = createSvgIcon(/* @__PURE__ */ jsxRuntimeExports.jsx("path", {
+  d: "M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2m-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2m3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1s3.1 1.39 3.1 3.1z"
+}), "Lock");
+const OndemandVideo = createSvgIcon(/* @__PURE__ */ jsxRuntimeExports.jsx("path", {
+  d: "M21 3H3c-1.11 0-2 .89-2 2v12c0 1.1.89 2 2 2h5v2h8v-2h5c1.1 0 1.99-.9 1.99-2L23 5c0-1.11-.9-2-2-2m0 14H3V5h18zm-5-6-7 4V7z"
+}), "OndemandVideo");
+const PauseIcon = createSvgIcon(/* @__PURE__ */ jsxRuntimeExports.jsx("path", {
+  d: "M6 19h4V5H6zm8-14v14h4V5z"
+}), "Pause");
+const PlayArrowIcon = createSvgIcon(/* @__PURE__ */ jsxRuntimeExports.jsx("path", {
+  d: "M8 5v14l11-7z"
+}), "PlayArrow");
+const TextSnippetIcon = createSvgIcon(/* @__PURE__ */ jsxRuntimeExports.jsx("path", {
+  d: "m20.41 8.41-4.83-4.83c-.37-.37-.88-.58-1.41-.58H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V9.83c0-.53-.21-1.04-.59-1.42M7 7h7v2H7zm10 10H7v-2h10zm0-4H7v-2h10z"
+}), "TextSnippet");
 const normalizeWordForComparison = (word) => ({
   text: word.text,
   start_time: word.start_time ?? 0,
@@ -32789,6 +32820,11 @@ function ReviewChangesModal({
   setModalSpacebarHandler
 }) {
   const videoRef = reactExports.useRef(null);
+  reactExports.useEffect(() => {
+    if (open && window.isAudioPlaying && window.toggleAudioPlayback) {
+      window.toggleAudioPlayback();
+    }
+  }, [open]);
   reactExports.useEffect(() => {
     if (open) {
       setModalSpacebarHandler(() => (e) => {
@@ -32951,7 +32987,7 @@ function ReviewChangesModal({
       maxWidth: "md",
       fullWidth: true,
       children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx(DialogTitle, { children: "Review Changes" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx(DialogTitle, { children: "Preview Video (With Vocals)" }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs(
           DialogContent,
           {
@@ -32973,7 +33009,7 @@ function ReviewChangesModal({
                 }
               ),
               /* @__PURE__ */ jsxRuntimeExports.jsx(Box, { sx: { p: 2, mt: 0 }, children: differences.length === 0 ? /* @__PURE__ */ jsxRuntimeExports.jsxs(Box, { children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx(Typography, { color: "text.secondary", children: "No changes detected. You can still submit to continue processing." }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx(Typography, { color: "text.secondary", children: "No manual corrections detected. If everything looks good in the preview, click submit and the server will generate the final karaoke video." }),
                 /* @__PURE__ */ jsxRuntimeExports.jsxs(Typography, { variant: "body2", color: "text.secondary", children: [
                   "Total segments: ",
                   updatedData.corrected_segments.length
@@ -32991,13 +33027,24 @@ function ReviewChangesModal({
           }
         ),
         /* @__PURE__ */ jsxRuntimeExports.jsxs(DialogActions, { children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx(Button, { onClick: onClose, children: "Cancel" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            Button,
+            {
+              onClick: onClose,
+              color: "warning",
+              startIcon: /* @__PURE__ */ jsxRuntimeExports.jsx(ArrowBack, {}),
+              sx: { mr: "auto" },
+              children: "Cancel"
+            }
+          ),
           /* @__PURE__ */ jsxRuntimeExports.jsx(
             Button,
             {
               onClick: onSubmit,
               variant: "contained",
-              children: "Submit to Server"
+              color: "success",
+              endIcon: /* @__PURE__ */ jsxRuntimeExports.jsx(CloudUpload, {}),
+              children: "Complete Review"
             }
           )
         ] })
@@ -33212,18 +33259,6 @@ const getModalState = () => ({
   currentModalHandler,
   isModalOpen
 });
-const LockIcon = createSvgIcon(/* @__PURE__ */ jsxRuntimeExports.jsx("path", {
-  d: "M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2m-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2m3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1s3.1 1.39 3.1 3.1z"
-}), "Lock");
-const HighlightIcon = createSvgIcon(/* @__PURE__ */ jsxRuntimeExports.jsx("path", {
-  d: "m6 14 3 3v5h6v-5l3-3V9H6zm5-12h2v3h-2zM3.5 5.88l1.41-1.41 2.12 2.12L5.62 8zm13.46.71 2.12-2.12 1.41 1.41L18.38 8z"
-}), "Highlight");
-const InfoIcon = createSvgIcon(/* @__PURE__ */ jsxRuntimeExports.jsx("path", {
-  d: "M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2m1 15h-2v-6h2zm0-8h-2V7h2z"
-}), "Info");
-const EditIcon = createSvgIcon(/* @__PURE__ */ jsxRuntimeExports.jsx("path", {
-  d: "M3 17.25V21h3.75L17.81 9.94l-3.75-3.75zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34a.996.996 0 0 0-1.41 0l-1.83 1.83 3.75 3.75z"
-}), "Edit");
 function ModeSelector({ effectiveMode, onChange }) {
   return /* @__PURE__ */ jsxRuntimeExports.jsxs(Box, { sx: { display: "flex", alignItems: "center", gap: 2 }, children: [
     /* @__PURE__ */ jsxRuntimeExports.jsx(Typography, { variant: "body2", color: "text.secondary", children: "Click Mode:" }),
@@ -33235,29 +33270,44 @@ function ModeSelector({ effectiveMode, onChange }) {
         onChange: (_, newMode) => newMode && onChange(newMode),
         size: "small",
         children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsxs(ToggleButton, { value: "edit", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx(EditIcon, { sx: { mr: 1 } }),
-            "Edit"
-          ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs(ToggleButton, { value: "details", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx(InfoIcon, { sx: { mr: 1 } }),
-            "Details"
-          ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs(ToggleButton, { value: "highlight", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx(HighlightIcon, { sx: { mr: 1 } }),
-            "Highlight"
-          ] })
+          /* @__PURE__ */ jsxRuntimeExports.jsxs(
+            ToggleButton,
+            {
+              value: "edit",
+              title: "Click to edit segments and make corrections in the transcription view",
+              children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx(EditIcon, { sx: { mr: 1 } }),
+                "Edit"
+              ]
+            }
+          ),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs(
+            ToggleButton,
+            {
+              value: "details",
+              title: "Click words to view detailed information about anchors and gaps. You can also hold CTRL to temporarily activate this mode.",
+              children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx(InfoIcon, { sx: { mr: 1 } }),
+                "Details"
+              ]
+            }
+          ),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs(
+            ToggleButton,
+            {
+              value: "highlight",
+              title: "Click words in the transcription view to highlight the matching anchor sequence in the reference lyrics. You can also hold SHIFT to temporarily activate this mode.",
+              children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx(HighlightIcon, { sx: { mr: 1 } }),
+                "Highlight"
+              ]
+            }
+          )
         ]
       }
     )
   ] });
 }
-const PlayArrowIcon = createSvgIcon(/* @__PURE__ */ jsxRuntimeExports.jsx("path", {
-  d: "M8 5v14l11-7z"
-}), "PlayArrow");
-const PauseIcon = createSvgIcon(/* @__PURE__ */ jsxRuntimeExports.jsx("path", {
-  d: "M6 19h4V5H6zm8-14v14h4V5z"
-}), "Pause");
 function AudioPlayer({ apiClient, onTimeUpdate, audioHash }) {
   const [isPlaying, setIsPlaying] = reactExports.useState(false);
   const [currentTime, setCurrentTime] = reactExports.useState(0);
@@ -33446,7 +33496,7 @@ function Header({
       alignItems: isMobile ? "stretch" : "center",
       mb: 3
     }, children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx(Typography, { variant: "h4", sx: { fontSize: isMobile ? "1.75rem" : "2.125rem" }, children: "Lyrics Correction Review" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx(Typography, { variant: "h4", sx: { fontSize: isMobile ? "1.75rem" : "2.125rem" }, children: "Nomad Karaoke: Lyrics Transcription Review" }),
       isReadOnly && /* @__PURE__ */ jsxRuntimeExports.jsx(
         Button,
         {
@@ -33464,15 +33514,26 @@ function Header({
       mb: 3,
       flexDirection: isMobile ? "column" : "row"
     }, children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsxs(Box, { sx: {
+      /* @__PURE__ */ jsxRuntimeExports.jsx(Box, { sx: {
         display: "flex",
         flexDirection: "column",
-        gap: 1,
-        minWidth: "250px",
+        minWidth: "300px",
         position: "relative"
+      }, children: /* @__PURE__ */ jsxRuntimeExports.jsxs(Paper, { sx: {
+        p: 1,
+        height: "100%",
+        maxHeight: "200px",
+        display: "flex",
+        flexDirection: "column"
       }, children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx(Typography, { variant: "subtitle2", color: "text.secondary", children: "Correction Handlers" }),
-        availableHandlers.map((handler) => /* @__PURE__ */ jsxRuntimeExports.jsx(
+        /* @__PURE__ */ jsxRuntimeExports.jsx(Typography, { variant: "subtitle2", color: "text.secondary", sx: { mb: 1 }, children: "Correction Handlers" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx(Box, { sx: {
+          flex: 1,
+          overflow: "auto",
+          display: "flex",
+          flexDirection: "column",
+          gap: 1
+        }, children: availableHandlers.map((handler) => /* @__PURE__ */ jsxRuntimeExports.jsx(
           Tooltip,
           {
             title: handler.description,
@@ -33508,32 +33569,8 @@ function Header({
             )
           },
           handler.id
-        )),
-        isUpdatingHandlers && /* @__PURE__ */ jsxRuntimeExports.jsx(Box, { sx: {
-          position: "absolute",
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          backgroundColor: "rgba(255, 255, 255, 0.7)",
-          borderRadius: 1,
-          zIndex: 1
-        }, children: /* @__PURE__ */ jsxRuntimeExports.jsxs(Box, { sx: {
-          display: "flex",
-          alignItems: "center",
-          gap: 2,
-          padding: 2,
-          backgroundColor: "rgba(255, 255, 255, 0.9)",
-          borderRadius: 1,
-          boxShadow: 1
-        }, children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx(CircularProgress, { size: 24 }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx(Typography, { variant: "body2", color: "text.secondary", children: "Updating corrections..." })
-        ] }) })
-      ] }),
+        )) })
+      ] }) }),
       /* @__PURE__ */ jsxRuntimeExports.jsx(Box, { sx: { flexGrow: 1 }, children: /* @__PURE__ */ jsxRuntimeExports.jsx(
         CorrectionMetrics,
         {
@@ -33592,6 +33629,7 @@ function Header({
         {
           variant: "outlined",
           onClick: onAddLyrics,
+          startIcon: /* @__PURE__ */ jsxRuntimeExports.jsx(TextSnippetIcon, {}),
           sx: { minWidth: "fit-content" },
           children: "Add Reference Lyrics"
         }
@@ -34063,21 +34101,51 @@ function LyricsAnalyzer({ data: initialData, onFileLoad, apiClient, isReadOnly, 
       }
     ),
     /* @__PURE__ */ jsxRuntimeExports.jsxs(Grid, { container: true, spacing: 2, direction: isMobile ? "column" : "row", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx(Grid, { item: true, xs: 12, md: 6, children: /* @__PURE__ */ jsxRuntimeExports.jsx(
-        TranscriptionView,
-        {
-          data,
-          mode: effectiveMode,
-          onElementClick: setModalContent,
-          onWordClick: handleWordClick,
-          flashingType,
-          flashingHandler,
-          highlightInfo,
-          onPlaySegment: handlePlaySegment,
-          currentTime: currentAudioTime,
-          anchors: data.anchor_sequences
-        }
-      ) }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs(Grid, { item: true, xs: 12, md: 6, children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx(
+          TranscriptionView,
+          {
+            data,
+            mode: effectiveMode,
+            onElementClick: setModalContent,
+            onWordClick: handleWordClick,
+            flashingType,
+            flashingHandler,
+            highlightInfo,
+            onPlaySegment: handlePlaySegment,
+            currentTime: currentAudioTime,
+            anchors: data.anchor_sequences
+          }
+        ),
+        !isReadOnly && apiClient && /* @__PURE__ */ jsxRuntimeExports.jsxs(Box, { sx: {
+          mt: 2,
+          mb: 3,
+          display: "flex",
+          justifyContent: "space-between",
+          width: "100%"
+        }, children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            Button,
+            {
+              variant: "outlined",
+              color: "warning",
+              onClick: handleResetCorrections,
+              startIcon: /* @__PURE__ */ jsxRuntimeExports.jsx(RestoreFromTrash, {}),
+              children: "Reset Corrections"
+            }
+          ),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            Button,
+            {
+              variant: "contained",
+              onClick: handleFinishReview,
+              disabled: isReviewComplete,
+              endIcon: /* @__PURE__ */ jsxRuntimeExports.jsx(OndemandVideo, {}),
+              children: isReviewComplete ? "Review Complete" : "Preview Video"
+            }
+          )
+        ] })
+      ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsx(Grid, { item: true, xs: 12, md: 6, children: /* @__PURE__ */ jsxRuntimeExports.jsx(
         ReferenceView,
         {
@@ -34146,27 +34214,7 @@ function LyricsAnalyzer({ data: initialData, onFileLoad, apiClient, isReadOnly, 
         onSubmit: handleAddLyrics,
         isSubmitting: isAddingLyrics
       }
-    ),
-    !isReadOnly && apiClient && /* @__PURE__ */ jsxRuntimeExports.jsxs(Box, { sx: { mt: 2, mb: 3, display: "flex", gap: 2 }, children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx(
-        Button,
-        {
-          variant: "contained",
-          onClick: handleFinishReview,
-          disabled: isReviewComplete,
-          children: isReviewComplete ? "Review Complete" : "Finish Review"
-        }
-      ),
-      /* @__PURE__ */ jsxRuntimeExports.jsx(
-        Button,
-        {
-          variant: "outlined",
-          color: "warning",
-          onClick: handleResetCorrections,
-          children: "Reset Corrections"
-        }
-      )
-    ] })
+    )
   ] });
 }
 function App() {
@@ -34321,4 +34369,4 @@ function App() {
 ReactDOM$1.createRoot(document.getElementById("root")).render(
   /* @__PURE__ */ jsxRuntimeExports.jsx(App, {})
 );
-//# sourceMappingURL=index-Ci-Wnbvy.js.map
+//# sourceMappingURL=index-BWU1t9U6.js.map

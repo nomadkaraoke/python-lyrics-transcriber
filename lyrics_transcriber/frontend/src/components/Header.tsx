@@ -1,6 +1,7 @@
-import { Box, Button, Typography, useMediaQuery, useTheme, Switch, FormControlLabel, Tooltip, CircularProgress } from '@mui/material'
+import { Box, Button, Typography, useMediaQuery, useTheme, Switch, FormControlLabel, Tooltip, Paper } from '@mui/material'
 import LockIcon from '@mui/icons-material/Lock'
 import UploadFileIcon from '@mui/icons-material/UploadFile'
+import TextSnippetIcon from '@mui/icons-material/TextSnippet'
 import { CorrectionData } from '../types'
 import CorrectionMetrics from './CorrectionMetrics'
 import ModeSelector from './ModeSelector'
@@ -108,7 +109,7 @@ export default function Header({
                 mb: 3
             }}>
                 <Typography variant="h4" sx={{ fontSize: isMobile ? '1.75rem' : '2.125rem' }}>
-                    Lyrics Correction Review
+                    Nomad Karaoke: Lyrics Transcription Review
                 </Typography>
                 {isReadOnly && (
                     <Button
@@ -131,78 +132,62 @@ export default function Header({
                 <Box sx={{
                     display: 'flex',
                     flexDirection: 'column',
-                    gap: 1,
-                    minWidth: '250px',
-                    position: 'relative'
+                    minWidth: '300px',
+                    position: 'relative',
                 }}>
-                    <Typography variant="subtitle2" color="text.secondary">
-                        Correction Handlers
-                    </Typography>
+                    <Paper sx={{
+                        p: 1,
+                        height: '100%',
+                        maxHeight: '200px',
+                        display: 'flex',
+                        flexDirection: 'column'
+                    }}>
+                        <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 1 }}>
+                            Correction Handlers
+                        </Typography>
 
-                    {availableHandlers.map(handler => (
-                        <Tooltip
-                            key={handler.id}
-                            title={handler.description}
-                            placement="right"
-                        >
-                            <FormControlLabel
-                                control={
-                                    <Switch
-                                        checked={enabledHandlers.has(handler.id)}
-                                        onChange={(e) => onHandlerToggle(handler.id, e.target.checked)}
-                                        size="small"
-                                        disabled={isUpdatingHandlers}
-                                    />
-                                }
-                                label={`${handler.name} (${handlerCounts[handler.id] || 0})`}
-                                onClick={(e) => {
-                                    if ((e.target as HTMLElement).tagName !== 'INPUT') {
-                                        e.preventDefault();
-                                        e.stopPropagation();
-                                        onHandlerClick?.(handler.id);
-                                    }
-                                }}
-                                sx={{
-                                    ml: 0,
-                                    '& .MuiFormControlLabel-label': {
-                                        fontSize: '0.875rem',
-                                        cursor: 'pointer'
-                                    }
-                                }}
-                            />
-                        </Tooltip>
-                    ))}
-
-                    {isUpdatingHandlers && (
                         <Box sx={{
-                            position: 'absolute',
-                            top: 0,
-                            left: 0,
-                            right: 0,
-                            bottom: 0,
+                            flex: 1,
+                            overflow: 'auto',
                             display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            backgroundColor: 'rgba(255, 255, 255, 0.7)',
-                            borderRadius: 1,
-                            zIndex: 1
+                            flexDirection: 'column',
+                            gap: 1
                         }}>
-                            <Box sx={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: 2,
-                                padding: 2,
-                                backgroundColor: 'rgba(255, 255, 255, 0.9)',
-                                borderRadius: 1,
-                                boxShadow: 1
-                            }}>
-                                <CircularProgress size={24} />
-                                <Typography variant="body2" color="text.secondary">
-                                    Updating corrections...
-                                </Typography>
-                            </Box>
+                            {availableHandlers.map(handler => (
+                                <Tooltip
+                                    key={handler.id}
+                                    title={handler.description}
+                                    placement="right"
+                                >
+                                    <FormControlLabel
+                                        control={
+                                            <Switch
+                                                checked={enabledHandlers.has(handler.id)}
+                                                onChange={(e) => onHandlerToggle(handler.id, e.target.checked)}
+                                                size="small"
+                                                disabled={isUpdatingHandlers}
+                                            />
+                                        }
+                                        label={`${handler.name} (${handlerCounts[handler.id] || 0})`}
+                                        onClick={(e) => {
+                                            if ((e.target as HTMLElement).tagName !== 'INPUT') {
+                                                e.preventDefault();
+                                                e.stopPropagation();
+                                                onHandlerClick?.(handler.id);
+                                            }
+                                        }}
+                                        sx={{
+                                            ml: 0,
+                                            '& .MuiFormControlLabel-label': {
+                                                fontSize: '0.875rem',
+                                                cursor: 'pointer'
+                                            }
+                                        }}
+                                    />
+                                </Tooltip>
+                            ))}
                         </Box>
-                    )}
+                    </Paper>
                 </Box>
                 <Box sx={{ flexGrow: 1 }}>
                     <CorrectionMetrics
@@ -257,6 +242,7 @@ export default function Header({
                     <Button
                         variant="outlined"
                         onClick={onAddLyrics}
+                        startIcon={<TextSnippetIcon />}
                         sx={{ minWidth: 'fit-content' }}
                     >
                         Add Reference Lyrics

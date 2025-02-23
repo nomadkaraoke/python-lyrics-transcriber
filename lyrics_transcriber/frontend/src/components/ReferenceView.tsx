@@ -177,7 +177,7 @@ export default function ReferenceView({
         <Paper sx={{ p: 2 }}>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
                 <Typography variant="h6">
-                    Reference Text
+                    Reference Lyrics
                 </Typography>
                 <SourceSelector
                     currentSource={effectiveCurrentSource}

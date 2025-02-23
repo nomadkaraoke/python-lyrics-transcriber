@@ -21,15 +21,24 @@ export default function ModeSelector({ effectiveMode, onChange }: ModeSelectorPr
                 onChange={(_, newMode) => newMode && onChange(newMode)}
                 size="small"
             >
-                <ToggleButton value="edit">
+                <ToggleButton 
+                    value="edit"
+                    title="Click to edit segments and make corrections in the transcription view"
+                >
                     <EditIcon sx={{ mr: 1 }} />
                     Edit
                 </ToggleButton>
-                <ToggleButton value="details">
+                <ToggleButton 
+                    value="details"
+                    title="Click words to view detailed information about anchors and gaps. You can also hold CTRL to temporarily activate this mode."
+                >
                     <InfoIcon sx={{ mr: 1 }} />
                     Details
                 </ToggleButton>
-                <ToggleButton value="highlight">
+                <ToggleButton 
+                    value="highlight"
+                    title="Click words in the transcription view to highlight the matching anchor sequence in the reference lyrics. You can also hold SHIFT to temporarily activate this mode."
+                >
                     <HighlightIcon sx={{ mr: 1 }} />
                     Highlight
                 </ToggleButton>

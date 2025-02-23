@@ -262,15 +262,26 @@ class AnchorSequenceFinder:
         for segment in transcription_result.segments:
             all_words.extend(segment.words)
 
-        # Clean and split texts - this should match all_words exactly
-        trans_words = [w.text.lower().strip('.,?!"\n') for w in all_words]  # Changed to derive directly from all_words
+        # Clean and split texts
+        trans_words = [w.text.lower().strip('.,?!"\n') for w in all_words]
         ref_texts_clean = {
             source: self._clean_text(" ".join(w.text for s in lyrics.segments for w in s.words)).split()
             for source, lyrics in references.items()
         }
         ref_words = {source: [w for s in lyrics.segments for w in s.words] for source, lyrics in references.items()}
 
-        max_length = min(len(trans_words), min(len(words) for words in ref_texts_clean.values()))
+        # Filter out very short reference sources for n-gram length calculation
+        valid_ref_lengths = [
+            len(words) for words in ref_texts_clean.values()
+            if len(words) >= self.min_sequence_length
+        ]
+
+        if not valid_ref_lengths:
+            self.logger.warning("No reference sources long enough for anchor detection")
+            return []
+
+        # Calculate max length using only valid reference sources
+        max_length = min(len(trans_words), min(valid_ref_lengths))
         n_gram_lengths = range(max_length, self.min_sequence_length - 1, -1)
 
         # Process n-gram lengths in parallel
