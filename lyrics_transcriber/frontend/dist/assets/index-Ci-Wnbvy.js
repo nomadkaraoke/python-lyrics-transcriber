@@ -32105,6 +32105,10 @@ function useManualSync({
 }) {
   const [isManualSyncing, setIsManualSyncing] = reactExports.useState(false);
   const [syncWordIndex, setSyncWordIndex] = reactExports.useState(-1);
+  const currentTimeRef = reactExports.useRef(currentTime);
+  reactExports.useEffect(() => {
+    currentTimeRef.current = currentTime;
+  }, [currentTime]);
   const cleanupManualSync = reactExports.useCallback(() => {
     setIsManualSyncing(false);
     setSyncWordIndex(-1);
@@ -32114,7 +32118,7 @@ function useManualSync({
       isManualSyncing,
       hasEditedSegment: !!editedSegment,
       syncWordIndex,
-      currentTime
+      currentTime: currentTimeRef.current
     });
     e.preventDefault();
     e.stopPropagation();
@@ -32124,9 +32128,9 @@ function useManualSync({
         const newWords = [...editedSegment.words];
         const currentWord = newWords[syncWordIndex];
         const prevWord = syncWordIndex > 0 ? newWords[syncWordIndex - 1] : null;
-        currentWord.start_time = currentTime;
+        currentWord.start_time = currentTimeRef.current;
         if (prevWord) {
-          prevWord.end_time = currentTime - 0.01;
+          prevWord.end_time = currentTimeRef.current - 0.01;
         }
         if (syncWordIndex === editedSegment.words.length - 1) {
           currentWord.end_time = editedSegment.end_time;
@@ -32142,7 +32146,7 @@ function useManualSync({
       console.log("useManualSync - Handling segment playback");
       const startTime = editedSegment.start_time ?? 0;
       const endTime = editedSegment.end_time ?? 0;
-      if (currentTime >= startTime && currentTime <= endTime) {
+      if (currentTimeRef.current >= startTime && currentTimeRef.current <= endTime) {
         if (window.toggleAudioPlayback) {
           window.toggleAudioPlayback();
         }
@@ -32150,7 +32154,7 @@ function useManualSync({
         onPlaySegment(startTime);
       }
     }
-  }, [isManualSyncing, editedSegment, syncWordIndex, currentTime, onPlaySegment, updateSegment2]);
+  }, [isManualSyncing, editedSegment, syncWordIndex, onPlaySegment, updateSegment2]);
   const startManualSync = reactExports.useCallback(() => {
     if (isManualSyncing) {
       cleanupManualSync();
@@ -32165,12 +32169,12 @@ function useManualSync({
     var _a;
     if (!editedSegment) return;
     const endTime = editedSegment.end_time ?? 0;
-    if (window.isAudioPlaying && currentTime > endTime) {
+    if (window.isAudioPlaying && currentTimeRef.current > endTime) {
       console.log("Stopping playback: current time exceeded end time");
       (_a = window.toggleAudioPlayback) == null ? void 0 : _a.call(window);
       cleanupManualSync();
     }
-  }, [isManualSyncing, editedSegment, currentTime, cleanupManualSync]);
+  }, [isManualSyncing, editedSegment, currentTimeRef, cleanupManualSync]);
   return {
     isManualSyncing,
     syncWordIndex,
@@ -32237,14 +32241,19 @@ function EditModal({
       });
       setModalSpacebarHandler(() => spacebarHandler);
       return () => {
-        console.log("EditModal - Cleanup effect running, open state:", open);
         if (!open) {
           console.log("EditModal - Cleanup: clearing modal spacebar handler");
           setModalSpacebarHandler(void 0);
         }
       };
     }
-  }, [open, handleSpacebar, setModalSpacebarHandler, editedSegment == null ? void 0 : editedSegment.id, onPlaySegment]);
+  }, [
+    open,
+    handleSpacebar,
+    setModalSpacebarHandler,
+    editedSegment == null ? void 0 : editedSegment.id,
+    onPlaySegment
+  ]);
   reactExports.useEffect(() => {
     if (editedSegment) {
       const startTime = editedSegment.start_time ?? 0;
@@ -34312,4 +34321,4 @@ function App() {
 ReactDOM$1.createRoot(document.getElementById("root")).render(
   /* @__PURE__ */ jsxRuntimeExports.jsx(App, {})
 );
-//# sourceMappingURL=index-D5KlXFGx.js.map
+//# sourceMappingURL=index-Ci-Wnbvy.js.map

@@ -109,14 +109,19 @@ export default function EditModal({
 
             // Only cleanup when the effect is re-run or the modal is closed
             return () => {
-                console.log('EditModal - Cleanup effect running, open state:', open)
                 if (!open) {
                     console.log('EditModal - Cleanup: clearing modal spacebar handler')
                     setModalSpacebarHandler(undefined)
                 }
             }
         }
-    }, [open, handleSpacebar, setModalSpacebarHandler, editedSegment?.id, onPlaySegment])
+    }, [
+        open,
+        handleSpacebar,
+        setModalSpacebarHandler,
+        editedSegment?.id,
+        onPlaySegment
+    ])
 
     // Update isPlaying when currentTime changes
     useEffect(() => {

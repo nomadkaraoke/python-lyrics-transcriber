@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react'
+import { useState, useCallback, useEffect, useRef } from 'react'
 import { LyricsSegment, Word } from '../types'
 
 interface UseManualSyncProps {
@@ -16,6 +16,12 @@ export default function useManualSync({
 }: UseManualSyncProps) {
     const [isManualSyncing, setIsManualSyncing] = useState(false)
     const [syncWordIndex, setSyncWordIndex] = useState<number>(-1)
+    const currentTimeRef = useRef(currentTime)
+
+    // Keep currentTimeRef up to date
+    useEffect(() => {
+        currentTimeRef.current = currentTime
+    }, [currentTime])
 
     const cleanupManualSync = useCallback(() => {
         setIsManualSyncing(false)
@@ -27,7 +33,7 @@ export default function useManualSync({
             isManualSyncing,
             hasEditedSegment: !!editedSegment,
             syncWordIndex,
-            currentTime
+            currentTime: currentTimeRef.current
         })
 
         e.preventDefault()
@@ -41,10 +47,10 @@ export default function useManualSync({
                 const currentWord = newWords[syncWordIndex]
                 const prevWord = syncWordIndex > 0 ? newWords[syncWordIndex - 1] : null
 
-                currentWord.start_time = currentTime
+                currentWord.start_time = currentTimeRef.current
 
                 if (prevWord) {
-                    prevWord.end_time = currentTime - 0.01
+                    prevWord.end_time = currentTimeRef.current - 0.01
                 }
 
                 if (syncWordIndex === editedSegment.words.length - 1) {
@@ -63,7 +69,7 @@ export default function useManualSync({
             const startTime = editedSegment.start_time ?? 0
             const endTime = editedSegment.end_time ?? 0
 
-            if (currentTime >= startTime && currentTime <= endTime) {
+            if (currentTimeRef.current >= startTime && currentTimeRef.current <= endTime) {
                 if (window.toggleAudioPlayback) {
                     window.toggleAudioPlayback()
                 }
@@ -71,7 +77,7 @@ export default function useManualSync({
                 onPlaySegment(startTime)
             }
         }
-    }, [isManualSyncing, editedSegment, syncWordIndex, currentTime, onPlaySegment, updateSegment])
+    }, [isManualSyncing, editedSegment, syncWordIndex, onPlaySegment, updateSegment])
 
     const startManualSync = useCallback(() => {
         if (isManualSyncing) {
@@ -93,12 +99,12 @@ export default function useManualSync({
 
         const endTime = editedSegment.end_time ?? 0
 
-        if (window.isAudioPlaying && currentTime > endTime) {
+        if (window.isAudioPlaying && currentTimeRef.current > endTime) {
             console.log('Stopping playback: current time exceeded end time')
             window.toggleAudioPlayback?.()
             cleanupManualSync()
         }
-    }, [isManualSyncing, editedSegment, currentTime, cleanupManualSync])
+    }, [isManualSyncing, editedSegment, currentTimeRef, cleanupManualSync])
 
     return {
         isManualSyncing,
