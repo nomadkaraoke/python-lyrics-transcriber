@@ -97,16 +97,26 @@ export default function EditModal({
 
     // Update the spacebar handler when modal state changes
     useEffect(() => {
-        if (open) {
-            setModalSpacebarHandler(() => handleSpacebar)
-        } else {
-            setModalSpacebarHandler(undefined)
-        }
+        const spacebarHandler = handleSpacebar // Capture the current handler
 
-        return () => {
-            setModalSpacebarHandler(undefined)
+        if (open) {
+            console.log('EditModal - Setting up modal spacebar handler', {
+                hasPlaySegment: !!onPlaySegment,
+                editedSegmentId: editedSegment?.id,
+                handlerFunction: spacebarHandler.toString().slice(0, 100)
+            })
+            setModalSpacebarHandler(() => spacebarHandler)
+
+            // Only cleanup when the effect is re-run or the modal is closed
+            return () => {
+                console.log('EditModal - Cleanup effect running, open state:', open)
+                if (!open) {
+                    console.log('EditModal - Cleanup: clearing modal spacebar handler')
+                    setModalSpacebarHandler(undefined)
+                }
+            }
         }
-    }, [open, handleSpacebar, setModalSpacebarHandler])
+    }, [open, handleSpacebar, setModalSpacebarHandler, editedSegment?.id, onPlaySegment])
 
     // Update isPlaying when currentTime changes
     useEffect(() => {

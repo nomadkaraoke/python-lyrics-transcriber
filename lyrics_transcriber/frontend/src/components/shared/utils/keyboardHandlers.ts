@@ -13,6 +13,14 @@ type KeyboardState = {
 
 // Add functions to update the modal handler state
 export const setModalHandler = (handler: ((e: KeyboardEvent) => void) | undefined, open: boolean) => {
+    console.log('setModalHandler called', {
+        hasHandler: !!handler,
+        open,
+        previousState: {
+            hadHandler: !!currentModalHandler,
+            wasOpen: isModalOpen
+        }
+    })
     currentModalHandler = handler
     isModalOpen = open
 }
@@ -22,6 +30,16 @@ export const setupKeyboardHandlers = (state: KeyboardState) => {
     console.log(`Setting up keyboard handlers [${handlerId}]`)
 
     const handleKeyDown = (e: KeyboardEvent) => {
+        console.log(`Keyboard event captured [${handlerId}]`, {
+            key: e.key,
+            code: e.code,
+            target: e.target,
+            currentTarget: e.currentTarget,
+            eventPhase: e.eventPhase,
+            isModalOpen,
+            hasModalHandler: !!currentModalHandler
+        })
+
         if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
             console.log(`[${handlerId}] Ignoring keydown in input/textarea`)
             return
@@ -33,22 +51,22 @@ export const setupKeyboardHandlers = (state: KeyboardState) => {
         } else if (e.key === 'Meta') {
             state.setIsCtrlPressed(true)
         } else if (e.key === ' ' || e.code === 'Space') {
-            console.log(`[${handlerId}] Spacebar pressed:`, {
+            console.log('Keyboard handler - Spacebar pressed', {
                 modalOpen: isModalOpen,
                 hasModalHandler: !!currentModalHandler,
-                hasGlobalToggle: !!window.toggleAudioPlayback
+                hasGlobalToggle: !!window.toggleAudioPlayback,
+                target: e.target,
+                eventPhase: e.eventPhase,
+                handlerFunction: currentModalHandler?.toString().slice(0, 100)
             })
-            
+
             e.preventDefault()
-            
-            // If modal is open and has a handler, use that
+
             if (isModalOpen && currentModalHandler) {
-                console.log(`[${handlerId}] Using modal spacebar handler`)
+                console.log('Keyboard handler - Delegating to modal handler')
                 currentModalHandler(e)
-            } 
-            // Otherwise use global audio control
-            else if (window.toggleAudioPlayback && !isModalOpen) {
-                console.log(`[${handlerId}] Using global audio toggle`)
+            } else if (window.toggleAudioPlayback && !isModalOpen) {
+                console.log('Keyboard handler - Using global audio toggle')
                 window.toggleAudioPlayback()
             }
         }
@@ -64,4 +82,10 @@ export const setupKeyboardHandlers = (state: KeyboardState) => {
     }
 
     return { handleKeyDown, handleKeyUp }
-} 
+}
+
+// Export these for external use
+export const getModalState = () => ({
+    currentModalHandler,
+    isModalOpen
+}) 

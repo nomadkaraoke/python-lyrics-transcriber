@@ -22,7 +22,7 @@ import {
     updateSegment
 } from './shared/utils/segmentOperations'
 import { loadSavedData, saveData, clearSavedData } from './shared/utils/localStorage'
-import { setupKeyboardHandlers, setModalHandler } from './shared/utils/keyboardHandlers'
+import { setupKeyboardHandlers, setModalHandler, getModalState } from './shared/utils/keyboardHandlers'
 import Header from './Header'
 import { findWordById, getWordsFromIds } from './shared/utils/wordUtils'
 import AddLyricsModal from './AddLyricsModal'
@@ -125,29 +125,35 @@ export default function LyricsAnalyzer({ data: initialData, onFileLoad, apiClien
 
     // Keyboard handlers
     useEffect(() => {
-        console.log('Setting up keyboard handlers in LyricsAnalyzer')
+        const { currentModalHandler } = getModalState()
+
+        console.log('LyricsAnalyzer - Setting up keyboard effect', {
+            isAnyModalOpen,
+            hasSpacebarHandler: !!currentModalHandler
+        })
 
         const { handleKeyDown, handleKeyUp } = setupKeyboardHandlers({
             setIsShiftPressed,
             setIsCtrlPressed
         })
 
-        // Only add keyboard listeners if no modal is open
-        if (!isAnyModalOpen) {
-            console.log('Adding keyboard event listeners')
-            window.addEventListener('keydown', handleKeyDown)
-            window.addEventListener('keyup', handleKeyUp)
+        // Always add keyboard listeners
+        console.log('LyricsAnalyzer - Adding keyboard event listeners')
+        window.addEventListener('keydown', handleKeyDown)
+        window.addEventListener('keyup', handleKeyUp)
 
-            return () => {
-                console.log('Removing keyboard event listeners')
-                window.removeEventListener('keydown', handleKeyDown)
-                window.removeEventListener('keyup', handleKeyUp)
-                document.body.style.userSelect = ''
-            }
-        } else {
-            // Reset modifier states when a modal opens
+        // Reset modifier states when a modal opens
+        if (isAnyModalOpen) {
             setIsShiftPressed(false)
             setIsCtrlPressed(false)
+        }
+
+        // Cleanup function
+        return () => {
+            console.log('LyricsAnalyzer - Cleanup effect running')
+            window.removeEventListener('keydown', handleKeyDown)
+            window.removeEventListener('keyup', handleKeyUp)
+            document.body.style.userSelect = ''
         }
     }, [setIsShiftPressed, setIsCtrlPressed, isAnyModalOpen])
 
@@ -465,6 +471,9 @@ export default function LyricsAnalyzer({ data: initialData, onFileLoad, apiClien
 
     // Wrap setModalSpacebarHandler in useCallback
     const handleSetModalSpacebarHandler = useCallback((handler: (() => (e: KeyboardEvent) => void) | undefined) => {
+        console.log('LyricsAnalyzer - Setting modal handler:', {
+            hasHandler: !!handler
+        })
         // Update the global modal handler
         setModalHandler(handler ? handler() : undefined, !!handler)
     }, [])

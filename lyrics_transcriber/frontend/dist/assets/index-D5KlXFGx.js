@@ -32110,9 +32110,16 @@ function useManualSync({
     setSyncWordIndex(-1);
   }, []);
   const handleSpacebar = reactExports.useCallback((e) => {
+    console.log("useManualSync - Spacebar pressed", {
+      isManualSyncing,
+      hasEditedSegment: !!editedSegment,
+      syncWordIndex,
+      currentTime
+    });
     e.preventDefault();
     e.stopPropagation();
     if (isManualSyncing && editedSegment) {
+      console.log("useManualSync - Handling manual sync mode");
       if (syncWordIndex < editedSegment.words.length) {
         const newWords = [...editedSegment.words];
         const currentWord = newWords[syncWordIndex];
@@ -32132,6 +32139,7 @@ function useManualSync({
         }
       }
     } else if (editedSegment && onPlaySegment) {
+      console.log("useManualSync - Handling segment playback");
       const startTime = editedSegment.start_time ?? 0;
       const endTime = editedSegment.end_time ?? 0;
       if (currentTime >= startTime && currentTime <= endTime) {
@@ -32220,15 +32228,23 @@ function EditModal({
     onClose();
   }, [onClose, cleanupManualSync]);
   reactExports.useEffect(() => {
+    const spacebarHandler = handleSpacebar;
     if (open) {
-      setModalSpacebarHandler(() => handleSpacebar);
-    } else {
-      setModalSpacebarHandler(void 0);
+      console.log("EditModal - Setting up modal spacebar handler", {
+        hasPlaySegment: !!onPlaySegment,
+        editedSegmentId: editedSegment == null ? void 0 : editedSegment.id,
+        handlerFunction: spacebarHandler.toString().slice(0, 100)
+      });
+      setModalSpacebarHandler(() => spacebarHandler);
+      return () => {
+        console.log("EditModal - Cleanup effect running, open state:", open);
+        if (!open) {
+          console.log("EditModal - Cleanup: clearing modal spacebar handler");
+          setModalSpacebarHandler(void 0);
+        }
+      };
     }
-    return () => {
-      setModalSpacebarHandler(void 0);
-    };
-  }, [open, handleSpacebar, setModalSpacebarHandler]);
+  }, [open, handleSpacebar, setModalSpacebarHandler, editedSegment == null ? void 0 : editedSegment.id, onPlaySegment]);
   reactExports.useEffect(() => {
     if (editedSegment) {
       const startTime = editedSegment.start_time ?? 0;
@@ -33121,6 +33137,14 @@ const clearSavedData = (data) => {
 let currentModalHandler;
 let isModalOpen = false;
 const setModalHandler = (handler, open) => {
+  console.log("setModalHandler called", {
+    hasHandler: !!handler,
+    open,
+    previousState: {
+      hadHandler: !!currentModalHandler,
+      wasOpen: isModalOpen
+    }
+  });
   currentModalHandler = handler;
   isModalOpen = open;
 };
@@ -33128,6 +33152,15 @@ const setupKeyboardHandlers = (state) => {
   const handlerId = Math.random().toString(36).substr(2, 9);
   console.log(`Setting up keyboard handlers [${handlerId}]`);
   const handleKeyDown = (e) => {
+    console.log(`Keyboard event captured [${handlerId}]`, {
+      key: e.key,
+      code: e.code,
+      target: e.target,
+      currentTarget: e.currentTarget,
+      eventPhase: e.eventPhase,
+      isModalOpen,
+      hasModalHandler: !!currentModalHandler
+    });
     if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
       console.log(`[${handlerId}] Ignoring keydown in input/textarea`);
       return;
@@ -33138,17 +33171,20 @@ const setupKeyboardHandlers = (state) => {
     } else if (e.key === "Meta") {
       state.setIsCtrlPressed(true);
     } else if (e.key === " " || e.code === "Space") {
-      console.log(`[${handlerId}] Spacebar pressed:`, {
+      console.log("Keyboard handler - Spacebar pressed", {
         modalOpen: isModalOpen,
         hasModalHandler: !!currentModalHandler,
-        hasGlobalToggle: !!window.toggleAudioPlayback
+        hasGlobalToggle: !!window.toggleAudioPlayback,
+        target: e.target,
+        eventPhase: e.eventPhase,
+        handlerFunction: currentModalHandler == null ? void 0 : currentModalHandler.toString().slice(0, 100)
       });
       e.preventDefault();
       if (isModalOpen && currentModalHandler) {
-        console.log(`[${handlerId}] Using modal spacebar handler`);
+        console.log("Keyboard handler - Delegating to modal handler");
         currentModalHandler(e);
       } else if (window.toggleAudioPlayback && !isModalOpen) {
-        console.log(`[${handlerId}] Using global audio toggle`);
+        console.log("Keyboard handler - Using global audio toggle");
         window.toggleAudioPlayback();
       }
     }
@@ -33163,6 +33199,10 @@ const setupKeyboardHandlers = (state) => {
   };
   return { handleKeyDown, handleKeyUp };
 };
+const getModalState = () => ({
+  currentModalHandler,
+  isModalOpen
+});
 const LockIcon = createSvgIcon(/* @__PURE__ */ jsxRuntimeExports.jsx("path", {
   d: "M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2m-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2m3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1s3.1 1.39 3.1 3.1z"
 }), "Lock");
@@ -33693,25 +33733,28 @@ function LyricsAnalyzer({ data: initialData, onFileLoad, apiClient, isReadOnly, 
     }
   }, [data, isReadOnly, initialData]);
   reactExports.useEffect(() => {
-    console.log("Setting up keyboard handlers in LyricsAnalyzer");
+    const { currentModalHandler: currentModalHandler2 } = getModalState();
+    console.log("LyricsAnalyzer - Setting up keyboard effect", {
+      isAnyModalOpen,
+      hasSpacebarHandler: !!currentModalHandler2
+    });
     const { handleKeyDown, handleKeyUp } = setupKeyboardHandlers({
       setIsShiftPressed,
       setIsCtrlPressed
     });
-    if (!isAnyModalOpen) {
-      console.log("Adding keyboard event listeners");
-      window.addEventListener("keydown", handleKeyDown);
-      window.addEventListener("keyup", handleKeyUp);
-      return () => {
-        console.log("Removing keyboard event listeners");
-        window.removeEventListener("keydown", handleKeyDown);
-        window.removeEventListener("keyup", handleKeyUp);
-        document.body.style.userSelect = "";
-      };
-    } else {
+    console.log("LyricsAnalyzer - Adding keyboard event listeners");
+    window.addEventListener("keydown", handleKeyDown);
+    window.addEventListener("keyup", handleKeyUp);
+    if (isAnyModalOpen) {
       setIsShiftPressed(false);
       setIsCtrlPressed(false);
     }
+    return () => {
+      console.log("LyricsAnalyzer - Cleanup effect running");
+      window.removeEventListener("keydown", handleKeyDown);
+      window.removeEventListener("keyup", handleKeyUp);
+      document.body.style.userSelect = "";
+    };
   }, [setIsShiftPressed, setIsCtrlPressed, isAnyModalOpen]);
   reactExports.useEffect(() => {
     const modalOpen = Boolean(
@@ -33967,6 +34010,9 @@ function LyricsAnalyzer({ data: initialData, onFileLoad, apiClient, isReadOnly, 
     }, 1500);
   }, []);
   const handleSetModalSpacebarHandler = reactExports.useCallback((handler) => {
+    console.log("LyricsAnalyzer - Setting modal handler:", {
+      hasHandler: !!handler
+    });
     setModalHandler(handler ? handler() : void 0, !!handler);
   }, []);
   const handleAddLyrics = reactExports.useCallback(async (source, lyrics) => {
@@ -34266,4 +34312,4 @@ function App() {
 ReactDOM$1.createRoot(document.getElementById("root")).render(
   /* @__PURE__ */ jsxRuntimeExports.jsx(App, {})
 );
-//# sourceMappingURL=index-67yjx3bu.js.map
+//# sourceMappingURL=index-D5KlXFGx.js.map

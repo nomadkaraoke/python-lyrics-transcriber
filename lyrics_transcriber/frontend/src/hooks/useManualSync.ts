@@ -23,10 +23,18 @@ export default function useManualSync({
     }, [])
 
     const handleSpacebar = useCallback((e: KeyboardEvent) => {
+        console.log('useManualSync - Spacebar pressed', {
+            isManualSyncing,
+            hasEditedSegment: !!editedSegment,
+            syncWordIndex,
+            currentTime
+        })
+
         e.preventDefault()
         e.stopPropagation()
 
         if (isManualSyncing && editedSegment) {
+            console.log('useManualSync - Handling manual sync mode')
             // Handle manual sync mode
             if (syncWordIndex < editedSegment.words.length) {
                 const newWords = [...editedSegment.words]
@@ -50,6 +58,7 @@ export default function useManualSync({
                 }
             }
         } else if (editedSegment && onPlaySegment) {
+            console.log('useManualSync - Handling segment playback')
             // Toggle segment playback when not in manual sync mode
             const startTime = editedSegment.start_time ?? 0
             const endTime = editedSegment.end_time ?? 0
