@@ -85,8 +85,8 @@ class ReviewServer:
         return CorrectionResult(
             corrections=[
                 WordCorrection(
-                    original_word=c.get("original_word", ""),
-                    corrected_word=c.get("corrected_word", ""),
+                    original_word=c.get("original_word", "").strip(),
+                    corrected_word=c.get("corrected_word", "").strip(),
                     original_position=c.get("original_position", 0),
                     source=c.get("source", "review"),
                     reason=c.get("reason", "manual_review"),
@@ -105,7 +105,26 @@ class ReviewServer:
                 )
                 for c in updated_data["corrections"]
             ],
-            corrected_segments=[LyricsSegment.from_dict(s) for s in updated_data["corrected_segments"]],
+            corrected_segments=[
+                LyricsSegment(
+                    id=s["id"],
+                    text=s["text"].strip(),
+                    words=[
+                        Word(
+                            id=w["id"],
+                            text=w["text"].strip(),
+                            start_time=w["start_time"],
+                            end_time=w["end_time"],
+                            confidence=w.get("confidence"),
+                            created_during_correction=w.get("created_during_correction", False),
+                        )
+                        for w in s["words"]
+                    ],
+                    start_time=s["start_time"],
+                    end_time=s["end_time"],
+                )
+                for s in updated_data["corrected_segments"]
+            ],
             # Copy existing fields from the base result
             original_segments=base_result.original_segments,
             corrections_made=len(updated_data["corrections"]),
@@ -248,9 +267,7 @@ class ReviewServer:
                 elif "available_handlers" in self.correction_result.metadata:
                     # If no enabled_handlers but we have available_handlers, enable all default handlers
                     enabled_handlers = [
-                        handler["id"] 
-                        for handler in self.correction_result.metadata["available_handlers"] 
-                        if handler.get("enabled", True)
+                        handler["id"] for handler in self.correction_result.metadata["available_handlers"] if handler.get("enabled", True)
                     ]
                     self.logger.info(f"No enabled handlers found in metadata, using default enabled handlers: {enabled_handlers}")
                 else:
@@ -267,7 +284,7 @@ class ReviewServer:
             corrector = LyricsCorrector(
                 cache_dir=self.output_config.cache_dir,
                 enabled_handlers=enabled_handlers,  # Pass the preserved handlers or None to use defaults
-                logger=self.logger
+                logger=self.logger,
             )
 
             self.logger.info(f"Active correction handlers: {[h.__class__.__name__ for h in corrector.handlers]}")
@@ -281,13 +298,17 @@ class ReviewServer:
             # Update metadata with the new handler state from corrector
             if not self.correction_result.metadata:
                 self.correction_result.metadata = {}
-            self.correction_result.metadata.update({
-                "available_handlers": corrector.all_handlers,
-                "enabled_handlers": [getattr(handler, "name", handler.__class__.__name__) for handler in corrector.handlers]
-            })
+            self.correction_result.metadata.update(
+                {
+                    "available_handlers": corrector.all_handlers,
+                    "enabled_handlers": [getattr(handler, "name", handler.__class__.__name__) for handler in corrector.handlers],
+                }
+            )
 
             self.logger.info("Correction process completed")
-            self.logger.info(f"Updated metadata with {len(corrector.handlers)} enabled handlers: {self.correction_result.metadata['enabled_handlers']}")
+            self.logger.info(
+                f"Updated metadata with {len(corrector.handlers)} enabled handlers: {self.correction_result.metadata['enabled_handlers']}"
+            )
 
             # Restore audio hash
             if audio_hash:
@@ -408,9 +429,7 @@ class ReviewServer:
                 elif "available_handlers" in self.correction_result.metadata:
                     # If no enabled_handlers but we have available_handlers, enable all default handlers
                     enabled_handlers = [
-                        handler["id"] 
-                        for handler in self.correction_result.metadata["available_handlers"] 
-                        if handler.get("enabled", True)
+                        handler["id"] for handler in self.correction_result.metadata["available_handlers"] if handler.get("enabled", True)
                     ]
                     self.logger.info(f"No enabled handlers found in metadata, using default enabled handlers: {enabled_handlers}")
                 else:
@@ -427,7 +446,7 @@ class ReviewServer:
             corrector = LyricsCorrector(
                 cache_dir=self.output_config.cache_dir,
                 enabled_handlers=enabled_handlers,  # Pass the preserved handlers or None to use defaults
-                logger=self.logger
+                logger=self.logger,
             )
 
             self.logger.info(f"Active correction handlers: {[h.__class__.__name__ for h in corrector.handlers]}")
@@ -441,10 +460,12 @@ class ReviewServer:
             # Update metadata with the new handler state from corrector
             if not self.correction_result.metadata:
                 self.correction_result.metadata = {}
-            self.correction_result.metadata.update({
-                "available_handlers": corrector.all_handlers,
-                "enabled_handlers": [getattr(handler, "name", handler.__class__.__name__) for handler in corrector.handlers]
-            })
+            self.correction_result.metadata.update(
+                {
+                    "available_handlers": corrector.all_handlers,
+                    "enabled_handlers": [getattr(handler, "name", handler.__class__.__name__) for handler in corrector.handlers],
+                }
+            )
 
             # Restore audio hash
             if audio_hash:
@@ -453,7 +474,9 @@ class ReviewServer:
                 self.correction_result.metadata["audio_hash"] = audio_hash
 
             self.logger.info("Correction process completed")
-            self.logger.info(f"Updated metadata with {len(corrector.handlers)} enabled handlers: {self.correction_result.metadata['enabled_handlers']}")
+            self.logger.info(
+                f"Updated metadata with {len(corrector.handlers)} enabled handlers: {self.correction_result.metadata['enabled_handlers']}"
+            )
 
             return {"status": "success", "data": self.correction_result.to_dict()}
 
