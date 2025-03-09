@@ -32987,27 +32987,208 @@ function TranscriptionView({
     )
   ] });
 }
-const DeleteIcon = createSvgIcon(/* @__PURE__ */ jsxRuntimeExports.jsx("path", {
-  d: "M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6zM19 4h-3.5l-1-1h-5l-1 1H5v2h14z"
-}), "Delete");
-const SplitIcon = createSvgIcon(/* @__PURE__ */ jsxRuntimeExports.jsx("path", {
-  d: "m14 4 2.29 2.29-2.88 2.88 1.42 1.42 2.88-2.88L20 10V4zm-4 0H4v6l2.29-2.29 4.71 4.7V20h2v-8.41l-5.29-5.3z"
-}), "CallSplit");
-const RestoreFromTrash = createSvgIcon(/* @__PURE__ */ jsxRuntimeExports.jsx("path", {
-  d: "M19 4h-3.5l-1-1h-5l-1 1H5v2h14zM6 7v12c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7zm8 7v4h-4v-4H8l4-4 4 4z"
-}), "RestoreFromTrash");
-const AutoFixHighIcon = createSvgIcon(/* @__PURE__ */ jsxRuntimeExports.jsx("path", {
-  d: "M7.5 5.6 10 7 8.6 4.5 10 2 7.5 3.4 5 2l1.4 2.5L5 7zm12 9.8L17 14l1.4 2.5L17 19l2.5-1.4L22 19l-1.4-2.5L22 14zM22 2l-2.5 1.4L17 2l1.4 2.5L17 7l2.5-1.4L22 7l-1.4-2.5zm-7.63 5.29a.996.996 0 0 0-1.41 0L1.29 18.96c-.39.39-.39 1.02 0 1.41l2.34 2.34c.39.39 1.02.39 1.41 0L16.7 11.05c.39-.39.39-1.02 0-1.41zm-1.03 5.49-2.12-2.12 2.44-2.44 2.12 2.12z"
-}), "AutoFixHigh");
-const CancelIcon = createSvgIcon(/* @__PURE__ */ jsxRuntimeExports.jsx("path", {
-  d: "M12 2C6.47 2 2 6.47 2 12s4.47 10 10 10 10-4.47 10-10S17.53 2 12 2m5 13.59L15.59 17 12 13.41 8.41 17 7 15.59 10.59 12 7 8.41 8.41 7 12 10.59 15.59 7 17 8.41 13.41 12z"
-}), "Cancel");
 const StopIcon = createSvgIcon(/* @__PURE__ */ jsxRuntimeExports.jsx("path", {
   d: "M6 6h12v12H6z"
 }), "Stop");
-const HistoryIcon = createSvgIcon(/* @__PURE__ */ jsxRuntimeExports.jsx("path", {
-  d: "M13 3c-4.97 0-9 4.03-9 9H1l3.89 3.89.07.14L9 12H6c0-3.87 3.13-7 7-7s7 3.13 7 7-3.13 7-7 7c-1.93 0-3.68-.79-4.94-2.06l-1.42 1.42C8.27 19.99 10.51 21 13 21c4.97 0 9-4.03 9-9s-4.03-9-9-9m-1 5v5l4.28 2.54.72-1.21-3.5-2.08V8z"
-}), "History");
+const urlAlphabet = "useandom-26T198340PX75pxJACKVERYMINDBUSHWOLF_GQZbfghjklqvwyzrict";
+let nanoid = (size = 21) => {
+  let id = "";
+  let bytes = crypto.getRandomValues(new Uint8Array(size |= 0));
+  while (size--) {
+    id += urlAlphabet[bytes[size] & 63];
+  }
+  return id;
+};
+const TAP_THRESHOLD_MS = 200;
+const DEFAULT_WORD_DURATION = 1;
+const OVERLAP_BUFFER = 0.01;
+function useManualSync({
+  editedSegment,
+  currentTime,
+  onPlaySegment,
+  updateSegment: updateSegment2
+}) {
+  const [isManualSyncing, setIsManualSyncing] = reactExports.useState(false);
+  const [syncWordIndex, setSyncWordIndex] = reactExports.useState(-1);
+  const currentTimeRef = reactExports.useRef(currentTime);
+  const [isSpacebarPressed, setIsSpacebarPressed] = reactExports.useState(false);
+  const wordStartTimeRef = reactExports.useRef(null);
+  const wordsRef = reactExports.useRef([]);
+  const spacebarPressTimeRef = reactExports.useRef(null);
+  reactExports.useEffect(() => {
+    currentTimeRef.current = currentTime;
+  }, [currentTime]);
+  reactExports.useEffect(() => {
+    if (editedSegment) {
+      wordsRef.current = [...editedSegment.words];
+    }
+  }, [editedSegment]);
+  const cleanupManualSync = reactExports.useCallback(() => {
+    setIsManualSyncing(false);
+    setSyncWordIndex(-1);
+    setIsSpacebarPressed(false);
+    wordStartTimeRef.current = null;
+    spacebarPressTimeRef.current = null;
+  }, []);
+  const handleKeyDown = reactExports.useCallback((e) => {
+    if (e.code !== "Space") return;
+    console.log("useManualSync - Spacebar pressed down", {
+      isManualSyncing,
+      hasEditedSegment: !!editedSegment,
+      syncWordIndex,
+      currentTime: currentTimeRef.current
+    });
+    e.preventDefault();
+    e.stopPropagation();
+    if (isManualSyncing && editedSegment && !isSpacebarPressed) {
+      const currentWord = syncWordIndex < editedSegment.words.length ? editedSegment.words[syncWordIndex] : null;
+      console.log("useManualSync - Recording word start time", {
+        wordIndex: syncWordIndex,
+        wordText: currentWord == null ? void 0 : currentWord.text,
+        time: currentTimeRef.current
+      });
+      setIsSpacebarPressed(true);
+      wordStartTimeRef.current = currentTimeRef.current;
+      spacebarPressTimeRef.current = Date.now();
+      if (syncWordIndex < editedSegment.words.length) {
+        const newWords = [...wordsRef.current];
+        const currentWord2 = newWords[syncWordIndex];
+        currentWord2.start_time = currentTimeRef.current;
+        wordsRef.current = newWords;
+        updateSegment2(newWords);
+      }
+    } else if (!isManualSyncing && editedSegment && onPlaySegment) {
+      console.log("useManualSync - Handling segment playback");
+      const startTime = editedSegment.start_time ?? 0;
+      const endTime = editedSegment.end_time ?? 0;
+      if (currentTimeRef.current >= startTime && currentTimeRef.current <= endTime) {
+        if (window.toggleAudioPlayback) {
+          window.toggleAudioPlayback();
+        }
+      } else {
+        onPlaySegment(startTime);
+      }
+    }
+  }, [isManualSyncing, editedSegment, syncWordIndex, onPlaySegment, updateSegment2, isSpacebarPressed]);
+  const handleKeyUp = reactExports.useCallback((e) => {
+    if (e.code !== "Space") return;
+    console.log("useManualSync - Spacebar released", {
+      isManualSyncing,
+      hasEditedSegment: !!editedSegment,
+      syncWordIndex,
+      currentTime: currentTimeRef.current,
+      wordStartTime: wordStartTimeRef.current
+    });
+    e.preventDefault();
+    e.stopPropagation();
+    if (isManualSyncing && editedSegment && isSpacebarPressed) {
+      const currentWord = syncWordIndex < editedSegment.words.length ? editedSegment.words[syncWordIndex] : null;
+      const pressDuration = spacebarPressTimeRef.current ? Date.now() - spacebarPressTimeRef.current : 0;
+      const isTap = pressDuration < TAP_THRESHOLD_MS;
+      console.log("useManualSync - Recording word end time", {
+        wordIndex: syncWordIndex,
+        wordText: currentWord == null ? void 0 : currentWord.text,
+        startTime: wordStartTimeRef.current,
+        endTime: currentTimeRef.current,
+        pressDuration: `${pressDuration}ms`,
+        isTap,
+        duration: currentWord ? (currentTimeRef.current - (wordStartTimeRef.current || 0)).toFixed(2) + "s" : "N/A"
+      });
+      setIsSpacebarPressed(false);
+      if (syncWordIndex < editedSegment.words.length) {
+        const newWords = [...wordsRef.current];
+        const currentWord2 = newWords[syncWordIndex];
+        if (isTap) {
+          const defaultEndTime = (wordStartTimeRef.current || currentTimeRef.current) + DEFAULT_WORD_DURATION;
+          currentWord2.end_time = defaultEndTime;
+          console.log("useManualSync - Tap detected, setting default duration", {
+            defaultEndTime,
+            duration: DEFAULT_WORD_DURATION
+          });
+        } else {
+          currentWord2.end_time = currentTimeRef.current;
+        }
+        wordsRef.current = newWords;
+        if (syncWordIndex === editedSegment.words.length - 1) {
+          console.log("useManualSync - Completed manual sync for all words");
+          setIsManualSyncing(false);
+          setSyncWordIndex(-1);
+          wordStartTimeRef.current = null;
+          spacebarPressTimeRef.current = null;
+        } else {
+          const nextWord = editedSegment.words[syncWordIndex + 1];
+          console.log("useManualSync - Moving to next word", {
+            nextWordIndex: syncWordIndex + 1,
+            nextWordText: nextWord == null ? void 0 : nextWord.text
+          });
+          setSyncWordIndex(syncWordIndex + 1);
+        }
+        updateSegment2(newWords);
+      }
+    }
+  }, [isManualSyncing, editedSegment, syncWordIndex, updateSegment2, isSpacebarPressed]);
+  reactExports.useEffect(() => {
+    if (isManualSyncing && editedSegment && syncWordIndex > 0) {
+      const newWords = [...wordsRef.current];
+      const prevWord = newWords[syncWordIndex - 1];
+      const currentWord = newWords[syncWordIndex];
+      if (prevWord && currentWord && prevWord.end_time !== null && currentWord.start_time !== null && prevWord.end_time > currentWord.start_time) {
+        console.log("useManualSync - Adjusting previous word end time to prevent overlap", {
+          prevWordIndex: syncWordIndex - 1,
+          prevWordText: prevWord.text,
+          prevWordEndTime: prevWord.end_time,
+          currentWordStartTime: currentWord.start_time,
+          newEndTime: currentWord.start_time - OVERLAP_BUFFER
+        });
+        prevWord.end_time = currentWord.start_time - OVERLAP_BUFFER;
+        wordsRef.current = newWords;
+        updateSegment2(newWords);
+      }
+    }
+  }, [syncWordIndex, isManualSyncing, editedSegment, updateSegment2]);
+  const handleSpacebar = reactExports.useCallback((e) => {
+    if (e.type === "keydown") {
+      handleKeyDown(e);
+    } else if (e.type === "keyup") {
+      handleKeyUp(e);
+    }
+  }, [handleKeyDown, handleKeyUp]);
+  const startManualSync = reactExports.useCallback(() => {
+    if (isManualSyncing) {
+      cleanupManualSync();
+      return;
+    }
+    if (!editedSegment || !onPlaySegment) return;
+    wordsRef.current = [...editedSegment.words];
+    setIsManualSyncing(true);
+    setSyncWordIndex(0);
+    setIsSpacebarPressed(false);
+    wordStartTimeRef.current = null;
+    spacebarPressTimeRef.current = null;
+    onPlaySegment((editedSegment.start_time ?? 0) - 3);
+  }, [isManualSyncing, editedSegment, onPlaySegment, cleanupManualSync]);
+  reactExports.useEffect(() => {
+    var _a;
+    if (!editedSegment) return;
+    const endTime = editedSegment.end_time ?? 0;
+    if (window.isAudioPlaying && currentTimeRef.current > endTime) {
+      console.log("Stopping playback: current time exceeded end time");
+      (_a = window.toggleAudioPlayback) == null ? void 0 : _a.call(window);
+      cleanupManualSync();
+    }
+  }, [isManualSyncing, editedSegment, currentTimeRef, cleanupManualSync]);
+  return {
+    isManualSyncing,
+    syncWordIndex,
+    startManualSync,
+    cleanupManualSync,
+    handleSpacebar,
+    isSpacebarPressed
+  };
+}
+const CancelIcon = createSvgIcon(/* @__PURE__ */ jsxRuntimeExports.jsx("path", {
+  d: "M12 2C6.47 2 2 6.47 2 12s4.47 10 10 10 10-4.47 10-10S17.53 2 12 2m5 13.59L15.59 17 12 13.41 8.41 17 7 15.59 10.59 12 7 8.41 8.41 7 12 10.59 15.59 7 17 8.41 13.41 12z"
+}), "Cancel");
 const TimelineContainer = styled(Box)(({ theme: theme2 }) => ({
   position: "relative",
   height: "75px",
@@ -33312,15 +33493,83 @@ function TimelineEditor({ words, startTime, endTime, onWordUpdate, currentTime =
     }
   );
 }
-const urlAlphabet = "useandom-26T198340PX75pxJACKVERYMINDBUSHWOLF_GQZbfghjklqvwyzrict";
-let nanoid = (size = 21) => {
-  let id = "";
-  let bytes = crypto.getRandomValues(new Uint8Array(size |= 0));
-  while (size--) {
-    id += urlAlphabet[bytes[size] & 63];
-  }
-  return id;
-};
+function EditTimelineSection({
+  words,
+  startTime,
+  endTime,
+  originalStartTime,
+  originalEndTime,
+  currentStartTime,
+  currentEndTime,
+  currentTime,
+  isManualSyncing,
+  syncWordIndex,
+  isSpacebarPressed,
+  onWordUpdate,
+  onPlaySegment,
+  startManualSync
+}) {
+  var _a;
+  return /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsx(Box, { sx: { mb: 0 }, children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+      TimelineEditor,
+      {
+        words,
+        startTime,
+        endTime,
+        onWordUpdate,
+        currentTime,
+        onPlaySegment
+      }
+    ) }),
+    /* @__PURE__ */ jsxRuntimeExports.jsxs(Box, { sx: { display: "flex", alignItems: "center", justifyContent: "space-between" }, children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs(Typography, { variant: "body2", color: "text.secondary", children: [
+        "Original Time Range: ",
+        (originalStartTime == null ? void 0 : originalStartTime.toFixed(2)) ?? "N/A",
+        " - ",
+        (originalEndTime == null ? void 0 : originalEndTime.toFixed(2)) ?? "N/A",
+        /* @__PURE__ */ jsxRuntimeExports.jsx("br", {}),
+        "Current Time Range: ",
+        (currentStartTime == null ? void 0 : currentStartTime.toFixed(2)) ?? "N/A",
+        " - ",
+        (currentEndTime == null ? void 0 : currentEndTime.toFixed(2)) ?? "N/A"
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs(Box, { sx: { display: "flex", alignItems: "center", gap: 2 }, children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx(
+          Button,
+          {
+            variant: isManualSyncing ? "outlined" : "contained",
+            onClick: startManualSync,
+            disabled: !onPlaySegment,
+            startIcon: isManualSyncing ? /* @__PURE__ */ jsxRuntimeExports.jsx(CancelIcon, {}) : /* @__PURE__ */ jsxRuntimeExports.jsx(PlayCircleOutlineIcon, {}),
+            color: isManualSyncing ? "error" : "primary",
+            children: isManualSyncing ? "Cancel Sync" : "Manual Sync"
+          }
+        ),
+        isManualSyncing && /* @__PURE__ */ jsxRuntimeExports.jsxs(Box, { children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs(Typography, { variant: "body2", children: [
+            "Word ",
+            syncWordIndex + 1,
+            " of ",
+            words.length,
+            ": ",
+            /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: ((_a = words[syncWordIndex]) == null ? void 0 : _a.text) || "" })
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(Typography, { variant: "caption", color: "text.secondary", children: isSpacebarPressed ? "Holding spacebar... Release when word ends" : "Press spacebar when word starts (tap for short words, hold for long words)" })
+        ] })
+      ] })
+    ] })
+  ] });
+}
+const DeleteIcon = createSvgIcon(/* @__PURE__ */ jsxRuntimeExports.jsx("path", {
+  d: "M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6zM19 4h-3.5l-1-1h-5l-1 1H5v2h14z"
+}), "Delete");
+const SplitIcon = createSvgIcon(/* @__PURE__ */ jsxRuntimeExports.jsx("path", {
+  d: "m14 4 2.29 2.29-2.88 2.88 1.42 1.42 2.88-2.88L20 10V4zm-4 0H4v6l2.29-2.29 4.71 4.7V20h2v-8.41l-5.29-5.3z"
+}), "CallSplit");
+const AutoFixHighIcon = createSvgIcon(/* @__PURE__ */ jsxRuntimeExports.jsx("path", {
+  d: "M7.5 5.6 10 7 8.6 4.5 10 2 7.5 3.4 5 2l1.4 2.5L5 7zm12 9.8L17 14l1.4 2.5L17 19l2.5-1.4L22 19l-1.4-2.5L22 14zM22 2l-2.5 1.4L17 2l1.4 2.5L17 7l2.5-1.4L22 7l-1.4-2.5zm-7.63 5.29a.996.996 0 0 0-1.41 0L1.29 18.96c-.39.39-.39 1.02 0 1.41l2.34 2.34c.39.39 1.02.39 1.41 0L16.7 11.05c.39-.39.39-1.02 0-1.41zm-1.03 5.49-2.12-2.12 2.44-2.44 2.12 2.12z"
+}), "AutoFixHigh");
 const AddIcon = createSvgIcon(/* @__PURE__ */ jsxRuntimeExports.jsx("path", {
   d: "M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6z"
 }), "Add");
@@ -33485,192 +33734,225 @@ function WordDivider({
     }
   );
 }
-const TAP_THRESHOLD_MS = 200;
-const DEFAULT_WORD_DURATION = 1;
-const OVERLAP_BUFFER = 0.01;
-function useManualSync({
-  editedSegment,
+function EditWordList({
+  words,
+  onWordUpdate,
+  onSplitWord,
+  onMergeWords,
+  onAddWord,
+  onRemoveWord,
+  onSplitSegment,
+  onAddSegment,
+  onMergeSegment,
   currentTime,
-  onPlaySegment,
-  updateSegment: updateSegment2
+  isGlobal = false
 }) {
-  const [isManualSyncing, setIsManualSyncing] = reactExports.useState(false);
-  const [syncWordIndex, setSyncWordIndex] = reactExports.useState(-1);
-  const currentTimeRef = reactExports.useRef(currentTime);
-  const [isSpacebarPressed, setIsSpacebarPressed] = reactExports.useState(false);
-  const wordStartTimeRef = reactExports.useRef(null);
-  const wordsRef = reactExports.useRef([]);
-  const spacebarPressTimeRef = reactExports.useRef(null);
-  reactExports.useEffect(() => {
-    currentTimeRef.current = currentTime;
-  }, [currentTime]);
-  reactExports.useEffect(() => {
-    if (editedSegment) {
-      wordsRef.current = [...editedSegment.words];
-    }
-  }, [editedSegment]);
-  const cleanupManualSync = reactExports.useCallback(() => {
-    setIsManualSyncing(false);
-    setSyncWordIndex(-1);
-    setIsSpacebarPressed(false);
-    wordStartTimeRef.current = null;
-    spacebarPressTimeRef.current = null;
-  }, []);
-  const handleKeyDown = reactExports.useCallback((e) => {
-    if (e.code !== "Space") return;
-    console.log("useManualSync - Spacebar pressed down", {
-      isManualSyncing,
-      hasEditedSegment: !!editedSegment,
-      syncWordIndex,
-      currentTime: currentTimeRef.current
+  const [replacementText, setReplacementText] = reactExports.useState("");
+  const handleReplaceAllWords = () => {
+    const newWords = replacementText.trim().split(/\s+/);
+    newWords.forEach((text, index) => {
+      if (index < words.length) {
+        onWordUpdate(index, { text });
+      }
     });
-    e.preventDefault();
-    e.stopPropagation();
-    if (isManualSyncing && editedSegment && !isSpacebarPressed) {
-      const currentWord = syncWordIndex < editedSegment.words.length ? editedSegment.words[syncWordIndex] : null;
-      console.log("useManualSync - Recording word start time", {
-        wordIndex: syncWordIndex,
-        wordText: currentWord == null ? void 0 : currentWord.text,
-        time: currentTimeRef.current
-      });
-      setIsSpacebarPressed(true);
-      wordStartTimeRef.current = currentTimeRef.current;
-      spacebarPressTimeRef.current = Date.now();
-      if (syncWordIndex < editedSegment.words.length) {
-        const newWords = [...wordsRef.current];
-        const currentWord2 = newWords[syncWordIndex];
-        currentWord2.start_time = currentTimeRef.current;
-        wordsRef.current = newWords;
-        updateSegment2(newWords);
-      }
-    } else if (!isManualSyncing && editedSegment && onPlaySegment) {
-      console.log("useManualSync - Handling segment playback");
-      const startTime = editedSegment.start_time ?? 0;
-      const endTime = editedSegment.end_time ?? 0;
-      if (currentTimeRef.current >= startTime && currentTimeRef.current <= endTime) {
-        if (window.toggleAudioPlayback) {
-          window.toggleAudioPlayback();
-        }
-      } else {
-        onPlaySegment(startTime);
-      }
-    }
-  }, [isManualSyncing, editedSegment, syncWordIndex, onPlaySegment, updateSegment2, isSpacebarPressed]);
-  const handleKeyUp = reactExports.useCallback((e) => {
-    if (e.code !== "Space") return;
-    console.log("useManualSync - Spacebar released", {
-      isManualSyncing,
-      hasEditedSegment: !!editedSegment,
-      syncWordIndex,
-      currentTime: currentTimeRef.current,
-      wordStartTime: wordStartTimeRef.current
-    });
-    e.preventDefault();
-    e.stopPropagation();
-    if (isManualSyncing && editedSegment && isSpacebarPressed) {
-      const currentWord = syncWordIndex < editedSegment.words.length ? editedSegment.words[syncWordIndex] : null;
-      const pressDuration = spacebarPressTimeRef.current ? Date.now() - spacebarPressTimeRef.current : 0;
-      const isTap = pressDuration < TAP_THRESHOLD_MS;
-      console.log("useManualSync - Recording word end time", {
-        wordIndex: syncWordIndex,
-        wordText: currentWord == null ? void 0 : currentWord.text,
-        startTime: wordStartTimeRef.current,
-        endTime: currentTimeRef.current,
-        pressDuration: `${pressDuration}ms`,
-        isTap,
-        duration: currentWord ? (currentTimeRef.current - (wordStartTimeRef.current || 0)).toFixed(2) + "s" : "N/A"
-      });
-      setIsSpacebarPressed(false);
-      if (syncWordIndex < editedSegment.words.length) {
-        const newWords = [...wordsRef.current];
-        const currentWord2 = newWords[syncWordIndex];
-        if (isTap) {
-          const defaultEndTime = (wordStartTimeRef.current || currentTimeRef.current) + DEFAULT_WORD_DURATION;
-          currentWord2.end_time = defaultEndTime;
-          console.log("useManualSync - Tap detected, setting default duration", {
-            defaultEndTime,
-            duration: DEFAULT_WORD_DURATION
-          });
-        } else {
-          currentWord2.end_time = currentTimeRef.current;
-        }
-        wordsRef.current = newWords;
-        if (syncWordIndex === editedSegment.words.length - 1) {
-          console.log("useManualSync - Completed manual sync for all words");
-          setIsManualSyncing(false);
-          setSyncWordIndex(-1);
-          wordStartTimeRef.current = null;
-          spacebarPressTimeRef.current = null;
-        } else {
-          const nextWord = editedSegment.words[syncWordIndex + 1];
-          console.log("useManualSync - Moving to next word", {
-            nextWordIndex: syncWordIndex + 1,
-            nextWordText: nextWord == null ? void 0 : nextWord.text
-          });
-          setSyncWordIndex(syncWordIndex + 1);
-        }
-        updateSegment2(newWords);
-      }
-    }
-  }, [isManualSyncing, editedSegment, syncWordIndex, updateSegment2, isSpacebarPressed]);
-  reactExports.useEffect(() => {
-    if (isManualSyncing && editedSegment && syncWordIndex > 0) {
-      const newWords = [...wordsRef.current];
-      const prevWord = newWords[syncWordIndex - 1];
-      const currentWord = newWords[syncWordIndex];
-      if (prevWord && currentWord && prevWord.end_time !== null && currentWord.start_time !== null && prevWord.end_time > currentWord.start_time) {
-        console.log("useManualSync - Adjusting previous word end time to prevent overlap", {
-          prevWordIndex: syncWordIndex - 1,
-          prevWordText: prevWord.text,
-          prevWordEndTime: prevWord.end_time,
-          currentWordStartTime: currentWord.start_time,
-          newEndTime: currentWord.start_time - OVERLAP_BUFFER
-        });
-        prevWord.end_time = currentWord.start_time - OVERLAP_BUFFER;
-        wordsRef.current = newWords;
-        updateSegment2(newWords);
-      }
-    }
-  }, [syncWordIndex, isManualSyncing, editedSegment, updateSegment2]);
-  const handleSpacebar = reactExports.useCallback((e) => {
-    if (e.type === "keydown") {
-      handleKeyDown(e);
-    } else if (e.type === "keyup") {
-      handleKeyUp(e);
-    }
-  }, [handleKeyDown, handleKeyUp]);
-  const startManualSync = reactExports.useCallback(() => {
-    if (isManualSyncing) {
-      cleanupManualSync();
-      return;
-    }
-    if (!editedSegment || !onPlaySegment) return;
-    wordsRef.current = [...editedSegment.words];
-    setIsManualSyncing(true);
-    setSyncWordIndex(0);
-    setIsSpacebarPressed(false);
-    wordStartTimeRef.current = null;
-    spacebarPressTimeRef.current = null;
-    onPlaySegment((editedSegment.start_time ?? 0) - 3);
-  }, [isManualSyncing, editedSegment, onPlaySegment, cleanupManualSync]);
-  reactExports.useEffect(() => {
-    var _a;
-    if (!editedSegment) return;
-    const endTime = editedSegment.end_time ?? 0;
-    if (window.isAudioPlaying && currentTimeRef.current > endTime) {
-      console.log("Stopping playback: current time exceeded end time");
-      (_a = window.toggleAudioPlayback) == null ? void 0 : _a.call(window);
-      cleanupManualSync();
-    }
-  }, [isManualSyncing, editedSegment, currentTimeRef, cleanupManualSync]);
-  return {
-    isManualSyncing,
-    syncWordIndex,
-    startManualSync,
-    cleanupManualSync,
-    handleSpacebar,
-    isSpacebarPressed
+    setReplacementText("");
   };
+  const isWordHighlighted = (word) => {
+    if (!currentTime || word.start_time === null || word.end_time === null) return false;
+    return currentTime >= word.start_time && currentTime <= word.end_time;
+  };
+  return /* @__PURE__ */ jsxRuntimeExports.jsxs(Box, { sx: { display: "flex", flexDirection: "column", gap: 1, flexGrow: 1, minHeight: 0 }, children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsxs(Box, { sx: {
+      display: "flex",
+      flexDirection: "column",
+      gap: 0.5,
+      flexGrow: 1,
+      overflowY: "auto",
+      mb: 0,
+      pt: 1,
+      "&::-webkit-scrollbar": {
+        width: "8px"
+      },
+      "&::-webkit-scrollbar-thumb": {
+        backgroundColor: "rgba(0,0,0,0.2)",
+        borderRadius: "4px"
+      },
+      scrollbarWidth: "thin",
+      msOverflowStyle: "autohiding-scrollbar"
+    }, children: [
+      !isGlobal && /* @__PURE__ */ jsxRuntimeExports.jsx(
+        WordDivider,
+        {
+          onAddWord: () => onAddWord(-1),
+          onAddSegmentBefore: () => onAddSegment == null ? void 0 : onAddSegment(0),
+          onMergeSegment: () => onMergeSegment == null ? void 0 : onMergeSegment(false),
+          isFirst: true,
+          sx: { ml: 15 }
+        }
+      ),
+      words.map((word, index) => {
+        var _a, _b;
+        return /* @__PURE__ */ jsxRuntimeExports.jsxs(Box, { children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs(Box, { sx: {
+            display: "flex",
+            gap: 2,
+            alignItems: "center",
+            backgroundColor: isWordHighlighted(word) ? "action.selected" : "transparent"
+          }, children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              TextField,
+              {
+                label: `Word ${index}`,
+                value: word.text,
+                onChange: (e) => onWordUpdate(index, { text: e.target.value }),
+                fullWidth: true,
+                size: "small"
+              }
+            ),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              TextField,
+              {
+                label: "Start Time",
+                value: ((_a = word.start_time) == null ? void 0 : _a.toFixed(2)) ?? "",
+                onChange: (e) => onWordUpdate(index, { start_time: parseFloat(e.target.value) }),
+                type: "number",
+                inputProps: { step: 0.01 },
+                sx: { width: "150px" },
+                size: "small"
+              }
+            ),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              TextField,
+              {
+                label: "End Time",
+                value: ((_b = word.end_time) == null ? void 0 : _b.toFixed(2)) ?? "",
+                onChange: (e) => onWordUpdate(index, { end_time: parseFloat(e.target.value) }),
+                type: "number",
+                inputProps: { step: 0.01 },
+                sx: { width: "150px" },
+                size: "small"
+              }
+            ),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              IconButton,
+              {
+                onClick: () => onSplitWord(index),
+                title: "Split Word",
+                sx: { color: "primary.main" },
+                size: "small",
+                children: /* @__PURE__ */ jsxRuntimeExports.jsx(SplitIcon, { fontSize: "small" })
+              }
+            ),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              IconButton,
+              {
+                onClick: () => onRemoveWord(index),
+                disabled: words.length <= 1,
+                title: "Remove Word",
+                sx: { color: "error.main" },
+                size: "small",
+                children: /* @__PURE__ */ jsxRuntimeExports.jsx(DeleteIcon, { fontSize: "small" })
+              }
+            )
+          ] }),
+          !isGlobal && /* @__PURE__ */ jsxRuntimeExports.jsx(
+            WordDivider,
+            {
+              onAddWord: () => onAddWord(index),
+              onMergeWords: () => onMergeWords(index),
+              onSplitSegment: () => onSplitSegment == null ? void 0 : onSplitSegment(index),
+              onAddSegmentAfter: index === words.length - 1 ? () => onAddSegment == null ? void 0 : onAddSegment(index + 1) : void 0,
+              onMergeSegment: index === words.length - 1 ? () => onMergeSegment == null ? void 0 : onMergeSegment(true) : void 0,
+              canMerge: index < words.length - 1,
+              isLast: index === words.length - 1,
+              sx: { ml: 15 }
+            }
+          )
+        ] }, word.id);
+      })
+    ] }),
+    /* @__PURE__ */ jsxRuntimeExports.jsxs(Box, { sx: { display: "flex", gap: 2, mb: 0.6 }, children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx(
+        TextField,
+        {
+          value: replacementText,
+          onChange: (e) => setReplacementText(e.target.value),
+          placeholder: "Replace all words",
+          size: "small",
+          sx: { flexGrow: 1, maxWidth: "calc(100% - 140px)" }
+        }
+      ),
+      /* @__PURE__ */ jsxRuntimeExports.jsx(
+        Button,
+        {
+          onClick: handleReplaceAllWords,
+          startIcon: /* @__PURE__ */ jsxRuntimeExports.jsx(AutoFixHighIcon, {}),
+          size: "small",
+          sx: { whiteSpace: "nowrap" },
+          children: "Replace All"
+        }
+      )
+    ] })
+  ] });
+}
+const RestoreFromTrash = createSvgIcon(/* @__PURE__ */ jsxRuntimeExports.jsx("path", {
+  d: "M19 4h-3.5l-1-1h-5l-1 1H5v2h14zM6 7v12c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7zm8 7v4h-4v-4H8l4-4 4 4z"
+}), "RestoreFromTrash");
+const HistoryIcon = createSvgIcon(/* @__PURE__ */ jsxRuntimeExports.jsx("path", {
+  d: "M13 3c-4.97 0-9 4.03-9 9H1l3.89 3.89.07.14L9 12H6c0-3.87 3.13-7 7-7s7 3.13 7 7-3.13 7-7 7c-1.93 0-3.68-.79-4.94-2.06l-1.42 1.42C8.27 19.99 10.51 21 13 21c4.97 0 9-4.03 9-9s-4.03-9-9-9m-1 5v5l4.28 2.54.72-1.21-3.5-2.08V8z"
+}), "History");
+function EditActionBar({
+  onReset,
+  onRevertToOriginal,
+  onDelete,
+  onClose,
+  onSave,
+  editedSegment,
+  originalTranscribedSegment,
+  isGlobal = false
+}) {
+  return /* @__PURE__ */ jsxRuntimeExports.jsxs(Box, { sx: { display: "flex", alignItems: "center", gap: 1, width: "100%" }, children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsxs(Box, { sx: { display: "flex", alignItems: "center", gap: 1 }, children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx(
+        Button,
+        {
+          startIcon: /* @__PURE__ */ jsxRuntimeExports.jsx(RestoreFromTrash, {}),
+          onClick: onReset,
+          color: "warning",
+          children: "Reset"
+        }
+      ),
+      originalTranscribedSegment && /* @__PURE__ */ jsxRuntimeExports.jsx(
+        Button,
+        {
+          onClick: onRevertToOriginal,
+          startIcon: /* @__PURE__ */ jsxRuntimeExports.jsx(HistoryIcon, {}),
+          children: "Un-Correct"
+        }
+      ),
+      !isGlobal && onDelete && /* @__PURE__ */ jsxRuntimeExports.jsx(
+        Button,
+        {
+          startIcon: /* @__PURE__ */ jsxRuntimeExports.jsx(DeleteIcon, {}),
+          onClick: onDelete,
+          color: "error",
+          children: "Delete Segment"
+        }
+      )
+    ] }),
+    /* @__PURE__ */ jsxRuntimeExports.jsxs(Box, { sx: { ml: "auto", display: "flex", gap: 1 }, children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx(Button, { onClick: onClose, children: "Cancel" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx(
+        Button,
+        {
+          onClick: onSave,
+          variant: "contained",
+          disabled: !editedSegment || editedSegment.words.length === 0,
+          children: "Save"
+        }
+      )
+    ] })
+  ] });
 }
 function EditModal({
   open,
@@ -33686,11 +33968,10 @@ function EditModal({
   onSplitSegment,
   onMergeSegment,
   setModalSpacebarHandler,
-  originalTranscribedSegment
+  originalTranscribedSegment,
+  isGlobal = false
 }) {
-  var _a, _b, _c, _d, _e;
   const [editedSegment, setEditedSegment] = reactExports.useState(segment);
-  const [replacementText, setReplacementText] = reactExports.useState("");
   const [isPlaying, setIsPlaying] = reactExports.useState(false);
   const updateSegment2 = reactExports.useCallback((newWords) => {
     if (!editedSegment) return;
@@ -33763,12 +34044,12 @@ function EditModal({
     setEditedSegment(segment);
   }, [segment]);
   reactExports.useEffect(() => {
-    var _a2;
+    var _a;
     if (!editedSegment) return;
     const endTime = editedSegment.end_time ?? 0;
     if (window.isAudioPlaying && currentTime > endTime) {
       console.log("Stopping playback: current time exceeded end time");
-      (_a2 = window.toggleAudioPlayback) == null ? void 0 : _a2.call(window);
+      (_a = window.toggleAudioPlayback) == null ? void 0 : _a.call(window);
       cleanupManualSync();
     }
   }, [isManualSyncing, editedSegment, currentTime, cleanupManualSync]);
@@ -33868,53 +34149,17 @@ function EditModal({
     }
   };
   const handleSave = () => {
-    var _a2, _b2;
+    var _a, _b;
     if (editedSegment) {
       console.log("EditModal - Saving segment:", {
         segmentIndex,
         originalText: segment == null ? void 0 : segment.text,
         editedText: editedSegment.text,
         wordCount: editedSegment.words.length,
-        timeRange: `${((_a2 = editedSegment.start_time) == null ? void 0 : _a2.toFixed(4)) ?? "N/A"} - ${((_b2 = editedSegment.end_time) == null ? void 0 : _b2.toFixed(4)) ?? "N/A"}`
+        timeRange: `${((_a = editedSegment.start_time) == null ? void 0 : _a.toFixed(4)) ?? "N/A"} - ${((_b = editedSegment.end_time) == null ? void 0 : _b.toFixed(4)) ?? "N/A"}`
       });
       onSave(editedSegment);
       onClose();
-    }
-  };
-  const handleReplaceAllWords = () => {
-    if (!editedSegment) return;
-    const newWords = replacementText.trim().split(/\s+/);
-    const startTime = editedSegment.start_time ?? 0;
-    const endTime = editedSegment.end_time ?? startTime + newWords.length;
-    const segmentDuration = endTime - startTime;
-    let updatedWords;
-    if (newWords.length === editedSegment.words.length) {
-      updatedWords = editedSegment.words.map((word, index) => ({
-        id: word.id,
-        // Keep original ID
-        text: newWords[index],
-        start_time: word.start_time,
-        end_time: word.end_time,
-        confidence: 1
-      }));
-    } else {
-      const avgWordDuration = segmentDuration / newWords.length;
-      updatedWords = newWords.map((text, index) => ({
-        id: nanoid(),
-        // Generate new ID
-        text,
-        start_time: startTime + index * avgWordDuration,
-        end_time: startTime + (index + 1) * avgWordDuration,
-        confidence: 1
-      }));
-    }
-    updateSegment2(updatedWords);
-    setReplacementText("");
-  };
-  const handleKeyDown = (event) => {
-    if (event.key === "Enter" && !event.shiftKey) {
-      event.preventDefault();
-      handleSave();
     }
   };
   const handleDelete = () => {
@@ -33953,20 +34198,23 @@ function EditModal({
       onClose: handleClose,
       maxWidth: "md",
       fullWidth: true,
-      onKeyDown: handleKeyDown,
+      onKeyDown: (e) => {
+        if (e.key === "Enter" && !e.shiftKey) {
+          e.preventDefault();
+          handleSave();
+        }
+      },
       PaperProps: {
         sx: {
           height: "90vh",
-          // Take up 90% of viewport height
           margin: "5vh 0"
-          // Add 5vh margin top and bottom
         }
       },
       children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs(DialogTitle, { sx: { display: "flex", alignItems: "center", gap: 1 }, children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs(Box, { sx: { flex: 1, display: "flex", alignItems: "center", gap: 1 }, children: [
-            "Edit Segment ",
-            segmentIndex,
+            "Edit ",
+            isGlobal ? "All Words" : `Segment ${segmentIndex}`,
             (segment == null ? void 0 : segment.start_time) !== null && onPlaySegment && /* @__PURE__ */ jsxRuntimeExports.jsx(
               IconButton,
               {
@@ -33987,225 +34235,60 @@ function EditModal({
               display: "flex",
               flexDirection: "column",
               flexGrow: 1,
-              // Allow content to fill available space
               overflow: "hidden"
-              // Prevent double scrollbars
             },
             children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx(Box, { sx: { mb: 0 }, children: /* @__PURE__ */ jsxRuntimeExports.jsx(
-                TimelineEditor,
+              /* @__PURE__ */ jsxRuntimeExports.jsx(
+                EditTimelineSection,
                 {
                   words: editedSegment.words,
                   startTime: timeRange.start,
                   endTime: timeRange.end,
-                  onWordUpdate: handleWordChange,
+                  originalStartTime: originalSegment.start_time,
+                  originalEndTime: originalSegment.end_time,
+                  currentStartTime: editedSegment.start_time,
+                  currentEndTime: editedSegment.end_time,
                   currentTime,
-                  onPlaySegment
+                  isManualSyncing,
+                  syncWordIndex,
+                  isSpacebarPressed,
+                  onWordUpdate: handleWordChange,
+                  onPlaySegment,
+                  startManualSync
                 }
-              ) }),
-              /* @__PURE__ */ jsxRuntimeExports.jsxs(Box, { sx: { mb: 1, display: "flex", alignItems: "center", justifyContent: "space-between" }, children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsxs(Typography, { variant: "body2", color: "text.secondary", children: [
-                  "Original Time Range: ",
-                  ((_a = originalSegment == null ? void 0 : originalSegment.start_time) == null ? void 0 : _a.toFixed(2)) ?? "N/A",
-                  " - ",
-                  ((_b = originalSegment == null ? void 0 : originalSegment.end_time) == null ? void 0 : _b.toFixed(2)) ?? "N/A",
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("br", {}),
-                  "Current Time Range: ",
-                  ((_c = editedSegment == null ? void 0 : editedSegment.start_time) == null ? void 0 : _c.toFixed(2)) ?? "N/A",
-                  " - ",
-                  ((_d = editedSegment == null ? void 0 : editedSegment.end_time) == null ? void 0 : _d.toFixed(2)) ?? "N/A"
-                ] }),
-                /* @__PURE__ */ jsxRuntimeExports.jsxs(Box, { sx: { display: "flex", alignItems: "center", gap: 2 }, children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsx(
-                    Button,
-                    {
-                      variant: isManualSyncing ? "outlined" : "contained",
-                      onClick: startManualSync,
-                      disabled: !onPlaySegment,
-                      startIcon: isManualSyncing ? /* @__PURE__ */ jsxRuntimeExports.jsx(CancelIcon, {}) : /* @__PURE__ */ jsxRuntimeExports.jsx(PlayCircleOutlineIcon, {}),
-                      color: isManualSyncing ? "error" : "primary",
-                      children: isManualSyncing ? "Cancel Sync" : "Manual Sync"
-                    }
-                  ),
-                  isManualSyncing && /* @__PURE__ */ jsxRuntimeExports.jsxs(Box, { children: [
-                    /* @__PURE__ */ jsxRuntimeExports.jsxs(Typography, { variant: "body2", children: [
-                      "Word ",
-                      syncWordIndex + 1,
-                      " of ",
-                      editedSegment == null ? void 0 : editedSegment.words.length,
-                      ": ",
-                      /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: ((_e = editedSegment == null ? void 0 : editedSegment.words[syncWordIndex]) == null ? void 0 : _e.text) || "" })
-                    ] }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsx(Typography, { variant: "caption", color: "text.secondary", children: isSpacebarPressed ? "Holding spacebar... Release when word ends" : "Press spacebar when word starts (tap for short words, hold for long words)" })
-                  ] })
-                ] })
-              ] }),
-              /* @__PURE__ */ jsxRuntimeExports.jsxs(Box, { sx: {
-                display: "flex",
-                flexDirection: "column",
-                gap: 0.5,
-                mb: 3,
-                pt: 1,
-                flexGrow: 1,
-                overflowY: "auto",
-                "&::-webkit-scrollbar": {
-                  display: "none"
-                  // Hide scrollbar for WebKit browsers (Chrome, Safari, etc.)
-                },
-                msOverflowStyle: "none",
-                // Hide scrollbar for IE and Edge
-                scrollbarWidth: "none"
-                // Hide scrollbar for Firefox
-              }, children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx(
-                  WordDivider,
-                  {
-                    onAddWord: () => handleAddWord(-1),
-                    onAddSegmentBefore: () => onAddSegment == null ? void 0 : onAddSegment(segmentIndex),
-                    onMergeSegment: () => handleMergeSegment(false),
-                    isFirst: true,
-                    sx: { ml: 15 }
-                  }
-                ),
-                editedSegment.words.map((word, index) => {
-                  var _a2, _b2;
-                  return /* @__PURE__ */ jsxRuntimeExports.jsxs(Box, { children: [
-                    /* @__PURE__ */ jsxRuntimeExports.jsxs(Box, { sx: { display: "flex", gap: 2, alignItems: "center" }, children: [
-                      /* @__PURE__ */ jsxRuntimeExports.jsx(
-                        TextField,
-                        {
-                          label: `Word ${index}`,
-                          value: word.text,
-                          onChange: (e) => handleWordChange(index, { text: e.target.value }),
-                          fullWidth: true,
-                          size: "small"
-                        }
-                      ),
-                      /* @__PURE__ */ jsxRuntimeExports.jsx(
-                        TextField,
-                        {
-                          label: "Start Time",
-                          value: ((_a2 = word.start_time) == null ? void 0 : _a2.toFixed(2)) ?? "",
-                          onChange: (e) => handleWordChange(index, { start_time: parseFloat(e.target.value) }),
-                          type: "number",
-                          inputProps: { step: 0.01 },
-                          sx: { width: "150px" },
-                          size: "small"
-                        }
-                      ),
-                      /* @__PURE__ */ jsxRuntimeExports.jsx(
-                        TextField,
-                        {
-                          label: "End Time",
-                          value: ((_b2 = word.end_time) == null ? void 0 : _b2.toFixed(2)) ?? "",
-                          onChange: (e) => handleWordChange(index, { end_time: parseFloat(e.target.value) }),
-                          type: "number",
-                          inputProps: { step: 0.01 },
-                          sx: { width: "150px" },
-                          size: "small"
-                        }
-                      ),
-                      /* @__PURE__ */ jsxRuntimeExports.jsx(
-                        IconButton,
-                        {
-                          onClick: () => handleSplitWord(index),
-                          title: "Split Word",
-                          sx: { color: "primary.main" },
-                          size: "small",
-                          children: /* @__PURE__ */ jsxRuntimeExports.jsx(SplitIcon, { fontSize: "small" })
-                        }
-                      ),
-                      /* @__PURE__ */ jsxRuntimeExports.jsx(
-                        IconButton,
-                        {
-                          onClick: () => handleRemoveWord(index),
-                          disabled: editedSegment.words.length <= 1,
-                          title: "Remove Word",
-                          sx: { color: "error.main" },
-                          size: "small",
-                          children: /* @__PURE__ */ jsxRuntimeExports.jsx(DeleteIcon, { fontSize: "small" })
-                        }
-                      )
-                    ] }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsx(
-                      WordDivider,
-                      {
-                        onAddWord: () => handleAddWord(index),
-                        onMergeWords: () => handleMergeWords(index),
-                        onSplitSegment: () => handleSplitSegment(index),
-                        onAddSegmentAfter: index === editedSegment.words.length - 1 ? () => onAddSegment == null ? void 0 : onAddSegment(segmentIndex + 1) : void 0,
-                        onMergeSegment: index === editedSegment.words.length - 1 ? () => handleMergeSegment(true) : void 0,
-                        canMerge: index < editedSegment.words.length - 1,
-                        isLast: index === editedSegment.words.length - 1,
-                        sx: { ml: 15 }
-                      }
-                    )
-                  ] }, word.id);
-                })
-              ] }),
-              /* @__PURE__ */ jsxRuntimeExports.jsxs(Box, { sx: { display: "flex", gap: 2, mt: 2 }, children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx(
-                  TextField,
-                  {
-                    value: replacementText,
-                    onChange: (e) => setReplacementText(e.target.value),
-                    placeholder: "Replace all words",
-                    size: "small",
-                    sx: { flexGrow: 1, maxWidth: "calc(100% - 140px)" }
-                  }
-                ),
-                /* @__PURE__ */ jsxRuntimeExports.jsx(
-                  Button,
-                  {
-                    onClick: handleReplaceAllWords,
-                    startIcon: /* @__PURE__ */ jsxRuntimeExports.jsx(AutoFixHighIcon, {}),
-                    size: "small",
-                    sx: { whiteSpace: "nowrap" },
-                    children: "Replace All"
-                  }
-                )
-              ] })
+              ),
+              /* @__PURE__ */ jsxRuntimeExports.jsx(
+                EditWordList,
+                {
+                  words: editedSegment.words,
+                  onWordUpdate: handleWordChange,
+                  onSplitWord: handleSplitWord,
+                  onMergeWords: handleMergeWords,
+                  onAddWord: handleAddWord,
+                  onRemoveWord: handleRemoveWord,
+                  onSplitSegment: handleSplitSegment,
+                  onAddSegment,
+                  onMergeSegment: handleMergeSegment,
+                  currentTime,
+                  isGlobal
+                }
+              )
             ]
           }
         ),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs(DialogActions, { children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx(
-            Button,
-            {
-              startIcon: /* @__PURE__ */ jsxRuntimeExports.jsx(RestoreFromTrash, {}),
-              onClick: handleReset,
-              color: "warning",
-              children: "Reset"
-            }
-          ),
-          originalTranscribedSegment && /* @__PURE__ */ jsxRuntimeExports.jsx(
-            Button,
-            {
-              onClick: handleRevertToOriginal,
-              startIcon: /* @__PURE__ */ jsxRuntimeExports.jsx(HistoryIcon, {}),
-              children: "Un-Correct"
-            }
-          ),
-          /* @__PURE__ */ jsxRuntimeExports.jsx(Box, { sx: { mr: "auto" }, children: /* @__PURE__ */ jsxRuntimeExports.jsx(
-            Button,
-            {
-              startIcon: /* @__PURE__ */ jsxRuntimeExports.jsx(DeleteIcon, {}),
-              onClick: handleDelete,
-              color: "error",
-              children: "Delete Segment"
-            }
-          ) }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx(Button, { onClick: handleClose, children: "Cancel" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx(
-            Button,
-            {
-              onClick: handleSave,
-              variant: "contained",
-              disabled: !editedSegment || editedSegment.words.length === 0,
-              children: "Save"
-            }
-          )
-        ] })
+        /* @__PURE__ */ jsxRuntimeExports.jsx(DialogActions, { children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+          EditActionBar,
+          {
+            onReset: handleReset,
+            onRevertToOriginal: handleRevertToOriginal,
+            onDelete: handleDelete,
+            onClose: handleClose,
+            onSave: handleSave,
+            editedSegment,
+            originalTranscribedSegment,
+            isGlobal
+          }
+        ) })
       ]
     }
   );
@@ -36114,7 +36197,7 @@ function LyricsAnalyzer({ data: initialData, onFileLoad, apiClient, isReadOnly, 
         onFindReplace: () => setIsFindReplaceModalOpen(true)
       }
     ),
-    /* @__PURE__ */ jsxRuntimeExports.jsxs(Grid, { container: true, spacing: 1, direction: isMobile ? "column" : "row", children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsxs(Grid, { container: true, direction: isMobile ? "column" : "row", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsxs(Grid, { item: true, xs: 12, md: 6, children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx(
           TranscriptionView,
@@ -36587,4 +36670,4 @@ ReactDOM$1.createRoot(document.getElementById("root")).render(
     /* @__PURE__ */ jsxRuntimeExports.jsx(App, {})
   ] })
 );
-//# sourceMappingURL=index-B48E6Odw.js.map
+//# sourceMappingURL=index-CsZkPA7h.js.map

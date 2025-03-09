@@ -63,8 +63,8 @@ export default function TranscriptionView({
                 {data.corrected_segments.map((segment, segmentIndex) => {
                     const segmentWords: TranscriptionWordPosition[] = segment.words.map(word => {
                         // Find if this word is part of a correction
-                        const correction = data.corrections?.find(c => 
-                            c.corrected_word_id === word.id || 
+                        const correction = data.corrections?.find(c =>
+                            c.corrected_word_id === word.id ||
                             c.word_id === word.id
                         )
 
@@ -109,10 +109,10 @@ export default function TranscriptionView({
                     })
 
                     return (
-                        <Box key={segment.id} sx={{ 
-                            display: 'flex', 
-                            alignItems: 'flex-start', 
-                            width: '100%', 
+                        <Box key={segment.id} sx={{
+                            display: 'flex',
+                            alignItems: 'flex-start',
+                            width: '100%',
                             mb: 0,
                             '&:hover': {
                                 backgroundColor: 'rgba(0, 0, 0, 0.03)'
@@ -129,7 +129,7 @@ export default function TranscriptionView({
                                     <IconButton
                                         size="small"
                                         onClick={() => onPlaySegment?.(segment.start_time!)}
-                                        sx={{ 
+                                        sx={{
                                             padding: '1px',
                                             height: '18px',
                                             width: '18px',

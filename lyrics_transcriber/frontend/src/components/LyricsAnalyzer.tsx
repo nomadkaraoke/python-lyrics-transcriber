@@ -498,7 +498,7 @@ export default function LyricsAnalyzer({ data: initialData, onFileLoad, apiClien
                 onFindReplace={() => setIsFindReplaceModalOpen(true)}
             />
 
-            <Grid container spacing={1} direction={isMobile ? 'column' : 'row'}>
+            <Grid container direction={isMobile ? 'column' : 'row'}>
                 <Grid item xs={12} md={6}>
                     <TranscriptionView
                         data={data}

@@ -5,25 +5,17 @@ import {
     DialogActions,
     IconButton,
     Box,
-    TextField,
-    Button,
-    Typography
 } from '@mui/material'
 import CloseIcon from '@mui/icons-material/Close'
-import DeleteIcon from '@mui/icons-material/Delete'
-import SplitIcon from '@mui/icons-material/CallSplit'
-import RestoreIcon from '@mui/icons-material/RestoreFromTrash'
-import AutoFixHighIcon from '@mui/icons-material/AutoFixHigh'
 import PlayCircleOutlineIcon from '@mui/icons-material/PlayCircleOutline'
-import CancelIcon from '@mui/icons-material/Cancel'
 import StopIcon from '@mui/icons-material/Stop'
-import HistoryIcon from '@mui/icons-material/History'
 import { LyricsSegment, Word } from '../types'
 import { useState, useEffect, useCallback } from 'react'
-import TimelineEditor from './TimelineEditor'
 import { nanoid } from 'nanoid'
-import WordDivider from './WordDivider'
 import useManualSync from '../hooks/useManualSync'
+import EditTimelineSection from './EditTimelineSection'
+import EditWordList from './EditWordList'
+import EditActionBar from './EditActionBar'
 
 interface EditModalProps {
     open: boolean
@@ -40,6 +32,7 @@ interface EditModalProps {
     onMergeSegment?: (segmentIndex: number, mergeWithNext: boolean) => void
     setModalSpacebarHandler: (handler: (() => (e: KeyboardEvent) => void) | undefined) => void
     originalTranscribedSegment?: LyricsSegment | null
+    isGlobal?: boolean
 }
 
 export default function EditModal({
@@ -56,10 +49,10 @@ export default function EditModal({
     onSplitSegment,
     onMergeSegment,
     setModalSpacebarHandler,
-    originalTranscribedSegment
+    originalTranscribedSegment,
+    isGlobal = false
 }: EditModalProps) {
     const [editedSegment, setEditedSegment] = useState<LyricsSegment | null>(segment)
-    const [replacementText, setReplacementText] = useState('')
     const [isPlaying, setIsPlaying] = useState(false)
 
     // Define updateSegment first since the hook depends on it
@@ -81,7 +74,7 @@ export default function EditModal({
         })
     }, [editedSegment])
 
-    // Use the new hook
+    // Use the manual sync hook
     const {
         isManualSyncing,
         syncWordIndex,
@@ -111,14 +104,14 @@ export default function EditModal({
                 editedSegmentId: editedSegment?.id,
                 handlerFunction: spacebarHandler.toString().slice(0, 100)
             })
-            
+
             // Create a function that will be called by the global event listeners
             const handleKeyEvent = (e: KeyboardEvent) => {
                 if (e.code === 'Space') {
                     spacebarHandler(e)
                 }
             }
-            
+
             setModalSpacebarHandler(() => handleKeyEvent)
 
             // Only cleanup when the effect is re-run or the modal is closed
@@ -313,48 +306,6 @@ export default function EditModal({
         }
     }
 
-    const handleReplaceAllWords = () => {
-        if (!editedSegment) return
-
-        const newWords = replacementText.trim().split(/\s+/)
-        const startTime = editedSegment.start_time ?? 0
-        const endTime = editedSegment.end_time ?? (startTime + newWords.length) // Default to 1 second per word
-        const segmentDuration = endTime - startTime
-
-        let updatedWords: Word[]
-
-        if (newWords.length === editedSegment.words.length) {
-            // If word count matches, keep original timestamps and IDs
-            updatedWords = editedSegment.words.map((word, index) => ({
-                id: word.id,  // Keep original ID
-                text: newWords[index],
-                start_time: word.start_time,
-                end_time: word.end_time,
-                confidence: 1.0
-            }))
-        } else {
-            // If word count differs, distribute time evenly and generate new IDs
-            const avgWordDuration = segmentDuration / newWords.length
-            updatedWords = newWords.map((text, index) => ({
-                id: nanoid(),  // Generate new ID
-                text,
-                start_time: startTime + (index * avgWordDuration),
-                end_time: startTime + ((index + 1) * avgWordDuration),
-                confidence: 1.0
-            }))
-        }
-
-        updateSegment(updatedWords)
-        setReplacementText('') // Clear the input after replacing
-    }
-
-    const handleKeyDown = (event: React.KeyboardEvent) => {
-        if (event.key === 'Enter' && !event.shiftKey) {
-            event.preventDefault()
-            handleSave()
-        }
-    }
-
     const handleDelete = () => {
         if (segmentIndex !== null) {
             onDelete?.(segmentIndex)
@@ -398,17 +349,22 @@ export default function EditModal({
             onClose={handleClose}
             maxWidth="md"
             fullWidth
-            onKeyDown={handleKeyDown}
+            onKeyDown={(e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault()
+                    handleSave()
+                }
+            }}
             PaperProps={{
                 sx: {
-                    height: '90vh',  // Take up 90% of viewport height
-                    margin: '5vh 0'  // Add 5vh margin top and bottom
+                    height: '90vh',
+                    margin: '5vh 0'
                 }
             }}
         >
             <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                 <Box sx={{ flex: 1, display: 'flex', alignItems: 'center', gap: 1 }}>
-                    Edit Segment {segmentIndex}
+                    Edit {isGlobal ? 'All Words' : `Segment ${segmentIndex}`}
                     {segment?.start_time !== null && onPlaySegment && (
                         <IconButton
                             size="small"
@@ -427,202 +383,59 @@ export default function EditModal({
                     <CloseIcon />
                 </IconButton>
             </DialogTitle>
+
             <DialogContent
                 dividers
                 sx={{
                     display: 'flex',
                     flexDirection: 'column',
-                    flexGrow: 1,     // Allow content to fill available space
-                    overflow: 'hidden'  // Prevent double scrollbars
+                    flexGrow: 1,
+                    overflow: 'hidden'
                 }}
             >
-                <Box sx={{ mb: 0 }}>
-                    <TimelineEditor
-                        words={editedSegment.words}
-                        startTime={timeRange.start}
-                        endTime={timeRange.end}
-                        onWordUpdate={handleWordChange}
-                        currentTime={currentTime}
-                        onPlaySegment={onPlaySegment}
-                    />
-                </Box>
+                <EditTimelineSection
+                    words={editedSegment.words}
+                    startTime={timeRange.start}
+                    endTime={timeRange.end}
+                    originalStartTime={originalSegment.start_time}
+                    originalEndTime={originalSegment.end_time}
+                    currentStartTime={editedSegment.start_time}
+                    currentEndTime={editedSegment.end_time}
+                    currentTime={currentTime}
+                    isManualSyncing={isManualSyncing}
+                    syncWordIndex={syncWordIndex}
+                    isSpacebarPressed={isSpacebarPressed}
+                    onWordUpdate={handleWordChange}
+                    onPlaySegment={onPlaySegment}
+                    startManualSync={startManualSync}
+                />
 
-                <Box sx={{ mb: 1, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                    <Typography variant="body2" color="text.secondary">
-                        Original Time Range: {originalSegment?.start_time?.toFixed(2) ?? 'N/A'} - {originalSegment?.end_time?.toFixed(2) ?? 'N/A'}
-                        <br />
-                        Current Time Range: {editedSegment?.start_time?.toFixed(2) ?? 'N/A'} - {editedSegment?.end_time?.toFixed(2) ?? 'N/A'}
-                    </Typography>
-
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                        <Button
-                            variant={isManualSyncing ? "outlined" : "contained"}
-                            onClick={startManualSync}
-                            disabled={!onPlaySegment}
-                            startIcon={isManualSyncing ? <CancelIcon /> : <PlayCircleOutlineIcon />}
-                            color={isManualSyncing ? "error" : "primary"}
-                        >
-                            {isManualSyncing ? "Cancel Sync" : "Manual Sync"}
-                        </Button>
-                        {isManualSyncing && (
-                            <Box>
-                                <Typography variant="body2">
-                                    Word {syncWordIndex + 1} of {editedSegment?.words.length}: <strong>{editedSegment?.words[syncWordIndex]?.text || ''}</strong>
-                                </Typography>
-                                <Typography variant="caption" color="text.secondary">
-                                    {isSpacebarPressed ? 
-                                        "Holding spacebar... Release when word ends" : 
-                                        "Press spacebar when word starts (tap for short words, hold for long words)"}
-                                </Typography>
-                            </Box>
-                        )}
-                    </Box>
-                </Box>
-
-                <Box sx={{
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: 0.5,
-                    mb: 3,
-                    pt: 1,
-                    flexGrow: 1,
-                    overflowY: 'auto',
-                    '&::-webkit-scrollbar': {
-                        display: 'none'  // Hide scrollbar for WebKit browsers (Chrome, Safari, etc.)
-                    },
-                    msOverflowStyle: 'none',  // Hide scrollbar for IE and Edge
-                    scrollbarWidth: 'none',   // Hide scrollbar for Firefox
-                }}>
-                    {/* Initial divider with Add Segment Before button */}
-                    <WordDivider
-                        onAddWord={() => handleAddWord(-1)}
-                        onAddSegmentBefore={() => onAddSegment?.(segmentIndex)}
-                        onMergeSegment={() => handleMergeSegment(false)}
-                        isFirst={true}
-                        sx={{ ml: 15 }}
-                    />
-
-                    {editedSegment.words.map((word, index) => (
-                        <Box key={word.id}>
-                            <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
-                                <TextField
-                                    label={`Word ${index}`}
-                                    value={word.text}
-                                    onChange={(e) => handleWordChange(index, { text: e.target.value })}
-                                    fullWidth
-                                    size="small"
-                                />
-                                <TextField
-                                    label="Start Time"
-                                    value={word.start_time?.toFixed(2) ?? ''}
-                                    onChange={(e) => handleWordChange(index, { start_time: parseFloat(e.target.value) })}
-                                    type="number"
-                                    inputProps={{ step: 0.01 }}
-                                    sx={{ width: '150px' }}
-                                    size="small"
-                                />
-                                <TextField
-                                    label="End Time"
-                                    value={word.end_time?.toFixed(2) ?? ''}
-                                    onChange={(e) => handleWordChange(index, { end_time: parseFloat(e.target.value) })}
-                                    type="number"
-                                    inputProps={{ step: 0.01 }}
-                                    sx={{ width: '150px' }}
-                                    size="small"
-                                />
-                                <IconButton
-                                    onClick={() => handleSplitWord(index)}
-                                    title="Split Word"
-                                    sx={{ color: 'primary.main' }}
-                                    size="small"
-                                >
-                                    <SplitIcon fontSize="small" />
-                                </IconButton>
-                                <IconButton
-                                    onClick={() => handleRemoveWord(index)}
-                                    disabled={editedSegment.words.length <= 1}
-                                    title="Remove Word"
-                                    sx={{ color: 'error.main' }}
-                                    size="small"
-                                >
-                                    <DeleteIcon fontSize="small" />
-                                </IconButton>
-                            </Box>
-
-                            {/* Update the WordDivider usage to include split segment */}
-                            <WordDivider
-                                onAddWord={() => handleAddWord(index)}
-                                onMergeWords={() => handleMergeWords(index)}
-                                onSplitSegment={() => handleSplitSegment(index)}
-                                onAddSegmentAfter={
-                                    index === editedSegment.words.length - 1
-                                        ? () => onAddSegment?.(segmentIndex + 1)
-                                        : undefined
-                                }
-                                onMergeSegment={
-                                    index === editedSegment.words.length - 1
-                                        ? () => handleMergeSegment(true)
-                                        : undefined
-                                }
-                                canMerge={index < editedSegment.words.length - 1}
-                                isLast={index === editedSegment.words.length - 1}
-                                sx={{ ml: 15 }}
-                            />
-                        </Box>
-                    ))}
-                </Box>
-
-                <Box sx={{ display: 'flex', gap: 2, mt: 2 }}>
-                    <TextField
-                        value={replacementText}
-                        onChange={(e) => setReplacementText(e.target.value)}
-                        placeholder="Replace all words"
-                        size="small"
-                        sx={{ flexGrow: 1, maxWidth: 'calc(100% - 140px)' }}  // Reserve space for the button
-                    />
-                    <Button
-                        onClick={handleReplaceAllWords}
-                        startIcon={<AutoFixHighIcon />}
-                        size="small"
-                        sx={{ whiteSpace: 'nowrap' }}
-                    >
-                        Replace All
-                    </Button>
-                </Box>
+                <EditWordList
+                    words={editedSegment.words}
+                    onWordUpdate={handleWordChange}
+                    onSplitWord={handleSplitWord}
+                    onMergeWords={handleMergeWords}
+                    onAddWord={handleAddWord}
+                    onRemoveWord={handleRemoveWord}
+                    onSplitSegment={handleSplitSegment}
+                    onAddSegment={onAddSegment}
+                    onMergeSegment={handleMergeSegment}
+                    currentTime={currentTime}
+                    isGlobal={isGlobal}
+                />
             </DialogContent>
+
             <DialogActions>
-                <Button
-                    startIcon={<RestoreIcon />}
-                    onClick={handleReset}
-                    color="warning"
-                >
-                    Reset
-                </Button>
-                {originalTranscribedSegment && (
-                    <Button
-                        onClick={handleRevertToOriginal}
-                        startIcon={<HistoryIcon />}
-                    >
-                        Un-Correct
-                    </Button>
-                )}
-                <Box sx={{ mr: 'auto' }}>
-                    <Button
-                        startIcon={<DeleteIcon />}
-                        onClick={handleDelete}
-                        color="error"
-                    >
-                        Delete Segment
-                    </Button>
-                </Box>
-                <Button onClick={handleClose}>Cancel</Button>
-                <Button
-                    onClick={handleSave}
-                    variant="contained"
-                    disabled={!editedSegment || editedSegment.words.length === 0}
-                >
-                    Save
-                </Button>
+                <EditActionBar
+                    onReset={handleReset}
+                    onRevertToOriginal={handleRevertToOriginal}
+                    onDelete={handleDelete}
+                    onClose={handleClose}
+                    onSave={handleSave}
+                    editedSegment={editedSegment}
+                    originalTranscribedSegment={originalTranscribedSegment}
+                    isGlobal={isGlobal}
+                />
             </DialogActions>
         </Dialog>
     )
