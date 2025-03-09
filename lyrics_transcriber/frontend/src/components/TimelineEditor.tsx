@@ -9,6 +9,7 @@ interface TimelineEditorProps {
     onWordUpdate: (index: number, updates: Partial<Word>) => void
     currentTime?: number
     onPlaySegment?: (time: number) => void
+    showPlaybackIndicator?: boolean
 }
 
 const TimelineContainer = styled(Box)(({ theme }) => ({
@@ -113,7 +114,7 @@ const TimelineCursor = styled(Box)(({ theme }) => ({
     zIndex: 1, // Ensure it's above other elements
 }))
 
-export default function TimelineEditor({ words, startTime, endTime, onWordUpdate, currentTime = 0, onPlaySegment }: TimelineEditorProps) {
+export default function TimelineEditor({ words, startTime, endTime, onWordUpdate, currentTime = 0, onPlaySegment, showPlaybackIndicator = true }: TimelineEditorProps) {
     const containerRef = useRef<HTMLDivElement>(null)
     const [dragState, setDragState] = useState<{
         wordIndex: number
@@ -308,12 +309,14 @@ export default function TimelineEditor({ words, startTime, endTime, onWordUpdate
             </TimelineRuler>
 
             {/* Add cursor line */}
-            <TimelineCursor
-                sx={{
-                    left: `${timeToPosition(currentTime)}%`,
-                    display: currentTime >= startTime && currentTime <= endTime ? 'block' : 'none'
-                }}
-            />
+            {showPlaybackIndicator && (
+                <TimelineCursor
+                    sx={{
+                        left: `${timeToPosition(currentTime)}%`,
+                        display: currentTime >= startTime && currentTime <= endTime ? 'block' : 'none'
+                    }}
+                />
+            )}
 
             {words.map((word, index) => {
                 // Skip words with null timestamps

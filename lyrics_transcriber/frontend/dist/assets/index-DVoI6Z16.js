@@ -13483,7 +13483,7 @@ function getSvgIconUtilityClass(slot) {
   return generateUtilityClass("MuiSvgIcon", slot);
 }
 generateUtilityClasses("MuiSvgIcon", ["root", "colorPrimary", "colorSecondary", "colorAction", "colorError", "colorDisabled", "fontSizeInherit", "fontSizeSmall", "fontSizeMedium", "fontSizeLarge"]);
-const useUtilityClasses$F = (ownerState) => {
+const useUtilityClasses$G = (ownerState) => {
   const {
     color: color2,
     fontSize,
@@ -13628,7 +13628,7 @@ const SvgIcon = /* @__PURE__ */ reactExports.forwardRef(function SvgIcon2(inProp
   if (!inheritViewBox) {
     more.viewBox = viewBox;
   }
-  const classes = useUtilityClasses$F(ownerState);
+  const classes = useUtilityClasses$G(ownerState);
   return /* @__PURE__ */ jsxRuntimeExports.jsxs(SvgIconRoot, {
     as: component,
     className: clsx(classes.root, className),
@@ -14135,7 +14135,7 @@ function getPaperUtilityClass(slot) {
   return generateUtilityClass("MuiPaper", slot);
 }
 generateUtilityClasses("MuiPaper", ["root", "rounded", "outlined", "elevation", "elevation0", "elevation1", "elevation2", "elevation3", "elevation4", "elevation5", "elevation6", "elevation7", "elevation8", "elevation9", "elevation10", "elevation11", "elevation12", "elevation13", "elevation14", "elevation15", "elevation16", "elevation17", "elevation18", "elevation19", "elevation20", "elevation21", "elevation22", "elevation23", "elevation24"]);
-const useUtilityClasses$E = (ownerState) => {
+const useUtilityClasses$F = (ownerState) => {
   const {
     square,
     elevation,
@@ -14208,7 +14208,7 @@ const Paper = /* @__PURE__ */ reactExports.forwardRef(function Paper2(inProps, r
     square,
     variant
   };
-  const classes = useUtilityClasses$E(ownerState);
+  const classes = useUtilityClasses$F(ownerState);
   return /* @__PURE__ */ jsxRuntimeExports.jsx(PaperRoot, {
     as: component,
     ownerState,
@@ -14669,7 +14669,7 @@ function getButtonBaseUtilityClass(slot) {
   return generateUtilityClass("MuiButtonBase", slot);
 }
 const buttonBaseClasses = generateUtilityClasses("MuiButtonBase", ["root", "disabled", "focusVisible"]);
-const useUtilityClasses$D = (ownerState) => {
+const useUtilityClasses$E = (ownerState) => {
   const {
     disabled,
     focusVisible,
@@ -14886,7 +14886,7 @@ const ButtonBase = /* @__PURE__ */ reactExports.forwardRef(function ButtonBase2(
     tabIndex,
     focusVisible
   };
-  const classes = useUtilityClasses$D(ownerState);
+  const classes = useUtilityClasses$E(ownerState);
   return /* @__PURE__ */ jsxRuntimeExports.jsxs(ButtonBaseRoot, {
     as: ComponentProp,
     className: clsx(classes.root, className),
@@ -14984,7 +14984,7 @@ const rotateAnimation = typeof circularRotateKeyframe !== "string" ? css`
 const dashAnimation = typeof circularDashKeyframe !== "string" ? css`
         animation: ${circularDashKeyframe} 1.4s ease-in-out infinite;
       ` : null;
-const useUtilityClasses$C = (ownerState) => {
+const useUtilityClasses$D = (ownerState) => {
   const {
     classes,
     variant,
@@ -15107,7 +15107,7 @@ const CircularProgress = /* @__PURE__ */ reactExports.forwardRef(function Circul
     value,
     variant
   };
-  const classes = useUtilityClasses$C(ownerState);
+  const classes = useUtilityClasses$D(ownerState);
   const circleStyle = {};
   const rootStyle = {};
   const rootProps = {};
@@ -15152,7 +15152,7 @@ function getIconButtonUtilityClass(slot) {
   return generateUtilityClass("MuiIconButton", slot);
 }
 const iconButtonClasses = generateUtilityClasses("MuiIconButton", ["root", "disabled", "colorInherit", "colorPrimary", "colorSecondary", "colorError", "colorInfo", "colorSuccess", "colorWarning", "edgeStart", "edgeEnd", "sizeSmall", "sizeMedium", "sizeLarge", "loading", "loadingIndicator", "loadingWrapper"]);
-const useUtilityClasses$B = (ownerState) => {
+const useUtilityClasses$C = (ownerState) => {
   const {
     classes,
     disabled,
@@ -15338,7 +15338,7 @@ const IconButton = /* @__PURE__ */ reactExports.forwardRef(function IconButton2(
     loadingIndicator,
     size
   };
-  const classes = useUtilityClasses$B(ownerState);
+  const classes = useUtilityClasses$C(ownerState);
   return /* @__PURE__ */ jsxRuntimeExports.jsxs(IconButtonRoot, {
     id,
     className: clsx(classes.root, className),
@@ -15377,7 +15377,7 @@ const InfoOutlinedIcon = createSvgIcon(/* @__PURE__ */ jsxRuntimeExports.jsx("pa
 const ClearIcon = createSvgIcon(/* @__PURE__ */ jsxRuntimeExports.jsx("path", {
   d: "M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"
 }), "Close");
-const useUtilityClasses$A = (ownerState) => {
+const useUtilityClasses$B = (ownerState) => {
   const {
     variant,
     color: color2,
@@ -15532,7 +15532,7 @@ const Alert = /* @__PURE__ */ reactExports.forwardRef(function Alert2(inProps, r
     variant,
     colorSeverity: color2 || severity
   };
-  const classes = useUtilityClasses$A(ownerState);
+  const classes = useUtilityClasses$B(ownerState);
   const externalForwardedProps = {
     slots: {
       closeButton: components.CloseButton,
@@ -15631,7 +15631,7 @@ const v6Colors = {
   textDisabled: true
 };
 const extendSxProp = internal_createExtendSxProp();
-const useUtilityClasses$z = (ownerState) => {
+const useUtilityClasses$A = (ownerState) => {
   const {
     align,
     gutterBottom,
@@ -15774,7 +15774,7 @@ const Typography = /* @__PURE__ */ reactExports.forwardRef(function Typography2(
     variantMapping
   };
   const Component = component || (paragraph ? "p" : variantMapping[variant] || defaultVariantMapping[variant]) || "span";
-  const classes = useUtilityClasses$z(ownerState);
+  const classes = useUtilityClasses$A(ownerState);
   return /* @__PURE__ */ jsxRuntimeExports.jsx(TypographyRoot, {
     as: Component,
     ref,
@@ -17198,7 +17198,7 @@ function resolveAnchorEl$1(anchorEl) {
 function isHTMLElement(element) {
   return element.nodeType !== void 0;
 }
-const useUtilityClasses$y = (ownerState) => {
+const useUtilityClasses$z = (ownerState) => {
   const {
     classes
   } = ownerState;
@@ -17299,7 +17299,7 @@ const PopperTooltip = /* @__PURE__ */ reactExports.forwardRef(function PopperToo
   if (TransitionProps !== null) {
     childProps.TransitionProps = TransitionProps;
   }
-  const classes = useUtilityClasses$y(props);
+  const classes = useUtilityClasses$z(props);
   const Root = slots.root ?? "div";
   const rootProps = useSlotProps({
     elementType: Root,
@@ -17651,7 +17651,7 @@ const inputOverridesResolver = (props, styles2) => {
   } = props;
   return [styles2.input, ownerState.size === "small" && styles2.inputSizeSmall, ownerState.multiline && styles2.inputMultiline, ownerState.type === "search" && styles2.inputTypeSearch, ownerState.startAdornment && styles2.inputAdornedStart, ownerState.endAdornment && styles2.inputAdornedEnd, ownerState.hiddenLabel && styles2.inputHiddenLabel];
 };
-const useUtilityClasses$x = (ownerState) => {
+const useUtilityClasses$y = (ownerState) => {
   const {
     classes,
     color: color2,
@@ -18037,7 +18037,7 @@ const InputBase = /* @__PURE__ */ reactExports.forwardRef(function InputBase2(in
     startAdornment,
     type
   };
-  const classes = useUtilityClasses$x(ownerState);
+  const classes = useUtilityClasses$y(ownerState);
   const Root = slots.root || components.Root || InputBaseRoot;
   const rootProps = slotProps.root || componentsProps.root || {};
   const Input3 = slots.input || components.Input || InputBaseInput;
@@ -18242,7 +18242,7 @@ function getBackdropUtilityClass(slot) {
   return generateUtilityClass("MuiBackdrop", slot);
 }
 generateUtilityClasses("MuiBackdrop", ["root", "invisible"]);
-const useUtilityClasses$w = (ownerState) => {
+const useUtilityClasses$x = (ownerState) => {
   const {
     classes,
     invisible
@@ -18305,7 +18305,7 @@ const Backdrop = /* @__PURE__ */ reactExports.forwardRef(function Backdrop2(inPr
     component,
     invisible
   };
-  const classes = useUtilityClasses$w(ownerState);
+  const classes = useUtilityClasses$x(ownerState);
   const backwardCompatibleSlots = {
     transition: TransitionComponentProp,
     root: components.Root,
@@ -18358,7 +18358,7 @@ function getButtonUtilityClass(slot) {
 const buttonClasses = generateUtilityClasses("MuiButton", ["root", "text", "textInherit", "textPrimary", "textSecondary", "textSuccess", "textError", "textInfo", "textWarning", "outlined", "outlinedInherit", "outlinedPrimary", "outlinedSecondary", "outlinedSuccess", "outlinedError", "outlinedInfo", "outlinedWarning", "contained", "containedInherit", "containedPrimary", "containedSecondary", "containedSuccess", "containedError", "containedInfo", "containedWarning", "disableElevation", "focusVisible", "disabled", "colorInherit", "colorPrimary", "colorSecondary", "colorSuccess", "colorError", "colorInfo", "colorWarning", "textSizeSmall", "textSizeMedium", "textSizeLarge", "outlinedSizeSmall", "outlinedSizeMedium", "outlinedSizeLarge", "containedSizeSmall", "containedSizeMedium", "containedSizeLarge", "sizeMedium", "sizeSmall", "sizeLarge", "fullWidth", "startIcon", "endIcon", "icon", "iconSizeSmall", "iconSizeMedium", "iconSizeLarge", "loading", "loadingWrapper", "loadingIconPlaceholder", "loadingIndicator", "loadingPositionCenter", "loadingPositionStart", "loadingPositionEnd"]);
 const ButtonGroupContext = /* @__PURE__ */ reactExports.createContext({});
 const ButtonGroupButtonContext = /* @__PURE__ */ reactExports.createContext(void 0);
-const useUtilityClasses$v = (ownerState) => {
+const useUtilityClasses$w = (ownerState) => {
   const {
     color: color2,
     disableElevation,
@@ -18860,7 +18860,7 @@ const Button = /* @__PURE__ */ reactExports.forwardRef(function Button2(inProps,
     type,
     variant
   };
-  const classes = useUtilityClasses$v(ownerState);
+  const classes = useUtilityClasses$w(ownerState);
   const startIcon = (startIconProp || loading && loadingPosition === "start") && /* @__PURE__ */ jsxRuntimeExports.jsx(ButtonStartIcon, {
     className: classes.startIcon,
     ownerState,
@@ -18905,6 +18905,307 @@ const Button = /* @__PURE__ */ reactExports.forwardRef(function Button2(inProps,
     ...other,
     classes,
     children: [startIcon, loadingPosition !== "end" && loader, children, loadingPosition === "end" && loader, endIcon]
+  });
+});
+function getButtonGroupUtilityClass(slot) {
+  return generateUtilityClass("MuiButtonGroup", slot);
+}
+const buttonGroupClasses = generateUtilityClasses("MuiButtonGroup", ["root", "contained", "outlined", "text", "disableElevation", "disabled", "firstButton", "fullWidth", "horizontal", "vertical", "colorPrimary", "colorSecondary", "grouped", "groupedHorizontal", "groupedVertical", "groupedText", "groupedTextHorizontal", "groupedTextVertical", "groupedTextPrimary", "groupedTextSecondary", "groupedOutlined", "groupedOutlinedHorizontal", "groupedOutlinedVertical", "groupedOutlinedPrimary", "groupedOutlinedSecondary", "groupedContained", "groupedContainedHorizontal", "groupedContainedVertical", "groupedContainedPrimary", "groupedContainedSecondary", "lastButton", "middleButton"]);
+const overridesResolver$1 = (props, styles2) => {
+  const {
+    ownerState
+  } = props;
+  return [{
+    [`& .${buttonGroupClasses.grouped}`]: styles2.grouped
+  }, {
+    [`& .${buttonGroupClasses.grouped}`]: styles2[`grouped${capitalize(ownerState.orientation)}`]
+  }, {
+    [`& .${buttonGroupClasses.grouped}`]: styles2[`grouped${capitalize(ownerState.variant)}`]
+  }, {
+    [`& .${buttonGroupClasses.grouped}`]: styles2[`grouped${capitalize(ownerState.variant)}${capitalize(ownerState.orientation)}`]
+  }, {
+    [`& .${buttonGroupClasses.grouped}`]: styles2[`grouped${capitalize(ownerState.variant)}${capitalize(ownerState.color)}`]
+  }, {
+    [`& .${buttonGroupClasses.firstButton}`]: styles2.firstButton
+  }, {
+    [`& .${buttonGroupClasses.lastButton}`]: styles2.lastButton
+  }, {
+    [`& .${buttonGroupClasses.middleButton}`]: styles2.middleButton
+  }, styles2.root, styles2[ownerState.variant], ownerState.disableElevation === true && styles2.disableElevation, ownerState.fullWidth && styles2.fullWidth, ownerState.orientation === "vertical" && styles2.vertical];
+};
+const useUtilityClasses$v = (ownerState) => {
+  const {
+    classes,
+    color: color2,
+    disabled,
+    disableElevation,
+    fullWidth,
+    orientation,
+    variant
+  } = ownerState;
+  const slots = {
+    root: ["root", variant, orientation, fullWidth && "fullWidth", disableElevation && "disableElevation", `color${capitalize(color2)}`],
+    grouped: ["grouped", `grouped${capitalize(orientation)}`, `grouped${capitalize(variant)}`, `grouped${capitalize(variant)}${capitalize(orientation)}`, `grouped${capitalize(variant)}${capitalize(color2)}`, disabled && "disabled"],
+    firstButton: ["firstButton"],
+    lastButton: ["lastButton"],
+    middleButton: ["middleButton"]
+  };
+  return composeClasses(slots, getButtonGroupUtilityClass, classes);
+};
+const ButtonGroupRoot = styled("div", {
+  name: "MuiButtonGroup",
+  slot: "Root",
+  overridesResolver: overridesResolver$1
+})(memoTheme(({
+  theme: theme2
+}) => ({
+  display: "inline-flex",
+  borderRadius: (theme2.vars || theme2).shape.borderRadius,
+  variants: [{
+    props: {
+      variant: "contained"
+    },
+    style: {
+      boxShadow: (theme2.vars || theme2).shadows[2]
+    }
+  }, {
+    props: {
+      disableElevation: true
+    },
+    style: {
+      boxShadow: "none"
+    }
+  }, {
+    props: {
+      fullWidth: true
+    },
+    style: {
+      width: "100%"
+    }
+  }, {
+    props: {
+      orientation: "vertical"
+    },
+    style: {
+      flexDirection: "column",
+      [`& .${buttonGroupClasses.lastButton},& .${buttonGroupClasses.middleButton}`]: {
+        borderTopRightRadius: 0,
+        borderTopLeftRadius: 0
+      },
+      [`& .${buttonGroupClasses.firstButton},& .${buttonGroupClasses.middleButton}`]: {
+        borderBottomRightRadius: 0,
+        borderBottomLeftRadius: 0
+      }
+    }
+  }, {
+    props: {
+      orientation: "horizontal"
+    },
+    style: {
+      [`& .${buttonGroupClasses.firstButton},& .${buttonGroupClasses.middleButton}`]: {
+        borderTopRightRadius: 0,
+        borderBottomRightRadius: 0
+      },
+      [`& .${buttonGroupClasses.lastButton},& .${buttonGroupClasses.middleButton}`]: {
+        borderTopLeftRadius: 0,
+        borderBottomLeftRadius: 0
+      }
+    }
+  }, {
+    props: {
+      variant: "text",
+      orientation: "horizontal"
+    },
+    style: {
+      [`& .${buttonGroupClasses.firstButton},& .${buttonGroupClasses.middleButton}`]: {
+        borderRight: theme2.vars ? `1px solid rgba(${theme2.vars.palette.common.onBackgroundChannel} / 0.23)` : `1px solid ${theme2.palette.mode === "light" ? "rgba(0, 0, 0, 0.23)" : "rgba(255, 255, 255, 0.23)"}`,
+        [`&.${buttonGroupClasses.disabled}`]: {
+          borderRight: `1px solid ${(theme2.vars || theme2).palette.action.disabled}`
+        }
+      }
+    }
+  }, {
+    props: {
+      variant: "text",
+      orientation: "vertical"
+    },
+    style: {
+      [`& .${buttonGroupClasses.firstButton},& .${buttonGroupClasses.middleButton}`]: {
+        borderBottom: theme2.vars ? `1px solid rgba(${theme2.vars.palette.common.onBackgroundChannel} / 0.23)` : `1px solid ${theme2.palette.mode === "light" ? "rgba(0, 0, 0, 0.23)" : "rgba(255, 255, 255, 0.23)"}`,
+        [`&.${buttonGroupClasses.disabled}`]: {
+          borderBottom: `1px solid ${(theme2.vars || theme2).palette.action.disabled}`
+        }
+      }
+    }
+  }, ...Object.entries(theme2.palette).filter(createSimplePaletteValueFilter()).flatMap(([color2]) => [{
+    props: {
+      variant: "text",
+      color: color2
+    },
+    style: {
+      [`& .${buttonGroupClasses.firstButton},& .${buttonGroupClasses.middleButton}`]: {
+        borderColor: theme2.vars ? `rgba(${theme2.vars.palette[color2].mainChannel} / 0.5)` : alpha(theme2.palette[color2].main, 0.5)
+      }
+    }
+  }]), {
+    props: {
+      variant: "outlined",
+      orientation: "horizontal"
+    },
+    style: {
+      [`& .${buttonGroupClasses.firstButton},& .${buttonGroupClasses.middleButton}`]: {
+        borderRightColor: "transparent",
+        "&:hover": {
+          borderRightColor: "currentColor"
+        }
+      },
+      [`& .${buttonGroupClasses.lastButton},& .${buttonGroupClasses.middleButton}`]: {
+        marginLeft: -1
+      }
+    }
+  }, {
+    props: {
+      variant: "outlined",
+      orientation: "vertical"
+    },
+    style: {
+      [`& .${buttonGroupClasses.firstButton},& .${buttonGroupClasses.middleButton}`]: {
+        borderBottomColor: "transparent",
+        "&:hover": {
+          borderBottomColor: "currentColor"
+        }
+      },
+      [`& .${buttonGroupClasses.lastButton},& .${buttonGroupClasses.middleButton}`]: {
+        marginTop: -1
+      }
+    }
+  }, {
+    props: {
+      variant: "contained",
+      orientation: "horizontal"
+    },
+    style: {
+      [`& .${buttonGroupClasses.firstButton},& .${buttonGroupClasses.middleButton}`]: {
+        borderRight: `1px solid ${(theme2.vars || theme2).palette.grey[400]}`,
+        [`&.${buttonGroupClasses.disabled}`]: {
+          borderRight: `1px solid ${(theme2.vars || theme2).palette.action.disabled}`
+        }
+      }
+    }
+  }, {
+    props: {
+      variant: "contained",
+      orientation: "vertical"
+    },
+    style: {
+      [`& .${buttonGroupClasses.firstButton},& .${buttonGroupClasses.middleButton}`]: {
+        borderBottom: `1px solid ${(theme2.vars || theme2).palette.grey[400]}`,
+        [`&.${buttonGroupClasses.disabled}`]: {
+          borderBottom: `1px solid ${(theme2.vars || theme2).palette.action.disabled}`
+        }
+      }
+    }
+  }, ...Object.entries(theme2.palette).filter(createSimplePaletteValueFilter(["dark"])).map(([color2]) => ({
+    props: {
+      variant: "contained",
+      color: color2
+    },
+    style: {
+      [`& .${buttonGroupClasses.firstButton},& .${buttonGroupClasses.middleButton}`]: {
+        borderColor: (theme2.vars || theme2).palette[color2].dark
+      }
+    }
+  }))],
+  [`& .${buttonGroupClasses.grouped}`]: {
+    minWidth: 40,
+    boxShadow: "none",
+    props: {
+      variant: "contained"
+    },
+    style: {
+      "&:hover": {
+        boxShadow: "none"
+      }
+    }
+  }
+})));
+const ButtonGroup = /* @__PURE__ */ reactExports.forwardRef(function ButtonGroup2(inProps, ref) {
+  const props = useDefaultProps({
+    props: inProps,
+    name: "MuiButtonGroup"
+  });
+  const {
+    children,
+    className,
+    color: color2 = "primary",
+    component = "div",
+    disabled = false,
+    disableElevation = false,
+    disableFocusRipple = false,
+    disableRipple = false,
+    fullWidth = false,
+    orientation = "horizontal",
+    size = "medium",
+    variant = "outlined",
+    ...other
+  } = props;
+  const ownerState = {
+    ...props,
+    color: color2,
+    component,
+    disabled,
+    disableElevation,
+    disableFocusRipple,
+    disableRipple,
+    fullWidth,
+    orientation,
+    size,
+    variant
+  };
+  const classes = useUtilityClasses$v(ownerState);
+  const context = reactExports.useMemo(() => ({
+    className: classes.grouped,
+    color: color2,
+    disabled,
+    disableElevation,
+    disableFocusRipple,
+    disableRipple,
+    fullWidth,
+    size,
+    variant
+  }), [color2, disabled, disableElevation, disableFocusRipple, disableRipple, fullWidth, size, variant, classes.grouped]);
+  const validChildren = getValidReactChildren(children);
+  const childrenCount = validChildren.length;
+  const getButtonPositionClassName = (index) => {
+    const isFirstButton = index === 0;
+    const isLastButton = index === childrenCount - 1;
+    if (isFirstButton && isLastButton) {
+      return "";
+    }
+    if (isFirstButton) {
+      return classes.firstButton;
+    }
+    if (isLastButton) {
+      return classes.lastButton;
+    }
+    return classes.middleButton;
+  };
+  return /* @__PURE__ */ jsxRuntimeExports.jsx(ButtonGroupRoot, {
+    as: component,
+    role: "group",
+    className: clsx(classes.root, className),
+    ref,
+    ownerState,
+    ...other,
+    children: /* @__PURE__ */ jsxRuntimeExports.jsx(ButtonGroupContext.Provider, {
+      value: context,
+      children: validChildren.map((child, index) => {
+        return /* @__PURE__ */ jsxRuntimeExports.jsx(ButtonGroupButtonContext.Provider, {
+          value: getButtonPositionClassName(index),
+          children: child
+        }, index);
+      })
+    })
   });
 });
 function getSwitchBaseUtilityClass(slot) {
@@ -33112,7 +33413,7 @@ const TimelineCursor = styled(Box)(({ theme: theme2 }) => ({
   zIndex: 1
   // Ensure it's above other elements
 }));
-function TimelineEditor({ words, startTime, endTime, onWordUpdate, currentTime = 0, onPlaySegment }) {
+function TimelineEditor({ words, startTime, endTime, onWordUpdate, currentTime = 0, onPlaySegment, showPlaybackIndicator = true }) {
   const containerRef = reactExports.useRef(null);
   const [dragState, setDragState] = reactExports.useState(null);
   const MIN_DURATION = 0.1;
@@ -33258,7 +33559,7 @@ function TimelineEditor({ words, startTime, endTime, onWordUpdate, currentTime =
       onMouseLeave: handleMouseUp,
       children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx(TimelineRuler, { onClick: handleTimelineClick, children: generateTimelineMarks() }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx(
+        showPlaybackIndicator && /* @__PURE__ */ jsxRuntimeExports.jsx(
           TimelineCursor,
           {
             sx: {
@@ -34325,12 +34626,29 @@ const OndemandVideo = createSvgIcon(/* @__PURE__ */ jsxRuntimeExports.jsx("path"
 const PauseIcon = createSvgIcon(/* @__PURE__ */ jsxRuntimeExports.jsx("path", {
   d: "M6 19h4V5H6zm8-14v14h4V5z"
 }), "Pause");
+const PauseCircleOutlineIcon = createSvgIcon(/* @__PURE__ */ jsxRuntimeExports.jsx("path", {
+  d: "M9 16h2V8H9zm3-14C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2m0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8m1-4h2V8h-2z"
+}), "PauseCircleOutline");
 const PlayArrowIcon = createSvgIcon(/* @__PURE__ */ jsxRuntimeExports.jsx("path", {
   d: "M8 5v14l11-7z"
 }), "PlayArrow");
+const StopCircleIcon = createSvgIcon(/* @__PURE__ */ jsxRuntimeExports.jsx("path", {
+  d: "M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2m4 14H8V8h8z"
+}), "StopCircle");
 const TextSnippetIcon = createSvgIcon(/* @__PURE__ */ jsxRuntimeExports.jsx("path", {
   d: "m20.41 8.41-4.83-4.83c-.37-.37-.88-.58-1.41-.58H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V9.83c0-.53-.21-1.04-.59-1.42M7 7h7v2H7zm10 10H7v-2h10zm0-4H7v-2h10z"
 }), "TextSnippet");
+const TimerIcon = createSvgIcon(/* @__PURE__ */ jsxRuntimeExports.jsx("path", {
+  d: "M9 1h6v2H9zm10.03 6.39 1.42-1.42c-.43-.51-.9-.99-1.41-1.41l-1.42 1.42C16.07 4.74 14.12 4 12 4c-4.97 0-9 4.03-9 9s4.02 9 9 9 9-4.03 9-9c0-2.12-.74-4.07-1.97-5.61M13 14h-2V8h2z"
+}), "Timer");
+const ZoomInIcon = createSvgIcon([/* @__PURE__ */ jsxRuntimeExports.jsx("path", {
+  d: "M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"
+}, "0"), /* @__PURE__ */ jsxRuntimeExports.jsx("path", {
+  d: "M12 10h-2v2H9v-2H7V9h2V7h1v2h2z"
+}, "1")], "ZoomIn");
+const ZoomOutIcon = createSvgIcon(/* @__PURE__ */ jsxRuntimeExports.jsx("path", {
+  d: "M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14M7 9h5v1H7z"
+}), "ZoomOut");
 const normalizeWordForComparison = (word) => ({
   text: word.text,
   start_time: word.start_time ?? 0,
@@ -35140,7 +35458,8 @@ function Header({
   isUpdatingHandlers,
   onHandlerClick,
   onAddLyrics,
-  onFindReplace
+  onFindReplace,
+  onEditSync
 }) {
   var _a, _b, _c;
   const theme2 = useTheme();
@@ -35315,6 +35634,17 @@ function Header({
             startIcon: /* @__PURE__ */ jsxRuntimeExports.jsx(FindReplaceIcon, {}),
             sx: { minWidth: "fit-content", height: "32px" },
             children: "Find/Replace"
+          }
+        ),
+        !isReadOnly && onEditSync && /* @__PURE__ */ jsxRuntimeExports.jsx(
+          Button,
+          {
+            variant: "outlined",
+            size: "small",
+            onClick: onEditSync,
+            startIcon: /* @__PURE__ */ jsxRuntimeExports.jsx(TimerIcon, {}),
+            sx: { minWidth: "fit-content", height: "32px" },
+            children: "Edit Sync"
           }
         ),
         /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -35769,6 +36099,539 @@ function FindReplaceModal({
     }
   );
 }
+const ZOOM_LEVELS = [5, 10, 15, 20, 30, 45, 60, 90, 120, 180, 300, 600, 1200];
+function GlobalSyncEditor({
+  open,
+  onClose,
+  segments,
+  onSave,
+  onPlaySegment,
+  currentTime = 0,
+  setModalSpacebarHandler
+}) {
+  const [editedSegments, setEditedSegments] = reactExports.useState([]);
+  const [allWords, setAllWords] = reactExports.useState([]);
+  const [isManualSyncing, setIsManualSyncing] = reactExports.useState(false);
+  const [syncWordIndex, setSyncWordIndex] = reactExports.useState(-1);
+  const [zoomLevel, setZoomLevel] = reactExports.useState(3);
+  const [scrollPosition, setScrollPosition] = reactExports.useState(0);
+  const [songDuration, setSongDuration] = reactExports.useState(0);
+  const [visibleTimeRange, setVisibleTimeRange] = reactExports.useState({ start: 0, end: 20 });
+  const [isPlaying, setIsPlaying] = reactExports.useState(false);
+  const timelineContainerRef = reactExports.useRef(null);
+  reactExports.useEffect(() => {
+    if (open && segments) {
+      const segmentsCopy = [...segments];
+      setEditedSegments(segmentsCopy);
+      const flattenedWords = [];
+      segmentsCopy.forEach((segment, segmentIndex) => {
+        segment.words.forEach((word, wordIndex) => {
+          flattenedWords.push({
+            word,
+            segmentIndex,
+            wordIndex
+          });
+        });
+      });
+      flattenedWords.sort((a, b) => {
+        const aStart = a.word.start_time ?? 0;
+        const bStart = b.word.start_time ?? 0;
+        return aStart - bStart;
+      });
+      setAllWords(flattenedWords);
+      const allEndTimes = flattenedWords.map((item) => item.word.end_time).filter((t) => t !== null);
+      const duration2 = allEndTimes.length > 0 ? Math.max(...allEndTimes) + 5 : 60;
+      setSongDuration(duration2);
+      setScrollPosition(0);
+      updateVisibleTimeRange(0, zoomLevel);
+    }
+  }, [open, segments, zoomLevel]);
+  const updateVisibleTimeRange = reactExports.useCallback((scrollPos, zoom) => {
+    const secondsPerScreen2 = ZOOM_LEVELS[zoom];
+    const start2 = scrollPos * songDuration / 100;
+    const end2 = start2 + secondsPerScreen2;
+    setVisibleTimeRange({ start: start2, end: end2 });
+  }, [songDuration]);
+  const handleScroll = reactExports.useCallback(() => {
+    if (!timelineContainerRef.current) return;
+    const container = timelineContainerRef.current;
+    const scrollPercentage = container.scrollLeft / (container.scrollWidth - container.clientWidth) * 100;
+    setScrollPosition(scrollPercentage);
+    updateVisibleTimeRange(scrollPercentage, zoomLevel);
+  }, [zoomLevel, updateVisibleTimeRange]);
+  const handleZoomChange = reactExports.useCallback((_event, newValue) => {
+    const newZoom = Array.isArray(newValue) ? newValue[0] : newValue;
+    setZoomLevel(newZoom);
+    updateVisibleTimeRange(scrollPosition, newZoom);
+  }, [scrollPosition, updateVisibleTimeRange]);
+  const handleWordUpdate = reactExports.useCallback((flatWordIndex, updates) => {
+    if (flatWordIndex < 0 || flatWordIndex >= allWords.length) return;
+    const { segmentIndex, wordIndex } = allWords[flatWordIndex];
+    const newSegments = [...editedSegments];
+    if (segmentIndex < 0 || segmentIndex >= newSegments.length) return;
+    const segment = newSegments[segmentIndex];
+    if (wordIndex < 0 || wordIndex >= segment.words.length) return;
+    const newWords = [...segment.words];
+    newWords[wordIndex] = {
+      ...newWords[wordIndex],
+      ...updates
+    };
+    const validStartTimes = newWords.map((w) => w.start_time).filter((t) => t !== null);
+    const validEndTimes = newWords.map((w) => w.end_time).filter((t) => t !== null);
+    const segmentStartTime = validStartTimes.length > 0 ? Math.min(...validStartTimes) : segment.start_time;
+    const segmentEndTime = validEndTimes.length > 0 ? Math.max(...validEndTimes) : segment.end_time;
+    newSegments[segmentIndex] = {
+      ...segment,
+      words: newWords,
+      start_time: segmentStartTime,
+      end_time: segmentEndTime
+    };
+    setEditedSegments(newSegments);
+    const newAllWords = [...allWords];
+    newAllWords[flatWordIndex] = {
+      ...newAllWords[flatWordIndex],
+      word: {
+        ...newAllWords[flatWordIndex].word,
+        ...updates
+      }
+    };
+    setAllWords(newAllWords);
+  }, [allWords, editedSegments]);
+  const useGlobalManualSync = () => {
+    const [isSpacebarPressed2, setIsSpacebarPressed] = reactExports.useState(false);
+    const wordStartTimeRef = reactExports.useRef(null);
+    const spacebarPressTimeRef = reactExports.useRef(null);
+    const currentTimeRef = reactExports.useRef(currentTime);
+    reactExports.useEffect(() => {
+      currentTimeRef.current = currentTime;
+    }, [currentTime]);
+    const cleanupManualSync2 = reactExports.useCallback(() => {
+      setIsManualSyncing(false);
+      setSyncWordIndex(-1);
+      setIsSpacebarPressed(false);
+      wordStartTimeRef.current = null;
+      spacebarPressTimeRef.current = null;
+    }, []);
+    const startManualSyncFromBeginning2 = reactExports.useCallback(() => {
+      if (isManualSyncing) {
+        cleanupManualSync2();
+        return;
+      }
+      if (!onPlaySegment || allWords.length === 0) return;
+      setIsManualSyncing(true);
+      setSyncWordIndex(0);
+      setIsSpacebarPressed(false);
+      wordStartTimeRef.current = null;
+      spacebarPressTimeRef.current = null;
+      const firstWordStartTime = allWords[0].word.start_time ?? 0;
+      onPlaySegment(Math.max(0, firstWordStartTime - 3));
+      setIsPlaying(true);
+    }, [isManualSyncing, allWords, onPlaySegment, cleanupManualSync2]);
+    const startManualSyncFromCurrent2 = reactExports.useCallback(() => {
+      if (isManualSyncing) {
+        cleanupManualSync2();
+        return;
+      }
+      if (!onPlaySegment || allWords.length === 0) return;
+      const currentT = currentTimeRef.current;
+      let closestIndex = 0;
+      let minDiff = Number.MAX_VALUE;
+      allWords.forEach((item, index) => {
+        const wordStart = item.word.start_time ?? 0;
+        const diff = Math.abs(wordStart - currentT);
+        if (diff < minDiff) {
+          minDiff = diff;
+          closestIndex = index;
+        }
+      });
+      setIsManualSyncing(true);
+      setSyncWordIndex(closestIndex);
+      setIsSpacebarPressed(false);
+      wordStartTimeRef.current = null;
+      spacebarPressTimeRef.current = null;
+      const wordStartTime = allWords[closestIndex].word.start_time ?? 0;
+      onPlaySegment(Math.max(0, wordStartTime - 3));
+      setIsPlaying(true);
+    }, [isManualSyncing, allWords, onPlaySegment, cleanupManualSync2, currentTimeRef]);
+    const handleKeyDown = reactExports.useCallback((e) => {
+      if (e.code !== "Space") return;
+      console.log("GlobalSyncEditor - Spacebar pressed down", {
+        isManualSyncing,
+        syncWordIndex,
+        currentTime: currentTimeRef.current
+      });
+      e.preventDefault();
+      e.stopPropagation();
+      if (isManualSyncing && !isSpacebarPressed2 && syncWordIndex >= 0 && syncWordIndex < allWords.length) {
+        const currentWord = allWords[syncWordIndex];
+        console.log("GlobalSyncEditor - Recording word start time", {
+          wordIndex: syncWordIndex,
+          wordText: currentWord.word.text,
+          time: currentTimeRef.current
+        });
+        setIsSpacebarPressed(true);
+        wordStartTimeRef.current = currentTimeRef.current;
+        spacebarPressTimeRef.current = Date.now();
+        handleWordUpdate(syncWordIndex, { start_time: currentTimeRef.current });
+      } else if (!isManualSyncing && onPlaySegment) {
+        if (window.toggleAudioPlayback) {
+          window.toggleAudioPlayback();
+          setIsPlaying((prev2) => !prev2);
+        }
+      }
+    }, [isManualSyncing, syncWordIndex, allWords, isSpacebarPressed2, handleWordUpdate, onPlaySegment]);
+    const handleKeyUp = reactExports.useCallback((e) => {
+      if (e.code !== "Space") return;
+      console.log("GlobalSyncEditor - Spacebar released", {
+        isManualSyncing,
+        syncWordIndex,
+        currentTime: currentTimeRef.current,
+        wordStartTime: wordStartTimeRef.current
+      });
+      e.preventDefault();
+      e.stopPropagation();
+      if (isManualSyncing && isSpacebarPressed2 && syncWordIndex >= 0 && syncWordIndex < allWords.length) {
+        const currentWord = allWords[syncWordIndex];
+        const pressDuration = spacebarPressTimeRef.current ? Date.now() - spacebarPressTimeRef.current : 0;
+        const isTap = pressDuration < 200;
+        console.log("GlobalSyncEditor - Recording word end time", {
+          wordIndex: syncWordIndex,
+          wordText: currentWord.word.text,
+          startTime: wordStartTimeRef.current,
+          endTime: currentTimeRef.current,
+          pressDuration: `${pressDuration}ms`,
+          isTap,
+          duration: (currentTimeRef.current - (wordStartTimeRef.current || 0)).toFixed(2) + "s"
+        });
+        setIsSpacebarPressed(false);
+        if (isTap) {
+          const defaultEndTime = (wordStartTimeRef.current || currentTimeRef.current) + 1;
+          handleWordUpdate(syncWordIndex, { end_time: defaultEndTime });
+        } else {
+          handleWordUpdate(syncWordIndex, { end_time: currentTimeRef.current });
+        }
+        if (syncWordIndex === allWords.length - 1) {
+          console.log("GlobalSyncEditor - Completed manual sync for all words");
+          setIsManualSyncing(false);
+          setSyncWordIndex(-1);
+          wordStartTimeRef.current = null;
+          spacebarPressTimeRef.current = null;
+        } else {
+          const nextWord = allWords[syncWordIndex + 1];
+          console.log("GlobalSyncEditor - Moving to next word", {
+            nextWordIndex: syncWordIndex + 1,
+            nextWordText: nextWord.word.text
+          });
+          setSyncWordIndex(syncWordIndex + 1);
+          const currentEndTime = currentWord.word.end_time;
+          const nextStartTime = nextWord.word.start_time;
+          if (currentEndTime !== null && nextStartTime !== null && currentEndTime > nextStartTime) {
+            handleWordUpdate(syncWordIndex + 1, { start_time: currentEndTime + 0.01 });
+          }
+        }
+      }
+    }, [isManualSyncing, syncWordIndex, allWords, isSpacebarPressed2, handleWordUpdate]);
+    const handleSpacebar2 = reactExports.useCallback((e) => {
+      if (e.type === "keydown") {
+        handleKeyDown(e);
+      } else if (e.type === "keyup") {
+        handleKeyUp(e);
+      }
+    }, [handleKeyDown, handleKeyUp]);
+    return {
+      isSpacebarPressed: isSpacebarPressed2,
+      startManualSyncFromBeginning: startManualSyncFromBeginning2,
+      startManualSyncFromCurrent: startManualSyncFromCurrent2,
+      cleanupManualSync: cleanupManualSync2,
+      handleSpacebar: handleSpacebar2
+    };
+  };
+  const {
+    isSpacebarPressed,
+    startManualSyncFromBeginning,
+    startManualSyncFromCurrent,
+    cleanupManualSync,
+    handleSpacebar
+  } = useGlobalManualSync();
+  reactExports.useEffect(() => {
+    const spacebarHandler = handleSpacebar;
+    if (open) {
+      console.log("GlobalSyncEditor - Setting up modal spacebar handler");
+      const handleKeyEvent = (e) => {
+        if (e.code === "Space") {
+          spacebarHandler(e);
+        }
+      };
+      setModalSpacebarHandler(() => () => handleKeyEvent);
+      return () => {
+        if (!open) {
+          console.log("GlobalSyncEditor - Cleanup: clearing modal spacebar handler");
+          setModalSpacebarHandler(void 0);
+        }
+      };
+    }
+  }, [
+    open,
+    handleSpacebar,
+    setModalSpacebarHandler
+  ]);
+  reactExports.useEffect(() => {
+    if (window.isAudioPlaying !== void 0) {
+      setIsPlaying(window.isAudioPlaying);
+    }
+  }, [currentTime]);
+  const handleClose = reactExports.useCallback(() => {
+    cleanupManualSync();
+    onClose();
+  }, [onClose, cleanupManualSync]);
+  const handleSave = reactExports.useCallback(() => {
+    onSave(editedSegments);
+    onClose();
+  }, [editedSegments, onSave, onClose]);
+  const handlePlayFromTime = reactExports.useCallback((time) => {
+    if (onPlaySegment) {
+      onPlaySegment(time);
+      setIsPlaying(true);
+    }
+  }, [onPlaySegment]);
+  const handlePlayPause = reactExports.useCallback(() => {
+    if (window.toggleAudioPlayback) {
+      window.toggleAudioPlayback();
+      setIsPlaying((prev2) => !prev2);
+    }
+  }, []);
+  const handleStop = reactExports.useCallback(() => {
+    if (window.isAudioPlaying && window.toggleAudioPlayback) {
+      window.toggleAudioPlayback();
+      setIsPlaying(false);
+    }
+  }, []);
+  const scrollToCurrentTime = reactExports.useCallback(() => {
+    if (!timelineContainerRef.current) return;
+    const container = timelineContainerRef.current;
+    const totalWidth = container.scrollWidth;
+    const viewportWidth = container.clientWidth;
+    const currentTimePosition = currentTime / songDuration * totalWidth;
+    const scrollLeft = Math.max(0, currentTimePosition - viewportWidth / 2);
+    container.scrollTo({
+      left: scrollLeft,
+      behavior: "smooth"
+    });
+  }, [currentTime, songDuration]);
+  if (!segments || segments.length === 0) return null;
+  const secondsPerScreen = ZOOM_LEVELS[zoomLevel];
+  const totalWidthPercentage = songDuration / secondsPerScreen * 100;
+  return /* @__PURE__ */ jsxRuntimeExports.jsxs(
+    Dialog,
+    {
+      open,
+      onClose: handleClose,
+      maxWidth: "lg",
+      fullWidth: true,
+      PaperProps: {
+        sx: {
+          height: "80vh",
+          display: "flex",
+          flexDirection: "column"
+        }
+      },
+      children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs(DialogTitle, { children: [
+          "Edit Sync - All Words",
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            IconButton,
+            {
+              "aria-label": "close",
+              onClick: handleClose,
+              sx: {
+                position: "absolute",
+                right: 8,
+                top: 8,
+                color: (theme2) => theme2.palette.grey[500]
+              },
+              children: /* @__PURE__ */ jsxRuntimeExports.jsx(CloseIcon, {})
+            }
+          )
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs(DialogContent, { sx: { flexGrow: 1, display: "flex", flexDirection: "column", overflow: "hidden" }, children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs(Box, { sx: { mb: 2, display: "flex", alignItems: "center", gap: 2 }, children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx(Typography, { variant: "body2", children: "Zoom:" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              IconButton,
+              {
+                size: "small",
+                onClick: () => setZoomLevel(Math.max(0, zoomLevel - 1)),
+                disabled: zoomLevel === 0,
+                children: /* @__PURE__ */ jsxRuntimeExports.jsx(ZoomOutIcon, {})
+              }
+            ),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              Slider,
+              {
+                value: zoomLevel,
+                min: 0,
+                max: ZOOM_LEVELS.length - 1,
+                step: 1,
+                onChange: handleZoomChange,
+                marks: true,
+                sx: { flexGrow: 1, maxWidth: 300 }
+              }
+            ),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              IconButton,
+              {
+                size: "small",
+                onClick: () => setZoomLevel(Math.min(ZOOM_LEVELS.length - 1, zoomLevel + 1)),
+                disabled: zoomLevel === ZOOM_LEVELS.length - 1,
+                children: /* @__PURE__ */ jsxRuntimeExports.jsx(ZoomInIcon, {})
+              }
+            ),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs(Typography, { variant: "body2", children: [
+              ZOOM_LEVELS[zoomLevel],
+              " seconds per screen"
+            ] })
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs(Box, { sx: { mb: 2, display: "flex", alignItems: "center", gap: 2 }, children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsxs(ButtonGroup, { variant: "outlined", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx(
+                Button,
+                {
+                  onClick: handlePlayPause,
+                  startIcon: isPlaying ? /* @__PURE__ */ jsxRuntimeExports.jsx(PauseCircleOutlineIcon, {}) : /* @__PURE__ */ jsxRuntimeExports.jsx(PlayCircleOutlineIcon, {}),
+                  children: isPlaying ? "Pause" : "Play"
+                }
+              ),
+              /* @__PURE__ */ jsxRuntimeExports.jsx(
+                Button,
+                {
+                  onClick: handleStop,
+                  startIcon: /* @__PURE__ */ jsxRuntimeExports.jsx(StopCircleIcon, {}),
+                  disabled: !isPlaying,
+                  children: "Stop"
+                }
+              ),
+              /* @__PURE__ */ jsxRuntimeExports.jsx(
+                Button,
+                {
+                  onClick: scrollToCurrentTime,
+                  disabled: !currentTime,
+                  children: "Go to Current Time"
+                }
+              )
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              Button,
+              {
+                variant: isManualSyncing ? "outlined" : "contained",
+                onClick: startManualSyncFromBeginning,
+                disabled: !onPlaySegment || allWords.length === 0,
+                startIcon: isManualSyncing ? /* @__PURE__ */ jsxRuntimeExports.jsx(CancelIcon, {}) : /* @__PURE__ */ jsxRuntimeExports.jsx(PlayCircleOutlineIcon, {}),
+                color: isManualSyncing ? "error" : "primary",
+                children: isManualSyncing ? "Cancel Sync" : "Sync From Start"
+              }
+            ),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              Button,
+              {
+                variant: "contained",
+                onClick: startManualSyncFromCurrent,
+                disabled: !onPlaySegment || allWords.length === 0 || isManualSyncing,
+                startIcon: /* @__PURE__ */ jsxRuntimeExports.jsx(PlayCircleOutlineIcon, {}),
+                children: "Sync From Current Time"
+              }
+            )
+          ] }),
+          isManualSyncing && syncWordIndex >= 0 && syncWordIndex < allWords.length && /* @__PURE__ */ jsxRuntimeExports.jsxs(Box, { sx: { mb: 2 }, children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsxs(Typography, { variant: "body2", children: [
+              "Word ",
+              syncWordIndex + 1,
+              " of ",
+              allWords.length,
+              ": ",
+              /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: allWords[syncWordIndex].word.text || "" })
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(Typography, { variant: "caption", color: "text.secondary", children: isSpacebarPressed ? "Holding spacebar... Release when word ends" : "Press spacebar when word starts (tap for short words, hold for long words)" })
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            Box,
+            {
+              ref: timelineContainerRef,
+              sx: {
+                flexGrow: 1,
+                overflowX: "auto",
+                overflowY: "hidden",
+                position: "relative",
+                "&::-webkit-scrollbar": {
+                  height: "10px"
+                },
+                "&::-webkit-scrollbar-thumb": {
+                  backgroundColor: "rgba(0,0,0,0.2)",
+                  borderRadius: "10px"
+                }
+              },
+              onScroll: handleScroll,
+              children: /* @__PURE__ */ jsxRuntimeExports.jsxs(Box, { sx: {
+                width: `${totalWidthPercentage}%`,
+                minWidth: "100%",
+                height: "100%",
+                position: "relative"
+              }, children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  TimelineEditor,
+                  {
+                    words: allWords.map((item) => item.word),
+                    startTime: 0,
+                    endTime: songDuration,
+                    onWordUpdate: (index, updates) => handleWordUpdate(index, updates),
+                    currentTime,
+                    onPlaySegment: handlePlayFromTime,
+                    showPlaybackIndicator: false
+                  }
+                ),
+                currentTime >= 0 && currentTime <= songDuration && /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  Box,
+                  {
+                    sx: {
+                      position: "absolute",
+                      top: 0,
+                      left: `${currentTime / songDuration * 100}%`,
+                      width: "2px",
+                      height: "100%",
+                      backgroundColor: "error.main",
+                      zIndex: 10
+                    }
+                  }
+                )
+              ] })
+            }
+          ),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs(Box, { sx: { mt: 1, display: "flex", justifyContent: "space-between" }, children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsxs(Typography, { variant: "body2", children: [
+              "Visible: ",
+              visibleTimeRange.start.toFixed(1),
+              "s - ",
+              visibleTimeRange.end.toFixed(1),
+              "s"
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs(Typography, { variant: "body2", children: [
+              "Total Duration: ",
+              songDuration.toFixed(1),
+              "s"
+            ] })
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs(Typography, { variant: "body2", sx: { mt: 1 }, children: [
+            "Total Words: ",
+            allWords.length
+          ] })
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs(DialogActions, { children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx(Button, { onClick: handleClose, children: "Cancel" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(Button, { onClick: handleSave, variant: "contained", color: "primary", children: "Save" })
+        ] })
+      ]
+    }
+  );
+}
 function LyricsAnalyzer({ data: initialData, onFileLoad, apiClient, isReadOnly, audioHash }) {
   const [modalContent, setModalContent] = reactExports.useState(null);
   const [flashingType, setFlashingType] = reactExports.useState(null);
@@ -35794,6 +36657,7 @@ function LyricsAnalyzer({ data: initialData, onFileLoad, apiClient, isReadOnly, 
   const [isAddLyricsModalOpen, setIsAddLyricsModalOpen] = reactExports.useState(false);
   const [isAnyModalOpen, setIsAnyModalOpen] = reactExports.useState(false);
   const [isFindReplaceModalOpen, setIsFindReplaceModalOpen] = reactExports.useState(false);
+  const [isGlobalSyncEditorOpen, setIsGlobalSyncEditorOpen] = reactExports.useState(false);
   const theme2 = useTheme();
   const isMobile = useMediaQuery(theme2.breakpoints.down("md"));
   reactExports.useEffect(() => {
@@ -36116,7 +36980,8 @@ function LyricsAnalyzer({ data: initialData, onFileLoad, apiClient, isReadOnly, 
         isUpdatingHandlers,
         onHandlerClick: handleHandlerClick,
         onAddLyrics: () => setIsAddLyricsModalOpen(true),
-        onFindReplace: () => setIsFindReplaceModalOpen(true)
+        onFindReplace: () => setIsFindReplaceModalOpen(true),
+        onEditSync: () => setIsGlobalSyncEditorOpen(true)
       }
     ),
     /* @__PURE__ */ jsxRuntimeExports.jsxs(Grid, { container: true, spacing: 1, direction: isMobile ? "column" : "row", children: [
@@ -36235,6 +37100,22 @@ function LyricsAnalyzer({ data: initialData, onFileLoad, apiClient, isReadOnly, 
         onClose: () => setIsFindReplaceModalOpen(false),
         onReplace: handleFindReplace,
         data
+      }
+    ),
+    !isReadOnly && /* @__PURE__ */ jsxRuntimeExports.jsx(
+      GlobalSyncEditor,
+      {
+        open: isGlobalSyncEditorOpen,
+        onClose: () => setIsGlobalSyncEditorOpen(false),
+        segments: data.corrected_segments || [],
+        onSave: (updatedSegments) => {
+          const newData = { ...data, corrected_segments: updatedSegments };
+          setData(newData);
+          saveData(newData, initialData);
+        },
+        onPlaySegment: handlePlaySegment,
+        currentTime: currentAudioTime,
+        setModalSpacebarHandler: handleSetModalSpacebarHandler
       }
     )
   ] });
@@ -36592,4 +37473,4 @@ ReactDOM$1.createRoot(document.getElementById("root")).render(
     /* @__PURE__ */ jsxRuntimeExports.jsx(App, {})
   ] })
 );
-//# sourceMappingURL=index-CFU19Y6P.js.map
+//# sourceMappingURL=index-DVoI6Z16.js.map

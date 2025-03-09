@@ -29,6 +29,7 @@ import { getWordsFromIds } from './shared/utils/wordUtils'
 import AddLyricsModal from './AddLyricsModal'
 import { RestoreFromTrash, OndemandVideo } from '@mui/icons-material'
 import FindReplaceModal from './FindReplaceModal'
+import GlobalSyncEditor from './GlobalSyncEditor'
 
 // Add type for window augmentation at the top of the file
 declare global {
@@ -92,6 +93,7 @@ export default function LyricsAnalyzer({ data: initialData, onFileLoad, apiClien
     const [isAddLyricsModalOpen, setIsAddLyricsModalOpen] = useState(false)
     const [isAnyModalOpen, setIsAnyModalOpen] = useState(false)
     const [isFindReplaceModalOpen, setIsFindReplaceModalOpen] = useState(false)
+    const [isGlobalSyncEditorOpen, setIsGlobalSyncEditorOpen] = useState(false)
     const theme = useTheme()
     const isMobile = useMediaQuery(theme.breakpoints.down('md'))
 
@@ -496,6 +498,7 @@ export default function LyricsAnalyzer({ data: initialData, onFileLoad, apiClien
                 onHandlerClick={handleHandlerClick}
                 onAddLyrics={() => setIsAddLyricsModalOpen(true)}
                 onFindReplace={() => setIsFindReplaceModalOpen(true)}
+                onEditSync={() => setIsGlobalSyncEditorOpen(true)}
             />
 
             <Grid container spacing={1} direction={isMobile ? 'column' : 'row'}>
@@ -606,6 +609,23 @@ export default function LyricsAnalyzer({ data: initialData, onFileLoad, apiClien
                 onReplace={handleFindReplace}
                 data={data}
             />
+
+            {/* Add GlobalSyncEditor modal */}
+            {!isReadOnly && (
+                <GlobalSyncEditor
+                    open={isGlobalSyncEditorOpen}
+                    onClose={() => setIsGlobalSyncEditorOpen(false)}
+                    segments={data.corrected_segments || []}
+                    onSave={(updatedSegments) => {
+                        const newData = { ...data, corrected_segments: updatedSegments };
+                        setData(newData);
+                        saveData(newData, initialData);
+                    }}
+                    onPlaySegment={handlePlaySegment}
+                    currentTime={currentAudioTime}
+                    setModalSpacebarHandler={handleSetModalSpacebarHandler}
+                />
+            )}
         </Box>
     )
 } 
