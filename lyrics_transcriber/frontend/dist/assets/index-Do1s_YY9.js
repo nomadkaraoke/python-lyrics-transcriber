@@ -33066,6 +33066,7 @@ const TimelineWord = styled(Box)(({ theme: theme2 }) => ({
   fontSize: "0.875rem",
   fontFamily: "sans-serif",
   transition: "background-color 0.1s ease",
+  boxSizing: "border-box",
   "&.highlighted": {
     backgroundColor: theme2.palette.secondary.main
   }
@@ -33073,7 +33074,7 @@ const TimelineWord = styled(Box)(({ theme: theme2 }) => ({
 const ResizeHandle = styled(Box)(({ theme: theme2 }) => ({
   position: "absolute",
   top: 0,
-  width: 16,
+  width: 10,
   height: "100%",
   cursor: "col-resize",
   "&:hover": {
@@ -33082,16 +33083,16 @@ const ResizeHandle = styled(Box)(({ theme: theme2 }) => ({
     boxShadow: `0 0 0 1px ${theme2.palette.primary.dark}`
   },
   "&.left": {
-    left: -8,
+    left: 0,
     right: "auto",
-    paddingRight: 12,
+    paddingRight: 0,
     borderTopLeftRadius: theme2.shape.borderRadius,
     borderBottomLeftRadius: theme2.shape.borderRadius
   },
   "&.right": {
-    right: -8,
+    right: 0,
     left: "auto",
-    paddingLeft: 12,
+    paddingLeft: 0,
     borderTopRightRadius: theme2.shape.borderRadius,
     borderBottomRightRadius: theme2.shape.borderRadius
   }
@@ -33271,8 +33272,7 @@ function TimelineEditor({ words, startTime, endTime, onWordUpdate, currentTime =
           const leftPosition = timeToPosition(word.start_time);
           const rightPosition = timeToPosition(word.end_time);
           const width2 = rightPosition - leftPosition;
-          const visualPadding = 2;
-          const adjustedWidth = Math.max(0, width2 - visualPadding);
+          const adjustedWidth = width2;
           return /* @__PURE__ */ jsxRuntimeExports.jsxs(
             TimelineWord,
             {
@@ -33280,7 +33280,7 @@ function TimelineEditor({ words, startTime, endTime, onWordUpdate, currentTime =
               sx: {
                 left: `${leftPosition}%`,
                 width: `${adjustedWidth}%`,
-                maxWidth: `calc(${100 - leftPosition}% - 2px)`
+                maxWidth: `calc(${100 - leftPosition}%)`
               },
               onMouseDown: (e) => {
                 e.stopPropagation();
@@ -36458,4 +36458,4 @@ ReactDOM$1.createRoot(document.getElementById("root")).render(
     /* @__PURE__ */ jsxRuntimeExports.jsx(App, {})
   ] })
 );
-//# sourceMappingURL=index-D5pIYx0d.js.map
+//# sourceMappingURL=index-Do1s_YY9.js.map

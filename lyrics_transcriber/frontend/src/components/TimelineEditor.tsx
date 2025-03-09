@@ -68,6 +68,7 @@ const TimelineWord = styled(Box)(({ theme }) => ({
     fontSize: '0.875rem',
     fontFamily: 'sans-serif',
     transition: 'background-color 0.1s ease',
+    boxSizing: 'border-box',
     '&.highlighted': {
         backgroundColor: theme.palette.secondary.main,
     }
@@ -76,7 +77,7 @@ const TimelineWord = styled(Box)(({ theme }) => ({
 const ResizeHandle = styled(Box)(({ theme }) => ({
     position: 'absolute',
     top: 0,
-    width: 16,
+    width: 10,
     height: '100%',
     cursor: 'col-resize',
     '&:hover': {
@@ -85,16 +86,16 @@ const ResizeHandle = styled(Box)(({ theme }) => ({
         boxShadow: `0 0 0 1px ${theme.palette.primary.dark}`,
     },
     '&.left': {
-        left: -8,
+        left: 0,
         right: 'auto',
-        paddingRight: 12,
+        paddingRight: 0,
         borderTopLeftRadius: theme.shape.borderRadius,
         borderBottomLeftRadius: theme.shape.borderRadius,
     },
     '&.right': {
-        right: -8,
+        right: 0,
         left: 'auto',
-        paddingLeft: 12,
+        paddingLeft: 0,
         borderTopRightRadius: theme.shape.borderRadius,
         borderBottomRightRadius: theme.shape.borderRadius,
     }
@@ -321,8 +322,8 @@ export default function TimelineEditor({ words, startTime, endTime, onWordUpdate
                 const leftPosition = timeToPosition(word.start_time)
                 const rightPosition = timeToPosition(word.end_time)
                 const width = rightPosition - leftPosition
-                const visualPadding = 2
-                const adjustedWidth = Math.max(0, width - visualPadding)
+                // Remove the visual padding that creates gaps
+                const adjustedWidth = width
 
                 return (
                     <TimelineWord
@@ -331,7 +332,7 @@ export default function TimelineEditor({ words, startTime, endTime, onWordUpdate
                         sx={{
                             left: `${leftPosition}%`,
                             width: `${adjustedWidth}%`,
-                            maxWidth: `calc(${100 - leftPosition}% - 2px)`,
+                            maxWidth: `calc(${100 - leftPosition}%)`,
                         }}
                         onMouseDown={(e) => {
                             e.stopPropagation()
