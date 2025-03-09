@@ -14,7 +14,7 @@ documentation = "https://github.com/karaokenerds/python-lyrics-transcriber/blob/
 [tool.poetry.dependencies]
 python = ">=3.9,<3.13"
 python-slugify = ">=8"
-lyricsgenius = { git = "git+https://github.com/S1M0N38/LyricsGenius.git", branch = "fix-lyrics-duplicate" }
+lyricsgenius = ">=0.1.0"
 syrics = ">=0"
 karaoke-lyrics-processor = ">=0.4"
 dropbox = ">=12"
