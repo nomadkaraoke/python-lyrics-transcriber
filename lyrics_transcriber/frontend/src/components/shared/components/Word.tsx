@@ -61,8 +61,7 @@ export const WordComponent = React.memo(function Word({
         const tooltipContent = (
             <>
                 <strong>Original:</strong> "{correction.originalWord}"<br />
-                <strong>Corrected by:</strong> {correction.handler}<br />
-                <strong>Confidence:</strong> {(correction.confidence * 100).toFixed(0)}%
+                <strong>Corrected by:</strong> {correction.handler}
             </>
         )
         

@@ -3,7 +3,6 @@ import LockIcon from '@mui/icons-material/Lock'
 import UploadFileIcon from '@mui/icons-material/UploadFile'
 import TextSnippetIcon from '@mui/icons-material/TextSnippet'
 import FindReplaceIcon from '@mui/icons-material/FindReplace'
-import TimerIcon from '@mui/icons-material/Timer'
 import { CorrectionData } from '../types'
 import CorrectionMetrics from './CorrectionMetrics'
 import ModeSelector from './ModeSelector'
@@ -31,7 +30,6 @@ interface HeaderProps {
     onHandlerClick?: (handler: string) => void
     onAddLyrics?: () => void
     onFindReplace?: () => void
-    onEditSync?: () => void
 }
 
 export default function Header({
@@ -49,7 +47,6 @@ export default function Header({
     onHandlerClick,
     onAddLyrics,
     onFindReplace,
-    onEditSync
 }: HeaderProps) {
     const theme = useTheme()
     const isMobile = useMediaQuery(theme.breakpoints.down('md'))
@@ -252,17 +249,6 @@ export default function Header({
                                 sx={{ minWidth: 'fit-content', height: '32px' }}
                             >
                                 Find/Replace
-                            </Button>
-                        )}
-                        {!isReadOnly && onEditSync && (
-                            <Button
-                                variant="outlined"
-                                size="small"
-                                onClick={onEditSync}
-                                startIcon={<TimerIcon />}
-                                sx={{ minWidth: 'fit-content', height: '32px' }}
-                            >
-                                Edit Sync
                             </Button>
                         )}
                         <AudioPlayer
