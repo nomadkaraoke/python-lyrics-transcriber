@@ -9,6 +9,7 @@ interface WordDividerProps {
     onAddSegmentBefore?: () => void
     onAddSegmentAfter?: () => void
     onSplitSegment?: () => void
+    onMergeSegment?: () => void
     canMerge?: boolean
     isFirst?: boolean
     isLast?: boolean
@@ -41,6 +42,7 @@ export default function WordDivider({
     onAddSegmentBefore,
     onAddSegmentAfter,
     onSplitSegment,
+    onMergeSegment,
     canMerge = false,
     isFirst = false,
     isLast = false,
@@ -82,20 +84,36 @@ export default function WordDivider({
                     </Typography>
                 </Button>
                 {isFirst && (
-                    <Button
-                        onClick={onAddSegmentBefore}
-                        title="Add Segment"
-                        size="small"
-                        startIcon={<AddIcon sx={{ transform: 'rotate(90deg)' }} />}
-                        sx={{
-                            ...buttonBaseStyle,
-                            color: 'success.main',
-                        }}
-                    >
-                        <Typography sx={buttonTextStyle}>
-                            Add Segment
-                        </Typography>
-                    </Button>
+                    <>
+                        <Button
+                            onClick={onAddSegmentBefore}
+                            title="Add Segment"
+                            size="small"
+                            startIcon={<AddIcon sx={{ transform: 'rotate(90deg)' }} />}
+                            sx={{
+                                ...buttonBaseStyle,
+                                color: 'success.main',
+                            }}
+                        >
+                            <Typography sx={buttonTextStyle}>
+                                Add Segment
+                            </Typography>
+                        </Button>
+                        <Button
+                            onClick={onMergeSegment}
+                            title="Merge with Previous Segment"
+                            size="small"
+                            startIcon={<MergeIcon sx={{ transform: 'rotate(90deg)' }} />}
+                            sx={{
+                                ...buttonBaseStyle,
+                                color: 'warning.main',
+                            }}
+                        >
+                            <Typography sx={buttonTextStyle}>
+                                Merge Segment
+                            </Typography>
+                        </Button>
+                    </>
                 )}
                 {onMergeWords && !isLast && (
                     <Button
@@ -131,20 +149,36 @@ export default function WordDivider({
                     </Button>
                 )}
                 {isLast && (
-                    <Button
-                        onClick={onAddSegmentAfter}
-                        title="Add Segment"
-                        size="small"
-                        startIcon={<AddIcon sx={{ transform: 'rotate(90deg)' }} />}
-                        sx={{
-                            ...buttonBaseStyle,
-                            color: 'success.main',
-                        }}
-                    >
-                        <Typography sx={buttonTextStyle}>
-                            Add Segment
-                        </Typography>
-                    </Button>
+                    <>
+                        <Button
+                            onClick={onAddSegmentAfter}
+                            title="Add Segment"
+                            size="small"
+                            startIcon={<AddIcon sx={{ transform: 'rotate(90deg)' }} />}
+                            sx={{
+                                ...buttonBaseStyle,
+                                color: 'success.main',
+                            }}
+                        >
+                            <Typography sx={buttonTextStyle}>
+                                Add Segment
+                            </Typography>
+                        </Button>
+                        <Button
+                            onClick={onMergeSegment}
+                            title="Merge with Next Segment"
+                            size="small"
+                            startIcon={<MergeIcon sx={{ transform: 'rotate(90deg)' }} />}
+                            sx={{
+                                ...buttonBaseStyle,
+                                color: 'warning.main',
+                            }}
+                        >
+                            <Typography sx={buttonTextStyle}>
+                                Merge Segment
+                            </Typography>
+                        </Button>
+                    </>
                 )}
             </Box>
         </Box>

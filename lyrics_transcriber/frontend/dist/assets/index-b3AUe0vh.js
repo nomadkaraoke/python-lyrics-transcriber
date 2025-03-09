@@ -31997,6 +31997,7 @@ function WordDivider({
   onAddSegmentBefore,
   onAddSegmentAfter,
   onSplitSegment,
+  onMergeSegment,
   canMerge = false,
   isFirst = false,
   isLast = false,
@@ -32037,20 +32038,36 @@ function WordDivider({
             children: /* @__PURE__ */ jsxRuntimeExports.jsx(Typography, { sx: buttonTextStyle, children: "Add Word" })
           }
         ),
-        isFirst && /* @__PURE__ */ jsxRuntimeExports.jsx(
-          Button,
-          {
-            onClick: onAddSegmentBefore,
-            title: "Add Segment",
-            size: "small",
-            startIcon: /* @__PURE__ */ jsxRuntimeExports.jsx(AddIcon, { sx: { transform: "rotate(90deg)" } }),
-            sx: {
-              ...buttonBaseStyle,
-              color: "success.main"
-            },
-            children: /* @__PURE__ */ jsxRuntimeExports.jsx(Typography, { sx: buttonTextStyle, children: "Add Segment" })
-          }
-        ),
+        isFirst && /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            Button,
+            {
+              onClick: onAddSegmentBefore,
+              title: "Add Segment",
+              size: "small",
+              startIcon: /* @__PURE__ */ jsxRuntimeExports.jsx(AddIcon, { sx: { transform: "rotate(90deg)" } }),
+              sx: {
+                ...buttonBaseStyle,
+                color: "success.main"
+              },
+              children: /* @__PURE__ */ jsxRuntimeExports.jsx(Typography, { sx: buttonTextStyle, children: "Add Segment" })
+            }
+          ),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            Button,
+            {
+              onClick: onMergeSegment,
+              title: "Merge with Previous Segment",
+              size: "small",
+              startIcon: /* @__PURE__ */ jsxRuntimeExports.jsx(MergeIcon, { sx: { transform: "rotate(90deg)" } }),
+              sx: {
+                ...buttonBaseStyle,
+                color: "warning.main"
+              },
+              children: /* @__PURE__ */ jsxRuntimeExports.jsx(Typography, { sx: buttonTextStyle, children: "Merge Segment" })
+            }
+          )
+        ] }),
         onMergeWords && !isLast && /* @__PURE__ */ jsxRuntimeExports.jsx(
           Button,
           {
@@ -32080,20 +32097,36 @@ function WordDivider({
             children: /* @__PURE__ */ jsxRuntimeExports.jsx(Typography, { sx: buttonTextStyle, children: "Split Segment" })
           }
         ),
-        isLast && /* @__PURE__ */ jsxRuntimeExports.jsx(
-          Button,
-          {
-            onClick: onAddSegmentAfter,
-            title: "Add Segment",
-            size: "small",
-            startIcon: /* @__PURE__ */ jsxRuntimeExports.jsx(AddIcon, { sx: { transform: "rotate(90deg)" } }),
-            sx: {
-              ...buttonBaseStyle,
-              color: "success.main"
-            },
-            children: /* @__PURE__ */ jsxRuntimeExports.jsx(Typography, { sx: buttonTextStyle, children: "Add Segment" })
-          }
-        )
+        isLast && /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            Button,
+            {
+              onClick: onAddSegmentAfter,
+              title: "Add Segment",
+              size: "small",
+              startIcon: /* @__PURE__ */ jsxRuntimeExports.jsx(AddIcon, { sx: { transform: "rotate(90deg)" } }),
+              sx: {
+                ...buttonBaseStyle,
+                color: "success.main"
+              },
+              children: /* @__PURE__ */ jsxRuntimeExports.jsx(Typography, { sx: buttonTextStyle, children: "Add Segment" })
+            }
+          ),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            Button,
+            {
+              onClick: onMergeSegment,
+              title: "Merge with Next Segment",
+              size: "small",
+              startIcon: /* @__PURE__ */ jsxRuntimeExports.jsx(MergeIcon, { sx: { transform: "rotate(90deg)" } }),
+              sx: {
+                ...buttonBaseStyle,
+                color: "warning.main"
+              },
+              children: /* @__PURE__ */ jsxRuntimeExports.jsx(Typography, { sx: buttonTextStyle, children: "Merge Segment" })
+            }
+          )
+        ] })
       ] })
     }
   );
@@ -32196,6 +32229,7 @@ function EditModal({
   onDelete,
   onAddSegment,
   onSplitSegment,
+  onMergeSegment,
   setModalSpacebarHandler
 }) {
   var _a, _b, _c, _d;
@@ -32428,6 +32462,13 @@ function EditModal({
       onSplitSegment == null ? void 0 : onSplitSegment(segmentIndex, wordIndex);
     }
   };
+  const handleMergeSegment = (mergeWithNext) => {
+    if (segmentIndex !== null && editedSegment) {
+      handleSave();
+      onMergeSegment == null ? void 0 : onMergeSegment(segmentIndex, mergeWithNext);
+      onClose();
+    }
+  };
   const handlePlayButtonClick = () => {
     if (!(segment == null ? void 0 : segment.start_time) || !onPlaySegment) return;
     if (isPlaying) {
@@ -32549,6 +32590,7 @@ function EditModal({
                   {
                     onAddWord: () => handleAddWord(-1),
                     onAddSegmentBefore: () => onAddSegment == null ? void 0 : onAddSegment(segmentIndex),
+                    onMergeSegment: () => handleMergeSegment(false),
                     isFirst: true,
                     sx: { ml: 15 }
                   }
@@ -32620,6 +32662,7 @@ function EditModal({
                         onMergeWords: () => handleMergeWords(index),
                         onSplitSegment: () => handleSplitSegment(index),
                         onAddSegmentAfter: index === editedSegment.words.length - 1 ? () => onAddSegment == null ? void 0 : onAddSegment(segmentIndex + 1) : void 0,
+                        onMergeSegment: index === editedSegment.words.length - 1 ? () => handleMergeSegment(true) : void 0,
                         canMerge: index < editedSegment.words.length - 1,
                         isLast: index === editedSegment.words.length - 1,
                         sx: { ml: 15 }
@@ -32774,6 +32817,9 @@ const CloudUpload = createSvgIcon(/* @__PURE__ */ jsxRuntimeExports.jsx("path", 
 const EditIcon = createSvgIcon(/* @__PURE__ */ jsxRuntimeExports.jsx("path", {
   d: "M3 17.25V21h3.75L17.81 9.94l-3.75-3.75zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34a.996.996 0 0 0-1.41 0l-1.83 1.83 3.75 3.75z"
 }), "Edit");
+const FindReplaceIcon = createSvgIcon(/* @__PURE__ */ jsxRuntimeExports.jsx("path", {
+  d: "M11 6c1.38 0 2.63.56 3.54 1.46L12 10h6V4l-2.05 2.05C14.68 4.78 12.93 4 11 4c-3.53 0-6.43 2.61-6.92 6H6.1c.46-2.28 2.48-4 4.9-4m5.64 9.14c.66-.9 1.12-1.97 1.28-3.14H15.9c-.46 2.28-2.48 4-4.9 4-1.38 0-2.63-.56-3.54-1.46L10 12H4v6l2.05-2.05C7.32 17.22 9.07 18 11 18c1.55 0 2.98-.51 4.14-1.36L20 21.49 21.49 20z"
+}), "FindReplace");
 const HighlightIcon = createSvgIcon(/* @__PURE__ */ jsxRuntimeExports.jsx("path", {
   d: "m6 14 3 3v5h6v-5l3-3V9H6zm5-12h2v3h-2zM3.5 5.88l1.41-1.41 2.12 2.12L5.62 8zm13.46.71 2.12-2.12 1.41 1.41L18.38 8z"
 }), "Highlight");
@@ -33125,6 +33171,49 @@ const updateSegment = (data, segmentIndex, updatedSegment) => {
   newData.corrected_segments[segmentIndex] = updatedSegment;
   return newData;
 };
+function mergeSegment(data, segmentIndex, mergeWithNext) {
+  const segments = [...data.corrected_segments];
+  const targetIndex = mergeWithNext ? segmentIndex + 1 : segmentIndex - 1;
+  if (targetIndex < 0 || targetIndex >= segments.length) {
+    return data;
+  }
+  const baseSegment = segments[segmentIndex];
+  const targetSegment = segments[targetIndex];
+  const mergedSegment = {
+    id: nanoid(),
+    words: mergeWithNext ? [...baseSegment.words, ...targetSegment.words] : [...targetSegment.words, ...baseSegment.words],
+    text: mergeWithNext ? `${baseSegment.text} ${targetSegment.text}` : `${targetSegment.text} ${baseSegment.text}`,
+    start_time: Math.min(
+      baseSegment.start_time ?? Infinity,
+      targetSegment.start_time ?? Infinity
+    ),
+    end_time: Math.max(
+      baseSegment.end_time ?? -Infinity,
+      targetSegment.end_time ?? -Infinity
+    )
+  };
+  const minIndex = Math.min(segmentIndex, targetIndex);
+  segments.splice(minIndex, 2, mergedSegment);
+  return {
+    ...data,
+    corrected_segments: segments
+  };
+}
+function findAndReplace(data, findText, replaceText) {
+  const newData = { ...data };
+  newData.corrected_segments = data.corrected_segments.map((segment) => {
+    const newWords = segment.words.map((word) => ({
+      ...word,
+      text: word.text.split(findText).join(replaceText)
+    }));
+    return {
+      ...segment,
+      words: newWords,
+      text: newWords.map((w) => w.text).join(" ")
+    };
+  });
+  return newData;
+}
 const generateStorageKey = (data) => {
   var _a;
   const text = ((_a = data.original_segments[0]) == null ? void 0 : _a.text) || "";
@@ -33451,7 +33540,8 @@ function Header({
   onHandlerToggle,
   isUpdatingHandlers,
   onHandlerClick,
-  onAddLyrics
+  onAddLyrics,
+  onFindReplace
 }) {
   var _a, _b, _c;
   const theme = useTheme();
@@ -33615,6 +33705,16 @@ function Header({
             onChange: onModeChange
           }
         ),
+        !isReadOnly && /* @__PURE__ */ jsxRuntimeExports.jsx(
+          Button,
+          {
+            variant: "outlined",
+            onClick: onFindReplace,
+            startIcon: /* @__PURE__ */ jsxRuntimeExports.jsx(FindReplaceIcon, {}),
+            sx: { minWidth: "fit-content" },
+            children: "Find/Replace"
+          }
+        ),
         /* @__PURE__ */ jsxRuntimeExports.jsx(
           AudioPlayer,
           {
@@ -33726,6 +33826,77 @@ function AddLyricsModal({
     }
   );
 }
+function FindReplaceModal({
+  open,
+  onClose,
+  onReplace
+}) {
+  const [findText, setFindText] = reactExports.useState("");
+  const [replaceText, setReplaceText] = reactExports.useState("");
+  const handleReplace = () => {
+    if (!findText) return;
+    onReplace(findText, replaceText);
+    onClose();
+  };
+  const handleKeyDown = (event) => {
+    if (event.key === "Enter" && !event.shiftKey) {
+      event.preventDefault();
+      handleReplace();
+    }
+  };
+  return /* @__PURE__ */ jsxRuntimeExports.jsxs(
+    Dialog,
+    {
+      open,
+      onClose,
+      maxWidth: "sm",
+      fullWidth: true,
+      onKeyDown: handleKeyDown,
+      children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs(DialogTitle, { sx: { display: "flex", alignItems: "center", gap: 1 }, children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx(Box, { sx: { flex: 1 }, children: "Find and Replace" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(IconButton, { onClick: onClose, children: /* @__PURE__ */ jsxRuntimeExports.jsx(CloseIcon, {}) })
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx(DialogContent, { dividers: true, children: /* @__PURE__ */ jsxRuntimeExports.jsxs(Box, { sx: { display: "flex", flexDirection: "column", gap: 2 }, children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx(Typography, { variant: "body2", color: "text.secondary", children: "Enter text to find and replace across all lyrics segments." }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            TextField,
+            {
+              label: "Find",
+              value: findText,
+              onChange: (e) => setFindText(e.target.value),
+              fullWidth: true,
+              size: "small",
+              autoFocus: true
+            }
+          ),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            TextField,
+            {
+              label: "Replace with",
+              value: replaceText,
+              onChange: (e) => setReplaceText(e.target.value),
+              fullWidth: true,
+              size: "small"
+            }
+          )
+        ] }) }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs(DialogActions, { children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx(Button, { onClick: onClose, children: "Cancel" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            Button,
+            {
+              onClick: handleReplace,
+              disabled: !findText,
+              variant: "contained",
+              children: "Replace All"
+            }
+          )
+        ] })
+      ]
+    }
+  );
+}
 function LyricsAnalyzer({ data: initialData, onFileLoad, apiClient, isReadOnly, audioHash }) {
   const [modalContent, setModalContent] = reactExports.useState(null);
   const [flashingType, setFlashingType] = reactExports.useState(null);
@@ -33751,6 +33922,7 @@ function LyricsAnalyzer({ data: initialData, onFileLoad, apiClient, isReadOnly, 
   const [isAddingLyrics, setIsAddingLyrics] = reactExports.useState(false);
   const [isAddLyricsModalOpen, setIsAddLyricsModalOpen] = reactExports.useState(false);
   const [isAnyModalOpen, setIsAnyModalOpen] = reactExports.useState(false);
+  const [isFindReplaceModalOpen, setIsFindReplaceModalOpen] = reactExports.useState(false);
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("md"));
   reactExports.useEffect(() => {
@@ -33805,10 +33977,10 @@ function LyricsAnalyzer({ data: initialData, onFileLoad, apiClient, isReadOnly, 
   }, [setIsShiftPressed, setIsCtrlPressed, isAnyModalOpen]);
   reactExports.useEffect(() => {
     const modalOpen = Boolean(
-      modalContent || editModalSegment || isReviewModalOpen || isAddLyricsModalOpen
+      modalContent || editModalSegment || isReviewModalOpen || isAddLyricsModalOpen || isFindReplaceModalOpen
     );
     setIsAnyModalOpen(modalOpen);
-  }, [modalContent, editModalSegment, isReviewModalOpen, isAddLyricsModalOpen]);
+  }, [modalContent, editModalSegment, isReviewModalOpen, isAddLyricsModalOpen, isFindReplaceModalOpen]);
   const effectiveMode = isShiftPressed ? "highlight" : isCtrlPressed ? "details" : interactionMode;
   const handleFlash = reactExports.useCallback((type, info) => {
     setFlashingType(null);
@@ -34021,6 +34193,11 @@ function LyricsAnalyzer({ data: initialData, onFileLoad, apiClient, isReadOnly, 
       setEditModalSegment(null);
     }
   }, [data]);
+  const handleMergeSegment = reactExports.useCallback((segmentIndex, mergeWithNext) => {
+    const newData = mergeSegment(data, segmentIndex, mergeWithNext);
+    setData(newData);
+    setEditModalSegment(null);
+  }, [data]);
   const handleHandlerToggle = reactExports.useCallback(async (handler, enabled) => {
     if (!apiClient) return;
     try {
@@ -34072,6 +34249,10 @@ function LyricsAnalyzer({ data: initialData, onFileLoad, apiClient, isReadOnly, 
       setIsAddingLyrics(false);
     }
   }, [apiClient]);
+  const handleFindReplace = (findText, replaceText) => {
+    const newData = findAndReplace(data, findText, replaceText);
+    setData(newData);
+  };
   return /* @__PURE__ */ jsxRuntimeExports.jsxs(Box, { sx: {
     p: 3,
     pb: 6,
@@ -34097,7 +34278,8 @@ function LyricsAnalyzer({ data: initialData, onFileLoad, apiClient, isReadOnly, 
         onHandlerToggle: handleHandlerToggle,
         isUpdatingHandlers,
         onHandlerClick: handleHandlerClick,
-        onAddLyrics: () => setIsAddLyricsModalOpen(true)
+        onAddLyrics: () => setIsAddLyricsModalOpen(true),
+        onFindReplace: () => setIsFindReplaceModalOpen(true)
       }
     ),
     /* @__PURE__ */ jsxRuntimeExports.jsxs(Grid, { container: true, spacing: 2, direction: isMobile ? "column" : "row", children: [
@@ -34189,6 +34371,7 @@ function LyricsAnalyzer({ data: initialData, onFileLoad, apiClient, isReadOnly, 
         onDelete: handleDeleteSegment,
         onAddSegment: handleAddSegment,
         onSplitSegment: handleSplitSegment,
+        onMergeSegment: handleMergeSegment,
         onPlaySegment: handlePlaySegment,
         currentTime: currentAudioTime,
         setModalSpacebarHandler: handleSetModalSpacebarHandler
@@ -34213,6 +34396,14 @@ function LyricsAnalyzer({ data: initialData, onFileLoad, apiClient, isReadOnly, 
         onClose: () => setIsAddLyricsModalOpen(false),
         onSubmit: handleAddLyrics,
         isSubmitting: isAddingLyrics
+      }
+    ),
+    /* @__PURE__ */ jsxRuntimeExports.jsx(
+      FindReplaceModal,
+      {
+        open: isFindReplaceModalOpen,
+        onClose: () => setIsFindReplaceModalOpen(false),
+        onReplace: handleFindReplace
       }
     )
   ] });
@@ -34369,4 +34560,4 @@ function App() {
 ReactDOM$1.createRoot(document.getElementById("root")).render(
   /* @__PURE__ */ jsxRuntimeExports.jsx(App, {})
 );
-//# sourceMappingURL=index-BWU1t9U6.js.map
+//# sourceMappingURL=index-b3AUe0vh.js.map

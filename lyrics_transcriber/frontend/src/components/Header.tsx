@@ -2,6 +2,7 @@ import { Box, Button, Typography, useMediaQuery, useTheme, Switch, FormControlLa
 import LockIcon from '@mui/icons-material/Lock'
 import UploadFileIcon from '@mui/icons-material/UploadFile'
 import TextSnippetIcon from '@mui/icons-material/TextSnippet'
+import FindReplaceIcon from '@mui/icons-material/FindReplace'
 import { CorrectionData } from '../types'
 import CorrectionMetrics from './CorrectionMetrics'
 import ModeSelector from './ModeSelector'
@@ -28,6 +29,7 @@ interface HeaderProps {
     isUpdatingHandlers: boolean
     onHandlerClick?: (handler: string) => void
     onAddLyrics?: () => void
+    onFindReplace?: () => void
 }
 
 export default function Header({
@@ -43,7 +45,8 @@ export default function Header({
     onHandlerToggle,
     isUpdatingHandlers,
     onHandlerClick,
-    onAddLyrics
+    onAddLyrics,
+    onFindReplace
 }: HeaderProps) {
     const theme = useTheme()
     const isMobile = useMediaQuery(theme.breakpoints.down('md'))
@@ -232,6 +235,16 @@ export default function Header({
                         effectiveMode={effectiveMode}
                         onChange={onModeChange}
                     />
+                    {!isReadOnly && (
+                        <Button
+                            variant="outlined"
+                            onClick={onFindReplace}
+                            startIcon={<FindReplaceIcon />}
+                            sx={{ minWidth: 'fit-content' }}
+                        >
+                            Find/Replace
+                        </Button>
+                    )}
                     <AudioPlayer
                         apiClient={apiClient}
                         onTimeUpdate={onTimeUpdate}

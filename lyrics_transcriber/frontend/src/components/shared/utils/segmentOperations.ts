@@ -118,4 +118,71 @@ export const updateSegment = (
     newData.corrected_segments[segmentIndex] = updatedSegment
 
     return newData
+}
+
+export function mergeSegment(data: CorrectionData, segmentIndex: number, mergeWithNext: boolean): CorrectionData {
+    const segments = [...data.corrected_segments]
+    const targetIndex = mergeWithNext ? segmentIndex + 1 : segmentIndex - 1
+
+    // Check if target segment exists
+    if (targetIndex < 0 || targetIndex >= segments.length) {
+        return data
+    }
+
+    const baseSegment = segments[segmentIndex]
+    const targetSegment = segments[targetIndex]
+    
+    // Create merged segment
+    const mergedSegment: LyricsSegment = {
+        id: nanoid(),
+        words: mergeWithNext 
+            ? [...baseSegment.words, ...targetSegment.words]
+            : [...targetSegment.words, ...baseSegment.words],
+        text: mergeWithNext
+            ? `${baseSegment.text} ${targetSegment.text}`
+            : `${targetSegment.text} ${baseSegment.text}`,
+        start_time: Math.min(
+            baseSegment.start_time ?? Infinity,
+            targetSegment.start_time ?? Infinity
+        ),
+        end_time: Math.max(
+            baseSegment.end_time ?? -Infinity,
+            targetSegment.end_time ?? -Infinity
+        )
+    }
+
+    // Replace the two segments with the merged one
+    const minIndex = Math.min(segmentIndex, targetIndex)
+    segments.splice(minIndex, 2, mergedSegment)
+
+    return {
+        ...data,
+        corrected_segments: segments
+    }
+}
+
+export function findAndReplace(
+    data: CorrectionData,
+    findText: string,
+    replaceText: string
+): CorrectionData {
+    const newData = { ...data }
+    
+    // Replace in all segments
+    newData.corrected_segments = data.corrected_segments.map(segment => {
+        // Replace in each word
+        const newWords = segment.words.map(word => ({
+            ...word,
+            text: word.text.split(findText).join(replaceText)
+        }))
+
+        // Update segment text
+        return {
+            ...segment,
+            words: newWords,
+            text: newWords.map(w => w.text).join(' ')
+        }
+    })
+
+    return newData
 } 

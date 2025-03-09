@@ -36,6 +36,7 @@ interface EditModalProps {
     onDelete?: (segmentIndex: number) => void
     onAddSegment?: (segmentIndex: number) => void
     onSplitSegment?: (segmentIndex: number, afterWordIndex: number) => void
+    onMergeSegment?: (segmentIndex: number, mergeWithNext: boolean) => void
     setModalSpacebarHandler: (handler: (() => (e: KeyboardEvent) => void) | undefined) => void
 }
 
@@ -51,6 +52,7 @@ export default function EditModal({
     onDelete,
     onAddSegment,
     onSplitSegment,
+    onMergeSegment,
     setModalSpacebarHandler,
 }: EditModalProps) {
     const [editedSegment, setEditedSegment] = useState<LyricsSegment | null>(segment)
@@ -349,6 +351,14 @@ export default function EditModal({
         }
     }
 
+    const handleMergeSegment = (mergeWithNext: boolean) => {
+        if (segmentIndex !== null && editedSegment) {
+            handleSave()  // Save current changes first
+            onMergeSegment?.(segmentIndex, mergeWithNext)
+            onClose()
+        }
+    }
+
     // Handle play/stop button click
     const handlePlayButtonClick = () => {
         if (!segment?.start_time || !onPlaySegment) return
@@ -462,6 +472,7 @@ export default function EditModal({
                     <WordDivider
                         onAddWord={() => handleAddWord(-1)}
                         onAddSegmentBefore={() => onAddSegment?.(segmentIndex)}
+                        onMergeSegment={() => handleMergeSegment(false)}
                         isFirst={true}
                         sx={{ ml: 15 }}
                     />
@@ -521,6 +532,11 @@ export default function EditModal({
                                 onAddSegmentAfter={
                                     index === editedSegment.words.length - 1
                                         ? () => onAddSegment?.(segmentIndex + 1)
+                                        : undefined
+                                }
+                                onMergeSegment={
+                                    index === editedSegment.words.length - 1
+                                        ? () => handleMergeSegment(true)
                                         : undefined
                                 }
                                 canMerge={index < editedSegment.words.length - 1}

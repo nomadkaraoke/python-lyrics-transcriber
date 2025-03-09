@@ -19,7 +19,9 @@ import {
     addSegmentBefore,
     splitSegment,
     deleteSegment,
-    updateSegment
+    updateSegment,
+    mergeSegment,
+    findAndReplace
 } from './shared/utils/segmentOperations'
 import { loadSavedData, saveData, clearSavedData } from './shared/utils/localStorage'
 import { setupKeyboardHandlers, setModalHandler, getModalState } from './shared/utils/keyboardHandlers'
@@ -27,6 +29,7 @@ import Header from './Header'
 import { findWordById, getWordsFromIds } from './shared/utils/wordUtils'
 import AddLyricsModal from './AddLyricsModal'
 import { RestoreFromTrash, OndemandVideo } from '@mui/icons-material'
+import FindReplaceModal from './FindReplaceModal'
 
 // Add type for window augmentation at the top of the file
 declare global {
@@ -90,6 +93,7 @@ export default function LyricsAnalyzer({ data: initialData, onFileLoad, apiClien
     const [isAddingLyrics, setIsAddingLyrics] = useState(false)
     const [isAddLyricsModalOpen, setIsAddLyricsModalOpen] = useState(false)
     const [isAnyModalOpen, setIsAnyModalOpen] = useState(false)
+    const [isFindReplaceModalOpen, setIsFindReplaceModalOpen] = useState(false)
     const theme = useTheme()
     const isMobile = useMediaQuery(theme.breakpoints.down('md'))
 
@@ -164,10 +168,11 @@ export default function LyricsAnalyzer({ data: initialData, onFileLoad, apiClien
             modalContent ||
             editModalSegment ||
             isReviewModalOpen ||
-            isAddLyricsModalOpen
+            isAddLyricsModalOpen ||
+            isFindReplaceModalOpen
         )
         setIsAnyModalOpen(modalOpen)
-    }, [modalContent, editModalSegment, isReviewModalOpen, isAddLyricsModalOpen])
+    }, [modalContent, editModalSegment, isReviewModalOpen, isAddLyricsModalOpen, isFindReplaceModalOpen])
 
     // Calculate effective mode based on modifier key states
     const effectiveMode = isShiftPressed ? 'highlight' :
@@ -418,6 +423,12 @@ export default function LyricsAnalyzer({ data: initialData, onFileLoad, apiClien
         }
     }, [data])
 
+    const handleMergeSegment = useCallback((segmentIndex: number, mergeWithNext: boolean) => {
+        const newData = mergeSegment(data, segmentIndex, mergeWithNext)
+        setData(newData)
+        setEditModalSegment(null)
+    }, [data])
+
     const handleHandlerToggle = useCallback(async (handler: string, enabled: boolean) => {
         if (!apiClient) return
 
@@ -492,6 +503,11 @@ export default function LyricsAnalyzer({ data: initialData, onFileLoad, apiClien
         }
     }, [apiClient])
 
+    const handleFindReplace = (findText: string, replaceText: string) => {
+        const newData = findAndReplace(data, findText, replaceText)
+        setData(newData)
+    }
+
     return (
         <Box sx={{
             p: 3,
@@ -517,6 +533,7 @@ export default function LyricsAnalyzer({ data: initialData, onFileLoad, apiClien
                 isUpdatingHandlers={isUpdatingHandlers}
                 onHandlerClick={handleHandlerClick}
                 onAddLyrics={() => setIsAddLyricsModalOpen(true)}
+                onFindReplace={() => setIsFindReplaceModalOpen(true)}
             />
 
             <Grid container spacing={2} direction={isMobile ? 'column' : 'row'}>
@@ -599,6 +616,7 @@ export default function LyricsAnalyzer({ data: initialData, onFileLoad, apiClien
                 onDelete={handleDeleteSegment}
                 onAddSegment={handleAddSegment}
                 onSplitSegment={handleSplitSegment}
+                onMergeSegment={handleMergeSegment}
                 onPlaySegment={handlePlaySegment}
                 currentTime={currentAudioTime}
                 setModalSpacebarHandler={handleSetModalSpacebarHandler}
@@ -619,6 +637,12 @@ export default function LyricsAnalyzer({ data: initialData, onFileLoad, apiClien
                 onClose={() => setIsAddLyricsModalOpen(false)}
                 onSubmit={handleAddLyrics}
                 isSubmitting={isAddingLyrics}
+            />
+
+            <FindReplaceModal
+                open={isFindReplaceModalOpen}
+                onClose={() => setIsFindReplaceModalOpen(false)}
+                onReplace={handleFindReplace}
             />
         </Box>
     )
