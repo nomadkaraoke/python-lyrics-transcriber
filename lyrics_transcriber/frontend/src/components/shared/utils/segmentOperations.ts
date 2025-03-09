@@ -164,25 +164,150 @@ export function mergeSegment(data: CorrectionData, segmentIndex: number, mergeWi
 export function findAndReplace(
     data: CorrectionData,
     findText: string,
-    replaceText: string
+    replaceText: string,
+    options: { caseSensitive: boolean, useRegex: boolean, fullTextMode?: boolean } = { 
+        caseSensitive: false, 
+        useRegex: false,
+        fullTextMode: false
+    }
 ): CorrectionData {
     const newData = { ...data }
     
-    // Replace in all segments
-    newData.corrected_segments = data.corrected_segments.map(segment => {
-        // Replace in each word
-        const newWords = segment.words.map(word => ({
-            ...word,
-            text: word.text.split(findText).join(replaceText)
-        }))
+    // If full text mode is enabled, perform replacements across word boundaries
+    if (options.fullTextMode) {
+        newData.corrected_segments = data.corrected_segments.map(segment => {
+            // Create a pattern for the full segment text
+            let pattern: RegExp
+            
+            if (options.useRegex) {
+                pattern = new RegExp(findText, options.caseSensitive ? 'g' : 'gi')
+            } else {
+                const escapedFindText = findText.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+                pattern = new RegExp(escapedFindText, options.caseSensitive ? 'g' : 'gi')
+            }
+            
+            // Get the full segment text
+            const segmentText = segment.text
+            
+            // If no matches, return the segment unchanged
+            if (!pattern.test(segmentText)) {
+                return segment
+            }
+            
+            // Reset pattern for replacement
+            pattern.lastIndex = 0
+            
+            // Replace in the full segment text
+            const newSegmentText = segmentText.replace(pattern, replaceText)
+            
+            // Split the new text into words
+            const newWordTexts = newSegmentText.trim().split(/\s+/).filter(text => text.length > 0)
+            
+            // Create new word objects
+            // We'll try to preserve original word IDs and timing info where possible
+            const newWords = []
+            
+            // If we have the same number of words, we can preserve IDs and timing
+            if (newWordTexts.length === segment.words.length) {
+                for (let i = 0; i < newWordTexts.length; i++) {
+                    newWords.push({
+                        ...segment.words[i],
+                        text: newWordTexts[i]
+                    })
+                }
+            } 
+            // If we have fewer words than before, some words were removed
+            else if (newWordTexts.length < segment.words.length) {
+                // Try to map new words to old words
+                let oldWordIndex = 0
+                for (let i = 0; i < newWordTexts.length; i++) {
+                    // Find the next non-empty old word
+                    while (oldWordIndex < segment.words.length && 
+                           segment.words[oldWordIndex].text.trim() === '') {
+                        oldWordIndex++
+                    }
+                    
+                    if (oldWordIndex < segment.words.length) {
+                        newWords.push({
+                            ...segment.words[oldWordIndex],
+                            text: newWordTexts[i]
+                        })
+                        oldWordIndex++
+                    } else {
+                        // If we run out of old words, create new ones
+                        newWords.push({
+                            id: nanoid(),
+                            text: newWordTexts[i],
+                            start_time: null,
+                            end_time: null
+                        })
+                    }
+                }
+            }
+            // If we have more words than before, some words were added
+            else {
+                // Try to preserve original words where possible
+                for (let i = 0; i < newWordTexts.length; i++) {
+                    if (i < segment.words.length) {
+                        newWords.push({
+                            ...segment.words[i],
+                            text: newWordTexts[i]
+                        })
+                    } else {
+                        // For new words, create new IDs
+                        newWords.push({
+                            id: nanoid(),
+                            text: newWordTexts[i],
+                            start_time: null,
+                            end_time: null
+                        })
+                    }
+                }
+            }
+            
+            return {
+                ...segment,
+                words: newWords,
+                text: newSegmentText
+            }
+        })
+    } 
+    // Word-level replacement (original implementation)
+    else {
+        newData.corrected_segments = data.corrected_segments.map(segment => {
+            // Replace in each word
+            let newWords = segment.words.map(word => {
+                let pattern: RegExp
+                
+                if (options.useRegex) {
+                    // Create regex with or without case sensitivity
+                    pattern = new RegExp(findText, options.caseSensitive ? 'g' : 'gi')
+                } else {
+                    // Escape special regex characters for literal search
+                    const escapedFindText = findText.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+                    pattern = new RegExp(escapedFindText, options.caseSensitive ? 'g' : 'gi')
+                }
+                
+                return {
+                    ...word,
+                    text: word.text.replace(pattern, replaceText)
+                }
+            });
 
-        // Update segment text
-        return {
-            ...segment,
-            words: newWords,
-            text: newWords.map(w => w.text).join(' ')
-        }
-    })
+            // Filter out words that have become empty
+            newWords = newWords.filter(word => word.text.trim() !== '');
+
+            // Update segment text
+            return {
+                ...segment,
+                words: newWords,
+                text: newWords.map(w => w.text).join(' ')
+            }
+        });
+    }
+
+    // Filter out segments that have no words left
+    newData.corrected_segments = newData.corrected_segments.filter(segment => segment.words.length > 0);
 
     return newData
 } 

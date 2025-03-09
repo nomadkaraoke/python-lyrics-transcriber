@@ -503,8 +503,8 @@ export default function LyricsAnalyzer({ data: initialData, onFileLoad, apiClien
         }
     }, [apiClient])
 
-    const handleFindReplace = (findText: string, replaceText: string) => {
-        const newData = findAndReplace(data, findText, replaceText)
+    const handleFindReplace = (findText: string, replaceText: string, options: { caseSensitive: boolean, useRegex: boolean, fullTextMode: boolean }) => {
+        const newData = findAndReplace(data, findText, replaceText, options)
         setData(newData)
     }
 
@@ -643,6 +643,7 @@ export default function LyricsAnalyzer({ data: initialData, onFileLoad, apiClien
                 open={isFindReplaceModalOpen}
                 onClose={() => setIsFindReplaceModalOpen(false)}
                 onReplace={handleFindReplace}
+                data={data}
             />
         </Box>
     )
