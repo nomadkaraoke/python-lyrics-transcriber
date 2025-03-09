@@ -32335,6 +32335,9 @@ const CancelIcon = createSvgIcon(/* @__PURE__ */ jsxRuntimeExports.jsx("path", {
 const StopIcon = createSvgIcon(/* @__PURE__ */ jsxRuntimeExports.jsx("path", {
   d: "M6 6h12v12H6z"
 }), "Stop");
+const HistoryIcon = createSvgIcon(/* @__PURE__ */ jsxRuntimeExports.jsx("path", {
+  d: "M13 3c-4.97 0-9 4.03-9 9H1l3.89 3.89.07.14L9 12H6c0-3.87 3.13-7 7-7s7 3.13 7 7-3.13 7-7 7c-1.93 0-3.68-.79-4.94-2.06l-1.42 1.42C8.27 19.99 10.51 21 13 21c4.97 0 9-4.03 9-9s-4.03-9-9-9m-1 5v5l4.28 2.54.72-1.21-3.5-2.08V8z"
+}), "History");
 const TimelineContainer = styled(Box)(({ theme }) => ({
   position: "relative",
   height: "80px",
@@ -32901,7 +32904,8 @@ function EditModal({
   onAddSegment,
   onSplitSegment,
   onMergeSegment,
-  setModalSpacebarHandler
+  setModalSpacebarHandler,
+  originalTranscribedSegment
 }) {
   var _a, _b, _c, _d;
   const [editedSegment, setEditedSegment] = reactExports.useState(segment);
@@ -33070,6 +33074,11 @@ function EditModal({
   };
   const handleReset = () => {
     setEditedSegment(JSON.parse(JSON.stringify(originalSegment)));
+  };
+  const handleRevertToOriginal = () => {
+    if (originalTranscribedSegment) {
+      setEditedSegment(JSON.parse(JSON.stringify(originalTranscribedSegment)));
+    }
   };
   const handleSave = () => {
     var _a2, _b2;
@@ -33377,6 +33386,14 @@ function EditModal({
               children: "Reset"
             }
           ),
+          originalTranscribedSegment && /* @__PURE__ */ jsxRuntimeExports.jsx(
+            Button,
+            {
+              onClick: handleRevertToOriginal,
+              startIcon: /* @__PURE__ */ jsxRuntimeExports.jsx(HistoryIcon, {}),
+              children: "Un-Correct"
+            }
+          ),
           /* @__PURE__ */ jsxRuntimeExports.jsx(Box, { sx: { mr: "auto" }, children: /* @__PURE__ */ jsxRuntimeExports.jsx(
             Button,
             {
@@ -33387,7 +33404,15 @@ function EditModal({
             }
           ) }),
           /* @__PURE__ */ jsxRuntimeExports.jsx(Button, { onClick: handleClose, children: "Cancel" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx(Button, { onClick: handleSave, children: "Save Changes" })
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            Button,
+            {
+              onClick: handleSave,
+              variant: "contained",
+              disabled: !editedSegment || editedSegment.words.length === 0,
+              children: "Save"
+            }
+          )
         ] })
       ]
     }
@@ -35399,7 +35424,10 @@ function LyricsAnalyzer({ data: initialData, onFileLoad, apiClient, isReadOnly, 
         onMergeSegment: handleMergeSegment,
         onPlaySegment: handlePlaySegment,
         currentTime: currentAudioTime,
-        setModalSpacebarHandler: handleSetModalSpacebarHandler
+        setModalSpacebarHandler: handleSetModalSpacebarHandler,
+        originalTranscribedSegment: (editModalSegment == null ? void 0 : editModalSegment.segment) && (editModalSegment == null ? void 0 : editModalSegment.index) !== null ? originalData.original_segments.find(
+          (s) => s.id === editModalSegment.segment.id
+        ) || null : null
       }
     ),
     /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -35586,4 +35614,4 @@ function App() {
 ReactDOM$1.createRoot(document.getElementById("root")).render(
   /* @__PURE__ */ jsxRuntimeExports.jsx(App, {})
 );
-//# sourceMappingURL=index-HKu8MeOh.js.map
+//# sourceMappingURL=index-Bm0gIClf.js.map

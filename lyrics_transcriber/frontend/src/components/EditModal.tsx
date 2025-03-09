@@ -17,6 +17,7 @@ import AutoFixHighIcon from '@mui/icons-material/AutoFixHigh'
 import PlayCircleOutlineIcon from '@mui/icons-material/PlayCircleOutline'
 import CancelIcon from '@mui/icons-material/Cancel'
 import StopIcon from '@mui/icons-material/Stop'
+import HistoryIcon from '@mui/icons-material/History'
 import { LyricsSegment, Word } from '../types'
 import { useState, useEffect, useCallback } from 'react'
 import TimelineEditor from './TimelineEditor'
@@ -38,6 +39,7 @@ interface EditModalProps {
     onSplitSegment?: (segmentIndex: number, afterWordIndex: number) => void
     onMergeSegment?: (segmentIndex: number, mergeWithNext: boolean) => void
     setModalSpacebarHandler: (handler: (() => (e: KeyboardEvent) => void) | undefined) => void
+    originalTranscribedSegment?: LyricsSegment | null
 }
 
 export default function EditModal({
@@ -54,6 +56,7 @@ export default function EditModal({
     onSplitSegment,
     onMergeSegment,
     setModalSpacebarHandler,
+    originalTranscribedSegment
 }: EditModalProps) {
     const [editedSegment, setEditedSegment] = useState<LyricsSegment | null>(segment)
     const [replacementText, setReplacementText] = useState('')
@@ -279,6 +282,12 @@ export default function EditModal({
 
     const handleReset = () => {
         setEditedSegment(JSON.parse(JSON.stringify(originalSegment)))
+    }
+
+    const handleRevertToOriginal = () => {
+        if (originalTranscribedSegment) {
+            setEditedSegment(JSON.parse(JSON.stringify(originalTranscribedSegment)))
+        }
     }
 
     const handleSave = () => {
@@ -573,6 +582,14 @@ export default function EditModal({
                 >
                     Reset
                 </Button>
+                {originalTranscribedSegment && (
+                    <Button
+                        onClick={handleRevertToOriginal}
+                        startIcon={<HistoryIcon />}
+                    >
+                        Un-Correct
+                    </Button>
+                )}
                 <Box sx={{ mr: 'auto' }}>
                     <Button
                         startIcon={<DeleteIcon />}
@@ -583,7 +600,13 @@ export default function EditModal({
                     </Button>
                 </Box>
                 <Button onClick={handleClose}>Cancel</Button>
-                <Button onClick={handleSave}>Save Changes</Button>
+                <Button
+                    onClick={handleSave}
+                    variant="contained"
+                    disabled={!editedSegment || editedSegment.words.length === 0}
+                >
+                    Save
+                </Button>
             </DialogActions>
         </Dialog>
     )

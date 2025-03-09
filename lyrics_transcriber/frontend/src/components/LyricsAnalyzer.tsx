@@ -620,6 +620,13 @@ export default function LyricsAnalyzer({ data: initialData, onFileLoad, apiClien
                 onPlaySegment={handlePlaySegment}
                 currentTime={currentAudioTime}
                 setModalSpacebarHandler={handleSetModalSpacebarHandler}
+                originalTranscribedSegment={
+                    editModalSegment?.segment && editModalSegment?.index !== null
+                        ? originalData.original_segments.find(
+                            (s: LyricsSegment) => s.id === editModalSegment.segment.id
+                          ) || null
+                        : null
+                }
             />
 
             <ReviewChangesModal
