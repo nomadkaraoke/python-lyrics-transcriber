@@ -87,7 +87,8 @@ export default function EditModal({
         syncWordIndex,
         startManualSync,
         cleanupManualSync,
-        handleSpacebar
+        handleSpacebar,
+        isSpacebarPressed
     } = useManualSync({
         editedSegment,
         currentTime,
@@ -110,7 +111,15 @@ export default function EditModal({
                 editedSegmentId: editedSegment?.id,
                 handlerFunction: spacebarHandler.toString().slice(0, 100)
             })
-            setModalSpacebarHandler(() => spacebarHandler)
+            
+            // Create a function that will be called by the global event listeners
+            const handleKeyEvent = (e: KeyboardEvent) => {
+                if (e.code === 'Space') {
+                    spacebarHandler(e)
+                }
+            }
+            
+            setModalSpacebarHandler(() => handleKeyEvent)
 
             // Only cleanup when the effect is re-run or the modal is closed
             return () => {
@@ -456,9 +465,16 @@ export default function EditModal({
                             {isManualSyncing ? "Cancel Sync" : "Manual Sync"}
                         </Button>
                         {isManualSyncing && (
-                            <Typography variant="body2">
-                                Press spacebar for word {syncWordIndex + 1} of {editedSegment?.words.length}
-                            </Typography>
+                            <Box>
+                                <Typography variant="body2">
+                                    Word {syncWordIndex + 1} of {editedSegment?.words.length}: <strong>{editedSegment?.words[syncWordIndex]?.text || ''}</strong>
+                                </Typography>
+                                <Typography variant="caption" color="text.secondary">
+                                    {isSpacebarPressed ? 
+                                        "Holding spacebar... Release when word ends" : 
+                                        "Press spacebar when word starts (tap for short words, hold for long words)"}
+                                </Typography>
+                            </Box>
                         )}
                     </Box>
                 </Box>

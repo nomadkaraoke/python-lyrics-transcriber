@@ -33490,6 +33490,9 @@ function WordDivider({
     }
   );
 }
+const TAP_THRESHOLD_MS = 200;
+const DEFAULT_WORD_DURATION = 1;
+const OVERLAP_BUFFER = 0.01;
 function useManualSync({
   editedSegment,
   currentTime,
@@ -33499,15 +33502,28 @@ function useManualSync({
   const [isManualSyncing, setIsManualSyncing] = reactExports.useState(false);
   const [syncWordIndex, setSyncWordIndex] = reactExports.useState(-1);
   const currentTimeRef = reactExports.useRef(currentTime);
+  const [isSpacebarPressed, setIsSpacebarPressed] = reactExports.useState(false);
+  const wordStartTimeRef = reactExports.useRef(null);
+  const wordsRef = reactExports.useRef([]);
+  const spacebarPressTimeRef = reactExports.useRef(null);
   reactExports.useEffect(() => {
     currentTimeRef.current = currentTime;
   }, [currentTime]);
+  reactExports.useEffect(() => {
+    if (editedSegment) {
+      wordsRef.current = [...editedSegment.words];
+    }
+  }, [editedSegment]);
   const cleanupManualSync = reactExports.useCallback(() => {
     setIsManualSyncing(false);
     setSyncWordIndex(-1);
+    setIsSpacebarPressed(false);
+    wordStartTimeRef.current = null;
+    spacebarPressTimeRef.current = null;
   }, []);
-  const handleSpacebar = reactExports.useCallback((e) => {
-    console.log("useManualSync - Spacebar pressed", {
+  const handleKeyDown = reactExports.useCallback((e) => {
+    if (e.code !== "Space") return;
+    console.log("useManualSync - Spacebar pressed down", {
       isManualSyncing,
       hasEditedSegment: !!editedSegment,
       syncWordIndex,
@@ -33515,27 +33531,24 @@ function useManualSync({
     });
     e.preventDefault();
     e.stopPropagation();
-    if (isManualSyncing && editedSegment) {
-      console.log("useManualSync - Handling manual sync mode");
+    if (isManualSyncing && editedSegment && !isSpacebarPressed) {
+      const currentWord = syncWordIndex < editedSegment.words.length ? editedSegment.words[syncWordIndex] : null;
+      console.log("useManualSync - Recording word start time", {
+        wordIndex: syncWordIndex,
+        wordText: currentWord == null ? void 0 : currentWord.text,
+        time: currentTimeRef.current
+      });
+      setIsSpacebarPressed(true);
+      wordStartTimeRef.current = currentTimeRef.current;
+      spacebarPressTimeRef.current = Date.now();
       if (syncWordIndex < editedSegment.words.length) {
-        const newWords = [...editedSegment.words];
-        const currentWord = newWords[syncWordIndex];
-        const prevWord = syncWordIndex > 0 ? newWords[syncWordIndex - 1] : null;
-        currentWord.start_time = currentTimeRef.current;
-        if (prevWord) {
-          prevWord.end_time = currentTimeRef.current - 0.01;
-        }
-        if (syncWordIndex === editedSegment.words.length - 1) {
-          currentWord.end_time = editedSegment.end_time;
-          setIsManualSyncing(false);
-          setSyncWordIndex(-1);
-          updateSegment2(newWords);
-        } else {
-          setSyncWordIndex(syncWordIndex + 1);
-          updateSegment2(newWords);
-        }
+        const newWords = [...wordsRef.current];
+        const currentWord2 = newWords[syncWordIndex];
+        currentWord2.start_time = currentTimeRef.current;
+        wordsRef.current = newWords;
+        updateSegment2(newWords);
       }
-    } else if (editedSegment && onPlaySegment) {
+    } else if (!isManualSyncing && editedSegment && onPlaySegment) {
       console.log("useManualSync - Handling segment playback");
       const startTime = editedSegment.start_time ?? 0;
       const endTime = editedSegment.end_time ?? 0;
@@ -33547,15 +33560,102 @@ function useManualSync({
         onPlaySegment(startTime);
       }
     }
-  }, [isManualSyncing, editedSegment, syncWordIndex, onPlaySegment, updateSegment2]);
+  }, [isManualSyncing, editedSegment, syncWordIndex, onPlaySegment, updateSegment2, isSpacebarPressed]);
+  const handleKeyUp = reactExports.useCallback((e) => {
+    if (e.code !== "Space") return;
+    console.log("useManualSync - Spacebar released", {
+      isManualSyncing,
+      hasEditedSegment: !!editedSegment,
+      syncWordIndex,
+      currentTime: currentTimeRef.current,
+      wordStartTime: wordStartTimeRef.current
+    });
+    e.preventDefault();
+    e.stopPropagation();
+    if (isManualSyncing && editedSegment && isSpacebarPressed) {
+      const currentWord = syncWordIndex < editedSegment.words.length ? editedSegment.words[syncWordIndex] : null;
+      const pressDuration = spacebarPressTimeRef.current ? Date.now() - spacebarPressTimeRef.current : 0;
+      const isTap = pressDuration < TAP_THRESHOLD_MS;
+      console.log("useManualSync - Recording word end time", {
+        wordIndex: syncWordIndex,
+        wordText: currentWord == null ? void 0 : currentWord.text,
+        startTime: wordStartTimeRef.current,
+        endTime: currentTimeRef.current,
+        pressDuration: `${pressDuration}ms`,
+        isTap,
+        duration: currentWord ? (currentTimeRef.current - (wordStartTimeRef.current || 0)).toFixed(2) + "s" : "N/A"
+      });
+      setIsSpacebarPressed(false);
+      if (syncWordIndex < editedSegment.words.length) {
+        const newWords = [...wordsRef.current];
+        const currentWord2 = newWords[syncWordIndex];
+        if (isTap) {
+          const defaultEndTime = (wordStartTimeRef.current || currentTimeRef.current) + DEFAULT_WORD_DURATION;
+          currentWord2.end_time = defaultEndTime;
+          console.log("useManualSync - Tap detected, setting default duration", {
+            defaultEndTime,
+            duration: DEFAULT_WORD_DURATION
+          });
+        } else {
+          currentWord2.end_time = currentTimeRef.current;
+        }
+        wordsRef.current = newWords;
+        if (syncWordIndex === editedSegment.words.length - 1) {
+          console.log("useManualSync - Completed manual sync for all words");
+          setIsManualSyncing(false);
+          setSyncWordIndex(-1);
+          wordStartTimeRef.current = null;
+          spacebarPressTimeRef.current = null;
+        } else {
+          const nextWord = editedSegment.words[syncWordIndex + 1];
+          console.log("useManualSync - Moving to next word", {
+            nextWordIndex: syncWordIndex + 1,
+            nextWordText: nextWord == null ? void 0 : nextWord.text
+          });
+          setSyncWordIndex(syncWordIndex + 1);
+        }
+        updateSegment2(newWords);
+      }
+    }
+  }, [isManualSyncing, editedSegment, syncWordIndex, updateSegment2, isSpacebarPressed]);
+  reactExports.useEffect(() => {
+    if (isManualSyncing && editedSegment && syncWordIndex > 0) {
+      const newWords = [...wordsRef.current];
+      const prevWord = newWords[syncWordIndex - 1];
+      const currentWord = newWords[syncWordIndex];
+      if (prevWord && currentWord && prevWord.end_time !== null && currentWord.start_time !== null && prevWord.end_time > currentWord.start_time) {
+        console.log("useManualSync - Adjusting previous word end time to prevent overlap", {
+          prevWordIndex: syncWordIndex - 1,
+          prevWordText: prevWord.text,
+          prevWordEndTime: prevWord.end_time,
+          currentWordStartTime: currentWord.start_time,
+          newEndTime: currentWord.start_time - OVERLAP_BUFFER
+        });
+        prevWord.end_time = currentWord.start_time - OVERLAP_BUFFER;
+        wordsRef.current = newWords;
+        updateSegment2(newWords);
+      }
+    }
+  }, [syncWordIndex, isManualSyncing, editedSegment, updateSegment2]);
+  const handleSpacebar = reactExports.useCallback((e) => {
+    if (e.type === "keydown") {
+      handleKeyDown(e);
+    } else if (e.type === "keyup") {
+      handleKeyUp(e);
+    }
+  }, [handleKeyDown, handleKeyUp]);
   const startManualSync = reactExports.useCallback(() => {
     if (isManualSyncing) {
       cleanupManualSync();
       return;
     }
     if (!editedSegment || !onPlaySegment) return;
+    wordsRef.current = [...editedSegment.words];
     setIsManualSyncing(true);
     setSyncWordIndex(0);
+    setIsSpacebarPressed(false);
+    wordStartTimeRef.current = null;
+    spacebarPressTimeRef.current = null;
     onPlaySegment((editedSegment.start_time ?? 0) - 3);
   }, [isManualSyncing, editedSegment, onPlaySegment, cleanupManualSync]);
   reactExports.useEffect(() => {
@@ -33573,7 +33673,8 @@ function useManualSync({
     syncWordIndex,
     startManualSync,
     cleanupManualSync,
-    handleSpacebar
+    handleSpacebar,
+    isSpacebarPressed
   };
 }
 function EditModal({
@@ -33592,7 +33693,7 @@ function EditModal({
   setModalSpacebarHandler,
   originalTranscribedSegment
 }) {
-  var _a, _b, _c, _d;
+  var _a, _b, _c, _d, _e;
   const [editedSegment, setEditedSegment] = reactExports.useState(segment);
   const [replacementText, setReplacementText] = reactExports.useState("");
   const [isPlaying, setIsPlaying] = reactExports.useState(false);
@@ -33615,7 +33716,8 @@ function EditModal({
     syncWordIndex,
     startManualSync,
     cleanupManualSync,
-    handleSpacebar
+    handleSpacebar,
+    isSpacebarPressed
   } = useManualSync({
     editedSegment,
     currentTime,
@@ -33634,7 +33736,12 @@ function EditModal({
         editedSegmentId: editedSegment == null ? void 0 : editedSegment.id,
         handlerFunction: spacebarHandler.toString().slice(0, 100)
       });
-      setModalSpacebarHandler(() => spacebarHandler);
+      const handleKeyEvent = (e) => {
+        if (e.code === "Space") {
+          spacebarHandler(e);
+        }
+      };
+      setModalSpacebarHandler(() => handleKeyEvent);
       return () => {
         if (!open) {
           console.log("EditModal - Cleanup: clearing modal spacebar handler");
@@ -33925,11 +34032,16 @@ function EditModal({
                       children: isManualSyncing ? "Cancel Sync" : "Manual Sync"
                     }
                   ),
-                  isManualSyncing && /* @__PURE__ */ jsxRuntimeExports.jsxs(Typography, { variant: "body2", children: [
-                    "Press spacebar for word ",
-                    syncWordIndex + 1,
-                    " of ",
-                    editedSegment == null ? void 0 : editedSegment.words.length
+                  isManualSyncing && /* @__PURE__ */ jsxRuntimeExports.jsxs(Box, { children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsxs(Typography, { variant: "body2", children: [
+                      "Word ",
+                      syncWordIndex + 1,
+                      " of ",
+                      editedSegment == null ? void 0 : editedSegment.words.length,
+                      ": ",
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: ((_e = editedSegment == null ? void 0 : editedSegment.words[syncWordIndex]) == null ? void 0 : _e.text) || "" })
+                    ] }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx(Typography, { variant: "caption", color: "text.secondary", children: isSpacebarPressed ? "Holding spacebar... Release when word ends" : "Press spacebar when word starts (tap for short words, hold for long words)" })
                   ] })
                 ] })
               ] }),
@@ -34764,6 +34876,7 @@ const setupKeyboardHandlers = (state) => {
     console.log(`Keyboard event captured [${handlerId}]`, {
       key: e.key,
       code: e.code,
+      type: e.type,
       target: e.target,
       currentTarget: e.currentTarget,
       eventPhase: e.eventPhase,
@@ -34780,7 +34893,7 @@ const setupKeyboardHandlers = (state) => {
     } else if (e.key === "Meta") {
       (_a = state.setIsCtrlPressed) == null ? void 0 : _a.call(state, true);
     } else if (e.key === " " || e.code === "Space") {
-      console.log("Keyboard handler - Spacebar pressed", {
+      console.log("Keyboard handler - Spacebar pressed down", {
         modalOpen: isModalOpen,
         hasModalHandler: !!currentModalHandler,
         hasGlobalToggle: !!window.toggleAudioPlayback,
@@ -34800,11 +34913,32 @@ const setupKeyboardHandlers = (state) => {
   };
   const handleKeyUp = (e) => {
     var _a;
+    console.log(`Keyboard up event captured [${handlerId}]`, {
+      key: e.key,
+      code: e.code,
+      type: e.type,
+      target: e.target,
+      eventPhase: e.eventPhase,
+      isModalOpen,
+      hasModalHandler: !!currentModalHandler
+    });
     if (e.key === "Shift") {
       state.setIsShiftPressed(false);
       document.body.style.userSelect = "";
     } else if (e.key === "Meta") {
       (_a = state.setIsCtrlPressed) == null ? void 0 : _a.call(state, false);
+    } else if (e.key === " " || e.code === "Space") {
+      console.log("Keyboard handler - Spacebar released", {
+        modalOpen: isModalOpen,
+        hasModalHandler: !!currentModalHandler,
+        target: e.target,
+        eventPhase: e.eventPhase
+      });
+      e.preventDefault();
+      if (isModalOpen && currentModalHandler) {
+        console.log("Keyboard handler - Delegating keyup to modal handler");
+        currentModalHandler(e);
+      }
     }
   };
   return { handleKeyDown, handleKeyUp };
@@ -36458,4 +36592,4 @@ ReactDOM$1.createRoot(document.getElementById("root")).render(
     /* @__PURE__ */ jsxRuntimeExports.jsx(App, {})
   ] })
 );
-//# sourceMappingURL=index-Do1s_YY9.js.map
+//# sourceMappingURL=index-CFU19Y6P.js.map

@@ -33,6 +33,7 @@ export const setupKeyboardHandlers = (state: KeyboardState) => {
         console.log(`Keyboard event captured [${handlerId}]`, {
             key: e.key,
             code: e.code,
+            type: e.type,
             target: e.target,
             currentTarget: e.currentTarget,
             eventPhase: e.eventPhase,
@@ -51,7 +52,7 @@ export const setupKeyboardHandlers = (state: KeyboardState) => {
         } else if (e.key === 'Meta') {
             state.setIsCtrlPressed?.(true)
         } else if (e.key === ' ' || e.code === 'Space') {
-            console.log('Keyboard handler - Spacebar pressed', {
+            console.log('Keyboard handler - Spacebar pressed down', {
                 modalOpen: isModalOpen,
                 hasModalHandler: !!currentModalHandler,
                 hasGlobalToggle: !!window.toggleAudioPlayback,
@@ -73,11 +74,35 @@ export const setupKeyboardHandlers = (state: KeyboardState) => {
     }
 
     const handleKeyUp = (e: KeyboardEvent) => {
+        console.log(`Keyboard up event captured [${handlerId}]`, {
+            key: e.key,
+            code: e.code,
+            type: e.type,
+            target: e.target,
+            eventPhase: e.eventPhase,
+            isModalOpen,
+            hasModalHandler: !!currentModalHandler
+        })
+
         if (e.key === 'Shift') {
             state.setIsShiftPressed(false)
             document.body.style.userSelect = ''
         } else if (e.key === 'Meta') {
             state.setIsCtrlPressed?.(false)
+        } else if (e.key === ' ' || e.code === 'Space') {
+            console.log('Keyboard handler - Spacebar released', {
+                modalOpen: isModalOpen,
+                hasModalHandler: !!currentModalHandler,
+                target: e.target,
+                eventPhase: e.eventPhase
+            })
+
+            e.preventDefault()
+
+            if (isModalOpen && currentModalHandler) {
+                console.log('Keyboard handler - Delegating keyup to modal handler')
+                currentModalHandler(e)
+            }
         }
     }
 
