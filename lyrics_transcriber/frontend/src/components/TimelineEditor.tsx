@@ -13,10 +13,10 @@ interface TimelineEditorProps {
 
 const TimelineContainer = styled(Box)(({ theme }) => ({
     position: 'relative',
-    height: '80px',
+    height: '75px',
     backgroundColor: theme.palette.grey[200],
     borderRadius: theme.shape.borderRadius,
-    margin: theme.spacing(2, 0),
+    margin: theme.spacing(1, 0),
     padding: theme.spacing(0, 1),
 }))
 
@@ -76,17 +76,27 @@ const TimelineWord = styled(Box)(({ theme }) => ({
 const ResizeHandle = styled(Box)(({ theme }) => ({
     position: 'absolute',
     top: 0,
-    width: 8,
+    width: 16,
     height: '100%',
     cursor: 'col-resize',
     '&:hover': {
         backgroundColor: theme.palette.primary.light,
+        opacity: 0.8,
+        boxShadow: `0 0 0 1px ${theme.palette.primary.dark}`,
     },
     '&.left': {
-        left: -4,
+        left: -8,
+        right: 'auto',
+        paddingRight: 12,
+        borderTopLeftRadius: theme.shape.borderRadius,
+        borderBottomLeftRadius: theme.shape.borderRadius,
     },
     '&.right': {
-        right: -4,
+        right: -8,
+        left: 'auto',
+        paddingLeft: 12,
+        borderTopRightRadius: theme.shape.borderRadius,
+        borderBottomRightRadius: theme.shape.borderRadius,
     }
 }))
 

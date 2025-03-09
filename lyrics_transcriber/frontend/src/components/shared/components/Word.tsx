@@ -2,6 +2,7 @@ import React from 'react'
 import { COLORS } from '../constants'
 import { HighlightedWord } from '../styles'
 import { WordProps } from '../types'
+import { Tooltip } from '@mui/material'
 
 export const WordComponent = React.memo(function Word({
     word,
@@ -10,8 +11,9 @@ export const WordComponent = React.memo(function Word({
     isCorrectedGap,
     isUncorrectedGap,
     isCurrentlyPlaying,
-    padding = '2px 4px',
+    padding = '1px 3px',
     onClick,
+    correction
 }: WordProps) {
     if (/^\s+$/.test(word)) {
         return word
@@ -29,15 +31,20 @@ export const WordComponent = React.memo(function Word({
                         ? COLORS.uncorrectedGap
                         : 'transparent'
 
-    return (
+    const wordElement = (
         <HighlightedWord
             shouldFlash={shouldFlash}
             style={{
                 backgroundColor,
                 padding,
                 cursor: 'pointer',
-                borderRadius: '3px',
+                borderRadius: '2px',
                 color: isCurrentlyPlaying ? '#ffffff' : 'inherit',
+                textDecoration: correction ? 'underline dotted' : 'none',
+                textDecorationColor: correction ? '#666' : 'inherit',
+                textUnderlineOffset: '2px',
+                fontSize: '0.85rem',
+                lineHeight: 1.2
             }}
             sx={{
                 '&:hover': {
@@ -49,4 +56,22 @@ export const WordComponent = React.memo(function Word({
             {word}
         </HighlightedWord>
     )
+
+    if (correction) {
+        const tooltipContent = (
+            <>
+                <strong>Original:</strong> "{correction.originalWord}"<br />
+                <strong>Corrected by:</strong> {correction.handler}<br />
+                <strong>Confidence:</strong> {(correction.confidence * 100).toFixed(0)}%
+            </>
+        )
+        
+        return (
+            <Tooltip title={tooltipContent} arrow placement="top">
+                {wordElement}
+            </Tooltip>
+        )
+    }
+
+    return wordElement
 }) 

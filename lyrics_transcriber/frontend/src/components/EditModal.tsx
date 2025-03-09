@@ -427,7 +427,7 @@ export default function EditModal({
                     overflow: 'hidden'  // Prevent double scrollbars
                 }}
             >
-                <Box sx={{ mb: 2 }}>
+                <Box sx={{ mb: 0 }}>
                     <TimelineEditor
                         words={editedSegment.words}
                         startTime={timeRange.start}
@@ -438,7 +438,7 @@ export default function EditModal({
                     />
                 </Box>
 
-                <Box sx={{ mb: 2, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <Box sx={{ mb: 1, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                     <Typography variant="body2" color="text.secondary">
                         Original Time Range: {originalSegment?.start_time?.toFixed(2) ?? 'N/A'} - {originalSegment?.end_time?.toFixed(2) ?? 'N/A'}
                         <br />

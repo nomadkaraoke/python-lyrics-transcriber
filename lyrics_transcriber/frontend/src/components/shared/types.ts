@@ -58,6 +58,11 @@ export interface WordProps {
     isCurrentlyPlaying?: boolean
     padding?: string
     onClick?: () => void
+    correction?: {
+        originalWord: string
+        handler: string
+        confidence: number
+    } | null
 }
 
 // Text segment props
@@ -100,11 +105,21 @@ export interface ReferenceViewProps extends BaseViewProps {
 // Update HighlightedTextProps to include linePositions
 export interface HighlightedTextProps extends BaseViewProps {
     text?: string
-    wordPositions?: TranscriptionWordPosition[]
+    segments?: LyricsSegment[]
+    wordPositions: TranscriptionWordPosition[] | ReferenceWordPosition[]
     anchors: AnchorSequence[]
-    gaps: GapSequence[]
+    highlightInfo: HighlightInfo | null
+    mode: InteractionMode
+    onElementClick: (content: ModalContent) => void
+    onWordClick?: (info: WordClickInfo) => void
+    flashingType: FlashType
     isReference?: boolean
     currentSource?: string
     preserveSegments?: boolean
     linePositions?: LinePosition[]
+    currentTime?: number
+    referenceCorrections?: Map<string, string>
+    gaps?: GapSequence[]
+    flashingHandler?: string | null
+    corrections?: WordCorrection[]
 } 

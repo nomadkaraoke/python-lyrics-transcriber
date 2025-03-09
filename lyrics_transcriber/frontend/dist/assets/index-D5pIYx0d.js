@@ -7077,13 +7077,1765 @@ function requireClient() {
 }
 var clientExports = requireClient();
 const ReactDOM$1 = /* @__PURE__ */ getDefaultExportFromCjs(clientExports);
+function formatMuiErrorMessage(code, ...args) {
+  const url = new URL(`https://mui.com/production-error/?code=${code}`);
+  args.forEach((arg2) => url.searchParams.append("args[]", arg2));
+  return `Minified MUI error #${code}; visit ${url} for the full message.`;
+}
+const THEME_ID = "$$material";
+function _extends() {
+  return _extends = Object.assign ? Object.assign.bind() : function(n) {
+    for (var e = 1; e < arguments.length; e++) {
+      var t = arguments[e];
+      for (var r2 in t) ({}).hasOwnProperty.call(t, r2) && (n[r2] = t[r2]);
+    }
+    return n;
+  }, _extends.apply(null, arguments);
+}
 var reactExports = requireReact();
 const React = /* @__PURE__ */ getDefaultExportFromCjs(reactExports);
 const React$1 = /* @__PURE__ */ _mergeNamespaces({
   __proto__: null,
   default: React
 }, [reactExports]);
+function sheetForTag(tag) {
+  if (tag.sheet) {
+    return tag.sheet;
+  }
+  for (var i = 0; i < document.styleSheets.length; i++) {
+    if (document.styleSheets[i].ownerNode === tag) {
+      return document.styleSheets[i];
+    }
+  }
+  return void 0;
+}
+function createStyleElement(options) {
+  var tag = document.createElement("style");
+  tag.setAttribute("data-emotion", options.key);
+  if (options.nonce !== void 0) {
+    tag.setAttribute("nonce", options.nonce);
+  }
+  tag.appendChild(document.createTextNode(""));
+  tag.setAttribute("data-s", "");
+  return tag;
+}
+var StyleSheet = /* @__PURE__ */ function() {
+  function StyleSheet2(options) {
+    var _this = this;
+    this._insertTag = function(tag) {
+      var before;
+      if (_this.tags.length === 0) {
+        if (_this.insertionPoint) {
+          before = _this.insertionPoint.nextSibling;
+        } else if (_this.prepend) {
+          before = _this.container.firstChild;
+        } else {
+          before = _this.before;
+        }
+      } else {
+        before = _this.tags[_this.tags.length - 1].nextSibling;
+      }
+      _this.container.insertBefore(tag, before);
+      _this.tags.push(tag);
+    };
+    this.isSpeedy = options.speedy === void 0 ? true : options.speedy;
+    this.tags = [];
+    this.ctr = 0;
+    this.nonce = options.nonce;
+    this.key = options.key;
+    this.container = options.container;
+    this.prepend = options.prepend;
+    this.insertionPoint = options.insertionPoint;
+    this.before = null;
+  }
+  var _proto = StyleSheet2.prototype;
+  _proto.hydrate = function hydrate(nodes) {
+    nodes.forEach(this._insertTag);
+  };
+  _proto.insert = function insert(rule) {
+    if (this.ctr % (this.isSpeedy ? 65e3 : 1) === 0) {
+      this._insertTag(createStyleElement(this));
+    }
+    var tag = this.tags[this.tags.length - 1];
+    if (this.isSpeedy) {
+      var sheet = sheetForTag(tag);
+      try {
+        sheet.insertRule(rule, sheet.cssRules.length);
+      } catch (e) {
+      }
+    } else {
+      tag.appendChild(document.createTextNode(rule));
+    }
+    this.ctr++;
+  };
+  _proto.flush = function flush() {
+    this.tags.forEach(function(tag) {
+      var _tag$parentNode;
+      return (_tag$parentNode = tag.parentNode) == null ? void 0 : _tag$parentNode.removeChild(tag);
+    });
+    this.tags = [];
+    this.ctr = 0;
+  };
+  return StyleSheet2;
+}();
+var MS = "-ms-";
+var MOZ = "-moz-";
+var WEBKIT = "-webkit-";
+var COMMENT = "comm";
+var RULESET = "rule";
+var DECLARATION = "decl";
+var IMPORT = "@import";
+var KEYFRAMES = "@keyframes";
+var LAYER = "@layer";
+var abs = Math.abs;
+var from = String.fromCharCode;
+var assign = Object.assign;
+function hash$2(value, length2) {
+  return charat(value, 0) ^ 45 ? (((length2 << 2 ^ charat(value, 0)) << 2 ^ charat(value, 1)) << 2 ^ charat(value, 2)) << 2 ^ charat(value, 3) : 0;
+}
+function trim(value) {
+  return value.trim();
+}
+function match(value, pattern) {
+  return (value = pattern.exec(value)) ? value[0] : value;
+}
+function replace(value, pattern, replacement) {
+  return value.replace(pattern, replacement);
+}
+function indexof(value, search) {
+  return value.indexOf(search);
+}
+function charat(value, index) {
+  return value.charCodeAt(index) | 0;
+}
+function substr(value, begin, end2) {
+  return value.slice(begin, end2);
+}
+function strlen(value) {
+  return value.length;
+}
+function sizeof(value) {
+  return value.length;
+}
+function append(value, array) {
+  return array.push(value), value;
+}
+function combine(array, callback) {
+  return array.map(callback).join("");
+}
+var line = 1;
+var column = 1;
+var length = 0;
+var position = 0;
+var character = 0;
+var characters = "";
+function node(value, root, parent, type, props, children, length2) {
+  return { value, root, parent, type, props, children, line, column, length: length2, return: "" };
+}
+function copy(root, props) {
+  return assign(node("", null, null, "", null, null, 0), root, { length: -root.length }, props);
+}
+function char() {
+  return character;
+}
+function prev() {
+  character = position > 0 ? charat(characters, --position) : 0;
+  if (column--, character === 10)
+    column = 1, line--;
+  return character;
+}
+function next() {
+  character = position < length ? charat(characters, position++) : 0;
+  if (column++, character === 10)
+    column = 1, line++;
+  return character;
+}
+function peek() {
+  return charat(characters, position);
+}
+function caret() {
+  return position;
+}
+function slice(begin, end2) {
+  return substr(characters, begin, end2);
+}
+function token(type) {
+  switch (type) {
+    // \0 \t \n \r \s whitespace token
+    case 0:
+    case 9:
+    case 10:
+    case 13:
+    case 32:
+      return 5;
+    // ! + , / > @ ~ isolate token
+    case 33:
+    case 43:
+    case 44:
+    case 47:
+    case 62:
+    case 64:
+    case 126:
+    // ; { } breakpoint token
+    case 59:
+    case 123:
+    case 125:
+      return 4;
+    // : accompanied token
+    case 58:
+      return 3;
+    // " ' ( [ opening delimit token
+    case 34:
+    case 39:
+    case 40:
+    case 91:
+      return 2;
+    // ) ] closing delimit token
+    case 41:
+    case 93:
+      return 1;
+  }
+  return 0;
+}
+function alloc(value) {
+  return line = column = 1, length = strlen(characters = value), position = 0, [];
+}
+function dealloc(value) {
+  return characters = "", value;
+}
+function delimit(type) {
+  return trim(slice(position - 1, delimiter(type === 91 ? type + 2 : type === 40 ? type + 1 : type)));
+}
+function whitespace(type) {
+  while (character = peek())
+    if (character < 33)
+      next();
+    else
+      break;
+  return token(type) > 2 || token(character) > 3 ? "" : " ";
+}
+function escaping(index, count) {
+  while (--count && next())
+    if (character < 48 || character > 102 || character > 57 && character < 65 || character > 70 && character < 97)
+      break;
+  return slice(index, caret() + (count < 6 && peek() == 32 && next() == 32));
+}
+function delimiter(type) {
+  while (next())
+    switch (character) {
+      // ] ) " '
+      case type:
+        return position;
+      // " '
+      case 34:
+      case 39:
+        if (type !== 34 && type !== 39)
+          delimiter(character);
+        break;
+      // (
+      case 40:
+        if (type === 41)
+          delimiter(type);
+        break;
+      // \
+      case 92:
+        next();
+        break;
+    }
+  return position;
+}
+function commenter(type, index) {
+  while (next())
+    if (type + character === 47 + 10)
+      break;
+    else if (type + character === 42 + 42 && peek() === 47)
+      break;
+  return "/*" + slice(index, position - 1) + "*" + from(type === 47 ? type : next());
+}
+function identifier(index) {
+  while (!token(peek()))
+    next();
+  return slice(index, position);
+}
+function compile(value) {
+  return dealloc(parse("", null, null, null, [""], value = alloc(value), 0, [0], value));
+}
+function parse(value, root, parent, rule, rules, rulesets, pseudo, points, declarations) {
+  var index = 0;
+  var offset2 = 0;
+  var length2 = pseudo;
+  var atrule = 0;
+  var property = 0;
+  var previous = 0;
+  var variable = 1;
+  var scanning = 1;
+  var ampersand = 1;
+  var character2 = 0;
+  var type = "";
+  var props = rules;
+  var children = rulesets;
+  var reference2 = rule;
+  var characters2 = type;
+  while (scanning)
+    switch (previous = character2, character2 = next()) {
+      // (
+      case 40:
+        if (previous != 108 && charat(characters2, length2 - 1) == 58) {
+          if (indexof(characters2 += replace(delimit(character2), "&", "&\f"), "&\f") != -1)
+            ampersand = -1;
+          break;
+        }
+      // " ' [
+      case 34:
+      case 39:
+      case 91:
+        characters2 += delimit(character2);
+        break;
+      // \t \n \r \s
+      case 9:
+      case 10:
+      case 13:
+      case 32:
+        characters2 += whitespace(previous);
+        break;
+      // \
+      case 92:
+        characters2 += escaping(caret() - 1, 7);
+        continue;
+      // /
+      case 47:
+        switch (peek()) {
+          case 42:
+          case 47:
+            append(comment(commenter(next(), caret()), root, parent), declarations);
+            break;
+          default:
+            characters2 += "/";
+        }
+        break;
+      // {
+      case 123 * variable:
+        points[index++] = strlen(characters2) * ampersand;
+      // } ; \0
+      case 125 * variable:
+      case 59:
+      case 0:
+        switch (character2) {
+          // \0 }
+          case 0:
+          case 125:
+            scanning = 0;
+          // ;
+          case 59 + offset2:
+            if (ampersand == -1) characters2 = replace(characters2, /\f/g, "");
+            if (property > 0 && strlen(characters2) - length2)
+              append(property > 32 ? declaration(characters2 + ";", rule, parent, length2 - 1) : declaration(replace(characters2, " ", "") + ";", rule, parent, length2 - 2), declarations);
+            break;
+          // @ ;
+          case 59:
+            characters2 += ";";
+          // { rule/at-rule
+          default:
+            append(reference2 = ruleset(characters2, root, parent, index, offset2, rules, points, type, props = [], children = [], length2), rulesets);
+            if (character2 === 123)
+              if (offset2 === 0)
+                parse(characters2, root, reference2, reference2, props, rulesets, length2, points, children);
+              else
+                switch (atrule === 99 && charat(characters2, 3) === 110 ? 100 : atrule) {
+                  // d l m s
+                  case 100:
+                  case 108:
+                  case 109:
+                  case 115:
+                    parse(value, reference2, reference2, rule && append(ruleset(value, reference2, reference2, 0, 0, rules, points, type, rules, props = [], length2), children), rules, children, length2, points, rule ? props : children);
+                    break;
+                  default:
+                    parse(characters2, reference2, reference2, reference2, [""], children, 0, points, children);
+                }
+        }
+        index = offset2 = property = 0, variable = ampersand = 1, type = characters2 = "", length2 = pseudo;
+        break;
+      // :
+      case 58:
+        length2 = 1 + strlen(characters2), property = previous;
+      default:
+        if (variable < 1) {
+          if (character2 == 123)
+            --variable;
+          else if (character2 == 125 && variable++ == 0 && prev() == 125)
+            continue;
+        }
+        switch (characters2 += from(character2), character2 * variable) {
+          // &
+          case 38:
+            ampersand = offset2 > 0 ? 1 : (characters2 += "\f", -1);
+            break;
+          // ,
+          case 44:
+            points[index++] = (strlen(characters2) - 1) * ampersand, ampersand = 1;
+            break;
+          // @
+          case 64:
+            if (peek() === 45)
+              characters2 += delimit(next());
+            atrule = peek(), offset2 = length2 = strlen(type = characters2 += identifier(caret())), character2++;
+            break;
+          // -
+          case 45:
+            if (previous === 45 && strlen(characters2) == 2)
+              variable = 0;
+        }
+    }
+  return rulesets;
+}
+function ruleset(value, root, parent, index, offset2, rules, points, type, props, children, length2) {
+  var post = offset2 - 1;
+  var rule = offset2 === 0 ? rules : [""];
+  var size = sizeof(rule);
+  for (var i = 0, j = 0, k = 0; i < index; ++i)
+    for (var x = 0, y = substr(value, post + 1, post = abs(j = points[i])), z2 = value; x < size; ++x)
+      if (z2 = trim(j > 0 ? rule[x] + " " + y : replace(y, /&\f/g, rule[x])))
+        props[k++] = z2;
+  return node(value, root, parent, offset2 === 0 ? RULESET : type, props, children, length2);
+}
+function comment(value, root, parent) {
+  return node(value, root, parent, COMMENT, from(char()), substr(value, 2, -2), 0);
+}
+function declaration(value, root, parent, length2) {
+  return node(value, root, parent, DECLARATION, substr(value, 0, length2), substr(value, length2 + 1, -1), length2);
+}
+function serialize(children, callback) {
+  var output = "";
+  var length2 = sizeof(children);
+  for (var i = 0; i < length2; i++)
+    output += callback(children[i], i, children, callback) || "";
+  return output;
+}
+function stringify(element, index, children, callback) {
+  switch (element.type) {
+    case LAYER:
+      if (element.children.length) break;
+    case IMPORT:
+    case DECLARATION:
+      return element.return = element.return || element.value;
+    case COMMENT:
+      return "";
+    case KEYFRAMES:
+      return element.return = element.value + "{" + serialize(element.children, callback) + "}";
+    case RULESET:
+      element.value = element.props.join(",");
+  }
+  return strlen(children = serialize(element.children, callback)) ? element.return = element.value + "{" + children + "}" : "";
+}
+function middleware(collection) {
+  var length2 = sizeof(collection);
+  return function(element, index, children, callback) {
+    var output = "";
+    for (var i = 0; i < length2; i++)
+      output += collection[i](element, index, children, callback) || "";
+    return output;
+  };
+}
+function rulesheet(callback) {
+  return function(element) {
+    if (!element.root) {
+      if (element = element.return)
+        callback(element);
+    }
+  };
+}
+function memoize$1(fn2) {
+  var cache = /* @__PURE__ */ Object.create(null);
+  return function(arg2) {
+    if (cache[arg2] === void 0) cache[arg2] = fn2(arg2);
+    return cache[arg2];
+  };
+}
+var identifierWithPointTracking = function identifierWithPointTracking2(begin, points, index) {
+  var previous = 0;
+  var character2 = 0;
+  while (true) {
+    previous = character2;
+    character2 = peek();
+    if (previous === 38 && character2 === 12) {
+      points[index] = 1;
+    }
+    if (token(character2)) {
+      break;
+    }
+    next();
+  }
+  return slice(begin, position);
+};
+var toRules = function toRules2(parsed, points) {
+  var index = -1;
+  var character2 = 44;
+  do {
+    switch (token(character2)) {
+      case 0:
+        if (character2 === 38 && peek() === 12) {
+          points[index] = 1;
+        }
+        parsed[index] += identifierWithPointTracking(position - 1, points, index);
+        break;
+      case 2:
+        parsed[index] += delimit(character2);
+        break;
+      case 4:
+        if (character2 === 44) {
+          parsed[++index] = peek() === 58 ? "&\f" : "";
+          points[index] = parsed[index].length;
+          break;
+        }
+      // fallthrough
+      default:
+        parsed[index] += from(character2);
+    }
+  } while (character2 = next());
+  return parsed;
+};
+var getRules = function getRules2(value, points) {
+  return dealloc(toRules(alloc(value), points));
+};
+var fixedElements = /* @__PURE__ */ new WeakMap();
+var compat = function compat2(element) {
+  if (element.type !== "rule" || !element.parent || // positive .length indicates that this rule contains pseudo
+  // negative .length indicates that this rule has been already prefixed
+  element.length < 1) {
+    return;
+  }
+  var value = element.value;
+  var parent = element.parent;
+  var isImplicitRule = element.column === parent.column && element.line === parent.line;
+  while (parent.type !== "rule") {
+    parent = parent.parent;
+    if (!parent) return;
+  }
+  if (element.props.length === 1 && value.charCodeAt(0) !== 58 && !fixedElements.get(parent)) {
+    return;
+  }
+  if (isImplicitRule) {
+    return;
+  }
+  fixedElements.set(element, true);
+  var points = [];
+  var rules = getRules(value, points);
+  var parentRules = parent.props;
+  for (var i = 0, k = 0; i < rules.length; i++) {
+    for (var j = 0; j < parentRules.length; j++, k++) {
+      element.props[k] = points[i] ? rules[i].replace(/&\f/g, parentRules[j]) : parentRules[j] + " " + rules[i];
+    }
+  }
+};
+var removeLabel = function removeLabel2(element) {
+  if (element.type === "decl") {
+    var value = element.value;
+    if (
+      // charcode for l
+      value.charCodeAt(0) === 108 && // charcode for b
+      value.charCodeAt(2) === 98
+    ) {
+      element["return"] = "";
+      element.value = "";
+    }
+  }
+};
+function prefix(value, length2) {
+  switch (hash$2(value, length2)) {
+    // color-adjust
+    case 5103:
+      return WEBKIT + "print-" + value + value;
+    // animation, animation-(delay|direction|duration|fill-mode|iteration-count|name|play-state|timing-function)
+    case 5737:
+    case 4201:
+    case 3177:
+    case 3433:
+    case 1641:
+    case 4457:
+    case 2921:
+    // text-decoration, filter, clip-path, backface-visibility, column, box-decoration-break
+    case 5572:
+    case 6356:
+    case 5844:
+    case 3191:
+    case 6645:
+    case 3005:
+    // mask, mask-image, mask-(mode|clip|size), mask-(repeat|origin), mask-position, mask-composite,
+    case 6391:
+    case 5879:
+    case 5623:
+    case 6135:
+    case 4599:
+    case 4855:
+    // background-clip, columns, column-(count|fill|gap|rule|rule-color|rule-style|rule-width|span|width)
+    case 4215:
+    case 6389:
+    case 5109:
+    case 5365:
+    case 5621:
+    case 3829:
+      return WEBKIT + value + value;
+    // appearance, user-select, transform, hyphens, text-size-adjust
+    case 5349:
+    case 4246:
+    case 4810:
+    case 6968:
+    case 2756:
+      return WEBKIT + value + MOZ + value + MS + value + value;
+    // flex, flex-direction
+    case 6828:
+    case 4268:
+      return WEBKIT + value + MS + value + value;
+    // order
+    case 6165:
+      return WEBKIT + value + MS + "flex-" + value + value;
+    // align-items
+    case 5187:
+      return WEBKIT + value + replace(value, /(\w+).+(:[^]+)/, WEBKIT + "box-$1$2" + MS + "flex-$1$2") + value;
+    // align-self
+    case 5443:
+      return WEBKIT + value + MS + "flex-item-" + replace(value, /flex-|-self/, "") + value;
+    // align-content
+    case 4675:
+      return WEBKIT + value + MS + "flex-line-pack" + replace(value, /align-content|flex-|-self/, "") + value;
+    // flex-shrink
+    case 5548:
+      return WEBKIT + value + MS + replace(value, "shrink", "negative") + value;
+    // flex-basis
+    case 5292:
+      return WEBKIT + value + MS + replace(value, "basis", "preferred-size") + value;
+    // flex-grow
+    case 6060:
+      return WEBKIT + "box-" + replace(value, "-grow", "") + WEBKIT + value + MS + replace(value, "grow", "positive") + value;
+    // transition
+    case 4554:
+      return WEBKIT + replace(value, /([^-])(transform)/g, "$1" + WEBKIT + "$2") + value;
+    // cursor
+    case 6187:
+      return replace(replace(replace(value, /(zoom-|grab)/, WEBKIT + "$1"), /(image-set)/, WEBKIT + "$1"), value, "") + value;
+    // background, background-image
+    case 5495:
+    case 3959:
+      return replace(value, /(image-set\([^]*)/, WEBKIT + "$1$`$1");
+    // justify-content
+    case 4968:
+      return replace(replace(value, /(.+:)(flex-)?(.*)/, WEBKIT + "box-pack:$3" + MS + "flex-pack:$3"), /s.+-b[^;]+/, "justify") + WEBKIT + value + value;
+    // (margin|padding)-inline-(start|end)
+    case 4095:
+    case 3583:
+    case 4068:
+    case 2532:
+      return replace(value, /(.+)-inline(.+)/, WEBKIT + "$1$2") + value;
+    // (min|max)?(width|height|inline-size|block-size)
+    case 8116:
+    case 7059:
+    case 5753:
+    case 5535:
+    case 5445:
+    case 5701:
+    case 4933:
+    case 4677:
+    case 5533:
+    case 5789:
+    case 5021:
+    case 4765:
+      if (strlen(value) - 1 - length2 > 6) switch (charat(value, length2 + 1)) {
+        // (m)ax-content, (m)in-content
+        case 109:
+          if (charat(value, length2 + 4) !== 45) break;
+        // (f)ill-available, (f)it-content
+        case 102:
+          return replace(value, /(.+:)(.+)-([^]+)/, "$1" + WEBKIT + "$2-$3$1" + MOZ + (charat(value, length2 + 3) == 108 ? "$3" : "$2-$3")) + value;
+        // (s)tretch
+        case 115:
+          return ~indexof(value, "stretch") ? prefix(replace(value, "stretch", "fill-available"), length2) + value : value;
+      }
+      break;
+    // position: sticky
+    case 4949:
+      if (charat(value, length2 + 1) !== 115) break;
+    // display: (flex|inline-flex)
+    case 6444:
+      switch (charat(value, strlen(value) - 3 - (~indexof(value, "!important") && 10))) {
+        // stic(k)y
+        case 107:
+          return replace(value, ":", ":" + WEBKIT) + value;
+        // (inline-)?fl(e)x
+        case 101:
+          return replace(value, /(.+:)([^;!]+)(;|!.+)?/, "$1" + WEBKIT + (charat(value, 14) === 45 ? "inline-" : "") + "box$3$1" + WEBKIT + "$2$3$1" + MS + "$2box$3") + value;
+      }
+      break;
+    // writing-mode
+    case 5936:
+      switch (charat(value, length2 + 11)) {
+        // vertical-l(r)
+        case 114:
+          return WEBKIT + value + MS + replace(value, /[svh]\w+-[tblr]{2}/, "tb") + value;
+        // vertical-r(l)
+        case 108:
+          return WEBKIT + value + MS + replace(value, /[svh]\w+-[tblr]{2}/, "tb-rl") + value;
+        // horizontal(-)tb
+        case 45:
+          return WEBKIT + value + MS + replace(value, /[svh]\w+-[tblr]{2}/, "lr") + value;
+      }
+      return WEBKIT + value + MS + value + value;
+  }
+  return value;
+}
+var prefixer = function prefixer2(element, index, children, callback) {
+  if (element.length > -1) {
+    if (!element["return"]) switch (element.type) {
+      case DECLARATION:
+        element["return"] = prefix(element.value, element.length);
+        break;
+      case KEYFRAMES:
+        return serialize([copy(element, {
+          value: replace(element.value, "@", "@" + WEBKIT)
+        })], callback);
+      case RULESET:
+        if (element.length) return combine(element.props, function(value) {
+          switch (match(value, /(::plac\w+|:read-\w+)/)) {
+            // :read-(only|write)
+            case ":read-only":
+            case ":read-write":
+              return serialize([copy(element, {
+                props: [replace(value, /:(read-\w+)/, ":" + MOZ + "$1")]
+              })], callback);
+            // :placeholder
+            case "::placeholder":
+              return serialize([copy(element, {
+                props: [replace(value, /:(plac\w+)/, ":" + WEBKIT + "input-$1")]
+              }), copy(element, {
+                props: [replace(value, /:(plac\w+)/, ":" + MOZ + "$1")]
+              }), copy(element, {
+                props: [replace(value, /:(plac\w+)/, MS + "input-$1")]
+              })], callback);
+          }
+          return "";
+        });
+    }
+  }
+};
+var defaultStylisPlugins = [prefixer];
+var createCache = function createCache2(options) {
+  var key = options.key;
+  if (key === "css") {
+    var ssrStyles = document.querySelectorAll("style[data-emotion]:not([data-s])");
+    Array.prototype.forEach.call(ssrStyles, function(node2) {
+      var dataEmotionAttribute = node2.getAttribute("data-emotion");
+      if (dataEmotionAttribute.indexOf(" ") === -1) {
+        return;
+      }
+      document.head.appendChild(node2);
+      node2.setAttribute("data-s", "");
+    });
+  }
+  var stylisPlugins = options.stylisPlugins || defaultStylisPlugins;
+  var inserted = {};
+  var container;
+  var nodesToHydrate = [];
+  {
+    container = options.container || document.head;
+    Array.prototype.forEach.call(
+      // this means we will ignore elements which don't have a space in them which
+      // means that the style elements we're looking at are only Emotion 11 server-rendered style elements
+      document.querySelectorAll('style[data-emotion^="' + key + ' "]'),
+      function(node2) {
+        var attrib = node2.getAttribute("data-emotion").split(" ");
+        for (var i = 1; i < attrib.length; i++) {
+          inserted[attrib[i]] = true;
+        }
+        nodesToHydrate.push(node2);
+      }
+    );
+  }
+  var _insert;
+  var omnipresentPlugins = [compat, removeLabel];
+  {
+    var currentSheet;
+    var finalizingPlugins = [stringify, rulesheet(function(rule) {
+      currentSheet.insert(rule);
+    })];
+    var serializer = middleware(omnipresentPlugins.concat(stylisPlugins, finalizingPlugins));
+    var stylis = function stylis2(styles2) {
+      return serialize(compile(styles2), serializer);
+    };
+    _insert = function insert(selector, serialized, sheet, shouldCache) {
+      currentSheet = sheet;
+      stylis(selector ? selector + "{" + serialized.styles + "}" : serialized.styles);
+      if (shouldCache) {
+        cache.inserted[serialized.name] = true;
+      }
+    };
+  }
+  var cache = {
+    key,
+    sheet: new StyleSheet({
+      key,
+      container,
+      nonce: options.nonce,
+      speedy: options.speedy,
+      prepend: options.prepend,
+      insertionPoint: options.insertionPoint
+    }),
+    nonce: options.nonce,
+    inserted,
+    registered: {},
+    insert: _insert
+  };
+  cache.sheet.hydrate(nodesToHydrate);
+  return cache;
+};
 var reactIs$1 = { exports: {} };
+var reactIs_production_min = {};
+/** @license React v16.13.1
+ * react-is.production.min.js
+ *
+ * Copyright (c) Facebook, Inc. and its affiliates.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ */
+var hasRequiredReactIs_production_min;
+function requireReactIs_production_min() {
+  if (hasRequiredReactIs_production_min) return reactIs_production_min;
+  hasRequiredReactIs_production_min = 1;
+  var b = "function" === typeof Symbol && Symbol.for, c = b ? Symbol.for("react.element") : 60103, d = b ? Symbol.for("react.portal") : 60106, e = b ? Symbol.for("react.fragment") : 60107, f = b ? Symbol.for("react.strict_mode") : 60108, g = b ? Symbol.for("react.profiler") : 60114, h = b ? Symbol.for("react.provider") : 60109, k = b ? Symbol.for("react.context") : 60110, l = b ? Symbol.for("react.async_mode") : 60111, m = b ? Symbol.for("react.concurrent_mode") : 60111, n = b ? Symbol.for("react.forward_ref") : 60112, p = b ? Symbol.for("react.suspense") : 60113, q = b ? Symbol.for("react.suspense_list") : 60120, r2 = b ? Symbol.for("react.memo") : 60115, t = b ? Symbol.for("react.lazy") : 60116, v = b ? Symbol.for("react.block") : 60121, w = b ? Symbol.for("react.fundamental") : 60117, x = b ? Symbol.for("react.responder") : 60118, y = b ? Symbol.for("react.scope") : 60119;
+  function z2(a) {
+    if ("object" === typeof a && null !== a) {
+      var u = a.$$typeof;
+      switch (u) {
+        case c:
+          switch (a = a.type, a) {
+            case l:
+            case m:
+            case e:
+            case g:
+            case f:
+            case p:
+              return a;
+            default:
+              switch (a = a && a.$$typeof, a) {
+                case k:
+                case n:
+                case t:
+                case r2:
+                case h:
+                  return a;
+                default:
+                  return u;
+              }
+          }
+        case d:
+          return u;
+      }
+    }
+  }
+  function A(a) {
+    return z2(a) === m;
+  }
+  reactIs_production_min.AsyncMode = l;
+  reactIs_production_min.ConcurrentMode = m;
+  reactIs_production_min.ContextConsumer = k;
+  reactIs_production_min.ContextProvider = h;
+  reactIs_production_min.Element = c;
+  reactIs_production_min.ForwardRef = n;
+  reactIs_production_min.Fragment = e;
+  reactIs_production_min.Lazy = t;
+  reactIs_production_min.Memo = r2;
+  reactIs_production_min.Portal = d;
+  reactIs_production_min.Profiler = g;
+  reactIs_production_min.StrictMode = f;
+  reactIs_production_min.Suspense = p;
+  reactIs_production_min.isAsyncMode = function(a) {
+    return A(a) || z2(a) === l;
+  };
+  reactIs_production_min.isConcurrentMode = A;
+  reactIs_production_min.isContextConsumer = function(a) {
+    return z2(a) === k;
+  };
+  reactIs_production_min.isContextProvider = function(a) {
+    return z2(a) === h;
+  };
+  reactIs_production_min.isElement = function(a) {
+    return "object" === typeof a && null !== a && a.$$typeof === c;
+  };
+  reactIs_production_min.isForwardRef = function(a) {
+    return z2(a) === n;
+  };
+  reactIs_production_min.isFragment = function(a) {
+    return z2(a) === e;
+  };
+  reactIs_production_min.isLazy = function(a) {
+    return z2(a) === t;
+  };
+  reactIs_production_min.isMemo = function(a) {
+    return z2(a) === r2;
+  };
+  reactIs_production_min.isPortal = function(a) {
+    return z2(a) === d;
+  };
+  reactIs_production_min.isProfiler = function(a) {
+    return z2(a) === g;
+  };
+  reactIs_production_min.isStrictMode = function(a) {
+    return z2(a) === f;
+  };
+  reactIs_production_min.isSuspense = function(a) {
+    return z2(a) === p;
+  };
+  reactIs_production_min.isValidElementType = function(a) {
+    return "string" === typeof a || "function" === typeof a || a === e || a === m || a === g || a === f || a === p || a === q || "object" === typeof a && null !== a && (a.$$typeof === t || a.$$typeof === r2 || a.$$typeof === h || a.$$typeof === k || a.$$typeof === n || a.$$typeof === w || a.$$typeof === x || a.$$typeof === y || a.$$typeof === v);
+  };
+  reactIs_production_min.typeOf = z2;
+  return reactIs_production_min;
+}
+var hasRequiredReactIs$1;
+function requireReactIs$1() {
+  if (hasRequiredReactIs$1) return reactIs$1.exports;
+  hasRequiredReactIs$1 = 1;
+  {
+    reactIs$1.exports = requireReactIs_production_min();
+  }
+  return reactIs$1.exports;
+}
+var hoistNonReactStatics_cjs;
+var hasRequiredHoistNonReactStatics_cjs;
+function requireHoistNonReactStatics_cjs() {
+  if (hasRequiredHoistNonReactStatics_cjs) return hoistNonReactStatics_cjs;
+  hasRequiredHoistNonReactStatics_cjs = 1;
+  var reactIs2 = requireReactIs$1();
+  var REACT_STATICS = {
+    childContextTypes: true,
+    contextType: true,
+    contextTypes: true,
+    defaultProps: true,
+    displayName: true,
+    getDefaultProps: true,
+    getDerivedStateFromError: true,
+    getDerivedStateFromProps: true,
+    mixins: true,
+    propTypes: true,
+    type: true
+  };
+  var KNOWN_STATICS = {
+    name: true,
+    length: true,
+    prototype: true,
+    caller: true,
+    callee: true,
+    arguments: true,
+    arity: true
+  };
+  var FORWARD_REF_STATICS = {
+    "$$typeof": true,
+    render: true,
+    defaultProps: true,
+    displayName: true,
+    propTypes: true
+  };
+  var MEMO_STATICS = {
+    "$$typeof": true,
+    compare: true,
+    defaultProps: true,
+    displayName: true,
+    propTypes: true,
+    type: true
+  };
+  var TYPE_STATICS = {};
+  TYPE_STATICS[reactIs2.ForwardRef] = FORWARD_REF_STATICS;
+  TYPE_STATICS[reactIs2.Memo] = MEMO_STATICS;
+  function getStatics(component) {
+    if (reactIs2.isMemo(component)) {
+      return MEMO_STATICS;
+    }
+    return TYPE_STATICS[component["$$typeof"]] || REACT_STATICS;
+  }
+  var defineProperty = Object.defineProperty;
+  var getOwnPropertyNames = Object.getOwnPropertyNames;
+  var getOwnPropertySymbols = Object.getOwnPropertySymbols;
+  var getOwnPropertyDescriptor = Object.getOwnPropertyDescriptor;
+  var getPrototypeOf = Object.getPrototypeOf;
+  var objectPrototype = Object.prototype;
+  function hoistNonReactStatics(targetComponent, sourceComponent, blacklist) {
+    if (typeof sourceComponent !== "string") {
+      if (objectPrototype) {
+        var inheritedComponent = getPrototypeOf(sourceComponent);
+        if (inheritedComponent && inheritedComponent !== objectPrototype) {
+          hoistNonReactStatics(targetComponent, inheritedComponent, blacklist);
+        }
+      }
+      var keys = getOwnPropertyNames(sourceComponent);
+      if (getOwnPropertySymbols) {
+        keys = keys.concat(getOwnPropertySymbols(sourceComponent));
+      }
+      var targetStatics = getStatics(targetComponent);
+      var sourceStatics = getStatics(sourceComponent);
+      for (var i = 0; i < keys.length; ++i) {
+        var key = keys[i];
+        if (!KNOWN_STATICS[key] && !(blacklist && blacklist[key]) && !(sourceStatics && sourceStatics[key]) && !(targetStatics && targetStatics[key])) {
+          var descriptor = getOwnPropertyDescriptor(sourceComponent, key);
+          try {
+            defineProperty(targetComponent, key, descriptor);
+          } catch (e) {
+          }
+        }
+      }
+    }
+    return targetComponent;
+  }
+  hoistNonReactStatics_cjs = hoistNonReactStatics;
+  return hoistNonReactStatics_cjs;
+}
+requireHoistNonReactStatics_cjs();
+var isBrowser = true;
+function getRegisteredStyles(registered, registeredStyles, classNames) {
+  var rawClassName = "";
+  classNames.split(" ").forEach(function(className) {
+    if (registered[className] !== void 0) {
+      registeredStyles.push(registered[className] + ";");
+    } else if (className) {
+      rawClassName += className + " ";
+    }
+  });
+  return rawClassName;
+}
+var registerStyles = function registerStyles2(cache, serialized, isStringTag2) {
+  var className = cache.key + "-" + serialized.name;
+  if (
+    // we only need to add the styles to the registered cache if the
+    // class name could be used further down
+    // the tree but if it's a string tag, we know it won't
+    // so we don't have to add it to registered cache.
+    // this improves memory usage since we can avoid storing the whole style string
+    (isStringTag2 === false || // we need to always store it if we're in compat mode and
+    // in node since emotion-server relies on whether a style is in
+    // the registered cache to know whether a style is global or not
+    // also, note that this check will be dead code eliminated in the browser
+    isBrowser === false) && cache.registered[className] === void 0
+  ) {
+    cache.registered[className] = serialized.styles;
+  }
+};
+var insertStyles = function insertStyles2(cache, serialized, isStringTag2) {
+  registerStyles(cache, serialized, isStringTag2);
+  var className = cache.key + "-" + serialized.name;
+  if (cache.inserted[serialized.name] === void 0) {
+    var current = serialized;
+    do {
+      cache.insert(serialized === current ? "." + className : "", current, cache.sheet, true);
+      current = current.next;
+    } while (current !== void 0);
+  }
+};
+function murmur2(str) {
+  var h = 0;
+  var k, i = 0, len = str.length;
+  for (; len >= 4; ++i, len -= 4) {
+    k = str.charCodeAt(i) & 255 | (str.charCodeAt(++i) & 255) << 8 | (str.charCodeAt(++i) & 255) << 16 | (str.charCodeAt(++i) & 255) << 24;
+    k = /* Math.imul(k, m): */
+    (k & 65535) * 1540483477 + ((k >>> 16) * 59797 << 16);
+    k ^= /* k >>> r: */
+    k >>> 24;
+    h = /* Math.imul(k, m): */
+    (k & 65535) * 1540483477 + ((k >>> 16) * 59797 << 16) ^ /* Math.imul(h, m): */
+    (h & 65535) * 1540483477 + ((h >>> 16) * 59797 << 16);
+  }
+  switch (len) {
+    case 3:
+      h ^= (str.charCodeAt(i + 2) & 255) << 16;
+    case 2:
+      h ^= (str.charCodeAt(i + 1) & 255) << 8;
+    case 1:
+      h ^= str.charCodeAt(i) & 255;
+      h = /* Math.imul(h, m): */
+      (h & 65535) * 1540483477 + ((h >>> 16) * 59797 << 16);
+  }
+  h ^= h >>> 13;
+  h = /* Math.imul(h, m): */
+  (h & 65535) * 1540483477 + ((h >>> 16) * 59797 << 16);
+  return ((h ^ h >>> 15) >>> 0).toString(36);
+}
+var unitlessKeys = {
+  animationIterationCount: 1,
+  aspectRatio: 1,
+  borderImageOutset: 1,
+  borderImageSlice: 1,
+  borderImageWidth: 1,
+  boxFlex: 1,
+  boxFlexGroup: 1,
+  boxOrdinalGroup: 1,
+  columnCount: 1,
+  columns: 1,
+  flex: 1,
+  flexGrow: 1,
+  flexPositive: 1,
+  flexShrink: 1,
+  flexNegative: 1,
+  flexOrder: 1,
+  gridRow: 1,
+  gridRowEnd: 1,
+  gridRowSpan: 1,
+  gridRowStart: 1,
+  gridColumn: 1,
+  gridColumnEnd: 1,
+  gridColumnSpan: 1,
+  gridColumnStart: 1,
+  msGridRow: 1,
+  msGridRowSpan: 1,
+  msGridColumn: 1,
+  msGridColumnSpan: 1,
+  fontWeight: 1,
+  lineHeight: 1,
+  opacity: 1,
+  order: 1,
+  orphans: 1,
+  scale: 1,
+  tabSize: 1,
+  widows: 1,
+  zIndex: 1,
+  zoom: 1,
+  WebkitLineClamp: 1,
+  // SVG-related properties
+  fillOpacity: 1,
+  floodOpacity: 1,
+  stopOpacity: 1,
+  strokeDasharray: 1,
+  strokeDashoffset: 1,
+  strokeMiterlimit: 1,
+  strokeOpacity: 1,
+  strokeWidth: 1
+};
+var hyphenateRegex = /[A-Z]|^ms/g;
+var animationRegex = /_EMO_([^_]+?)_([^]*?)_EMO_/g;
+var isCustomProperty = function isCustomProperty2(property) {
+  return property.charCodeAt(1) === 45;
+};
+var isProcessableValue = function isProcessableValue2(value) {
+  return value != null && typeof value !== "boolean";
+};
+var processStyleName = /* @__PURE__ */ memoize$1(function(styleName) {
+  return isCustomProperty(styleName) ? styleName : styleName.replace(hyphenateRegex, "-$&").toLowerCase();
+});
+var processStyleValue = function processStyleValue2(key, value) {
+  switch (key) {
+    case "animation":
+    case "animationName": {
+      if (typeof value === "string") {
+        return value.replace(animationRegex, function(match2, p1, p2) {
+          cursor = {
+            name: p1,
+            styles: p2,
+            next: cursor
+          };
+          return p1;
+        });
+      }
+    }
+  }
+  if (unitlessKeys[key] !== 1 && !isCustomProperty(key) && typeof value === "number" && value !== 0) {
+    return value + "px";
+  }
+  return value;
+};
+function handleInterpolation(mergedProps, registered, interpolation) {
+  if (interpolation == null) {
+    return "";
+  }
+  var componentSelector = interpolation;
+  if (componentSelector.__emotion_styles !== void 0) {
+    return componentSelector;
+  }
+  switch (typeof interpolation) {
+    case "boolean": {
+      return "";
+    }
+    case "object": {
+      var keyframes2 = interpolation;
+      if (keyframes2.anim === 1) {
+        cursor = {
+          name: keyframes2.name,
+          styles: keyframes2.styles,
+          next: cursor
+        };
+        return keyframes2.name;
+      }
+      var serializedStyles = interpolation;
+      if (serializedStyles.styles !== void 0) {
+        var next2 = serializedStyles.next;
+        if (next2 !== void 0) {
+          while (next2 !== void 0) {
+            cursor = {
+              name: next2.name,
+              styles: next2.styles,
+              next: cursor
+            };
+            next2 = next2.next;
+          }
+        }
+        var styles2 = serializedStyles.styles + ";";
+        return styles2;
+      }
+      return createStringFromObject(mergedProps, registered, interpolation);
+    }
+    case "function": {
+      if (mergedProps !== void 0) {
+        var previousCursor = cursor;
+        var result = interpolation(mergedProps);
+        cursor = previousCursor;
+        return handleInterpolation(mergedProps, registered, result);
+      }
+      break;
+    }
+  }
+  var asString = interpolation;
+  if (registered == null) {
+    return asString;
+  }
+  var cached = registered[asString];
+  return cached !== void 0 ? cached : asString;
+}
+function createStringFromObject(mergedProps, registered, obj) {
+  var string = "";
+  if (Array.isArray(obj)) {
+    for (var i = 0; i < obj.length; i++) {
+      string += handleInterpolation(mergedProps, registered, obj[i]) + ";";
+    }
+  } else {
+    for (var key in obj) {
+      var value = obj[key];
+      if (typeof value !== "object") {
+        var asString = value;
+        if (registered != null && registered[asString] !== void 0) {
+          string += key + "{" + registered[asString] + "}";
+        } else if (isProcessableValue(asString)) {
+          string += processStyleName(key) + ":" + processStyleValue(key, asString) + ";";
+        }
+      } else {
+        if (Array.isArray(value) && typeof value[0] === "string" && (registered == null || registered[value[0]] === void 0)) {
+          for (var _i = 0; _i < value.length; _i++) {
+            if (isProcessableValue(value[_i])) {
+              string += processStyleName(key) + ":" + processStyleValue(key, value[_i]) + ";";
+            }
+          }
+        } else {
+          var interpolated = handleInterpolation(mergedProps, registered, value);
+          switch (key) {
+            case "animation":
+            case "animationName": {
+              string += processStyleName(key) + ":" + interpolated + ";";
+              break;
+            }
+            default: {
+              string += key + "{" + interpolated + "}";
+            }
+          }
+        }
+      }
+    }
+  }
+  return string;
+}
+var labelPattern = /label:\s*([^\s;{]+)\s*(;|$)/g;
+var cursor;
+function serializeStyles(args, registered, mergedProps) {
+  if (args.length === 1 && typeof args[0] === "object" && args[0] !== null && args[0].styles !== void 0) {
+    return args[0];
+  }
+  var stringMode = true;
+  var styles2 = "";
+  cursor = void 0;
+  var strings = args[0];
+  if (strings == null || strings.raw === void 0) {
+    stringMode = false;
+    styles2 += handleInterpolation(mergedProps, registered, strings);
+  } else {
+    var asTemplateStringsArr = strings;
+    styles2 += asTemplateStringsArr[0];
+  }
+  for (var i = 1; i < args.length; i++) {
+    styles2 += handleInterpolation(mergedProps, registered, args[i]);
+    if (stringMode) {
+      var templateStringsArr = strings;
+      styles2 += templateStringsArr[i];
+    }
+  }
+  labelPattern.lastIndex = 0;
+  var identifierName = "";
+  var match2;
+  while ((match2 = labelPattern.exec(styles2)) !== null) {
+    identifierName += "-" + match2[1];
+  }
+  var name = murmur2(styles2) + identifierName;
+  return {
+    name,
+    styles: styles2,
+    next: cursor
+  };
+}
+var syncFallback = function syncFallback2(create) {
+  return create();
+};
+var useInsertionEffect = React$1["useInsertionEffect"] ? React$1["useInsertionEffect"] : false;
+var useInsertionEffectAlwaysWithSyncFallback = useInsertionEffect || syncFallback;
+var useInsertionEffectWithLayoutFallback = useInsertionEffect || reactExports.useLayoutEffect;
+var EmotionCacheContext = /* @__PURE__ */ reactExports.createContext(
+  // we're doing this to avoid preconstruct's dead code elimination in this one case
+  // because this module is primarily intended for the browser and node
+  // but it's also required in react native and similar environments sometimes
+  // and we could have a special build just for that
+  // but this is much easier and the native packages
+  // might use a different theme context in the future anyway
+  typeof HTMLElement !== "undefined" ? /* @__PURE__ */ createCache({
+    key: "css"
+  }) : null
+);
+EmotionCacheContext.Provider;
+var withEmotionCache = function withEmotionCache2(func) {
+  return /* @__PURE__ */ reactExports.forwardRef(function(props, ref) {
+    var cache = reactExports.useContext(EmotionCacheContext);
+    return func(props, cache, ref);
+  });
+};
+var ThemeContext$1 = /* @__PURE__ */ reactExports.createContext({});
+var hasOwn = {}.hasOwnProperty;
+var typePropName = "__EMOTION_TYPE_PLEASE_DO_NOT_USE__";
+var createEmotionProps = function createEmotionProps2(type, props) {
+  var newProps = {};
+  for (var _key in props) {
+    if (hasOwn.call(props, _key)) {
+      newProps[_key] = props[_key];
+    }
+  }
+  newProps[typePropName] = type;
+  return newProps;
+};
+var Insertion$1 = function Insertion(_ref) {
+  var cache = _ref.cache, serialized = _ref.serialized, isStringTag2 = _ref.isStringTag;
+  registerStyles(cache, serialized, isStringTag2);
+  useInsertionEffectAlwaysWithSyncFallback(function() {
+    return insertStyles(cache, serialized, isStringTag2);
+  });
+  return null;
+};
+var Emotion = /* @__PURE__ */ withEmotionCache(function(props, cache, ref) {
+  var cssProp = props.css;
+  if (typeof cssProp === "string" && cache.registered[cssProp] !== void 0) {
+    cssProp = cache.registered[cssProp];
+  }
+  var WrappedComponent = props[typePropName];
+  var registeredStyles = [cssProp];
+  var className = "";
+  if (typeof props.className === "string") {
+    className = getRegisteredStyles(cache.registered, registeredStyles, props.className);
+  } else if (props.className != null) {
+    className = props.className + " ";
+  }
+  var serialized = serializeStyles(registeredStyles, void 0, reactExports.useContext(ThemeContext$1));
+  className += cache.key + "-" + serialized.name;
+  var newProps = {};
+  for (var _key2 in props) {
+    if (hasOwn.call(props, _key2) && _key2 !== "css" && _key2 !== typePropName && true) {
+      newProps[_key2] = props[_key2];
+    }
+  }
+  newProps.className = className;
+  if (ref) {
+    newProps.ref = ref;
+  }
+  return /* @__PURE__ */ reactExports.createElement(reactExports.Fragment, null, /* @__PURE__ */ reactExports.createElement(Insertion$1, {
+    cache,
+    serialized,
+    isStringTag: typeof WrappedComponent === "string"
+  }), /* @__PURE__ */ reactExports.createElement(WrappedComponent, newProps));
+});
+var Emotion$1 = Emotion;
+var jsx = function jsx2(type, props) {
+  var args = arguments;
+  if (props == null || !hasOwn.call(props, "css")) {
+    return reactExports.createElement.apply(void 0, args);
+  }
+  var argsLength = args.length;
+  var createElementArgArray = new Array(argsLength);
+  createElementArgArray[0] = Emotion$1;
+  createElementArgArray[1] = createEmotionProps(type, props);
+  for (var i = 2; i < argsLength; i++) {
+    createElementArgArray[i] = args[i];
+  }
+  return reactExports.createElement.apply(null, createElementArgArray);
+};
+(function(_jsx) {
+  var JSX;
+  /* @__PURE__ */ (function(_JSX) {
+  })(JSX || (JSX = _jsx.JSX || (_jsx.JSX = {})));
+})(jsx || (jsx = {}));
+var Global = /* @__PURE__ */ withEmotionCache(function(props, cache) {
+  var styles2 = props.styles;
+  var serialized = serializeStyles([styles2], void 0, reactExports.useContext(ThemeContext$1));
+  var sheetRef = reactExports.useRef();
+  useInsertionEffectWithLayoutFallback(function() {
+    var key = cache.key + "-global";
+    var sheet = new cache.sheet.constructor({
+      key,
+      nonce: cache.sheet.nonce,
+      container: cache.sheet.container,
+      speedy: cache.sheet.isSpeedy
+    });
+    var rehydrating = false;
+    var node2 = document.querySelector('style[data-emotion="' + key + " " + serialized.name + '"]');
+    if (cache.sheet.tags.length) {
+      sheet.before = cache.sheet.tags[0];
+    }
+    if (node2 !== null) {
+      rehydrating = true;
+      node2.setAttribute("data-emotion", key);
+      sheet.hydrate([node2]);
+    }
+    sheetRef.current = [sheet, rehydrating];
+    return function() {
+      sheet.flush();
+    };
+  }, [cache]);
+  useInsertionEffectWithLayoutFallback(function() {
+    var sheetRefCurrent = sheetRef.current;
+    var sheet = sheetRefCurrent[0], rehydrating = sheetRefCurrent[1];
+    if (rehydrating) {
+      sheetRefCurrent[1] = false;
+      return;
+    }
+    if (serialized.next !== void 0) {
+      insertStyles(cache, serialized.next, true);
+    }
+    if (sheet.tags.length) {
+      var element = sheet.tags[sheet.tags.length - 1].nextElementSibling;
+      sheet.before = element;
+      sheet.flush();
+    }
+    cache.insert("", serialized, sheet, false);
+  }, [cache, serialized.name]);
+  return null;
+});
+function css() {
+  for (var _len = arguments.length, args = new Array(_len), _key = 0; _key < _len; _key++) {
+    args[_key] = arguments[_key];
+  }
+  return serializeStyles(args);
+}
+function keyframes() {
+  var insertable = css.apply(void 0, arguments);
+  var name = "animation-" + insertable.name;
+  return {
+    name,
+    styles: "@keyframes " + name + "{" + insertable.styles + "}",
+    anim: 1,
+    toString: function toString() {
+      return "_EMO_" + this.name + "_" + this.styles + "_EMO_";
+    }
+  };
+}
+var reactPropsRegex = /^((children|dangerouslySetInnerHTML|key|ref|autoFocus|defaultValue|defaultChecked|innerHTML|suppressContentEditableWarning|suppressHydrationWarning|valueLink|abbr|accept|acceptCharset|accessKey|action|allow|allowUserMedia|allowPaymentRequest|allowFullScreen|allowTransparency|alt|async|autoComplete|autoPlay|capture|cellPadding|cellSpacing|challenge|charSet|checked|cite|classID|className|cols|colSpan|content|contentEditable|contextMenu|controls|controlsList|coords|crossOrigin|data|dateTime|decoding|default|defer|dir|disabled|disablePictureInPicture|disableRemotePlayback|download|draggable|encType|enterKeyHint|fetchpriority|fetchPriority|form|formAction|formEncType|formMethod|formNoValidate|formTarget|frameBorder|headers|height|hidden|high|href|hrefLang|htmlFor|httpEquiv|id|inputMode|integrity|is|keyParams|keyType|kind|label|lang|list|loading|loop|low|marginHeight|marginWidth|max|maxLength|media|mediaGroup|method|min|minLength|multiple|muted|name|nonce|noValidate|open|optimum|pattern|placeholder|playsInline|poster|preload|profile|radioGroup|readOnly|referrerPolicy|rel|required|reversed|role|rows|rowSpan|sandbox|scope|scoped|scrolling|seamless|selected|shape|size|sizes|slot|span|spellCheck|src|srcDoc|srcLang|srcSet|start|step|style|summary|tabIndex|target|title|translate|type|useMap|value|width|wmode|wrap|about|datatype|inlist|prefix|property|resource|typeof|vocab|autoCapitalize|autoCorrect|autoSave|color|incremental|fallback|inert|itemProp|itemScope|itemType|itemID|itemRef|on|option|results|security|unselectable|accentHeight|accumulate|additive|alignmentBaseline|allowReorder|alphabetic|amplitude|arabicForm|ascent|attributeName|attributeType|autoReverse|azimuth|baseFrequency|baselineShift|baseProfile|bbox|begin|bias|by|calcMode|capHeight|clip|clipPathUnits|clipPath|clipRule|colorInterpolation|colorInterpolationFilters|colorProfile|colorRendering|contentScriptType|contentStyleType|cursor|cx|cy|d|decelerate|descent|diffuseConstant|direction|display|divisor|dominantBaseline|dur|dx|dy|edgeMode|elevation|enableBackground|end|exponent|externalResourcesRequired|fill|fillOpacity|fillRule|filter|filterRes|filterUnits|floodColor|floodOpacity|focusable|fontFamily|fontSize|fontSizeAdjust|fontStretch|fontStyle|fontVariant|fontWeight|format|from|fr|fx|fy|g1|g2|glyphName|glyphOrientationHorizontal|glyphOrientationVertical|glyphRef|gradientTransform|gradientUnits|hanging|horizAdvX|horizOriginX|ideographic|imageRendering|in|in2|intercept|k|k1|k2|k3|k4|kernelMatrix|kernelUnitLength|kerning|keyPoints|keySplines|keyTimes|lengthAdjust|letterSpacing|lightingColor|limitingConeAngle|local|markerEnd|markerMid|markerStart|markerHeight|markerUnits|markerWidth|mask|maskContentUnits|maskUnits|mathematical|mode|numOctaves|offset|opacity|operator|order|orient|orientation|origin|overflow|overlinePosition|overlineThickness|panose1|paintOrder|pathLength|patternContentUnits|patternTransform|patternUnits|pointerEvents|points|pointsAtX|pointsAtY|pointsAtZ|preserveAlpha|preserveAspectRatio|primitiveUnits|r|radius|refX|refY|renderingIntent|repeatCount|repeatDur|requiredExtensions|requiredFeatures|restart|result|rotate|rx|ry|scale|seed|shapeRendering|slope|spacing|specularConstant|specularExponent|speed|spreadMethod|startOffset|stdDeviation|stemh|stemv|stitchTiles|stopColor|stopOpacity|strikethroughPosition|strikethroughThickness|string|stroke|strokeDasharray|strokeDashoffset|strokeLinecap|strokeLinejoin|strokeMiterlimit|strokeOpacity|strokeWidth|surfaceScale|systemLanguage|tableValues|targetX|targetY|textAnchor|textDecoration|textRendering|textLength|to|transform|u1|u2|underlinePosition|underlineThickness|unicode|unicodeBidi|unicodeRange|unitsPerEm|vAlphabetic|vHanging|vIdeographic|vMathematical|values|vectorEffect|version|vertAdvY|vertOriginX|vertOriginY|viewBox|viewTarget|visibility|widths|wordSpacing|writingMode|x|xHeight|x1|x2|xChannelSelector|xlinkActuate|xlinkArcrole|xlinkHref|xlinkRole|xlinkShow|xlinkTitle|xlinkType|xmlBase|xmlns|xmlnsXlink|xmlLang|xmlSpace|y|y1|y2|yChannelSelector|z|zoomAndPan|for|class|autofocus)|(([Dd][Aa][Tt][Aa]|[Aa][Rr][Ii][Aa]|x)-.*))$/;
+var isPropValid = /* @__PURE__ */ memoize$1(
+  function(prop) {
+    return reactPropsRegex.test(prop) || prop.charCodeAt(0) === 111 && prop.charCodeAt(1) === 110 && prop.charCodeAt(2) < 91;
+  }
+  /* Z+1 */
+);
+var testOmitPropsOnStringTag = isPropValid;
+var testOmitPropsOnComponent = function testOmitPropsOnComponent2(key) {
+  return key !== "theme";
+};
+var getDefaultShouldForwardProp = function getDefaultShouldForwardProp2(tag) {
+  return typeof tag === "string" && // 96 is one less than the char code
+  // for "a" so this is checking that
+  // it's a lowercase character
+  tag.charCodeAt(0) > 96 ? testOmitPropsOnStringTag : testOmitPropsOnComponent;
+};
+var composeShouldForwardProps = function composeShouldForwardProps2(tag, options, isReal) {
+  var shouldForwardProp2;
+  if (options) {
+    var optionsShouldForwardProp = options.shouldForwardProp;
+    shouldForwardProp2 = tag.__emotion_forwardProp && optionsShouldForwardProp ? function(propName) {
+      return tag.__emotion_forwardProp(propName) && optionsShouldForwardProp(propName);
+    } : optionsShouldForwardProp;
+  }
+  if (typeof shouldForwardProp2 !== "function" && isReal) {
+    shouldForwardProp2 = tag.__emotion_forwardProp;
+  }
+  return shouldForwardProp2;
+};
+var Insertion2 = function Insertion3(_ref) {
+  var cache = _ref.cache, serialized = _ref.serialized, isStringTag2 = _ref.isStringTag;
+  registerStyles(cache, serialized, isStringTag2);
+  useInsertionEffectAlwaysWithSyncFallback(function() {
+    return insertStyles(cache, serialized, isStringTag2);
+  });
+  return null;
+};
+var createStyled$1 = function createStyled(tag, options) {
+  var isReal = tag.__emotion_real === tag;
+  var baseTag = isReal && tag.__emotion_base || tag;
+  var identifierName;
+  var targetClassName;
+  if (options !== void 0) {
+    identifierName = options.label;
+    targetClassName = options.target;
+  }
+  var shouldForwardProp2 = composeShouldForwardProps(tag, options, isReal);
+  var defaultShouldForwardProp = shouldForwardProp2 || getDefaultShouldForwardProp(baseTag);
+  var shouldUseAs = !defaultShouldForwardProp("as");
+  return function() {
+    var args = arguments;
+    var styles2 = isReal && tag.__emotion_styles !== void 0 ? tag.__emotion_styles.slice(0) : [];
+    if (identifierName !== void 0) {
+      styles2.push("label:" + identifierName + ";");
+    }
+    if (args[0] == null || args[0].raw === void 0) {
+      styles2.push.apply(styles2, args);
+    } else {
+      var templateStringsArr = args[0];
+      styles2.push(templateStringsArr[0]);
+      var len = args.length;
+      var i = 1;
+      for (; i < len; i++) {
+        styles2.push(args[i], templateStringsArr[i]);
+      }
+    }
+    var Styled = withEmotionCache(function(props, cache, ref) {
+      var FinalTag = shouldUseAs && props.as || baseTag;
+      var className = "";
+      var classInterpolations = [];
+      var mergedProps = props;
+      if (props.theme == null) {
+        mergedProps = {};
+        for (var key in props) {
+          mergedProps[key] = props[key];
+        }
+        mergedProps.theme = reactExports.useContext(ThemeContext$1);
+      }
+      if (typeof props.className === "string") {
+        className = getRegisteredStyles(cache.registered, classInterpolations, props.className);
+      } else if (props.className != null) {
+        className = props.className + " ";
+      }
+      var serialized = serializeStyles(styles2.concat(classInterpolations), cache.registered, mergedProps);
+      className += cache.key + "-" + serialized.name;
+      if (targetClassName !== void 0) {
+        className += " " + targetClassName;
+      }
+      var finalShouldForwardProp = shouldUseAs && shouldForwardProp2 === void 0 ? getDefaultShouldForwardProp(FinalTag) : defaultShouldForwardProp;
+      var newProps = {};
+      for (var _key in props) {
+        if (shouldUseAs && _key === "as") continue;
+        if (finalShouldForwardProp(_key)) {
+          newProps[_key] = props[_key];
+        }
+      }
+      newProps.className = className;
+      if (ref) {
+        newProps.ref = ref;
+      }
+      return /* @__PURE__ */ reactExports.createElement(reactExports.Fragment, null, /* @__PURE__ */ reactExports.createElement(Insertion2, {
+        cache,
+        serialized,
+        isStringTag: typeof FinalTag === "string"
+      }), /* @__PURE__ */ reactExports.createElement(FinalTag, newProps));
+    });
+    Styled.displayName = identifierName !== void 0 ? identifierName : "Styled(" + (typeof baseTag === "string" ? baseTag : baseTag.displayName || baseTag.name || "Component") + ")";
+    Styled.defaultProps = tag.defaultProps;
+    Styled.__emotion_real = Styled;
+    Styled.__emotion_base = baseTag;
+    Styled.__emotion_styles = styles2;
+    Styled.__emotion_forwardProp = shouldForwardProp2;
+    Object.defineProperty(Styled, "toString", {
+      value: function value() {
+        return "." + targetClassName;
+      }
+    });
+    Styled.withComponent = function(nextTag, nextOptions) {
+      var newStyled2 = createStyled(nextTag, _extends({}, options, nextOptions, {
+        shouldForwardProp: composeShouldForwardProps(Styled, nextOptions, true)
+      }));
+      return newStyled2.apply(void 0, styles2);
+    };
+    return Styled;
+  };
+};
+var tags = [
+  "a",
+  "abbr",
+  "address",
+  "area",
+  "article",
+  "aside",
+  "audio",
+  "b",
+  "base",
+  "bdi",
+  "bdo",
+  "big",
+  "blockquote",
+  "body",
+  "br",
+  "button",
+  "canvas",
+  "caption",
+  "cite",
+  "code",
+  "col",
+  "colgroup",
+  "data",
+  "datalist",
+  "dd",
+  "del",
+  "details",
+  "dfn",
+  "dialog",
+  "div",
+  "dl",
+  "dt",
+  "em",
+  "embed",
+  "fieldset",
+  "figcaption",
+  "figure",
+  "footer",
+  "form",
+  "h1",
+  "h2",
+  "h3",
+  "h4",
+  "h5",
+  "h6",
+  "head",
+  "header",
+  "hgroup",
+  "hr",
+  "html",
+  "i",
+  "iframe",
+  "img",
+  "input",
+  "ins",
+  "kbd",
+  "keygen",
+  "label",
+  "legend",
+  "li",
+  "link",
+  "main",
+  "map",
+  "mark",
+  "marquee",
+  "menu",
+  "menuitem",
+  "meta",
+  "meter",
+  "nav",
+  "noscript",
+  "object",
+  "ol",
+  "optgroup",
+  "option",
+  "output",
+  "p",
+  "param",
+  "picture",
+  "pre",
+  "progress",
+  "q",
+  "rp",
+  "rt",
+  "ruby",
+  "s",
+  "samp",
+  "script",
+  "section",
+  "select",
+  "small",
+  "source",
+  "span",
+  "strong",
+  "style",
+  "sub",
+  "summary",
+  "sup",
+  "table",
+  "tbody",
+  "td",
+  "textarea",
+  "tfoot",
+  "th",
+  "thead",
+  "time",
+  "title",
+  "tr",
+  "track",
+  "u",
+  "ul",
+  "var",
+  "video",
+  "wbr",
+  // SVG
+  "circle",
+  "clipPath",
+  "defs",
+  "ellipse",
+  "foreignObject",
+  "g",
+  "image",
+  "line",
+  "linearGradient",
+  "mask",
+  "path",
+  "pattern",
+  "polygon",
+  "polyline",
+  "radialGradient",
+  "rect",
+  "stop",
+  "svg",
+  "text",
+  "tspan"
+];
+var newStyled = createStyled$1.bind(null);
+tags.forEach(function(tagName) {
+  newStyled[tagName] = newStyled(tagName);
+});
+function isEmpty$2(obj) {
+  return obj === void 0 || obj === null || Object.keys(obj).length === 0;
+}
+function GlobalStyles$3(props) {
+  const {
+    styles: styles2,
+    defaultTheme: defaultTheme2 = {}
+  } = props;
+  const globalStyles = typeof styles2 === "function" ? (themeInput) => styles2(isEmpty$2(themeInput) ? defaultTheme2 : themeInput) : styles2;
+  return /* @__PURE__ */ jsxRuntimeExports.jsx(Global, {
+    styles: globalStyles
+  });
+}
+/**
+ * @mui/styled-engine v6.4.3
+ *
+ * @license MIT
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ */
+function styled$2(tag, options) {
+  const stylesFactory = newStyled(tag, options);
+  return stylesFactory;
+}
+function internal_mutateStyles(tag, processor) {
+  if (Array.isArray(tag.__emotion_styles)) {
+    tag.__emotion_styles = processor(tag.__emotion_styles);
+  }
+}
+const wrapper = [];
+function internal_serializeStyles(styles2) {
+  wrapper[0] = styles2;
+  return serializeStyles(wrapper);
+}
+var reactIs = { exports: {} };
 var reactIs_production = {};
 /**
  * @license React
@@ -7184,16 +8936,16 @@ function requireReactIs_production() {
   reactIs_production.typeOf = typeOf;
   return reactIs_production;
 }
-var hasRequiredReactIs$1;
-function requireReactIs$1() {
-  if (hasRequiredReactIs$1) return reactIs$1.exports;
-  hasRequiredReactIs$1 = 1;
+var hasRequiredReactIs;
+function requireReactIs() {
+  if (hasRequiredReactIs) return reactIs.exports;
+  hasRequiredReactIs = 1;
   {
-    reactIs$1.exports = /* @__PURE__ */ requireReactIs_production();
+    reactIs.exports = /* @__PURE__ */ requireReactIs_production();
   }
-  return reactIs$1.exports;
+  return reactIs.exports;
 }
-var reactIsExports = /* @__PURE__ */ requireReactIs$1();
+var reactIsExports = /* @__PURE__ */ requireReactIs();
 function isPlainObject(item) {
   if (typeof item !== "object" || item === null) {
     return false;
@@ -7233,458 +8985,83 @@ function deepmerge(target, source, options = {
   }
   return output;
 }
-function formatMuiErrorMessage(code, ...args) {
-  const url = new URL(`https://mui.com/production-error/?code=${code}`);
-  args.forEach((arg2) => url.searchParams.append("args[]", arg2));
-  return `Minified MUI error #${code}; visit ${url} for the full message.`;
-}
-function capitalize(string) {
-  if (typeof string !== "string") {
-    throw new Error(formatMuiErrorMessage(7));
-  }
-  return string.charAt(0).toUpperCase() + string.slice(1);
-}
-function createChainedFunction(...funcs) {
-  return funcs.reduce((acc, func) => {
-    if (func == null) {
-      return acc;
-    }
-    return function chainedFunction(...args) {
-      acc.apply(this, args);
-      func.apply(this, args);
-    };
-  }, () => {
-  });
-}
-function debounce$1(func, wait = 166) {
-  let timeout;
-  function debounced(...args) {
-    const later = () => {
-      func.apply(this, args);
-    };
-    clearTimeout(timeout);
-    timeout = setTimeout(later, wait);
-  }
-  debounced.clear = () => {
-    clearTimeout(timeout);
-  };
-  return debounced;
-}
-function isMuiElement(element, muiNames) {
-  var _a, _b, _c;
-  return /* @__PURE__ */ reactExports.isValidElement(element) && muiNames.indexOf(
-    // For server components `muiName` is avaialble in element.type._payload.value.muiName
-    // relevant info - https://github.com/facebook/react/blob/2807d781a08db8e9873687fccc25c0f12b4fb3d4/packages/react/src/ReactLazy.js#L45
-    // eslint-disable-next-line no-underscore-dangle
-    element.type.muiName ?? ((_c = (_b = (_a = element.type) == null ? void 0 : _a._payload) == null ? void 0 : _b.value) == null ? void 0 : _c.muiName)
-  ) !== -1;
-}
-function ownerDocument(node2) {
-  return node2 && node2.ownerDocument || document;
-}
-function ownerWindow(node2) {
-  const doc = ownerDocument(node2);
-  return doc.defaultView || window;
-}
-function setRef(ref, value) {
-  if (typeof ref === "function") {
-    ref(value);
-  } else if (ref) {
-    ref.current = value;
-  }
-}
-const useEnhancedEffect = typeof window !== "undefined" ? reactExports.useLayoutEffect : reactExports.useEffect;
-let globalId = 0;
-function useGlobalId(idOverride) {
-  const [defaultId, setDefaultId] = reactExports.useState(idOverride);
-  const id = idOverride || defaultId;
-  reactExports.useEffect(() => {
-    if (defaultId == null) {
-      globalId += 1;
-      setDefaultId(`mui-${globalId}`);
-    }
-  }, [defaultId]);
-  return id;
-}
-const safeReact$1 = {
-  ...React$1
-};
-const maybeReactUseId = safeReact$1.useId;
-function useId(idOverride) {
-  if (maybeReactUseId !== void 0) {
-    const reactId = maybeReactUseId();
-    return idOverride ?? reactId;
-  }
-  return useGlobalId(idOverride);
-}
-function useControlled({
-  controlled,
-  default: defaultProp,
-  name,
-  state = "value"
-}) {
-  const {
-    current: isControlled
-  } = reactExports.useRef(controlled !== void 0);
-  const [valueState, setValue] = reactExports.useState(defaultProp);
-  const value = isControlled ? controlled : valueState;
-  const setValueIfUncontrolled = reactExports.useCallback((newValue) => {
-    if (!isControlled) {
-      setValue(newValue);
-    }
-  }, []);
-  return [value, setValueIfUncontrolled];
-}
-function useEventCallback(fn2) {
-  const ref = reactExports.useRef(fn2);
-  useEnhancedEffect(() => {
-    ref.current = fn2;
-  });
-  return reactExports.useRef((...args) => (
-    // @ts-expect-error hide `this`
-    (0, ref.current)(...args)
-  )).current;
-}
-function useForkRef(...refs) {
-  return reactExports.useMemo(() => {
-    if (refs.every((ref) => ref == null)) {
-      return null;
-    }
-    return (instance) => {
-      refs.forEach((ref) => {
-        setRef(ref, instance);
-      });
-    };
-  }, refs);
-}
-const UNINITIALIZED = {};
-function useLazyRef(init, initArg) {
-  const ref = reactExports.useRef(UNINITIALIZED);
-  if (ref.current === UNINITIALIZED) {
-    ref.current = init(initArg);
-  }
-  return ref;
-}
-const EMPTY = [];
-function useOnMount(fn2) {
-  reactExports.useEffect(fn2, EMPTY);
-}
-class Timeout {
-  constructor() {
-    __publicField(this, "currentId", null);
-    __publicField(this, "clear", () => {
-      if (this.currentId !== null) {
-        clearTimeout(this.currentId);
-        this.currentId = null;
-      }
-    });
-    __publicField(this, "disposeEffect", () => {
-      return this.clear;
-    });
-  }
-  static create() {
-    return new Timeout();
-  }
-  /**
-   * Executes `fn` after `delay`, clearing any previously scheduled call.
-   */
-  start(delay, fn2) {
-    this.clear();
-    this.currentId = setTimeout(() => {
-      this.currentId = null;
-      fn2();
-    }, delay);
-  }
-}
-function useTimeout() {
-  const timeout = useLazyRef(Timeout.create).current;
-  useOnMount(timeout.disposeEffect);
-  return timeout;
-}
-function isFocusVisible(element) {
-  try {
-    return element.matches(":focus-visible");
-  } catch (error) {
-  }
-  return false;
-}
-function getScrollbarSize(win = window) {
-  const documentWidth = win.document.documentElement.clientWidth;
-  return win.innerWidth - documentWidth;
-}
-function getValidReactChildren(children) {
-  return reactExports.Children.toArray(children).filter((child) => /* @__PURE__ */ reactExports.isValidElement(child));
-}
-const visuallyHidden = {
-  border: 0,
-  clip: "rect(0 0 0 0)",
-  height: "1px",
-  margin: "-1px",
-  overflow: "hidden",
-  padding: 0,
-  position: "absolute",
-  whiteSpace: "nowrap",
-  width: "1px"
-};
-function resolveProps(defaultProps2, props) {
-  const output = {
-    ...props
-  };
-  for (const key in defaultProps2) {
-    if (Object.prototype.hasOwnProperty.call(defaultProps2, key)) {
-      const propName = key;
-      if (propName === "components" || propName === "slots") {
-        output[propName] = {
-          ...defaultProps2[propName],
-          ...output[propName]
-        };
-      } else if (propName === "componentsProps" || propName === "slotProps") {
-        const defaultSlotProps = defaultProps2[propName];
-        const slotProps = props[propName];
-        if (!slotProps) {
-          output[propName] = defaultSlotProps || {};
-        } else if (!defaultSlotProps) {
-          output[propName] = slotProps;
-        } else {
-          output[propName] = {
-            ...slotProps
-          };
-          for (const slotKey in defaultSlotProps) {
-            if (Object.prototype.hasOwnProperty.call(defaultSlotProps, slotKey)) {
-              const slotPropName = slotKey;
-              output[propName][slotPropName] = resolveProps(defaultSlotProps[slotPropName], slotProps[slotPropName]);
-            }
-          }
-        }
-      } else if (output[propName] === void 0) {
-        output[propName] = defaultProps2[propName];
-      }
-    }
-  }
-  return output;
-}
-function composeClasses(slots, getUtilityClass, classes = void 0) {
-  const output = {};
-  for (const slotName in slots) {
-    const slot = slots[slotName];
-    let buffer = "";
-    let start2 = true;
-    for (let i = 0; i < slot.length; i += 1) {
-      const value = slot[i];
-      if (value) {
-        buffer += (start2 === true ? "" : " ") + getUtilityClass(value);
-        start2 = false;
-        if (classes && classes[value]) {
-          buffer += " " + classes[value];
-        }
-      }
-    }
-    output[slotName] = buffer;
-  }
-  return output;
-}
-const defaultGenerator = (componentName) => componentName;
-const createClassNameGenerator = () => {
-  let generate = defaultGenerator;
-  return {
-    configure(generator) {
-      generate = generator;
-    },
-    generate(componentName) {
-      return generate(componentName);
-    },
-    reset() {
-      generate = defaultGenerator;
-    }
-  };
-};
-const ClassNameGenerator = createClassNameGenerator();
-const globalStateClasses = {
-  active: "active",
-  checked: "checked",
-  completed: "completed",
-  disabled: "disabled",
-  error: "error",
-  expanded: "expanded",
-  focused: "focused",
-  focusVisible: "focusVisible",
-  open: "open",
-  readOnly: "readOnly",
-  required: "required",
-  selected: "selected"
-};
-function generateUtilityClass(componentName, slot, globalStatePrefix = "Mui") {
-  const globalStateClass = globalStateClasses[slot];
-  return globalStateClass ? `${globalStatePrefix}-${globalStateClass}` : `${ClassNameGenerator.generate(componentName)}-${slot}`;
-}
-function generateUtilityClasses(componentName, slots, globalStatePrefix = "Mui") {
-  const result = {};
-  slots.forEach((slot) => {
-    result[slot] = generateUtilityClass(componentName, slot, globalStatePrefix);
-  });
-  return result;
-}
-function clamp(val, min2 = Number.MIN_SAFE_INTEGER, max2 = Number.MAX_SAFE_INTEGER) {
-  return Math.max(min2, Math.min(val, max2));
-}
-function isHostComponent$1(element) {
-  return typeof element === "string";
-}
-function appendOwnerState(elementType, otherProps, ownerState) {
-  if (elementType === void 0 || isHostComponent$1(elementType)) {
-    return otherProps;
-  }
-  return {
-    ...otherProps,
-    ownerState: {
-      ...otherProps.ownerState,
-      ...ownerState
-    }
-  };
-}
-function r(e) {
-  var t, f, n = "";
-  if ("string" == typeof e || "number" == typeof e) n += e;
-  else if ("object" == typeof e) if (Array.isArray(e)) {
-    var o = e.length;
-    for (t = 0; t < o; t++) e[t] && (f = r(e[t])) && (n && (n += " "), n += f);
-  } else for (f in e) e[f] && (n && (n += " "), n += f);
-  return n;
-}
-function clsx() {
-  for (var e, t, f = 0, n = "", o = arguments.length; f < o; f++) (e = arguments[f]) && (t = r(e)) && (n && (n += " "), n += t);
-  return n;
-}
-function extractEventHandlers(object, excludeKeys = []) {
-  if (object === void 0) {
-    return {};
-  }
-  const result = {};
-  Object.keys(object).filter((prop) => prop.match(/^on[A-Z]/) && typeof object[prop] === "function" && !excludeKeys.includes(prop)).forEach((prop) => {
-    result[prop] = object[prop];
-  });
-  return result;
-}
-function omitEventHandlers(object) {
-  if (object === void 0) {
-    return {};
-  }
-  const result = {};
-  Object.keys(object).filter((prop) => !(prop.match(/^on[A-Z]/) && typeof object[prop] === "function")).forEach((prop) => {
-    result[prop] = object[prop];
-  });
-  return result;
-}
-function mergeSlotProps(parameters) {
-  const {
-    getSlotProps,
-    additionalProps,
-    externalSlotProps,
-    externalForwardedProps,
-    className
-  } = parameters;
-  if (!getSlotProps) {
-    const joinedClasses2 = clsx(additionalProps == null ? void 0 : additionalProps.className, className, externalForwardedProps == null ? void 0 : externalForwardedProps.className, externalSlotProps == null ? void 0 : externalSlotProps.className);
-    const mergedStyle2 = {
-      ...additionalProps == null ? void 0 : additionalProps.style,
-      ...externalForwardedProps == null ? void 0 : externalForwardedProps.style,
-      ...externalSlotProps == null ? void 0 : externalSlotProps.style
-    };
-    const props2 = {
-      ...additionalProps,
-      ...externalForwardedProps,
-      ...externalSlotProps
-    };
-    if (joinedClasses2.length > 0) {
-      props2.className = joinedClasses2;
-    }
-    if (Object.keys(mergedStyle2).length > 0) {
-      props2.style = mergedStyle2;
-    }
+const sortBreakpointsValues = (values2) => {
+  const breakpointsAsArray = Object.keys(values2).map((key) => ({
+    key,
+    val: values2[key]
+  })) || [];
+  breakpointsAsArray.sort((breakpoint1, breakpoint2) => breakpoint1.val - breakpoint2.val);
+  return breakpointsAsArray.reduce((acc, obj) => {
     return {
-      props: props2,
-      internalRef: void 0
+      ...acc,
+      [obj.key]: obj.val
     };
+  }, {});
+};
+function createBreakpoints(breakpoints) {
+  const {
+    // The breakpoint **start** at this value.
+    // For instance with the first breakpoint xs: [xs, sm).
+    values: values2 = {
+      xs: 0,
+      // phone
+      sm: 600,
+      // tablet
+      md: 900,
+      // small laptop
+      lg: 1200,
+      // desktop
+      xl: 1536
+      // large screen
+    },
+    unit = "px",
+    step = 5,
+    ...other
+  } = breakpoints;
+  const sortedValues = sortBreakpointsValues(values2);
+  const keys = Object.keys(sortedValues);
+  function up(key) {
+    const value = typeof values2[key] === "number" ? values2[key] : key;
+    return `@media (min-width:${value}${unit})`;
   }
-  const eventHandlers = extractEventHandlers({
-    ...externalForwardedProps,
-    ...externalSlotProps
-  });
-  const componentsPropsWithoutEventHandlers = omitEventHandlers(externalSlotProps);
-  const otherPropsWithoutEventHandlers = omitEventHandlers(externalForwardedProps);
-  const internalSlotProps = getSlotProps(eventHandlers);
-  const joinedClasses = clsx(internalSlotProps == null ? void 0 : internalSlotProps.className, additionalProps == null ? void 0 : additionalProps.className, className, externalForwardedProps == null ? void 0 : externalForwardedProps.className, externalSlotProps == null ? void 0 : externalSlotProps.className);
-  const mergedStyle = {
-    ...internalSlotProps == null ? void 0 : internalSlotProps.style,
-    ...additionalProps == null ? void 0 : additionalProps.style,
-    ...externalForwardedProps == null ? void 0 : externalForwardedProps.style,
-    ...externalSlotProps == null ? void 0 : externalSlotProps.style
-  };
-  const props = {
-    ...internalSlotProps,
-    ...additionalProps,
-    ...otherPropsWithoutEventHandlers,
-    ...componentsPropsWithoutEventHandlers
-  };
-  if (joinedClasses.length > 0) {
-    props.className = joinedClasses;
+  function down(key) {
+    const value = typeof values2[key] === "number" ? values2[key] : key;
+    return `@media (max-width:${value - step / 100}${unit})`;
   }
-  if (Object.keys(mergedStyle).length > 0) {
-    props.style = mergedStyle;
+  function between(start2, end2) {
+    const endIndex = keys.indexOf(end2);
+    return `@media (min-width:${typeof values2[start2] === "number" ? values2[start2] : start2}${unit}) and (max-width:${(endIndex !== -1 && typeof values2[keys[endIndex]] === "number" ? values2[keys[endIndex]] : end2) - step / 100}${unit})`;
+  }
+  function only(key) {
+    if (keys.indexOf(key) + 1 < keys.length) {
+      return between(key, keys[keys.indexOf(key) + 1]);
+    }
+    return up(key);
+  }
+  function not(key) {
+    const keyIndex = keys.indexOf(key);
+    if (keyIndex === 0) {
+      return up(keys[1]);
+    }
+    if (keyIndex === keys.length - 1) {
+      return down(keys[keyIndex]);
+    }
+    return between(key, keys[keys.indexOf(key) + 1]).replace("@media", "@media not all and");
   }
   return {
-    props,
-    internalRef: internalSlotProps.ref
+    keys,
+    values: sortedValues,
+    up,
+    down,
+    between,
+    only,
+    not,
+    unit,
+    ...other
   };
 }
-function resolveComponentProps(componentProps, ownerState, slotState) {
-  if (typeof componentProps === "function") {
-    return componentProps(ownerState, slotState);
-  }
-  return componentProps;
-}
-function useSlotProps(parameters) {
-  var _a;
-  const {
-    elementType,
-    externalSlotProps,
-    ownerState,
-    skipResolvingSlotProps = false,
-    ...other
-  } = parameters;
-  const resolvedComponentsProps = skipResolvingSlotProps ? {} : resolveComponentProps(externalSlotProps, ownerState);
-  const {
-    props: mergedProps,
-    internalRef
-  } = mergeSlotProps({
-    ...other,
-    externalSlotProps: resolvedComponentsProps
-  });
-  const ref = useForkRef(internalRef, resolvedComponentsProps == null ? void 0 : resolvedComponentsProps.ref, (_a = parameters.additionalProps) == null ? void 0 : _a.ref);
-  const props = appendOwnerState(elementType, {
-    ...mergedProps,
-    ref
-  }, ownerState);
-  return props;
-}
-function getReactElementRef(element) {
-  var _a;
-  if (parseInt(reactExports.version, 10) >= 19) {
-    return ((_a = element == null ? void 0 : element.props) == null ? void 0 : _a.ref) || null;
-  }
-  return (element == null ? void 0 : element.ref) || null;
-}
-function merge(acc, item) {
-  if (!item) {
-    return acc;
-  }
-  return deepmerge(acc, item, {
-    clone: false
-    // No need to clone deep, it's way faster.
-  });
-}
-function sortContainerQueries(theme, css2) {
-  if (!theme.containerQueries) {
+function sortContainerQueries(theme2, css2) {
+  if (!theme2.containerQueries) {
     return css2;
   }
   const sorted = Object.keys(css2).filter((key) => key.startsWith("@container")).sort((a, b) => {
@@ -7707,14 +9084,14 @@ function sortContainerQueries(theme, css2) {
 function isCqShorthand(breakpointKeys, value) {
   return value === "@" || value.startsWith("@") && (breakpointKeys.some((key) => value.startsWith(`@${key}`)) || !!value.match(/^@\d/));
 }
-function getContainerQuery(theme, shorthand) {
+function getContainerQuery(theme2, shorthand) {
   const matches = shorthand.match(/^@([^/]+)?\/?(.+)?$/);
   if (!matches) {
     return null;
   }
   const [, containerQuery, containerName] = matches;
   const value = Number.isNaN(+containerQuery) ? containerQuery || 0 : +containerQuery;
-  return theme.containerQueries(containerName).up(value);
+  return theme2.containerQueries(containerName).up(value);
 }
 function cssContainerQueries(themeInput) {
   const toContainerQuery = (mediaQuery, name) => mediaQuery.replace("@media", name ? `@container ${name}` : "@container");
@@ -7741,6 +9118,18 @@ function cssContainerQueries(themeInput) {
     ...themeInput,
     containerQueries
   };
+}
+const shape = {
+  borderRadius: 4
+};
+function merge(acc, item) {
+  if (!item) {
+    return acc;
+  }
+  return deepmerge(acc, item, {
+    clone: false
+    // No need to clone deep, it's way faster.
+  });
 }
 const values$1 = {
   xs: 0,
@@ -7772,19 +9161,19 @@ const defaultContainerQueries = {
   })
 };
 function handleBreakpoints(props, propValue, styleFromPropValue) {
-  const theme = props.theme || {};
+  const theme2 = props.theme || {};
   if (Array.isArray(propValue)) {
-    const themeBreakpoints = theme.breakpoints || defaultBreakpoints;
+    const themeBreakpoints = theme2.breakpoints || defaultBreakpoints;
     return propValue.reduce((acc, item, index) => {
       acc[themeBreakpoints.up(themeBreakpoints.keys[index])] = styleFromPropValue(propValue[index]);
       return acc;
     }, {});
   }
   if (typeof propValue === "object") {
-    const themeBreakpoints = theme.breakpoints || defaultBreakpoints;
+    const themeBreakpoints = theme2.breakpoints || defaultBreakpoints;
     return Object.keys(propValue).reduce((acc, breakpoint) => {
       if (isCqShorthand(themeBreakpoints.keys, breakpoint)) {
-        const containerKey = getContainerQuery(theme.containerQueries ? theme : defaultContainerQueries, breakpoint);
+        const containerKey = getContainerQuery(theme2.containerQueries ? theme2 : defaultContainerQueries, breakpoint);
         if (containerKey) {
           acc[containerKey] = styleFromPropValue(propValue[breakpoint], breakpoint);
         }
@@ -7865,6 +9254,12 @@ function resolveBreakpointValues({
     return acc;
   }, {});
 }
+function capitalize(string) {
+  if (typeof string !== "string") {
+    throw new Error(formatMuiErrorMessage(7));
+  }
+  return string.charAt(0).toUpperCase() + string.slice(1);
+}
 function getPath(obj, path, checkVars = true) {
   if (!path || typeof path !== "string") {
     return null;
@@ -7908,8 +9303,8 @@ function style$1(options) {
       return null;
     }
     const propValue = props[prop];
-    const theme = props.theme;
-    const themeMapping = getPath(theme, themeKey) || {};
+    const theme2 = props.theme;
+    const themeMapping = getPath(theme2, themeKey) || {};
     const styleFromPropValue = (propValueFinal) => {
       let value = getStyleValue$1(themeMapping, transform, propValueFinal);
       if (propValueFinal === value && typeof propValueFinal === "string") {
@@ -7928,7 +9323,7 @@ function style$1(options) {
   fn2.filterProps = [prop];
   return fn2;
 }
-function memoize$1(fn2) {
+function memoize(fn2) {
   const cache = {};
   return (arg2) => {
     if (cache[arg2] === void 0) {
@@ -7955,7 +9350,7 @@ const aliases = {
   paddingX: "px",
   paddingY: "py"
 };
-const getCssProperties = memoize$1((prop) => {
+const getCssProperties = memoize((prop) => {
   if (prop.length > 2) {
     if (aliases[prop]) {
       prop = aliases[prop];
@@ -7971,8 +9366,8 @@ const getCssProperties = memoize$1((prop) => {
 const marginKeys = ["m", "mt", "mr", "mb", "ml", "mx", "my", "margin", "marginTop", "marginRight", "marginBottom", "marginLeft", "marginX", "marginY", "marginInline", "marginInlineStart", "marginInlineEnd", "marginBlock", "marginBlockStart", "marginBlockEnd"];
 const paddingKeys = ["p", "pt", "pr", "pb", "pl", "px", "py", "padding", "paddingTop", "paddingRight", "paddingBottom", "paddingLeft", "paddingX", "paddingY", "paddingInline", "paddingInlineStart", "paddingInlineEnd", "paddingBlock", "paddingBlockStart", "paddingBlockEnd"];
 [...marginKeys, ...paddingKeys];
-function createUnaryUnit(theme, themeKey, defaultValue, propName) {
-  const themeSpacing = getPath(theme, themeKey, true) ?? defaultValue;
+function createUnaryUnit(theme2, themeKey, defaultValue, propName) {
+  const themeSpacing = getPath(theme2, themeKey, true) ?? defaultValue;
   if (typeof themeSpacing === "number" || typeof themeSpacing === "string") {
     return (val) => {
       if (typeof val === "string") {
@@ -8005,8 +9400,8 @@ function createUnaryUnit(theme, themeKey, defaultValue, propName) {
   }
   return () => void 0;
 }
-function createUnarySpacing(theme) {
-  return createUnaryUnit(theme, "spacing", 8);
+function createUnarySpacing(theme2) {
+  return createUnaryUnit(theme2, "spacing", 8);
 }
 function getValue(transformer, propValue) {
   if (typeof propValue === "string" || propValue == null) {
@@ -8043,6 +9438,22 @@ function padding(props) {
 }
 padding.propTypes = {};
 padding.filterProps = paddingKeys;
+function createSpacing(spacingInput = 8, transform = createUnarySpacing({
+  spacing: spacingInput
+})) {
+  if (spacingInput.mui) {
+    return spacingInput;
+  }
+  const spacing = (...argsInput) => {
+    const args = argsInput.length === 0 ? [1] : argsInput;
+    return args.map((argument) => {
+      const output = transform(argument);
+      return typeof output === "number" ? `${output}px` : output;
+    }).join(" ");
+  };
+  spacing.mui = true;
+  return spacing;
+}
 function compose(...styles2) {
   const handlers = styles2.reduce((acc, style2) => {
     style2.filterProps.forEach((prop) => {
@@ -8545,10 +9956,10 @@ function callIfFn(maybeFn, arg2) {
   return typeof maybeFn === "function" ? maybeFn(arg2) : maybeFn;
 }
 function unstable_createStyleFunctionSx() {
-  function getThemeValue(prop, val, theme, config2) {
+  function getThemeValue(prop, val, theme2, config2) {
     const props = {
       [prop]: val,
-      theme
+      theme: theme2
     };
     const options = config2[prop];
     if (!options) {
@@ -8570,7 +9981,7 @@ function unstable_createStyleFunctionSx() {
         [prop]: val
       };
     }
-    const themeMapping = getPath(theme, themeKey) || {};
+    const themeMapping = getPath(theme2, themeKey) || {};
     if (style2) {
       return style2(props);
     }
@@ -8591,52 +10002,52 @@ function unstable_createStyleFunctionSx() {
   function styleFunctionSx2(props) {
     const {
       sx,
-      theme = {}
+      theme: theme2 = {}
     } = props || {};
     if (!sx) {
       return null;
     }
-    const config2 = theme.unstable_sxConfig ?? defaultSxConfig;
+    const config2 = theme2.unstable_sxConfig ?? defaultSxConfig;
     function traverse(sxInput) {
       let sxObject = sxInput;
       if (typeof sxInput === "function") {
-        sxObject = sxInput(theme);
+        sxObject = sxInput(theme2);
       } else if (typeof sxInput !== "object") {
         return sxInput;
       }
       if (!sxObject) {
         return null;
       }
-      const emptyBreakpoints = createEmptyBreakpointObject(theme.breakpoints);
+      const emptyBreakpoints = createEmptyBreakpointObject(theme2.breakpoints);
       const breakpointsKeys = Object.keys(emptyBreakpoints);
       let css2 = emptyBreakpoints;
       Object.keys(sxObject).forEach((styleKey) => {
-        const value = callIfFn(sxObject[styleKey], theme);
+        const value = callIfFn(sxObject[styleKey], theme2);
         if (value !== null && value !== void 0) {
           if (typeof value === "object") {
             if (config2[styleKey]) {
-              css2 = merge(css2, getThemeValue(styleKey, value, theme, config2));
+              css2 = merge(css2, getThemeValue(styleKey, value, theme2, config2));
             } else {
               const breakpointsValues = handleBreakpoints({
-                theme
+                theme: theme2
               }, value, (x) => ({
                 [styleKey]: x
               }));
               if (objectsHaveSameKeys(breakpointsValues, value)) {
                 css2[styleKey] = styleFunctionSx2({
                   sx: value,
-                  theme
+                  theme: theme2
                 });
               } else {
                 css2 = merge(css2, breakpointsValues);
               }
             }
           } else {
-            css2 = merge(css2, getThemeValue(styleKey, value, theme, config2));
+            css2 = merge(css2, getThemeValue(styleKey, value, theme2, config2));
           }
         }
       });
-      return sortContainerQueries(theme, removeUnusedBreakpoints(breakpointsKeys, css2));
+      return sortContainerQueries(theme2, removeUnusedBreakpoints(breakpointsKeys, css2));
     }
     return Array.isArray(sx) ? sx.map(traverse) : traverse(sx);
   }
@@ -8644,6 +10055,91 @@ function unstable_createStyleFunctionSx() {
 }
 const styleFunctionSx = unstable_createStyleFunctionSx();
 styleFunctionSx.filterProps = ["sx"];
+function applyStyles$2(key, styles2) {
+  var _a;
+  const theme2 = this;
+  if (theme2.vars) {
+    if (!((_a = theme2.colorSchemes) == null ? void 0 : _a[key]) || typeof theme2.getColorSchemeSelector !== "function") {
+      return {};
+    }
+    let selector = theme2.getColorSchemeSelector(key);
+    if (selector === "&") {
+      return styles2;
+    }
+    if (selector.includes("data-") || selector.includes(".")) {
+      selector = `*:where(${selector.replace(/\s*&$/, "")}) &`;
+    }
+    return {
+      [selector]: styles2
+    };
+  }
+  if (theme2.palette.mode === key) {
+    return styles2;
+  }
+  return {};
+}
+function createTheme$1(options = {}, ...args) {
+  const {
+    breakpoints: breakpointsInput = {},
+    palette: paletteInput = {},
+    spacing: spacingInput,
+    shape: shapeInput = {},
+    ...other
+  } = options;
+  const breakpoints = createBreakpoints(breakpointsInput);
+  const spacing = createSpacing(spacingInput);
+  let muiTheme = deepmerge({
+    breakpoints,
+    direction: "ltr",
+    components: {},
+    // Inject component definitions.
+    palette: {
+      mode: "light",
+      ...paletteInput
+    },
+    spacing,
+    shape: {
+      ...shape,
+      ...shapeInput
+    }
+  }, other);
+  muiTheme = cssContainerQueries(muiTheme);
+  muiTheme.applyStyles = applyStyles$2;
+  muiTheme = args.reduce((acc, argument) => deepmerge(acc, argument), muiTheme);
+  muiTheme.unstable_sxConfig = {
+    ...defaultSxConfig,
+    ...other == null ? void 0 : other.unstable_sxConfig
+  };
+  muiTheme.unstable_sx = function sx(props) {
+    return styleFunctionSx({
+      sx: props,
+      theme: this
+    });
+  };
+  return muiTheme;
+}
+function isObjectEmpty$2(obj) {
+  return Object.keys(obj).length === 0;
+}
+function useTheme$3(defaultTheme2 = null) {
+  const contextTheme = reactExports.useContext(ThemeContext$1);
+  return !contextTheme || isObjectEmpty$2(contextTheme) ? defaultTheme2 : contextTheme;
+}
+const systemDefaultTheme$1 = createTheme$1();
+function useTheme$2(defaultTheme2 = systemDefaultTheme$1) {
+  return useTheme$3(defaultTheme2);
+}
+function GlobalStyles$2({
+  styles: styles2,
+  themeId,
+  defaultTheme: defaultTheme2 = {}
+}) {
+  const upperTheme = useTheme$2(defaultTheme2);
+  const globalStyles = typeof styles2 === "function" ? styles2(themeId ? upperTheme[themeId] || upperTheme : upperTheme) : styles2;
+  return /* @__PURE__ */ jsxRuntimeExports.jsx(GlobalStyles$3, {
+    styles: globalStyles
+  });
+}
 const splitProps = (props) => {
   var _a;
   const result = {
@@ -8694,1930 +10190,34 @@ function extendSxProp$1(props) {
     sx: finalSx
   };
 }
-function _extends() {
-  return _extends = Object.assign ? Object.assign.bind() : function(n) {
-    for (var e = 1; e < arguments.length; e++) {
-      var t = arguments[e];
-      for (var r2 in t) ({}).hasOwnProperty.call(t, r2) && (n[r2] = t[r2]);
-    }
-    return n;
-  }, _extends.apply(null, arguments);
-}
-function sheetForTag(tag) {
-  if (tag.sheet) {
-    return tag.sheet;
-  }
-  for (var i = 0; i < document.styleSheets.length; i++) {
-    if (document.styleSheets[i].ownerNode === tag) {
-      return document.styleSheets[i];
-    }
-  }
-  return void 0;
-}
-function createStyleElement(options) {
-  var tag = document.createElement("style");
-  tag.setAttribute("data-emotion", options.key);
-  if (options.nonce !== void 0) {
-    tag.setAttribute("nonce", options.nonce);
-  }
-  tag.appendChild(document.createTextNode(""));
-  tag.setAttribute("data-s", "");
-  return tag;
-}
-var StyleSheet = /* @__PURE__ */ function() {
-  function StyleSheet2(options) {
-    var _this = this;
-    this._insertTag = function(tag) {
-      var before;
-      if (_this.tags.length === 0) {
-        if (_this.insertionPoint) {
-          before = _this.insertionPoint.nextSibling;
-        } else if (_this.prepend) {
-          before = _this.container.firstChild;
-        } else {
-          before = _this.before;
-        }
-      } else {
-        before = _this.tags[_this.tags.length - 1].nextSibling;
-      }
-      _this.container.insertBefore(tag, before);
-      _this.tags.push(tag);
-    };
-    this.isSpeedy = options.speedy === void 0 ? true : options.speedy;
-    this.tags = [];
-    this.ctr = 0;
-    this.nonce = options.nonce;
-    this.key = options.key;
-    this.container = options.container;
-    this.prepend = options.prepend;
-    this.insertionPoint = options.insertionPoint;
-    this.before = null;
-  }
-  var _proto = StyleSheet2.prototype;
-  _proto.hydrate = function hydrate(nodes) {
-    nodes.forEach(this._insertTag);
-  };
-  _proto.insert = function insert(rule) {
-    if (this.ctr % (this.isSpeedy ? 65e3 : 1) === 0) {
-      this._insertTag(createStyleElement(this));
-    }
-    var tag = this.tags[this.tags.length - 1];
-    if (this.isSpeedy) {
-      var sheet = sheetForTag(tag);
-      try {
-        sheet.insertRule(rule, sheet.cssRules.length);
-      } catch (e) {
-      }
-    } else {
-      tag.appendChild(document.createTextNode(rule));
-    }
-    this.ctr++;
-  };
-  _proto.flush = function flush() {
-    this.tags.forEach(function(tag) {
-      var _tag$parentNode;
-      return (_tag$parentNode = tag.parentNode) == null ? void 0 : _tag$parentNode.removeChild(tag);
-    });
-    this.tags = [];
-    this.ctr = 0;
-  };
-  return StyleSheet2;
-}();
-var MS = "-ms-";
-var MOZ = "-moz-";
-var WEBKIT = "-webkit-";
-var COMMENT = "comm";
-var RULESET = "rule";
-var DECLARATION = "decl";
-var IMPORT = "@import";
-var KEYFRAMES = "@keyframes";
-var LAYER = "@layer";
-var abs = Math.abs;
-var from = String.fromCharCode;
-var assign = Object.assign;
-function hash$2(value, length2) {
-  return charat(value, 0) ^ 45 ? (((length2 << 2 ^ charat(value, 0)) << 2 ^ charat(value, 1)) << 2 ^ charat(value, 2)) << 2 ^ charat(value, 3) : 0;
-}
-function trim(value) {
-  return value.trim();
-}
-function match(value, pattern) {
-  return (value = pattern.exec(value)) ? value[0] : value;
-}
-function replace(value, pattern, replacement) {
-  return value.replace(pattern, replacement);
-}
-function indexof(value, search) {
-  return value.indexOf(search);
-}
-function charat(value, index) {
-  return value.charCodeAt(index) | 0;
-}
-function substr(value, begin, end2) {
-  return value.slice(begin, end2);
-}
-function strlen(value) {
-  return value.length;
-}
-function sizeof(value) {
-  return value.length;
-}
-function append(value, array) {
-  return array.push(value), value;
-}
-function combine(array, callback) {
-  return array.map(callback).join("");
-}
-var line = 1;
-var column = 1;
-var length = 0;
-var position = 0;
-var character = 0;
-var characters = "";
-function node(value, root, parent, type, props, children, length2) {
-  return { value, root, parent, type, props, children, line, column, length: length2, return: "" };
-}
-function copy(root, props) {
-  return assign(node("", null, null, "", null, null, 0), root, { length: -root.length }, props);
-}
-function char() {
-  return character;
-}
-function prev() {
-  character = position > 0 ? charat(characters, --position) : 0;
-  if (column--, character === 10)
-    column = 1, line--;
-  return character;
-}
-function next() {
-  character = position < length ? charat(characters, position++) : 0;
-  if (column++, character === 10)
-    column = 1, line++;
-  return character;
-}
-function peek() {
-  return charat(characters, position);
-}
-function caret() {
-  return position;
-}
-function slice(begin, end2) {
-  return substr(characters, begin, end2);
-}
-function token(type) {
-  switch (type) {
-    // \0 \t \n \r \s whitespace token
-    case 0:
-    case 9:
-    case 10:
-    case 13:
-    case 32:
-      return 5;
-    // ! + , / > @ ~ isolate token
-    case 33:
-    case 43:
-    case 44:
-    case 47:
-    case 62:
-    case 64:
-    case 126:
-    // ; { } breakpoint token
-    case 59:
-    case 123:
-    case 125:
-      return 4;
-    // : accompanied token
-    case 58:
-      return 3;
-    // " ' ( [ opening delimit token
-    case 34:
-    case 39:
-    case 40:
-    case 91:
-      return 2;
-    // ) ] closing delimit token
-    case 41:
-    case 93:
-      return 1;
-  }
-  return 0;
-}
-function alloc(value) {
-  return line = column = 1, length = strlen(characters = value), position = 0, [];
-}
-function dealloc(value) {
-  return characters = "", value;
-}
-function delimit(type) {
-  return trim(slice(position - 1, delimiter(type === 91 ? type + 2 : type === 40 ? type + 1 : type)));
-}
-function whitespace(type) {
-  while (character = peek())
-    if (character < 33)
-      next();
-    else
-      break;
-  return token(type) > 2 || token(character) > 3 ? "" : " ";
-}
-function escaping(index, count) {
-  while (--count && next())
-    if (character < 48 || character > 102 || character > 57 && character < 65 || character > 70 && character < 97)
-      break;
-  return slice(index, caret() + (count < 6 && peek() == 32 && next() == 32));
-}
-function delimiter(type) {
-  while (next())
-    switch (character) {
-      // ] ) " '
-      case type:
-        return position;
-      // " '
-      case 34:
-      case 39:
-        if (type !== 34 && type !== 39)
-          delimiter(character);
-        break;
-      // (
-      case 40:
-        if (type === 41)
-          delimiter(type);
-        break;
-      // \
-      case 92:
-        next();
-        break;
-    }
-  return position;
-}
-function commenter(type, index) {
-  while (next())
-    if (type + character === 47 + 10)
-      break;
-    else if (type + character === 42 + 42 && peek() === 47)
-      break;
-  return "/*" + slice(index, position - 1) + "*" + from(type === 47 ? type : next());
-}
-function identifier(index) {
-  while (!token(peek()))
-    next();
-  return slice(index, position);
-}
-function compile(value) {
-  return dealloc(parse("", null, null, null, [""], value = alloc(value), 0, [0], value));
-}
-function parse(value, root, parent, rule, rules, rulesets, pseudo, points, declarations) {
-  var index = 0;
-  var offset2 = 0;
-  var length2 = pseudo;
-  var atrule = 0;
-  var property = 0;
-  var previous = 0;
-  var variable = 1;
-  var scanning = 1;
-  var ampersand = 1;
-  var character2 = 0;
-  var type = "";
-  var props = rules;
-  var children = rulesets;
-  var reference2 = rule;
-  var characters2 = type;
-  while (scanning)
-    switch (previous = character2, character2 = next()) {
-      // (
-      case 40:
-        if (previous != 108 && charat(characters2, length2 - 1) == 58) {
-          if (indexof(characters2 += replace(delimit(character2), "&", "&\f"), "&\f") != -1)
-            ampersand = -1;
-          break;
-        }
-      // " ' [
-      case 34:
-      case 39:
-      case 91:
-        characters2 += delimit(character2);
-        break;
-      // \t \n \r \s
-      case 9:
-      case 10:
-      case 13:
-      case 32:
-        characters2 += whitespace(previous);
-        break;
-      // \
-      case 92:
-        characters2 += escaping(caret() - 1, 7);
-        continue;
-      // /
-      case 47:
-        switch (peek()) {
-          case 42:
-          case 47:
-            append(comment(commenter(next(), caret()), root, parent), declarations);
-            break;
-          default:
-            characters2 += "/";
-        }
-        break;
-      // {
-      case 123 * variable:
-        points[index++] = strlen(characters2) * ampersand;
-      // } ; \0
-      case 125 * variable:
-      case 59:
-      case 0:
-        switch (character2) {
-          // \0 }
-          case 0:
-          case 125:
-            scanning = 0;
-          // ;
-          case 59 + offset2:
-            if (ampersand == -1) characters2 = replace(characters2, /\f/g, "");
-            if (property > 0 && strlen(characters2) - length2)
-              append(property > 32 ? declaration(characters2 + ";", rule, parent, length2 - 1) : declaration(replace(characters2, " ", "") + ";", rule, parent, length2 - 2), declarations);
-            break;
-          // @ ;
-          case 59:
-            characters2 += ";";
-          // { rule/at-rule
-          default:
-            append(reference2 = ruleset(characters2, root, parent, index, offset2, rules, points, type, props = [], children = [], length2), rulesets);
-            if (character2 === 123)
-              if (offset2 === 0)
-                parse(characters2, root, reference2, reference2, props, rulesets, length2, points, children);
-              else
-                switch (atrule === 99 && charat(characters2, 3) === 110 ? 100 : atrule) {
-                  // d l m s
-                  case 100:
-                  case 108:
-                  case 109:
-                  case 115:
-                    parse(value, reference2, reference2, rule && append(ruleset(value, reference2, reference2, 0, 0, rules, points, type, rules, props = [], length2), children), rules, children, length2, points, rule ? props : children);
-                    break;
-                  default:
-                    parse(characters2, reference2, reference2, reference2, [""], children, 0, points, children);
-                }
-        }
-        index = offset2 = property = 0, variable = ampersand = 1, type = characters2 = "", length2 = pseudo;
-        break;
-      // :
-      case 58:
-        length2 = 1 + strlen(characters2), property = previous;
-      default:
-        if (variable < 1) {
-          if (character2 == 123)
-            --variable;
-          else if (character2 == 125 && variable++ == 0 && prev() == 125)
-            continue;
-        }
-        switch (characters2 += from(character2), character2 * variable) {
-          // &
-          case 38:
-            ampersand = offset2 > 0 ? 1 : (characters2 += "\f", -1);
-            break;
-          // ,
-          case 44:
-            points[index++] = (strlen(characters2) - 1) * ampersand, ampersand = 1;
-            break;
-          // @
-          case 64:
-            if (peek() === 45)
-              characters2 += delimit(next());
-            atrule = peek(), offset2 = length2 = strlen(type = characters2 += identifier(caret())), character2++;
-            break;
-          // -
-          case 45:
-            if (previous === 45 && strlen(characters2) == 2)
-              variable = 0;
-        }
-    }
-  return rulesets;
-}
-function ruleset(value, root, parent, index, offset2, rules, points, type, props, children, length2) {
-  var post = offset2 - 1;
-  var rule = offset2 === 0 ? rules : [""];
-  var size = sizeof(rule);
-  for (var i = 0, j = 0, k = 0; i < index; ++i)
-    for (var x = 0, y = substr(value, post + 1, post = abs(j = points[i])), z2 = value; x < size; ++x)
-      if (z2 = trim(j > 0 ? rule[x] + " " + y : replace(y, /&\f/g, rule[x])))
-        props[k++] = z2;
-  return node(value, root, parent, offset2 === 0 ? RULESET : type, props, children, length2);
-}
-function comment(value, root, parent) {
-  return node(value, root, parent, COMMENT, from(char()), substr(value, 2, -2), 0);
-}
-function declaration(value, root, parent, length2) {
-  return node(value, root, parent, DECLARATION, substr(value, 0, length2), substr(value, length2 + 1, -1), length2);
-}
-function serialize(children, callback) {
-  var output = "";
-  var length2 = sizeof(children);
-  for (var i = 0; i < length2; i++)
-    output += callback(children[i], i, children, callback) || "";
-  return output;
-}
-function stringify(element, index, children, callback) {
-  switch (element.type) {
-    case LAYER:
-      if (element.children.length) break;
-    case IMPORT:
-    case DECLARATION:
-      return element.return = element.return || element.value;
-    case COMMENT:
-      return "";
-    case KEYFRAMES:
-      return element.return = element.value + "{" + serialize(element.children, callback) + "}";
-    case RULESET:
-      element.value = element.props.join(",");
-  }
-  return strlen(children = serialize(element.children, callback)) ? element.return = element.value + "{" + children + "}" : "";
-}
-function middleware(collection) {
-  var length2 = sizeof(collection);
-  return function(element, index, children, callback) {
-    var output = "";
-    for (var i = 0; i < length2; i++)
-      output += collection[i](element, index, children, callback) || "";
-    return output;
-  };
-}
-function rulesheet(callback) {
-  return function(element) {
-    if (!element.root) {
-      if (element = element.return)
-        callback(element);
-    }
-  };
-}
-function memoize(fn2) {
-  var cache = /* @__PURE__ */ Object.create(null);
-  return function(arg2) {
-    if (cache[arg2] === void 0) cache[arg2] = fn2(arg2);
-    return cache[arg2];
-  };
-}
-var identifierWithPointTracking = function identifierWithPointTracking2(begin, points, index) {
-  var previous = 0;
-  var character2 = 0;
-  while (true) {
-    previous = character2;
-    character2 = peek();
-    if (previous === 38 && character2 === 12) {
-      points[index] = 1;
-    }
-    if (token(character2)) {
-      break;
-    }
-    next();
-  }
-  return slice(begin, position);
-};
-var toRules = function toRules2(parsed, points) {
-  var index = -1;
-  var character2 = 44;
-  do {
-    switch (token(character2)) {
-      case 0:
-        if (character2 === 38 && peek() === 12) {
-          points[index] = 1;
-        }
-        parsed[index] += identifierWithPointTracking(position - 1, points, index);
-        break;
-      case 2:
-        parsed[index] += delimit(character2);
-        break;
-      case 4:
-        if (character2 === 44) {
-          parsed[++index] = peek() === 58 ? "&\f" : "";
-          points[index] = parsed[index].length;
-          break;
-        }
-      // fallthrough
-      default:
-        parsed[index] += from(character2);
-    }
-  } while (character2 = next());
-  return parsed;
-};
-var getRules = function getRules2(value, points) {
-  return dealloc(toRules(alloc(value), points));
-};
-var fixedElements = /* @__PURE__ */ new WeakMap();
-var compat = function compat2(element) {
-  if (element.type !== "rule" || !element.parent || // positive .length indicates that this rule contains pseudo
-  // negative .length indicates that this rule has been already prefixed
-  element.length < 1) {
-    return;
-  }
-  var value = element.value;
-  var parent = element.parent;
-  var isImplicitRule = element.column === parent.column && element.line === parent.line;
-  while (parent.type !== "rule") {
-    parent = parent.parent;
-    if (!parent) return;
-  }
-  if (element.props.length === 1 && value.charCodeAt(0) !== 58 && !fixedElements.get(parent)) {
-    return;
-  }
-  if (isImplicitRule) {
-    return;
-  }
-  fixedElements.set(element, true);
-  var points = [];
-  var rules = getRules(value, points);
-  var parentRules = parent.props;
-  for (var i = 0, k = 0; i < rules.length; i++) {
-    for (var j = 0; j < parentRules.length; j++, k++) {
-      element.props[k] = points[i] ? rules[i].replace(/&\f/g, parentRules[j]) : parentRules[j] + " " + rules[i];
-    }
-  }
-};
-var removeLabel = function removeLabel2(element) {
-  if (element.type === "decl") {
-    var value = element.value;
-    if (
-      // charcode for l
-      value.charCodeAt(0) === 108 && // charcode for b
-      value.charCodeAt(2) === 98
-    ) {
-      element["return"] = "";
-      element.value = "";
-    }
-  }
-};
-function prefix(value, length2) {
-  switch (hash$2(value, length2)) {
-    // color-adjust
-    case 5103:
-      return WEBKIT + "print-" + value + value;
-    // animation, animation-(delay|direction|duration|fill-mode|iteration-count|name|play-state|timing-function)
-    case 5737:
-    case 4201:
-    case 3177:
-    case 3433:
-    case 1641:
-    case 4457:
-    case 2921:
-    // text-decoration, filter, clip-path, backface-visibility, column, box-decoration-break
-    case 5572:
-    case 6356:
-    case 5844:
-    case 3191:
-    case 6645:
-    case 3005:
-    // mask, mask-image, mask-(mode|clip|size), mask-(repeat|origin), mask-position, mask-composite,
-    case 6391:
-    case 5879:
-    case 5623:
-    case 6135:
-    case 4599:
-    case 4855:
-    // background-clip, columns, column-(count|fill|gap|rule|rule-color|rule-style|rule-width|span|width)
-    case 4215:
-    case 6389:
-    case 5109:
-    case 5365:
-    case 5621:
-    case 3829:
-      return WEBKIT + value + value;
-    // appearance, user-select, transform, hyphens, text-size-adjust
-    case 5349:
-    case 4246:
-    case 4810:
-    case 6968:
-    case 2756:
-      return WEBKIT + value + MOZ + value + MS + value + value;
-    // flex, flex-direction
-    case 6828:
-    case 4268:
-      return WEBKIT + value + MS + value + value;
-    // order
-    case 6165:
-      return WEBKIT + value + MS + "flex-" + value + value;
-    // align-items
-    case 5187:
-      return WEBKIT + value + replace(value, /(\w+).+(:[^]+)/, WEBKIT + "box-$1$2" + MS + "flex-$1$2") + value;
-    // align-self
-    case 5443:
-      return WEBKIT + value + MS + "flex-item-" + replace(value, /flex-|-self/, "") + value;
-    // align-content
-    case 4675:
-      return WEBKIT + value + MS + "flex-line-pack" + replace(value, /align-content|flex-|-self/, "") + value;
-    // flex-shrink
-    case 5548:
-      return WEBKIT + value + MS + replace(value, "shrink", "negative") + value;
-    // flex-basis
-    case 5292:
-      return WEBKIT + value + MS + replace(value, "basis", "preferred-size") + value;
-    // flex-grow
-    case 6060:
-      return WEBKIT + "box-" + replace(value, "-grow", "") + WEBKIT + value + MS + replace(value, "grow", "positive") + value;
-    // transition
-    case 4554:
-      return WEBKIT + replace(value, /([^-])(transform)/g, "$1" + WEBKIT + "$2") + value;
-    // cursor
-    case 6187:
-      return replace(replace(replace(value, /(zoom-|grab)/, WEBKIT + "$1"), /(image-set)/, WEBKIT + "$1"), value, "") + value;
-    // background, background-image
-    case 5495:
-    case 3959:
-      return replace(value, /(image-set\([^]*)/, WEBKIT + "$1$`$1");
-    // justify-content
-    case 4968:
-      return replace(replace(value, /(.+:)(flex-)?(.*)/, WEBKIT + "box-pack:$3" + MS + "flex-pack:$3"), /s.+-b[^;]+/, "justify") + WEBKIT + value + value;
-    // (margin|padding)-inline-(start|end)
-    case 4095:
-    case 3583:
-    case 4068:
-    case 2532:
-      return replace(value, /(.+)-inline(.+)/, WEBKIT + "$1$2") + value;
-    // (min|max)?(width|height|inline-size|block-size)
-    case 8116:
-    case 7059:
-    case 5753:
-    case 5535:
-    case 5445:
-    case 5701:
-    case 4933:
-    case 4677:
-    case 5533:
-    case 5789:
-    case 5021:
-    case 4765:
-      if (strlen(value) - 1 - length2 > 6) switch (charat(value, length2 + 1)) {
-        // (m)ax-content, (m)in-content
-        case 109:
-          if (charat(value, length2 + 4) !== 45) break;
-        // (f)ill-available, (f)it-content
-        case 102:
-          return replace(value, /(.+:)(.+)-([^]+)/, "$1" + WEBKIT + "$2-$3$1" + MOZ + (charat(value, length2 + 3) == 108 ? "$3" : "$2-$3")) + value;
-        // (s)tretch
-        case 115:
-          return ~indexof(value, "stretch") ? prefix(replace(value, "stretch", "fill-available"), length2) + value : value;
-      }
-      break;
-    // position: sticky
-    case 4949:
-      if (charat(value, length2 + 1) !== 115) break;
-    // display: (flex|inline-flex)
-    case 6444:
-      switch (charat(value, strlen(value) - 3 - (~indexof(value, "!important") && 10))) {
-        // stic(k)y
-        case 107:
-          return replace(value, ":", ":" + WEBKIT) + value;
-        // (inline-)?fl(e)x
-        case 101:
-          return replace(value, /(.+:)([^;!]+)(;|!.+)?/, "$1" + WEBKIT + (charat(value, 14) === 45 ? "inline-" : "") + "box$3$1" + WEBKIT + "$2$3$1" + MS + "$2box$3") + value;
-      }
-      break;
-    // writing-mode
-    case 5936:
-      switch (charat(value, length2 + 11)) {
-        // vertical-l(r)
-        case 114:
-          return WEBKIT + value + MS + replace(value, /[svh]\w+-[tblr]{2}/, "tb") + value;
-        // vertical-r(l)
-        case 108:
-          return WEBKIT + value + MS + replace(value, /[svh]\w+-[tblr]{2}/, "tb-rl") + value;
-        // horizontal(-)tb
-        case 45:
-          return WEBKIT + value + MS + replace(value, /[svh]\w+-[tblr]{2}/, "lr") + value;
-      }
-      return WEBKIT + value + MS + value + value;
-  }
-  return value;
-}
-var prefixer = function prefixer2(element, index, children, callback) {
-  if (element.length > -1) {
-    if (!element["return"]) switch (element.type) {
-      case DECLARATION:
-        element["return"] = prefix(element.value, element.length);
-        break;
-      case KEYFRAMES:
-        return serialize([copy(element, {
-          value: replace(element.value, "@", "@" + WEBKIT)
-        })], callback);
-      case RULESET:
-        if (element.length) return combine(element.props, function(value) {
-          switch (match(value, /(::plac\w+|:read-\w+)/)) {
-            // :read-(only|write)
-            case ":read-only":
-            case ":read-write":
-              return serialize([copy(element, {
-                props: [replace(value, /:(read-\w+)/, ":" + MOZ + "$1")]
-              })], callback);
-            // :placeholder
-            case "::placeholder":
-              return serialize([copy(element, {
-                props: [replace(value, /:(plac\w+)/, ":" + WEBKIT + "input-$1")]
-              }), copy(element, {
-                props: [replace(value, /:(plac\w+)/, ":" + MOZ + "$1")]
-              }), copy(element, {
-                props: [replace(value, /:(plac\w+)/, MS + "input-$1")]
-              })], callback);
-          }
-          return "";
-        });
-    }
-  }
-};
-var defaultStylisPlugins = [prefixer];
-var createCache = function createCache2(options) {
-  var key = options.key;
-  if (key === "css") {
-    var ssrStyles = document.querySelectorAll("style[data-emotion]:not([data-s])");
-    Array.prototype.forEach.call(ssrStyles, function(node2) {
-      var dataEmotionAttribute = node2.getAttribute("data-emotion");
-      if (dataEmotionAttribute.indexOf(" ") === -1) {
-        return;
-      }
-      document.head.appendChild(node2);
-      node2.setAttribute("data-s", "");
-    });
-  }
-  var stylisPlugins = options.stylisPlugins || defaultStylisPlugins;
-  var inserted = {};
-  var container;
-  var nodesToHydrate = [];
-  {
-    container = options.container || document.head;
-    Array.prototype.forEach.call(
-      // this means we will ignore elements which don't have a space in them which
-      // means that the style elements we're looking at are only Emotion 11 server-rendered style elements
-      document.querySelectorAll('style[data-emotion^="' + key + ' "]'),
-      function(node2) {
-        var attrib = node2.getAttribute("data-emotion").split(" ");
-        for (var i = 1; i < attrib.length; i++) {
-          inserted[attrib[i]] = true;
-        }
-        nodesToHydrate.push(node2);
-      }
-    );
-  }
-  var _insert;
-  var omnipresentPlugins = [compat, removeLabel];
-  {
-    var currentSheet;
-    var finalizingPlugins = [stringify, rulesheet(function(rule) {
-      currentSheet.insert(rule);
-    })];
-    var serializer = middleware(omnipresentPlugins.concat(stylisPlugins, finalizingPlugins));
-    var stylis = function stylis2(styles2) {
-      return serialize(compile(styles2), serializer);
-    };
-    _insert = function insert(selector, serialized, sheet, shouldCache) {
-      currentSheet = sheet;
-      stylis(selector ? selector + "{" + serialized.styles + "}" : serialized.styles);
-      if (shouldCache) {
-        cache.inserted[serialized.name] = true;
-      }
-    };
-  }
-  var cache = {
-    key,
-    sheet: new StyleSheet({
-      key,
-      container,
-      nonce: options.nonce,
-      speedy: options.speedy,
-      prepend: options.prepend,
-      insertionPoint: options.insertionPoint
-    }),
-    nonce: options.nonce,
-    inserted,
-    registered: {},
-    insert: _insert
-  };
-  cache.sheet.hydrate(nodesToHydrate);
-  return cache;
-};
-var reactIs = { exports: {} };
-var reactIs_production_min = {};
-/** @license React v16.13.1
- * react-is.production.min.js
- *
- * Copyright (c) Facebook, Inc. and its affiliates.
- *
- * This source code is licensed under the MIT license found in the
- * LICENSE file in the root directory of this source tree.
- */
-var hasRequiredReactIs_production_min;
-function requireReactIs_production_min() {
-  if (hasRequiredReactIs_production_min) return reactIs_production_min;
-  hasRequiredReactIs_production_min = 1;
-  var b = "function" === typeof Symbol && Symbol.for, c = b ? Symbol.for("react.element") : 60103, d = b ? Symbol.for("react.portal") : 60106, e = b ? Symbol.for("react.fragment") : 60107, f = b ? Symbol.for("react.strict_mode") : 60108, g = b ? Symbol.for("react.profiler") : 60114, h = b ? Symbol.for("react.provider") : 60109, k = b ? Symbol.for("react.context") : 60110, l = b ? Symbol.for("react.async_mode") : 60111, m = b ? Symbol.for("react.concurrent_mode") : 60111, n = b ? Symbol.for("react.forward_ref") : 60112, p = b ? Symbol.for("react.suspense") : 60113, q = b ? Symbol.for("react.suspense_list") : 60120, r2 = b ? Symbol.for("react.memo") : 60115, t = b ? Symbol.for("react.lazy") : 60116, v = b ? Symbol.for("react.block") : 60121, w = b ? Symbol.for("react.fundamental") : 60117, x = b ? Symbol.for("react.responder") : 60118, y = b ? Symbol.for("react.scope") : 60119;
-  function z2(a) {
-    if ("object" === typeof a && null !== a) {
-      var u = a.$$typeof;
-      switch (u) {
-        case c:
-          switch (a = a.type, a) {
-            case l:
-            case m:
-            case e:
-            case g:
-            case f:
-            case p:
-              return a;
-            default:
-              switch (a = a && a.$$typeof, a) {
-                case k:
-                case n:
-                case t:
-                case r2:
-                case h:
-                  return a;
-                default:
-                  return u;
-              }
-          }
-        case d:
-          return u;
-      }
-    }
-  }
-  function A(a) {
-    return z2(a) === m;
-  }
-  reactIs_production_min.AsyncMode = l;
-  reactIs_production_min.ConcurrentMode = m;
-  reactIs_production_min.ContextConsumer = k;
-  reactIs_production_min.ContextProvider = h;
-  reactIs_production_min.Element = c;
-  reactIs_production_min.ForwardRef = n;
-  reactIs_production_min.Fragment = e;
-  reactIs_production_min.Lazy = t;
-  reactIs_production_min.Memo = r2;
-  reactIs_production_min.Portal = d;
-  reactIs_production_min.Profiler = g;
-  reactIs_production_min.StrictMode = f;
-  reactIs_production_min.Suspense = p;
-  reactIs_production_min.isAsyncMode = function(a) {
-    return A(a) || z2(a) === l;
-  };
-  reactIs_production_min.isConcurrentMode = A;
-  reactIs_production_min.isContextConsumer = function(a) {
-    return z2(a) === k;
-  };
-  reactIs_production_min.isContextProvider = function(a) {
-    return z2(a) === h;
-  };
-  reactIs_production_min.isElement = function(a) {
-    return "object" === typeof a && null !== a && a.$$typeof === c;
-  };
-  reactIs_production_min.isForwardRef = function(a) {
-    return z2(a) === n;
-  };
-  reactIs_production_min.isFragment = function(a) {
-    return z2(a) === e;
-  };
-  reactIs_production_min.isLazy = function(a) {
-    return z2(a) === t;
-  };
-  reactIs_production_min.isMemo = function(a) {
-    return z2(a) === r2;
-  };
-  reactIs_production_min.isPortal = function(a) {
-    return z2(a) === d;
-  };
-  reactIs_production_min.isProfiler = function(a) {
-    return z2(a) === g;
-  };
-  reactIs_production_min.isStrictMode = function(a) {
-    return z2(a) === f;
-  };
-  reactIs_production_min.isSuspense = function(a) {
-    return z2(a) === p;
-  };
-  reactIs_production_min.isValidElementType = function(a) {
-    return "string" === typeof a || "function" === typeof a || a === e || a === m || a === g || a === f || a === p || a === q || "object" === typeof a && null !== a && (a.$$typeof === t || a.$$typeof === r2 || a.$$typeof === h || a.$$typeof === k || a.$$typeof === n || a.$$typeof === w || a.$$typeof === x || a.$$typeof === y || a.$$typeof === v);
-  };
-  reactIs_production_min.typeOf = z2;
-  return reactIs_production_min;
-}
-var hasRequiredReactIs;
-function requireReactIs() {
-  if (hasRequiredReactIs) return reactIs.exports;
-  hasRequiredReactIs = 1;
-  {
-    reactIs.exports = requireReactIs_production_min();
-  }
-  return reactIs.exports;
-}
-var hoistNonReactStatics_cjs;
-var hasRequiredHoistNonReactStatics_cjs;
-function requireHoistNonReactStatics_cjs() {
-  if (hasRequiredHoistNonReactStatics_cjs) return hoistNonReactStatics_cjs;
-  hasRequiredHoistNonReactStatics_cjs = 1;
-  var reactIs2 = requireReactIs();
-  var REACT_STATICS = {
-    childContextTypes: true,
-    contextType: true,
-    contextTypes: true,
-    defaultProps: true,
-    displayName: true,
-    getDefaultProps: true,
-    getDerivedStateFromError: true,
-    getDerivedStateFromProps: true,
-    mixins: true,
-    propTypes: true,
-    type: true
-  };
-  var KNOWN_STATICS = {
-    name: true,
-    length: true,
-    prototype: true,
-    caller: true,
-    callee: true,
-    arguments: true,
-    arity: true
-  };
-  var FORWARD_REF_STATICS = {
-    "$$typeof": true,
-    render: true,
-    defaultProps: true,
-    displayName: true,
-    propTypes: true
-  };
-  var MEMO_STATICS = {
-    "$$typeof": true,
-    compare: true,
-    defaultProps: true,
-    displayName: true,
-    propTypes: true,
-    type: true
-  };
-  var TYPE_STATICS = {};
-  TYPE_STATICS[reactIs2.ForwardRef] = FORWARD_REF_STATICS;
-  TYPE_STATICS[reactIs2.Memo] = MEMO_STATICS;
-  function getStatics(component) {
-    if (reactIs2.isMemo(component)) {
-      return MEMO_STATICS;
-    }
-    return TYPE_STATICS[component["$$typeof"]] || REACT_STATICS;
-  }
-  var defineProperty = Object.defineProperty;
-  var getOwnPropertyNames = Object.getOwnPropertyNames;
-  var getOwnPropertySymbols = Object.getOwnPropertySymbols;
-  var getOwnPropertyDescriptor = Object.getOwnPropertyDescriptor;
-  var getPrototypeOf = Object.getPrototypeOf;
-  var objectPrototype = Object.prototype;
-  function hoistNonReactStatics(targetComponent, sourceComponent, blacklist) {
-    if (typeof sourceComponent !== "string") {
-      if (objectPrototype) {
-        var inheritedComponent = getPrototypeOf(sourceComponent);
-        if (inheritedComponent && inheritedComponent !== objectPrototype) {
-          hoistNonReactStatics(targetComponent, inheritedComponent, blacklist);
-        }
-      }
-      var keys = getOwnPropertyNames(sourceComponent);
-      if (getOwnPropertySymbols) {
-        keys = keys.concat(getOwnPropertySymbols(sourceComponent));
-      }
-      var targetStatics = getStatics(targetComponent);
-      var sourceStatics = getStatics(sourceComponent);
-      for (var i = 0; i < keys.length; ++i) {
-        var key = keys[i];
-        if (!KNOWN_STATICS[key] && !(blacklist && blacklist[key]) && !(sourceStatics && sourceStatics[key]) && !(targetStatics && targetStatics[key])) {
-          var descriptor = getOwnPropertyDescriptor(sourceComponent, key);
-          try {
-            defineProperty(targetComponent, key, descriptor);
-          } catch (e) {
-          }
-        }
-      }
-    }
-    return targetComponent;
-  }
-  hoistNonReactStatics_cjs = hoistNonReactStatics;
-  return hoistNonReactStatics_cjs;
-}
-requireHoistNonReactStatics_cjs();
-var isBrowser = true;
-function getRegisteredStyles(registered, registeredStyles, classNames) {
-  var rawClassName = "";
-  classNames.split(" ").forEach(function(className) {
-    if (registered[className] !== void 0) {
-      registeredStyles.push(registered[className] + ";");
-    } else if (className) {
-      rawClassName += className + " ";
-    }
-  });
-  return rawClassName;
-}
-var registerStyles = function registerStyles2(cache, serialized, isStringTag2) {
-  var className = cache.key + "-" + serialized.name;
-  if (
-    // we only need to add the styles to the registered cache if the
-    // class name could be used further down
-    // the tree but if it's a string tag, we know it won't
-    // so we don't have to add it to registered cache.
-    // this improves memory usage since we can avoid storing the whole style string
-    (isStringTag2 === false || // we need to always store it if we're in compat mode and
-    // in node since emotion-server relies on whether a style is in
-    // the registered cache to know whether a style is global or not
-    // also, note that this check will be dead code eliminated in the browser
-    isBrowser === false) && cache.registered[className] === void 0
-  ) {
-    cache.registered[className] = serialized.styles;
-  }
-};
-var insertStyles = function insertStyles2(cache, serialized, isStringTag2) {
-  registerStyles(cache, serialized, isStringTag2);
-  var className = cache.key + "-" + serialized.name;
-  if (cache.inserted[serialized.name] === void 0) {
-    var current = serialized;
-    do {
-      cache.insert(serialized === current ? "." + className : "", current, cache.sheet, true);
-      current = current.next;
-    } while (current !== void 0);
-  }
-};
-function murmur2(str) {
-  var h = 0;
-  var k, i = 0, len = str.length;
-  for (; len >= 4; ++i, len -= 4) {
-    k = str.charCodeAt(i) & 255 | (str.charCodeAt(++i) & 255) << 8 | (str.charCodeAt(++i) & 255) << 16 | (str.charCodeAt(++i) & 255) << 24;
-    k = /* Math.imul(k, m): */
-    (k & 65535) * 1540483477 + ((k >>> 16) * 59797 << 16);
-    k ^= /* k >>> r: */
-    k >>> 24;
-    h = /* Math.imul(k, m): */
-    (k & 65535) * 1540483477 + ((k >>> 16) * 59797 << 16) ^ /* Math.imul(h, m): */
-    (h & 65535) * 1540483477 + ((h >>> 16) * 59797 << 16);
-  }
-  switch (len) {
-    case 3:
-      h ^= (str.charCodeAt(i + 2) & 255) << 16;
-    case 2:
-      h ^= (str.charCodeAt(i + 1) & 255) << 8;
-    case 1:
-      h ^= str.charCodeAt(i) & 255;
-      h = /* Math.imul(h, m): */
-      (h & 65535) * 1540483477 + ((h >>> 16) * 59797 << 16);
-  }
-  h ^= h >>> 13;
-  h = /* Math.imul(h, m): */
-  (h & 65535) * 1540483477 + ((h >>> 16) * 59797 << 16);
-  return ((h ^ h >>> 15) >>> 0).toString(36);
-}
-var unitlessKeys = {
-  animationIterationCount: 1,
-  aspectRatio: 1,
-  borderImageOutset: 1,
-  borderImageSlice: 1,
-  borderImageWidth: 1,
-  boxFlex: 1,
-  boxFlexGroup: 1,
-  boxOrdinalGroup: 1,
-  columnCount: 1,
-  columns: 1,
-  flex: 1,
-  flexGrow: 1,
-  flexPositive: 1,
-  flexShrink: 1,
-  flexNegative: 1,
-  flexOrder: 1,
-  gridRow: 1,
-  gridRowEnd: 1,
-  gridRowSpan: 1,
-  gridRowStart: 1,
-  gridColumn: 1,
-  gridColumnEnd: 1,
-  gridColumnSpan: 1,
-  gridColumnStart: 1,
-  msGridRow: 1,
-  msGridRowSpan: 1,
-  msGridColumn: 1,
-  msGridColumnSpan: 1,
-  fontWeight: 1,
-  lineHeight: 1,
-  opacity: 1,
-  order: 1,
-  orphans: 1,
-  scale: 1,
-  tabSize: 1,
-  widows: 1,
-  zIndex: 1,
-  zoom: 1,
-  WebkitLineClamp: 1,
-  // SVG-related properties
-  fillOpacity: 1,
-  floodOpacity: 1,
-  stopOpacity: 1,
-  strokeDasharray: 1,
-  strokeDashoffset: 1,
-  strokeMiterlimit: 1,
-  strokeOpacity: 1,
-  strokeWidth: 1
-};
-var hyphenateRegex = /[A-Z]|^ms/g;
-var animationRegex = /_EMO_([^_]+?)_([^]*?)_EMO_/g;
-var isCustomProperty = function isCustomProperty2(property) {
-  return property.charCodeAt(1) === 45;
-};
-var isProcessableValue = function isProcessableValue2(value) {
-  return value != null && typeof value !== "boolean";
-};
-var processStyleName = /* @__PURE__ */ memoize(function(styleName) {
-  return isCustomProperty(styleName) ? styleName : styleName.replace(hyphenateRegex, "-$&").toLowerCase();
-});
-var processStyleValue = function processStyleValue2(key, value) {
-  switch (key) {
-    case "animation":
-    case "animationName": {
-      if (typeof value === "string") {
-        return value.replace(animationRegex, function(match2, p1, p2) {
-          cursor = {
-            name: p1,
-            styles: p2,
-            next: cursor
-          };
-          return p1;
-        });
-      }
-    }
-  }
-  if (unitlessKeys[key] !== 1 && !isCustomProperty(key) && typeof value === "number" && value !== 0) {
-    return value + "px";
-  }
-  return value;
-};
-function handleInterpolation(mergedProps, registered, interpolation) {
-  if (interpolation == null) {
-    return "";
-  }
-  var componentSelector = interpolation;
-  if (componentSelector.__emotion_styles !== void 0) {
-    return componentSelector;
-  }
-  switch (typeof interpolation) {
-    case "boolean": {
-      return "";
-    }
-    case "object": {
-      var keyframes2 = interpolation;
-      if (keyframes2.anim === 1) {
-        cursor = {
-          name: keyframes2.name,
-          styles: keyframes2.styles,
-          next: cursor
-        };
-        return keyframes2.name;
-      }
-      var serializedStyles = interpolation;
-      if (serializedStyles.styles !== void 0) {
-        var next2 = serializedStyles.next;
-        if (next2 !== void 0) {
-          while (next2 !== void 0) {
-            cursor = {
-              name: next2.name,
-              styles: next2.styles,
-              next: cursor
-            };
-            next2 = next2.next;
-          }
-        }
-        var styles2 = serializedStyles.styles + ";";
-        return styles2;
-      }
-      return createStringFromObject(mergedProps, registered, interpolation);
-    }
-    case "function": {
-      if (mergedProps !== void 0) {
-        var previousCursor = cursor;
-        var result = interpolation(mergedProps);
-        cursor = previousCursor;
-        return handleInterpolation(mergedProps, registered, result);
-      }
-      break;
-    }
-  }
-  var asString = interpolation;
-  if (registered == null) {
-    return asString;
-  }
-  var cached = registered[asString];
-  return cached !== void 0 ? cached : asString;
-}
-function createStringFromObject(mergedProps, registered, obj) {
-  var string = "";
-  if (Array.isArray(obj)) {
-    for (var i = 0; i < obj.length; i++) {
-      string += handleInterpolation(mergedProps, registered, obj[i]) + ";";
-    }
-  } else {
-    for (var key in obj) {
-      var value = obj[key];
-      if (typeof value !== "object") {
-        var asString = value;
-        if (registered != null && registered[asString] !== void 0) {
-          string += key + "{" + registered[asString] + "}";
-        } else if (isProcessableValue(asString)) {
-          string += processStyleName(key) + ":" + processStyleValue(key, asString) + ";";
-        }
-      } else {
-        if (Array.isArray(value) && typeof value[0] === "string" && (registered == null || registered[value[0]] === void 0)) {
-          for (var _i = 0; _i < value.length; _i++) {
-            if (isProcessableValue(value[_i])) {
-              string += processStyleName(key) + ":" + processStyleValue(key, value[_i]) + ";";
-            }
-          }
-        } else {
-          var interpolated = handleInterpolation(mergedProps, registered, value);
-          switch (key) {
-            case "animation":
-            case "animationName": {
-              string += processStyleName(key) + ":" + interpolated + ";";
-              break;
-            }
-            default: {
-              string += key + "{" + interpolated + "}";
-            }
-          }
-        }
-      }
-    }
-  }
-  return string;
-}
-var labelPattern = /label:\s*([^\s;{]+)\s*(;|$)/g;
-var cursor;
-function serializeStyles(args, registered, mergedProps) {
-  if (args.length === 1 && typeof args[0] === "object" && args[0] !== null && args[0].styles !== void 0) {
-    return args[0];
-  }
-  var stringMode = true;
-  var styles2 = "";
-  cursor = void 0;
-  var strings = args[0];
-  if (strings == null || strings.raw === void 0) {
-    stringMode = false;
-    styles2 += handleInterpolation(mergedProps, registered, strings);
-  } else {
-    var asTemplateStringsArr = strings;
-    styles2 += asTemplateStringsArr[0];
-  }
-  for (var i = 1; i < args.length; i++) {
-    styles2 += handleInterpolation(mergedProps, registered, args[i]);
-    if (stringMode) {
-      var templateStringsArr = strings;
-      styles2 += templateStringsArr[i];
-    }
-  }
-  labelPattern.lastIndex = 0;
-  var identifierName = "";
-  var match2;
-  while ((match2 = labelPattern.exec(styles2)) !== null) {
-    identifierName += "-" + match2[1];
-  }
-  var name = murmur2(styles2) + identifierName;
+const defaultGenerator = (componentName) => componentName;
+const createClassNameGenerator = () => {
+  let generate = defaultGenerator;
   return {
-    name,
-    styles: styles2,
-    next: cursor
-  };
-}
-var syncFallback = function syncFallback2(create) {
-  return create();
-};
-var useInsertionEffect = React$1["useInsertionEffect"] ? React$1["useInsertionEffect"] : false;
-var useInsertionEffectAlwaysWithSyncFallback = useInsertionEffect || syncFallback;
-var useInsertionEffectWithLayoutFallback = useInsertionEffect || reactExports.useLayoutEffect;
-var EmotionCacheContext = /* @__PURE__ */ reactExports.createContext(
-  // we're doing this to avoid preconstruct's dead code elimination in this one case
-  // because this module is primarily intended for the browser and node
-  // but it's also required in react native and similar environments sometimes
-  // and we could have a special build just for that
-  // but this is much easier and the native packages
-  // might use a different theme context in the future anyway
-  typeof HTMLElement !== "undefined" ? /* @__PURE__ */ createCache({
-    key: "css"
-  }) : null
-);
-EmotionCacheContext.Provider;
-var withEmotionCache = function withEmotionCache2(func) {
-  return /* @__PURE__ */ reactExports.forwardRef(function(props, ref) {
-    var cache = reactExports.useContext(EmotionCacheContext);
-    return func(props, cache, ref);
-  });
-};
-var ThemeContext = /* @__PURE__ */ reactExports.createContext({});
-var hasOwn = {}.hasOwnProperty;
-var typePropName = "__EMOTION_TYPE_PLEASE_DO_NOT_USE__";
-var createEmotionProps = function createEmotionProps2(type, props) {
-  var newProps = {};
-  for (var _key in props) {
-    if (hasOwn.call(props, _key)) {
-      newProps[_key] = props[_key];
-    }
-  }
-  newProps[typePropName] = type;
-  return newProps;
-};
-var Insertion$1 = function Insertion(_ref) {
-  var cache = _ref.cache, serialized = _ref.serialized, isStringTag2 = _ref.isStringTag;
-  registerStyles(cache, serialized, isStringTag2);
-  useInsertionEffectAlwaysWithSyncFallback(function() {
-    return insertStyles(cache, serialized, isStringTag2);
-  });
-  return null;
-};
-var Emotion = /* @__PURE__ */ withEmotionCache(function(props, cache, ref) {
-  var cssProp = props.css;
-  if (typeof cssProp === "string" && cache.registered[cssProp] !== void 0) {
-    cssProp = cache.registered[cssProp];
-  }
-  var WrappedComponent = props[typePropName];
-  var registeredStyles = [cssProp];
-  var className = "";
-  if (typeof props.className === "string") {
-    className = getRegisteredStyles(cache.registered, registeredStyles, props.className);
-  } else if (props.className != null) {
-    className = props.className + " ";
-  }
-  var serialized = serializeStyles(registeredStyles, void 0, reactExports.useContext(ThemeContext));
-  className += cache.key + "-" + serialized.name;
-  var newProps = {};
-  for (var _key2 in props) {
-    if (hasOwn.call(props, _key2) && _key2 !== "css" && _key2 !== typePropName && true) {
-      newProps[_key2] = props[_key2];
-    }
-  }
-  newProps.className = className;
-  if (ref) {
-    newProps.ref = ref;
-  }
-  return /* @__PURE__ */ reactExports.createElement(reactExports.Fragment, null, /* @__PURE__ */ reactExports.createElement(Insertion$1, {
-    cache,
-    serialized,
-    isStringTag: typeof WrappedComponent === "string"
-  }), /* @__PURE__ */ reactExports.createElement(WrappedComponent, newProps));
-});
-var Emotion$1 = Emotion;
-var jsx = function jsx2(type, props) {
-  var args = arguments;
-  if (props == null || !hasOwn.call(props, "css")) {
-    return reactExports.createElement.apply(void 0, args);
-  }
-  var argsLength = args.length;
-  var createElementArgArray = new Array(argsLength);
-  createElementArgArray[0] = Emotion$1;
-  createElementArgArray[1] = createEmotionProps(type, props);
-  for (var i = 2; i < argsLength; i++) {
-    createElementArgArray[i] = args[i];
-  }
-  return reactExports.createElement.apply(null, createElementArgArray);
-};
-(function(_jsx) {
-  var JSX;
-  /* @__PURE__ */ (function(_JSX) {
-  })(JSX || (JSX = _jsx.JSX || (_jsx.JSX = {})));
-})(jsx || (jsx = {}));
-var Global = /* @__PURE__ */ withEmotionCache(function(props, cache) {
-  var styles2 = props.styles;
-  var serialized = serializeStyles([styles2], void 0, reactExports.useContext(ThemeContext));
-  var sheetRef = reactExports.useRef();
-  useInsertionEffectWithLayoutFallback(function() {
-    var key = cache.key + "-global";
-    var sheet = new cache.sheet.constructor({
-      key,
-      nonce: cache.sheet.nonce,
-      container: cache.sheet.container,
-      speedy: cache.sheet.isSpeedy
-    });
-    var rehydrating = false;
-    var node2 = document.querySelector('style[data-emotion="' + key + " " + serialized.name + '"]');
-    if (cache.sheet.tags.length) {
-      sheet.before = cache.sheet.tags[0];
-    }
-    if (node2 !== null) {
-      rehydrating = true;
-      node2.setAttribute("data-emotion", key);
-      sheet.hydrate([node2]);
-    }
-    sheetRef.current = [sheet, rehydrating];
-    return function() {
-      sheet.flush();
-    };
-  }, [cache]);
-  useInsertionEffectWithLayoutFallback(function() {
-    var sheetRefCurrent = sheetRef.current;
-    var sheet = sheetRefCurrent[0], rehydrating = sheetRefCurrent[1];
-    if (rehydrating) {
-      sheetRefCurrent[1] = false;
-      return;
-    }
-    if (serialized.next !== void 0) {
-      insertStyles(cache, serialized.next, true);
-    }
-    if (sheet.tags.length) {
-      var element = sheet.tags[sheet.tags.length - 1].nextElementSibling;
-      sheet.before = element;
-      sheet.flush();
-    }
-    cache.insert("", serialized, sheet, false);
-  }, [cache, serialized.name]);
-  return null;
-});
-function css() {
-  for (var _len = arguments.length, args = new Array(_len), _key = 0; _key < _len; _key++) {
-    args[_key] = arguments[_key];
-  }
-  return serializeStyles(args);
-}
-function keyframes() {
-  var insertable = css.apply(void 0, arguments);
-  var name = "animation-" + insertable.name;
-  return {
-    name,
-    styles: "@keyframes " + name + "{" + insertable.styles + "}",
-    anim: 1,
-    toString: function toString() {
-      return "_EMO_" + this.name + "_" + this.styles + "_EMO_";
-    }
-  };
-}
-var reactPropsRegex = /^((children|dangerouslySetInnerHTML|key|ref|autoFocus|defaultValue|defaultChecked|innerHTML|suppressContentEditableWarning|suppressHydrationWarning|valueLink|abbr|accept|acceptCharset|accessKey|action|allow|allowUserMedia|allowPaymentRequest|allowFullScreen|allowTransparency|alt|async|autoComplete|autoPlay|capture|cellPadding|cellSpacing|challenge|charSet|checked|cite|classID|className|cols|colSpan|content|contentEditable|contextMenu|controls|controlsList|coords|crossOrigin|data|dateTime|decoding|default|defer|dir|disabled|disablePictureInPicture|disableRemotePlayback|download|draggable|encType|enterKeyHint|fetchpriority|fetchPriority|form|formAction|formEncType|formMethod|formNoValidate|formTarget|frameBorder|headers|height|hidden|high|href|hrefLang|htmlFor|httpEquiv|id|inputMode|integrity|is|keyParams|keyType|kind|label|lang|list|loading|loop|low|marginHeight|marginWidth|max|maxLength|media|mediaGroup|method|min|minLength|multiple|muted|name|nonce|noValidate|open|optimum|pattern|placeholder|playsInline|poster|preload|profile|radioGroup|readOnly|referrerPolicy|rel|required|reversed|role|rows|rowSpan|sandbox|scope|scoped|scrolling|seamless|selected|shape|size|sizes|slot|span|spellCheck|src|srcDoc|srcLang|srcSet|start|step|style|summary|tabIndex|target|title|translate|type|useMap|value|width|wmode|wrap|about|datatype|inlist|prefix|property|resource|typeof|vocab|autoCapitalize|autoCorrect|autoSave|color|incremental|fallback|inert|itemProp|itemScope|itemType|itemID|itemRef|on|option|results|security|unselectable|accentHeight|accumulate|additive|alignmentBaseline|allowReorder|alphabetic|amplitude|arabicForm|ascent|attributeName|attributeType|autoReverse|azimuth|baseFrequency|baselineShift|baseProfile|bbox|begin|bias|by|calcMode|capHeight|clip|clipPathUnits|clipPath|clipRule|colorInterpolation|colorInterpolationFilters|colorProfile|colorRendering|contentScriptType|contentStyleType|cursor|cx|cy|d|decelerate|descent|diffuseConstant|direction|display|divisor|dominantBaseline|dur|dx|dy|edgeMode|elevation|enableBackground|end|exponent|externalResourcesRequired|fill|fillOpacity|fillRule|filter|filterRes|filterUnits|floodColor|floodOpacity|focusable|fontFamily|fontSize|fontSizeAdjust|fontStretch|fontStyle|fontVariant|fontWeight|format|from|fr|fx|fy|g1|g2|glyphName|glyphOrientationHorizontal|glyphOrientationVertical|glyphRef|gradientTransform|gradientUnits|hanging|horizAdvX|horizOriginX|ideographic|imageRendering|in|in2|intercept|k|k1|k2|k3|k4|kernelMatrix|kernelUnitLength|kerning|keyPoints|keySplines|keyTimes|lengthAdjust|letterSpacing|lightingColor|limitingConeAngle|local|markerEnd|markerMid|markerStart|markerHeight|markerUnits|markerWidth|mask|maskContentUnits|maskUnits|mathematical|mode|numOctaves|offset|opacity|operator|order|orient|orientation|origin|overflow|overlinePosition|overlineThickness|panose1|paintOrder|pathLength|patternContentUnits|patternTransform|patternUnits|pointerEvents|points|pointsAtX|pointsAtY|pointsAtZ|preserveAlpha|preserveAspectRatio|primitiveUnits|r|radius|refX|refY|renderingIntent|repeatCount|repeatDur|requiredExtensions|requiredFeatures|restart|result|rotate|rx|ry|scale|seed|shapeRendering|slope|spacing|specularConstant|specularExponent|speed|spreadMethod|startOffset|stdDeviation|stemh|stemv|stitchTiles|stopColor|stopOpacity|strikethroughPosition|strikethroughThickness|string|stroke|strokeDasharray|strokeDashoffset|strokeLinecap|strokeLinejoin|strokeMiterlimit|strokeOpacity|strokeWidth|surfaceScale|systemLanguage|tableValues|targetX|targetY|textAnchor|textDecoration|textRendering|textLength|to|transform|u1|u2|underlinePosition|underlineThickness|unicode|unicodeBidi|unicodeRange|unitsPerEm|vAlphabetic|vHanging|vIdeographic|vMathematical|values|vectorEffect|version|vertAdvY|vertOriginX|vertOriginY|viewBox|viewTarget|visibility|widths|wordSpacing|writingMode|x|xHeight|x1|x2|xChannelSelector|xlinkActuate|xlinkArcrole|xlinkHref|xlinkRole|xlinkShow|xlinkTitle|xlinkType|xmlBase|xmlns|xmlnsXlink|xmlLang|xmlSpace|y|y1|y2|yChannelSelector|z|zoomAndPan|for|class|autofocus)|(([Dd][Aa][Tt][Aa]|[Aa][Rr][Ii][Aa]|x)-.*))$/;
-var isPropValid = /* @__PURE__ */ memoize(
-  function(prop) {
-    return reactPropsRegex.test(prop) || prop.charCodeAt(0) === 111 && prop.charCodeAt(1) === 110 && prop.charCodeAt(2) < 91;
-  }
-  /* Z+1 */
-);
-var testOmitPropsOnStringTag = isPropValid;
-var testOmitPropsOnComponent = function testOmitPropsOnComponent2(key) {
-  return key !== "theme";
-};
-var getDefaultShouldForwardProp = function getDefaultShouldForwardProp2(tag) {
-  return typeof tag === "string" && // 96 is one less than the char code
-  // for "a" so this is checking that
-  // it's a lowercase character
-  tag.charCodeAt(0) > 96 ? testOmitPropsOnStringTag : testOmitPropsOnComponent;
-};
-var composeShouldForwardProps = function composeShouldForwardProps2(tag, options, isReal) {
-  var shouldForwardProp2;
-  if (options) {
-    var optionsShouldForwardProp = options.shouldForwardProp;
-    shouldForwardProp2 = tag.__emotion_forwardProp && optionsShouldForwardProp ? function(propName) {
-      return tag.__emotion_forwardProp(propName) && optionsShouldForwardProp(propName);
-    } : optionsShouldForwardProp;
-  }
-  if (typeof shouldForwardProp2 !== "function" && isReal) {
-    shouldForwardProp2 = tag.__emotion_forwardProp;
-  }
-  return shouldForwardProp2;
-};
-var Insertion2 = function Insertion3(_ref) {
-  var cache = _ref.cache, serialized = _ref.serialized, isStringTag2 = _ref.isStringTag;
-  registerStyles(cache, serialized, isStringTag2);
-  useInsertionEffectAlwaysWithSyncFallback(function() {
-    return insertStyles(cache, serialized, isStringTag2);
-  });
-  return null;
-};
-var createStyled$1 = function createStyled(tag, options) {
-  var isReal = tag.__emotion_real === tag;
-  var baseTag = isReal && tag.__emotion_base || tag;
-  var identifierName;
-  var targetClassName;
-  if (options !== void 0) {
-    identifierName = options.label;
-    targetClassName = options.target;
-  }
-  var shouldForwardProp2 = composeShouldForwardProps(tag, options, isReal);
-  var defaultShouldForwardProp = shouldForwardProp2 || getDefaultShouldForwardProp(baseTag);
-  var shouldUseAs = !defaultShouldForwardProp("as");
-  return function() {
-    var args = arguments;
-    var styles2 = isReal && tag.__emotion_styles !== void 0 ? tag.__emotion_styles.slice(0) : [];
-    if (identifierName !== void 0) {
-      styles2.push("label:" + identifierName + ";");
-    }
-    if (args[0] == null || args[0].raw === void 0) {
-      styles2.push.apply(styles2, args);
-    } else {
-      var templateStringsArr = args[0];
-      styles2.push(templateStringsArr[0]);
-      var len = args.length;
-      var i = 1;
-      for (; i < len; i++) {
-        styles2.push(args[i], templateStringsArr[i]);
-      }
-    }
-    var Styled = withEmotionCache(function(props, cache, ref) {
-      var FinalTag = shouldUseAs && props.as || baseTag;
-      var className = "";
-      var classInterpolations = [];
-      var mergedProps = props;
-      if (props.theme == null) {
-        mergedProps = {};
-        for (var key in props) {
-          mergedProps[key] = props[key];
-        }
-        mergedProps.theme = reactExports.useContext(ThemeContext);
-      }
-      if (typeof props.className === "string") {
-        className = getRegisteredStyles(cache.registered, classInterpolations, props.className);
-      } else if (props.className != null) {
-        className = props.className + " ";
-      }
-      var serialized = serializeStyles(styles2.concat(classInterpolations), cache.registered, mergedProps);
-      className += cache.key + "-" + serialized.name;
-      if (targetClassName !== void 0) {
-        className += " " + targetClassName;
-      }
-      var finalShouldForwardProp = shouldUseAs && shouldForwardProp2 === void 0 ? getDefaultShouldForwardProp(FinalTag) : defaultShouldForwardProp;
-      var newProps = {};
-      for (var _key in props) {
-        if (shouldUseAs && _key === "as") continue;
-        if (finalShouldForwardProp(_key)) {
-          newProps[_key] = props[_key];
-        }
-      }
-      newProps.className = className;
-      if (ref) {
-        newProps.ref = ref;
-      }
-      return /* @__PURE__ */ reactExports.createElement(reactExports.Fragment, null, /* @__PURE__ */ reactExports.createElement(Insertion2, {
-        cache,
-        serialized,
-        isStringTag: typeof FinalTag === "string"
-      }), /* @__PURE__ */ reactExports.createElement(FinalTag, newProps));
-    });
-    Styled.displayName = identifierName !== void 0 ? identifierName : "Styled(" + (typeof baseTag === "string" ? baseTag : baseTag.displayName || baseTag.name || "Component") + ")";
-    Styled.defaultProps = tag.defaultProps;
-    Styled.__emotion_real = Styled;
-    Styled.__emotion_base = baseTag;
-    Styled.__emotion_styles = styles2;
-    Styled.__emotion_forwardProp = shouldForwardProp2;
-    Object.defineProperty(Styled, "toString", {
-      value: function value() {
-        return "." + targetClassName;
-      }
-    });
-    Styled.withComponent = function(nextTag, nextOptions) {
-      var newStyled2 = createStyled(nextTag, _extends({}, options, nextOptions, {
-        shouldForwardProp: composeShouldForwardProps(Styled, nextOptions, true)
-      }));
-      return newStyled2.apply(void 0, styles2);
-    };
-    return Styled;
-  };
-};
-var tags = [
-  "a",
-  "abbr",
-  "address",
-  "area",
-  "article",
-  "aside",
-  "audio",
-  "b",
-  "base",
-  "bdi",
-  "bdo",
-  "big",
-  "blockquote",
-  "body",
-  "br",
-  "button",
-  "canvas",
-  "caption",
-  "cite",
-  "code",
-  "col",
-  "colgroup",
-  "data",
-  "datalist",
-  "dd",
-  "del",
-  "details",
-  "dfn",
-  "dialog",
-  "div",
-  "dl",
-  "dt",
-  "em",
-  "embed",
-  "fieldset",
-  "figcaption",
-  "figure",
-  "footer",
-  "form",
-  "h1",
-  "h2",
-  "h3",
-  "h4",
-  "h5",
-  "h6",
-  "head",
-  "header",
-  "hgroup",
-  "hr",
-  "html",
-  "i",
-  "iframe",
-  "img",
-  "input",
-  "ins",
-  "kbd",
-  "keygen",
-  "label",
-  "legend",
-  "li",
-  "link",
-  "main",
-  "map",
-  "mark",
-  "marquee",
-  "menu",
-  "menuitem",
-  "meta",
-  "meter",
-  "nav",
-  "noscript",
-  "object",
-  "ol",
-  "optgroup",
-  "option",
-  "output",
-  "p",
-  "param",
-  "picture",
-  "pre",
-  "progress",
-  "q",
-  "rp",
-  "rt",
-  "ruby",
-  "s",
-  "samp",
-  "script",
-  "section",
-  "select",
-  "small",
-  "source",
-  "span",
-  "strong",
-  "style",
-  "sub",
-  "summary",
-  "sup",
-  "table",
-  "tbody",
-  "td",
-  "textarea",
-  "tfoot",
-  "th",
-  "thead",
-  "time",
-  "title",
-  "tr",
-  "track",
-  "u",
-  "ul",
-  "var",
-  "video",
-  "wbr",
-  // SVG
-  "circle",
-  "clipPath",
-  "defs",
-  "ellipse",
-  "foreignObject",
-  "g",
-  "image",
-  "line",
-  "linearGradient",
-  "mask",
-  "path",
-  "pattern",
-  "polygon",
-  "polyline",
-  "radialGradient",
-  "rect",
-  "stop",
-  "svg",
-  "text",
-  "tspan"
-];
-var newStyled = createStyled$1.bind(null);
-tags.forEach(function(tagName) {
-  newStyled[tagName] = newStyled(tagName);
-});
-function isEmpty$2(obj) {
-  return obj === void 0 || obj === null || Object.keys(obj).length === 0;
-}
-function GlobalStyles$2(props) {
-  const {
-    styles: styles2,
-    defaultTheme: defaultTheme2 = {}
-  } = props;
-  const globalStyles = typeof styles2 === "function" ? (themeInput) => styles2(isEmpty$2(themeInput) ? defaultTheme2 : themeInput) : styles2;
-  return /* @__PURE__ */ jsxRuntimeExports.jsx(Global, {
-    styles: globalStyles
-  });
-}
-/**
- * @mui/styled-engine v6.4.3
- *
- * @license MIT
- * This source code is licensed under the MIT license found in the
- * LICENSE file in the root directory of this source tree.
- */
-function styled$2(tag, options) {
-  const stylesFactory = newStyled(tag, options);
-  return stylesFactory;
-}
-function internal_mutateStyles(tag, processor) {
-  if (Array.isArray(tag.__emotion_styles)) {
-    tag.__emotion_styles = processor(tag.__emotion_styles);
-  }
-}
-const wrapper = [];
-function internal_serializeStyles(styles2) {
-  wrapper[0] = styles2;
-  return serializeStyles(wrapper);
-}
-const sortBreakpointsValues = (values2) => {
-  const breakpointsAsArray = Object.keys(values2).map((key) => ({
-    key,
-    val: values2[key]
-  })) || [];
-  breakpointsAsArray.sort((breakpoint1, breakpoint2) => breakpoint1.val - breakpoint2.val);
-  return breakpointsAsArray.reduce((acc, obj) => {
-    return {
-      ...acc,
-      [obj.key]: obj.val
-    };
-  }, {});
-};
-function createBreakpoints(breakpoints) {
-  const {
-    // The breakpoint **start** at this value.
-    // For instance with the first breakpoint xs: [xs, sm).
-    values: values2 = {
-      xs: 0,
-      // phone
-      sm: 600,
-      // tablet
-      md: 900,
-      // small laptop
-      lg: 1200,
-      // desktop
-      xl: 1536
-      // large screen
+    configure(generator) {
+      generate = generator;
     },
-    unit = "px",
-    step = 5,
-    ...other
-  } = breakpoints;
-  const sortedValues = sortBreakpointsValues(values2);
-  const keys = Object.keys(sortedValues);
-  function up(key) {
-    const value = typeof values2[key] === "number" ? values2[key] : key;
-    return `@media (min-width:${value}${unit})`;
-  }
-  function down(key) {
-    const value = typeof values2[key] === "number" ? values2[key] : key;
-    return `@media (max-width:${value - step / 100}${unit})`;
-  }
-  function between(start2, end2) {
-    const endIndex = keys.indexOf(end2);
-    return `@media (min-width:${typeof values2[start2] === "number" ? values2[start2] : start2}${unit}) and (max-width:${(endIndex !== -1 && typeof values2[keys[endIndex]] === "number" ? values2[keys[endIndex]] : end2) - step / 100}${unit})`;
-  }
-  function only(key) {
-    if (keys.indexOf(key) + 1 < keys.length) {
-      return between(key, keys[keys.indexOf(key) + 1]);
-    }
-    return up(key);
-  }
-  function not(key) {
-    const keyIndex = keys.indexOf(key);
-    if (keyIndex === 0) {
-      return up(keys[1]);
-    }
-    if (keyIndex === keys.length - 1) {
-      return down(keys[keyIndex]);
-    }
-    return between(key, keys[keys.indexOf(key) + 1]).replace("@media", "@media not all and");
-  }
-  return {
-    keys,
-    values: sortedValues,
-    up,
-    down,
-    between,
-    only,
-    not,
-    unit,
-    ...other
-  };
-}
-const shape = {
-  borderRadius: 4
-};
-function createSpacing(spacingInput = 8, transform = createUnarySpacing({
-  spacing: spacingInput
-})) {
-  if (spacingInput.mui) {
-    return spacingInput;
-  }
-  const spacing = (...argsInput) => {
-    const args = argsInput.length === 0 ? [1] : argsInput;
-    return args.map((argument) => {
-      const output = transform(argument);
-      return typeof output === "number" ? `${output}px` : output;
-    }).join(" ");
-  };
-  spacing.mui = true;
-  return spacing;
-}
-function applyStyles$2(key, styles2) {
-  var _a;
-  const theme = this;
-  if (theme.vars) {
-    if (!((_a = theme.colorSchemes) == null ? void 0 : _a[key]) || typeof theme.getColorSchemeSelector !== "function") {
-      return {};
-    }
-    let selector = theme.getColorSchemeSelector(key);
-    if (selector === "&") {
-      return styles2;
-    }
-    if (selector.includes("data-") || selector.includes(".")) {
-      selector = `*:where(${selector.replace(/\s*&$/, "")}) &`;
-    }
-    return {
-      [selector]: styles2
-    };
-  }
-  if (theme.palette.mode === key) {
-    return styles2;
-  }
-  return {};
-}
-function createTheme$1(options = {}, ...args) {
-  const {
-    breakpoints: breakpointsInput = {},
-    palette: paletteInput = {},
-    spacing: spacingInput,
-    shape: shapeInput = {},
-    ...other
-  } = options;
-  const breakpoints = createBreakpoints(breakpointsInput);
-  const spacing = createSpacing(spacingInput);
-  let muiTheme = deepmerge({
-    breakpoints,
-    direction: "ltr",
-    components: {},
-    // Inject component definitions.
-    palette: {
-      mode: "light",
-      ...paletteInput
+    generate(componentName) {
+      return generate(componentName);
     },
-    spacing,
-    shape: {
-      ...shape,
-      ...shapeInput
+    reset() {
+      generate = defaultGenerator;
     }
-  }, other);
-  muiTheme = cssContainerQueries(muiTheme);
-  muiTheme.applyStyles = applyStyles$2;
-  muiTheme = args.reduce((acc, argument) => deepmerge(acc, argument), muiTheme);
-  muiTheme.unstable_sxConfig = {
-    ...defaultSxConfig,
-    ...other == null ? void 0 : other.unstable_sxConfig
   };
-  muiTheme.unstable_sx = function sx(props) {
-    return styleFunctionSx({
-      sx: props,
-      theme: this
-    });
-  };
-  return muiTheme;
+};
+const ClassNameGenerator = createClassNameGenerator();
+function r(e) {
+  var t, f, n = "";
+  if ("string" == typeof e || "number" == typeof e) n += e;
+  else if ("object" == typeof e) if (Array.isArray(e)) {
+    var o = e.length;
+    for (t = 0; t < o; t++) e[t] && (f = r(e[t])) && (n && (n += " "), n += f);
+  } else for (f in e) e[f] && (n && (n += " "), n += f);
+  return n;
 }
-function isObjectEmpty$2(obj) {
-  return Object.keys(obj).length === 0;
-}
-function useTheme$2(defaultTheme2 = null) {
-  const contextTheme = reactExports.useContext(ThemeContext);
-  return !contextTheme || isObjectEmpty$2(contextTheme) ? defaultTheme2 : contextTheme;
-}
-const systemDefaultTheme$1 = createTheme$1();
-function useTheme$1(defaultTheme2 = systemDefaultTheme$1) {
-  return useTheme$2(defaultTheme2);
-}
-function GlobalStyles$1({
-  styles: styles2,
-  themeId,
-  defaultTheme: defaultTheme2 = {}
-}) {
-  const upperTheme = useTheme$1(defaultTheme2);
-  const globalStyles = typeof styles2 === "function" ? styles2(themeId ? upperTheme[themeId] || upperTheme : upperTheme) : styles2;
-  return /* @__PURE__ */ jsxRuntimeExports.jsx(GlobalStyles$2, {
-    styles: globalStyles
-  });
+function clsx() {
+  for (var e, t, f = 0, n = "", o = arguments.length; f < o; f++) (e = arguments[f]) && (t = r(e)) && (n && (n += " "), n += t);
+  return n;
 }
 function createBox(options = {}) {
   const {
@@ -10630,7 +10230,7 @@ function createBox(options = {}) {
     shouldForwardProp: (prop) => prop !== "theme" && prop !== "sx" && prop !== "as"
   })(styleFunctionSx);
   const Box2 = /* @__PURE__ */ reactExports.forwardRef(function Box3(inProps, ref) {
-    const theme = useTheme$1(defaultTheme2);
+    const theme2 = useTheme$2(defaultTheme2);
     const {
       className,
       component = "div",
@@ -10640,11 +10240,36 @@ function createBox(options = {}) {
       as: component,
       ref,
       className: clsx(className, generateClassName ? generateClassName(defaultClassName) : defaultClassName),
-      theme: themeId ? theme[themeId] || theme : theme,
+      theme: themeId ? theme2[themeId] || theme2 : theme2,
       ...other
     });
   });
   return Box2;
+}
+const globalStateClasses = {
+  active: "active",
+  checked: "checked",
+  completed: "completed",
+  disabled: "disabled",
+  error: "error",
+  expanded: "expanded",
+  focused: "focused",
+  focusVisible: "focusVisible",
+  open: "open",
+  readOnly: "readOnly",
+  required: "required",
+  selected: "selected"
+};
+function generateUtilityClass(componentName, slot, globalStatePrefix = "Mui") {
+  const globalStateClass = globalStateClasses[slot];
+  return globalStateClass ? `${globalStatePrefix}-${globalStateClass}` : `${ClassNameGenerator.generate(componentName)}-${slot}`;
+}
+function generateUtilityClasses(componentName, slots, globalStatePrefix = "Mui") {
+  const result = {};
+  slots.forEach((slot) => {
+    result[slot] = generateUtilityClass(componentName, slot, globalStatePrefix);
+  });
+  return result;
 }
 function preprocessStyles(input) {
   const {
@@ -10804,8 +10429,8 @@ function createStyled2(input = {}) {
       if (componentName && overridesResolver2) {
         expressionsTail.push(function styleThemeOverrides(props) {
           var _a, _b;
-          const theme = props.theme;
-          const styleOverrides = (_b = (_a = theme.components) == null ? void 0 : _a[componentName]) == null ? void 0 : _b.styleOverrides;
+          const theme2 = props.theme;
+          const styleOverrides = (_b = (_a = theme2.components) == null ? void 0 : _a[componentName]) == null ? void 0 : _b.styleOverrides;
           if (!styleOverrides) {
             return null;
           }
@@ -10819,8 +10444,8 @@ function createStyled2(input = {}) {
       if (componentName && !skipVariantsResolver) {
         expressionsTail.push(function styleThemeVariants(props) {
           var _a, _b;
-          const theme = props.theme;
-          const themeVariants = (_b = (_a = theme == null ? void 0 : theme.components) == null ? void 0 : _a[componentName]) == null ? void 0 : _b.variants;
+          const theme2 = props.theme;
+          const themeVariants = (_b = (_a = theme2 == null ? void 0 : theme2.components) == null ? void 0 : _a[componentName]) == null ? void 0 : _b.variants;
           if (!themeVariants) {
             return null;
           }
@@ -10878,17 +10503,55 @@ function lowercaseFirstLetter(string) {
   return string.charAt(0).toLowerCase() + string.slice(1);
 }
 const styled$1 = createStyled2();
+function resolveProps(defaultProps2, props) {
+  const output = {
+    ...props
+  };
+  for (const key in defaultProps2) {
+    if (Object.prototype.hasOwnProperty.call(defaultProps2, key)) {
+      const propName = key;
+      if (propName === "components" || propName === "slots") {
+        output[propName] = {
+          ...defaultProps2[propName],
+          ...output[propName]
+        };
+      } else if (propName === "componentsProps" || propName === "slotProps") {
+        const defaultSlotProps = defaultProps2[propName];
+        const slotProps = props[propName];
+        if (!slotProps) {
+          output[propName] = defaultSlotProps || {};
+        } else if (!defaultSlotProps) {
+          output[propName] = slotProps;
+        } else {
+          output[propName] = {
+            ...slotProps
+          };
+          for (const slotKey in defaultSlotProps) {
+            if (Object.prototype.hasOwnProperty.call(defaultSlotProps, slotKey)) {
+              const slotPropName = slotKey;
+              output[propName][slotPropName] = resolveProps(defaultSlotProps[slotPropName], slotProps[slotPropName]);
+            }
+          }
+        }
+      } else if (output[propName] === void 0) {
+        output[propName] = defaultProps2[propName];
+      }
+    }
+  }
+  return output;
+}
 function getThemeProps$1(params) {
   const {
-    theme,
+    theme: theme2,
     name,
     props
   } = params;
-  if (!theme || !theme.components || !theme.components[name] || !theme.components[name].defaultProps) {
+  if (!theme2 || !theme2.components || !theme2.components[name] || !theme2.components[name].defaultProps) {
     return props;
   }
-  return resolveProps(theme.components[name].defaultProps, props);
+  return resolveProps(theme2.components[name].defaultProps, props);
 }
+const useEnhancedEffect = typeof window !== "undefined" ? reactExports.useLayoutEffect : reactExports.useEffect;
 function useMediaQueryOld(query, defaultMatches, matchMedia, ssrMatchMedia, noSsr) {
   const [match2, setMatch] = reactExports.useState(() => {
     if (noSsr && matchMedia) {
@@ -10915,10 +10578,10 @@ function useMediaQueryOld(query, defaultMatches, matchMedia, ssrMatchMedia, noSs
   }, [query, matchMedia]);
   return match2;
 }
-const safeReact = {
+const safeReact$1 = {
   ...React$1
 };
-const maybeReactUseSyncExternalStore = safeReact.useSyncExternalStore;
+const maybeReactUseSyncExternalStore = safeReact$1.useSyncExternalStore;
 function useMediaQueryNew(query, defaultMatches, matchMedia, ssrMatchMedia, noSsr) {
   const getDefaultSnapshot = reactExports.useCallback(() => defaultMatches, [defaultMatches]);
   const getServerSnapshot = reactExports.useMemo(() => {
@@ -10954,9 +10617,9 @@ function unstable_createUseMediaQuery(params = {}) {
     themeId
   } = params;
   return function useMediaQuery2(queryInput, options = {}) {
-    let theme = useTheme$2();
-    if (theme && themeId) {
-      theme = theme[themeId] || theme;
+    let theme2 = useTheme$3();
+    if (theme2 && themeId) {
+      theme2 = theme2[themeId] || theme2;
     }
     const supportMatchMedia = typeof window !== "undefined" && typeof window.matchMedia !== "undefined";
     const {
@@ -10967,9 +10630,9 @@ function unstable_createUseMediaQuery(params = {}) {
     } = getThemeProps$1({
       name: "MuiUseMediaQuery",
       props: options,
-      theme
+      theme: theme2
     });
-    let query = typeof queryInput === "function" ? queryInput(theme) : queryInput;
+    let query = typeof queryInput === "function" ? queryInput(theme2) : queryInput;
     query = query.replace(/^@media( ?)/m, "");
     const useMediaQueryImplementation = maybeReactUseSyncExternalStore !== void 0 ? useMediaQueryNew : useMediaQueryOld;
     const match2 = useMediaQueryImplementation(query, defaultMatches, matchMedia, ssrMatchMedia, noSsr);
@@ -10977,6 +10640,9 @@ function unstable_createUseMediaQuery(params = {}) {
   };
 }
 unstable_createUseMediaQuery();
+function clamp(val, min2 = Number.MIN_SAFE_INTEGER, max2 = Number.MAX_SAFE_INTEGER) {
+  return Math.max(min2, Math.min(val, max2));
+}
 function clampWrapper(value, min2 = 0, max2 = 1) {
   return clamp(value, min2, max2);
 }
@@ -11165,22 +10831,412 @@ function private_safeEmphasize(color2, coefficient, warning) {
     return color2;
   }
 }
+function createChainedFunction(...funcs) {
+  return funcs.reduce((acc, func) => {
+    if (func == null) {
+      return acc;
+    }
+    return function chainedFunction(...args) {
+      acc.apply(this, args);
+      func.apply(this, args);
+    };
+  }, () => {
+  });
+}
+function debounce$1(func, wait = 166) {
+  let timeout;
+  function debounced(...args) {
+    const later = () => {
+      func.apply(this, args);
+    };
+    clearTimeout(timeout);
+    timeout = setTimeout(later, wait);
+  }
+  debounced.clear = () => {
+    clearTimeout(timeout);
+  };
+  return debounced;
+}
+function isMuiElement(element, muiNames) {
+  var _a, _b, _c;
+  return /* @__PURE__ */ reactExports.isValidElement(element) && muiNames.indexOf(
+    // For server components `muiName` is avaialble in element.type._payload.value.muiName
+    // relevant info - https://github.com/facebook/react/blob/2807d781a08db8e9873687fccc25c0f12b4fb3d4/packages/react/src/ReactLazy.js#L45
+    // eslint-disable-next-line no-underscore-dangle
+    element.type.muiName ?? ((_c = (_b = (_a = element.type) == null ? void 0 : _a._payload) == null ? void 0 : _b.value) == null ? void 0 : _c.muiName)
+  ) !== -1;
+}
+function ownerDocument(node2) {
+  return node2 && node2.ownerDocument || document;
+}
+function ownerWindow(node2) {
+  const doc = ownerDocument(node2);
+  return doc.defaultView || window;
+}
+function setRef(ref, value) {
+  if (typeof ref === "function") {
+    ref(value);
+  } else if (ref) {
+    ref.current = value;
+  }
+}
+let globalId = 0;
+function useGlobalId(idOverride) {
+  const [defaultId, setDefaultId] = reactExports.useState(idOverride);
+  const id = idOverride || defaultId;
+  reactExports.useEffect(() => {
+    if (defaultId == null) {
+      globalId += 1;
+      setDefaultId(`mui-${globalId}`);
+    }
+  }, [defaultId]);
+  return id;
+}
+const safeReact = {
+  ...React$1
+};
+const maybeReactUseId = safeReact.useId;
+function useId(idOverride) {
+  if (maybeReactUseId !== void 0) {
+    const reactId = maybeReactUseId();
+    return idOverride ?? reactId;
+  }
+  return useGlobalId(idOverride);
+}
+function useControlled({
+  controlled,
+  default: defaultProp,
+  name,
+  state = "value"
+}) {
+  const {
+    current: isControlled
+  } = reactExports.useRef(controlled !== void 0);
+  const [valueState, setValue] = reactExports.useState(defaultProp);
+  const value = isControlled ? controlled : valueState;
+  const setValueIfUncontrolled = reactExports.useCallback((newValue) => {
+    if (!isControlled) {
+      setValue(newValue);
+    }
+  }, []);
+  return [value, setValueIfUncontrolled];
+}
+function useEventCallback(fn2) {
+  const ref = reactExports.useRef(fn2);
+  useEnhancedEffect(() => {
+    ref.current = fn2;
+  });
+  return reactExports.useRef((...args) => (
+    // @ts-expect-error hide `this`
+    (0, ref.current)(...args)
+  )).current;
+}
+function useForkRef(...refs) {
+  return reactExports.useMemo(() => {
+    if (refs.every((ref) => ref == null)) {
+      return null;
+    }
+    return (instance) => {
+      refs.forEach((ref) => {
+        setRef(ref, instance);
+      });
+    };
+  }, refs);
+}
+const UNINITIALIZED = {};
+function useLazyRef(init, initArg) {
+  const ref = reactExports.useRef(UNINITIALIZED);
+  if (ref.current === UNINITIALIZED) {
+    ref.current = init(initArg);
+  }
+  return ref;
+}
+const EMPTY = [];
+function useOnMount(fn2) {
+  reactExports.useEffect(fn2, EMPTY);
+}
+class Timeout {
+  constructor() {
+    __publicField(this, "currentId", null);
+    __publicField(this, "clear", () => {
+      if (this.currentId !== null) {
+        clearTimeout(this.currentId);
+        this.currentId = null;
+      }
+    });
+    __publicField(this, "disposeEffect", () => {
+      return this.clear;
+    });
+  }
+  static create() {
+    return new Timeout();
+  }
+  /**
+   * Executes `fn` after `delay`, clearing any previously scheduled call.
+   */
+  start(delay, fn2) {
+    this.clear();
+    this.currentId = setTimeout(() => {
+      this.currentId = null;
+      fn2();
+    }, delay);
+  }
+}
+function useTimeout() {
+  const timeout = useLazyRef(Timeout.create).current;
+  useOnMount(timeout.disposeEffect);
+  return timeout;
+}
+function isFocusVisible(element) {
+  try {
+    return element.matches(":focus-visible");
+  } catch (error) {
+  }
+  return false;
+}
+function getScrollbarSize(win = window) {
+  const documentWidth = win.document.documentElement.clientWidth;
+  return win.innerWidth - documentWidth;
+}
+function getValidReactChildren(children) {
+  return reactExports.Children.toArray(children).filter((child) => /* @__PURE__ */ reactExports.isValidElement(child));
+}
+const visuallyHidden = {
+  border: 0,
+  clip: "rect(0 0 0 0)",
+  height: "1px",
+  margin: "-1px",
+  overflow: "hidden",
+  padding: 0,
+  position: "absolute",
+  whiteSpace: "nowrap",
+  width: "1px"
+};
+function composeClasses(slots, getUtilityClass, classes = void 0) {
+  const output = {};
+  for (const slotName in slots) {
+    const slot = slots[slotName];
+    let buffer = "";
+    let start2 = true;
+    for (let i = 0; i < slot.length; i += 1) {
+      const value = slot[i];
+      if (value) {
+        buffer += (start2 === true ? "" : " ") + getUtilityClass(value);
+        start2 = false;
+        if (classes && classes[value]) {
+          buffer += " " + classes[value];
+        }
+      }
+    }
+    output[slotName] = buffer;
+  }
+  return output;
+}
+function isHostComponent$1(element) {
+  return typeof element === "string";
+}
+function appendOwnerState(elementType, otherProps, ownerState) {
+  if (elementType === void 0 || isHostComponent$1(elementType)) {
+    return otherProps;
+  }
+  return {
+    ...otherProps,
+    ownerState: {
+      ...otherProps.ownerState,
+      ...ownerState
+    }
+  };
+}
+function extractEventHandlers(object, excludeKeys = []) {
+  if (object === void 0) {
+    return {};
+  }
+  const result = {};
+  Object.keys(object).filter((prop) => prop.match(/^on[A-Z]/) && typeof object[prop] === "function" && !excludeKeys.includes(prop)).forEach((prop) => {
+    result[prop] = object[prop];
+  });
+  return result;
+}
+function omitEventHandlers(object) {
+  if (object === void 0) {
+    return {};
+  }
+  const result = {};
+  Object.keys(object).filter((prop) => !(prop.match(/^on[A-Z]/) && typeof object[prop] === "function")).forEach((prop) => {
+    result[prop] = object[prop];
+  });
+  return result;
+}
+function mergeSlotProps(parameters) {
+  const {
+    getSlotProps,
+    additionalProps,
+    externalSlotProps,
+    externalForwardedProps,
+    className
+  } = parameters;
+  if (!getSlotProps) {
+    const joinedClasses2 = clsx(additionalProps == null ? void 0 : additionalProps.className, className, externalForwardedProps == null ? void 0 : externalForwardedProps.className, externalSlotProps == null ? void 0 : externalSlotProps.className);
+    const mergedStyle2 = {
+      ...additionalProps == null ? void 0 : additionalProps.style,
+      ...externalForwardedProps == null ? void 0 : externalForwardedProps.style,
+      ...externalSlotProps == null ? void 0 : externalSlotProps.style
+    };
+    const props2 = {
+      ...additionalProps,
+      ...externalForwardedProps,
+      ...externalSlotProps
+    };
+    if (joinedClasses2.length > 0) {
+      props2.className = joinedClasses2;
+    }
+    if (Object.keys(mergedStyle2).length > 0) {
+      props2.style = mergedStyle2;
+    }
+    return {
+      props: props2,
+      internalRef: void 0
+    };
+  }
+  const eventHandlers = extractEventHandlers({
+    ...externalForwardedProps,
+    ...externalSlotProps
+  });
+  const componentsPropsWithoutEventHandlers = omitEventHandlers(externalSlotProps);
+  const otherPropsWithoutEventHandlers = omitEventHandlers(externalForwardedProps);
+  const internalSlotProps = getSlotProps(eventHandlers);
+  const joinedClasses = clsx(internalSlotProps == null ? void 0 : internalSlotProps.className, additionalProps == null ? void 0 : additionalProps.className, className, externalForwardedProps == null ? void 0 : externalForwardedProps.className, externalSlotProps == null ? void 0 : externalSlotProps.className);
+  const mergedStyle = {
+    ...internalSlotProps == null ? void 0 : internalSlotProps.style,
+    ...additionalProps == null ? void 0 : additionalProps.style,
+    ...externalForwardedProps == null ? void 0 : externalForwardedProps.style,
+    ...externalSlotProps == null ? void 0 : externalSlotProps.style
+  };
+  const props = {
+    ...internalSlotProps,
+    ...additionalProps,
+    ...otherPropsWithoutEventHandlers,
+    ...componentsPropsWithoutEventHandlers
+  };
+  if (joinedClasses.length > 0) {
+    props.className = joinedClasses;
+  }
+  if (Object.keys(mergedStyle).length > 0) {
+    props.style = mergedStyle;
+  }
+  return {
+    props,
+    internalRef: internalSlotProps.ref
+  };
+}
+function resolveComponentProps(componentProps, ownerState, slotState) {
+  if (typeof componentProps === "function") {
+    return componentProps(ownerState, slotState);
+  }
+  return componentProps;
+}
+function useSlotProps(parameters) {
+  var _a;
+  const {
+    elementType,
+    externalSlotProps,
+    ownerState,
+    skipResolvingSlotProps = false,
+    ...other
+  } = parameters;
+  const resolvedComponentsProps = skipResolvingSlotProps ? {} : resolveComponentProps(externalSlotProps, ownerState);
+  const {
+    props: mergedProps,
+    internalRef
+  } = mergeSlotProps({
+    ...other,
+    externalSlotProps: resolvedComponentsProps
+  });
+  const ref = useForkRef(internalRef, resolvedComponentsProps == null ? void 0 : resolvedComponentsProps.ref, (_a = parameters.additionalProps) == null ? void 0 : _a.ref);
+  const props = appendOwnerState(elementType, {
+    ...mergedProps,
+    ref
+  }, ownerState);
+  return props;
+}
+function getReactElementRef(element) {
+  var _a;
+  if (parseInt(reactExports.version, 10) >= 19) {
+    return ((_a = element == null ? void 0 : element.props) == null ? void 0 : _a.ref) || null;
+  }
+  return (element == null ? void 0 : element.ref) || null;
+}
+const ThemeContext = /* @__PURE__ */ reactExports.createContext(null);
+function useTheme$1() {
+  const theme2 = reactExports.useContext(ThemeContext);
+  return theme2;
+}
+const hasSymbol = typeof Symbol === "function" && Symbol.for;
+const nested = hasSymbol ? Symbol.for("mui.nested") : "__THEME_NESTED__";
+function mergeOuterLocalTheme(outerTheme, localTheme) {
+  if (typeof localTheme === "function") {
+    const mergedTheme = localTheme(outerTheme);
+    return mergedTheme;
+  }
+  return {
+    ...outerTheme,
+    ...localTheme
+  };
+}
+function ThemeProvider$2(props) {
+  const {
+    children,
+    theme: localTheme
+  } = props;
+  const outerTheme = useTheme$1();
+  const theme2 = reactExports.useMemo(() => {
+    const output = outerTheme === null ? {
+      ...localTheme
+    } : mergeOuterLocalTheme(outerTheme, localTheme);
+    if (output != null) {
+      output[nested] = outerTheme !== null;
+    }
+    return output;
+  }, [localTheme, outerTheme]);
+  return /* @__PURE__ */ jsxRuntimeExports.jsx(ThemeContext.Provider, {
+    value: theme2,
+    children
+  });
+}
 const RtlContext = /* @__PURE__ */ reactExports.createContext();
+function RtlProvider({
+  value,
+  ...props
+}) {
+  return /* @__PURE__ */ jsxRuntimeExports.jsx(RtlContext.Provider, {
+    value: value ?? true,
+    ...props
+  });
+}
 const useRtl = () => {
   const value = reactExports.useContext(RtlContext);
   return value ?? false;
 };
 const PropsContext = /* @__PURE__ */ reactExports.createContext(void 0);
+function DefaultPropsProvider({
+  value,
+  children
+}) {
+  return /* @__PURE__ */ jsxRuntimeExports.jsx(PropsContext.Provider, {
+    value,
+    children
+  });
+}
 function getThemeProps(params) {
   const {
-    theme,
+    theme: theme2,
     name,
     props
   } = params;
-  if (!theme || !theme.components || !theme.components[name]) {
+  if (!theme2 || !theme2.components || !theme2.components[name]) {
     return props;
   }
-  const config2 = theme.components[name];
+  const config2 = theme2.components[name];
   if (config2.defaultProps) {
     return resolveProps(config2.defaultProps, props);
   }
@@ -11202,6 +11258,55 @@ function useDefaultProps$1({
     }
   });
 }
+const EMPTY_THEME = {};
+function useThemeScoping(themeId, upperTheme, localTheme, isPrivate = false) {
+  return reactExports.useMemo(() => {
+    const resolvedTheme = themeId ? upperTheme[themeId] || upperTheme : upperTheme;
+    if (typeof localTheme === "function") {
+      const mergedTheme = localTheme(resolvedTheme);
+      const result = themeId ? {
+        ...upperTheme,
+        [themeId]: mergedTheme
+      } : mergedTheme;
+      if (isPrivate) {
+        return () => result;
+      }
+      return result;
+    }
+    return themeId ? {
+      ...upperTheme,
+      [themeId]: localTheme
+    } : {
+      ...upperTheme,
+      ...localTheme
+    };
+  }, [themeId, upperTheme, localTheme, isPrivate]);
+}
+function ThemeProvider$1(props) {
+  const {
+    children,
+    theme: localTheme,
+    themeId
+  } = props;
+  const upperTheme = useTheme$3(EMPTY_THEME);
+  const upperPrivateTheme = useTheme$1() || EMPTY_THEME;
+  const engineTheme = useThemeScoping(themeId, upperTheme, localTheme);
+  const privateTheme = useThemeScoping(themeId, upperPrivateTheme, localTheme, true);
+  const rtlValue = (themeId ? engineTheme[themeId] : engineTheme).direction === "rtl";
+  return /* @__PURE__ */ jsxRuntimeExports.jsx(ThemeProvider$2, {
+    theme: privateTheme,
+    children: /* @__PURE__ */ jsxRuntimeExports.jsx(ThemeContext$1.Provider, {
+      value: engineTheme,
+      children: /* @__PURE__ */ jsxRuntimeExports.jsx(RtlProvider, {
+        value: rtlValue,
+        children: /* @__PURE__ */ jsxRuntimeExports.jsx(DefaultPropsProvider, {
+          value: themeId ? engineTheme[themeId].components : engineTheme.components,
+          children
+        })
+      })
+    })
+  });
+}
 const arg = {
   theme: void 0
 };
@@ -11217,6 +11322,527 @@ function unstable_memoTheme(styleFn) {
       lastTheme = props.theme;
     }
     return value;
+  };
+}
+const DEFAULT_MODE_STORAGE_KEY = "mode";
+const DEFAULT_COLOR_SCHEME_STORAGE_KEY = "color-scheme";
+const DEFAULT_ATTRIBUTE = "data-color-scheme";
+function InitColorSchemeScript(options) {
+  const {
+    defaultMode = "system",
+    defaultLightColorScheme = "light",
+    defaultDarkColorScheme = "dark",
+    modeStorageKey = DEFAULT_MODE_STORAGE_KEY,
+    colorSchemeStorageKey = DEFAULT_COLOR_SCHEME_STORAGE_KEY,
+    attribute: initialAttribute = DEFAULT_ATTRIBUTE,
+    colorSchemeNode = "document.documentElement",
+    nonce
+  } = options || {};
+  let setter = "";
+  let attribute = initialAttribute;
+  if (initialAttribute === "class") {
+    attribute = ".%s";
+  }
+  if (initialAttribute === "data") {
+    attribute = "[data-%s]";
+  }
+  if (attribute.startsWith(".")) {
+    const selector = attribute.substring(1);
+    setter += `${colorSchemeNode}.classList.remove('${selector}'.replace('%s', light), '${selector}'.replace('%s', dark));
+      ${colorSchemeNode}.classList.add('${selector}'.replace('%s', colorScheme));`;
+  }
+  const matches = attribute.match(/\[([^\]]+)\]/);
+  if (matches) {
+    const [attr, value] = matches[1].split("=");
+    if (!value) {
+      setter += `${colorSchemeNode}.removeAttribute('${attr}'.replace('%s', light));
+      ${colorSchemeNode}.removeAttribute('${attr}'.replace('%s', dark));`;
+    }
+    setter += `
+      ${colorSchemeNode}.setAttribute('${attr}'.replace('%s', colorScheme), ${value ? `${value}.replace('%s', colorScheme)` : '""'});`;
+  } else {
+    setter += `${colorSchemeNode}.setAttribute('${attribute}', colorScheme);`;
+  }
+  return /* @__PURE__ */ jsxRuntimeExports.jsx("script", {
+    suppressHydrationWarning: true,
+    nonce: typeof window === "undefined" ? nonce : "",
+    dangerouslySetInnerHTML: {
+      __html: `(function() {
+try {
+  let colorScheme = '';
+  const mode = localStorage.getItem('${modeStorageKey}') || '${defaultMode}';
+  const dark = localStorage.getItem('${colorSchemeStorageKey}-dark') || '${defaultDarkColorScheme}';
+  const light = localStorage.getItem('${colorSchemeStorageKey}-light') || '${defaultLightColorScheme}';
+  if (mode === 'system') {
+    // handle system mode
+    const mql = window.matchMedia('(prefers-color-scheme: dark)');
+    if (mql.matches) {
+      colorScheme = dark
+    } else {
+      colorScheme = light
+    }
+  }
+  if (mode === 'light') {
+    colorScheme = light;
+  }
+  if (mode === 'dark') {
+    colorScheme = dark;
+  }
+  if (colorScheme) {
+    ${setter}
+  }
+} catch(e){}})();`
+    }
+  }, "mui-color-scheme-init");
+}
+function getSystemMode(mode) {
+  if (typeof window !== "undefined" && typeof window.matchMedia === "function" && mode === "system") {
+    const mql = window.matchMedia("(prefers-color-scheme: dark)");
+    if (mql.matches) {
+      return "dark";
+    }
+    return "light";
+  }
+  return void 0;
+}
+function processState(state, callback) {
+  if (state.mode === "light" || state.mode === "system" && state.systemMode === "light") {
+    return callback("light");
+  }
+  if (state.mode === "dark" || state.mode === "system" && state.systemMode === "dark") {
+    return callback("dark");
+  }
+  return void 0;
+}
+function getColorScheme(state) {
+  return processState(state, (mode) => {
+    if (mode === "light") {
+      return state.lightColorScheme;
+    }
+    if (mode === "dark") {
+      return state.darkColorScheme;
+    }
+    return void 0;
+  });
+}
+function initializeValue(key, defaultValue) {
+  if (typeof window === "undefined") {
+    return void 0;
+  }
+  let value;
+  try {
+    value = localStorage.getItem(key) || void 0;
+    if (!value) {
+      localStorage.setItem(key, defaultValue);
+    }
+  } catch {
+  }
+  return value || defaultValue;
+}
+function useCurrentColorScheme(options) {
+  const {
+    defaultMode = "light",
+    defaultLightColorScheme,
+    defaultDarkColorScheme,
+    supportedColorSchemes = [],
+    modeStorageKey = DEFAULT_MODE_STORAGE_KEY,
+    colorSchemeStorageKey = DEFAULT_COLOR_SCHEME_STORAGE_KEY,
+    storageWindow = typeof window === "undefined" ? void 0 : window,
+    noSsr = false
+  } = options;
+  const joinedColorSchemes = supportedColorSchemes.join(",");
+  const isMultiSchemes = supportedColorSchemes.length > 1;
+  const [state, setState] = reactExports.useState(() => {
+    const initialMode = initializeValue(modeStorageKey, defaultMode);
+    const lightColorScheme = initializeValue(`${colorSchemeStorageKey}-light`, defaultLightColorScheme);
+    const darkColorScheme = initializeValue(`${colorSchemeStorageKey}-dark`, defaultDarkColorScheme);
+    return {
+      mode: initialMode,
+      systemMode: getSystemMode(initialMode),
+      lightColorScheme,
+      darkColorScheme
+    };
+  });
+  const [isClient, setIsClient] = reactExports.useState(noSsr || !isMultiSchemes);
+  reactExports.useEffect(() => {
+    setIsClient(true);
+  }, []);
+  const colorScheme = getColorScheme(state);
+  const setMode = reactExports.useCallback((mode) => {
+    setState((currentState) => {
+      if (mode === currentState.mode) {
+        return currentState;
+      }
+      const newMode = mode ?? defaultMode;
+      try {
+        localStorage.setItem(modeStorageKey, newMode);
+      } catch {
+      }
+      return {
+        ...currentState,
+        mode: newMode,
+        systemMode: getSystemMode(newMode)
+      };
+    });
+  }, [modeStorageKey, defaultMode]);
+  const setColorScheme = reactExports.useCallback((value) => {
+    if (!value) {
+      setState((currentState) => {
+        try {
+          localStorage.setItem(`${colorSchemeStorageKey}-light`, defaultLightColorScheme);
+          localStorage.setItem(`${colorSchemeStorageKey}-dark`, defaultDarkColorScheme);
+        } catch {
+        }
+        return {
+          ...currentState,
+          lightColorScheme: defaultLightColorScheme,
+          darkColorScheme: defaultDarkColorScheme
+        };
+      });
+    } else if (typeof value === "string") {
+      if (value && !joinedColorSchemes.includes(value)) {
+        console.error(`\`${value}\` does not exist in \`theme.colorSchemes\`.`);
+      } else {
+        setState((currentState) => {
+          const newState = {
+            ...currentState
+          };
+          processState(currentState, (mode) => {
+            try {
+              localStorage.setItem(`${colorSchemeStorageKey}-${mode}`, value);
+            } catch {
+            }
+            if (mode === "light") {
+              newState.lightColorScheme = value;
+            }
+            if (mode === "dark") {
+              newState.darkColorScheme = value;
+            }
+          });
+          return newState;
+        });
+      }
+    } else {
+      setState((currentState) => {
+        const newState = {
+          ...currentState
+        };
+        const newLightColorScheme = value.light === null ? defaultLightColorScheme : value.light;
+        const newDarkColorScheme = value.dark === null ? defaultDarkColorScheme : value.dark;
+        if (newLightColorScheme) {
+          if (!joinedColorSchemes.includes(newLightColorScheme)) {
+            console.error(`\`${newLightColorScheme}\` does not exist in \`theme.colorSchemes\`.`);
+          } else {
+            newState.lightColorScheme = newLightColorScheme;
+            try {
+              localStorage.setItem(`${colorSchemeStorageKey}-light`, newLightColorScheme);
+            } catch (error) {
+            }
+          }
+        }
+        if (newDarkColorScheme) {
+          if (!joinedColorSchemes.includes(newDarkColorScheme)) {
+            console.error(`\`${newDarkColorScheme}\` does not exist in \`theme.colorSchemes\`.`);
+          } else {
+            newState.darkColorScheme = newDarkColorScheme;
+            try {
+              localStorage.setItem(`${colorSchemeStorageKey}-dark`, newDarkColorScheme);
+            } catch (error) {
+            }
+          }
+        }
+        return newState;
+      });
+    }
+  }, [joinedColorSchemes, colorSchemeStorageKey, defaultLightColorScheme, defaultDarkColorScheme]);
+  const handleMediaQuery = reactExports.useCallback((event) => {
+    if (state.mode === "system") {
+      setState((currentState) => {
+        const systemMode = (event == null ? void 0 : event.matches) ? "dark" : "light";
+        if (currentState.systemMode === systemMode) {
+          return currentState;
+        }
+        return {
+          ...currentState,
+          systemMode
+        };
+      });
+    }
+  }, [state.mode]);
+  const mediaListener = reactExports.useRef(handleMediaQuery);
+  mediaListener.current = handleMediaQuery;
+  reactExports.useEffect(() => {
+    if (typeof window.matchMedia !== "function" || !isMultiSchemes) {
+      return void 0;
+    }
+    const handler = (...args) => mediaListener.current(...args);
+    const media = window.matchMedia("(prefers-color-scheme: dark)");
+    media.addListener(handler);
+    handler(media);
+    return () => {
+      media.removeListener(handler);
+    };
+  }, [isMultiSchemes]);
+  reactExports.useEffect(() => {
+    if (storageWindow && isMultiSchemes) {
+      const handleStorage = (event) => {
+        const value = event.newValue;
+        if (typeof event.key === "string" && event.key.startsWith(colorSchemeStorageKey) && (!value || joinedColorSchemes.match(value))) {
+          if (event.key.endsWith("light")) {
+            setColorScheme({
+              light: value
+            });
+          }
+          if (event.key.endsWith("dark")) {
+            setColorScheme({
+              dark: value
+            });
+          }
+        }
+        if (event.key === modeStorageKey && (!value || ["light", "dark", "system"].includes(value))) {
+          setMode(value || defaultMode);
+        }
+      };
+      storageWindow.addEventListener("storage", handleStorage);
+      return () => {
+        storageWindow.removeEventListener("storage", handleStorage);
+      };
+    }
+    return void 0;
+  }, [setColorScheme, setMode, modeStorageKey, colorSchemeStorageKey, joinedColorSchemes, defaultMode, storageWindow, isMultiSchemes]);
+  return {
+    ...state,
+    mode: isClient ? state.mode : void 0,
+    systemMode: isClient ? state.systemMode : void 0,
+    colorScheme: isClient ? colorScheme : void 0,
+    setMode,
+    setColorScheme
+  };
+}
+const DISABLE_CSS_TRANSITION = "*{-webkit-transition:none!important;-moz-transition:none!important;-o-transition:none!important;-ms-transition:none!important;transition:none!important}";
+function createCssVarsProvider(options) {
+  const {
+    themeId,
+    /**
+     * This `theme` object needs to follow a certain structure to
+     * be used correctly by the finel `CssVarsProvider`. It should have a
+     * `colorSchemes` key with the light and dark (and any other) palette.
+     * It should also ideally have a vars object created using `prepareCssVars`.
+     */
+    theme: defaultTheme2 = {},
+    modeStorageKey: defaultModeStorageKey = DEFAULT_MODE_STORAGE_KEY,
+    colorSchemeStorageKey: defaultColorSchemeStorageKey = DEFAULT_COLOR_SCHEME_STORAGE_KEY,
+    disableTransitionOnChange: designSystemTransitionOnChange = false,
+    defaultColorScheme,
+    resolveTheme
+  } = options;
+  const defaultContext = {
+    allColorSchemes: [],
+    colorScheme: void 0,
+    darkColorScheme: void 0,
+    lightColorScheme: void 0,
+    mode: void 0,
+    setColorScheme: () => {
+    },
+    setMode: () => {
+    },
+    systemMode: void 0
+  };
+  const ColorSchemeContext = /* @__PURE__ */ reactExports.createContext(void 0);
+  const useColorScheme = () => reactExports.useContext(ColorSchemeContext) || defaultContext;
+  const defaultColorSchemes = {};
+  const defaultComponents = {};
+  function CssVarsProvider2(props) {
+    var _a, _b, _c, _d;
+    const {
+      children,
+      theme: themeProp,
+      modeStorageKey = defaultModeStorageKey,
+      colorSchemeStorageKey = defaultColorSchemeStorageKey,
+      disableTransitionOnChange = designSystemTransitionOnChange,
+      storageWindow = typeof window === "undefined" ? void 0 : window,
+      documentNode = typeof document === "undefined" ? void 0 : document,
+      colorSchemeNode = typeof document === "undefined" ? void 0 : document.documentElement,
+      disableNestedContext = false,
+      disableStyleSheetGeneration = false,
+      defaultMode: initialMode = "system",
+      noSsr
+    } = props;
+    const hasMounted = reactExports.useRef(false);
+    const upperTheme = useTheme$1();
+    const ctx = reactExports.useContext(ColorSchemeContext);
+    const nested2 = !!ctx && !disableNestedContext;
+    const initialTheme = reactExports.useMemo(() => {
+      if (themeProp) {
+        return themeProp;
+      }
+      return typeof defaultTheme2 === "function" ? defaultTheme2() : defaultTheme2;
+    }, [themeProp]);
+    const scopedTheme = initialTheme[themeId];
+    const restThemeProp = scopedTheme || initialTheme;
+    const {
+      colorSchemes = defaultColorSchemes,
+      components = defaultComponents,
+      cssVarPrefix
+    } = restThemeProp;
+    const joinedColorSchemes = Object.keys(colorSchemes).filter((k) => !!colorSchemes[k]).join(",");
+    const allColorSchemes = reactExports.useMemo(() => joinedColorSchemes.split(","), [joinedColorSchemes]);
+    const defaultLightColorScheme2 = typeof defaultColorScheme === "string" ? defaultColorScheme : defaultColorScheme.light;
+    const defaultDarkColorScheme2 = typeof defaultColorScheme === "string" ? defaultColorScheme : defaultColorScheme.dark;
+    const defaultMode = colorSchemes[defaultLightColorScheme2] && colorSchemes[defaultDarkColorScheme2] ? initialMode : ((_b = (_a = colorSchemes[restThemeProp.defaultColorScheme]) == null ? void 0 : _a.palette) == null ? void 0 : _b.mode) || ((_c = restThemeProp.palette) == null ? void 0 : _c.mode);
+    const {
+      mode: stateMode,
+      setMode,
+      systemMode,
+      lightColorScheme,
+      darkColorScheme,
+      colorScheme: stateColorScheme,
+      setColorScheme
+    } = useCurrentColorScheme({
+      supportedColorSchemes: allColorSchemes,
+      defaultLightColorScheme: defaultLightColorScheme2,
+      defaultDarkColorScheme: defaultDarkColorScheme2,
+      modeStorageKey,
+      colorSchemeStorageKey,
+      defaultMode,
+      storageWindow,
+      noSsr
+    });
+    let mode = stateMode;
+    let colorScheme = stateColorScheme;
+    if (nested2) {
+      mode = ctx.mode;
+      colorScheme = ctx.colorScheme;
+    }
+    const memoTheme2 = reactExports.useMemo(() => {
+      var _a2;
+      const calculatedColorScheme = colorScheme || restThemeProp.defaultColorScheme;
+      const themeVars = ((_a2 = restThemeProp.generateThemeVars) == null ? void 0 : _a2.call(restThemeProp)) || restThemeProp.vars;
+      const theme2 = {
+        ...restThemeProp,
+        components,
+        colorSchemes,
+        cssVarPrefix,
+        vars: themeVars
+      };
+      if (typeof theme2.generateSpacing === "function") {
+        theme2.spacing = theme2.generateSpacing();
+      }
+      if (calculatedColorScheme) {
+        const scheme = colorSchemes[calculatedColorScheme];
+        if (scheme && typeof scheme === "object") {
+          Object.keys(scheme).forEach((schemeKey) => {
+            if (scheme[schemeKey] && typeof scheme[schemeKey] === "object") {
+              theme2[schemeKey] = {
+                ...theme2[schemeKey],
+                ...scheme[schemeKey]
+              };
+            } else {
+              theme2[schemeKey] = scheme[schemeKey];
+            }
+          });
+        }
+      }
+      return resolveTheme ? resolveTheme(theme2) : theme2;
+    }, [restThemeProp, colorScheme, components, colorSchemes, cssVarPrefix]);
+    const colorSchemeSelector = restThemeProp.colorSchemeSelector;
+    useEnhancedEffect(() => {
+      if (colorScheme && colorSchemeNode && colorSchemeSelector && colorSchemeSelector !== "media") {
+        const selector = colorSchemeSelector;
+        let rule = colorSchemeSelector;
+        if (selector === "class") {
+          rule = `.%s`;
+        }
+        if (selector === "data") {
+          rule = `[data-%s]`;
+        }
+        if ((selector == null ? void 0 : selector.startsWith("data-")) && !selector.includes("%s")) {
+          rule = `[${selector}="%s"]`;
+        }
+        if (rule.startsWith(".")) {
+          colorSchemeNode.classList.remove(...allColorSchemes.map((scheme) => rule.substring(1).replace("%s", scheme)));
+          colorSchemeNode.classList.add(rule.substring(1).replace("%s", colorScheme));
+        } else {
+          const matches = rule.replace("%s", colorScheme).match(/\[([^\]]+)\]/);
+          if (matches) {
+            const [attr, value] = matches[1].split("=");
+            if (!value) {
+              allColorSchemes.forEach((scheme) => {
+                colorSchemeNode.removeAttribute(attr.replace(colorScheme, scheme));
+              });
+            }
+            colorSchemeNode.setAttribute(attr, value ? value.replace(/"|'/g, "") : "");
+          } else {
+            colorSchemeNode.setAttribute(rule, colorScheme);
+          }
+        }
+      }
+    }, [colorScheme, colorSchemeSelector, colorSchemeNode, allColorSchemes]);
+    reactExports.useEffect(() => {
+      let timer;
+      if (disableTransitionOnChange && hasMounted.current && documentNode) {
+        const css2 = documentNode.createElement("style");
+        css2.appendChild(documentNode.createTextNode(DISABLE_CSS_TRANSITION));
+        documentNode.head.appendChild(css2);
+        (() => window.getComputedStyle(documentNode.body))();
+        timer = setTimeout(() => {
+          documentNode.head.removeChild(css2);
+        }, 1);
+      }
+      return () => {
+        clearTimeout(timer);
+      };
+    }, [colorScheme, disableTransitionOnChange, documentNode]);
+    reactExports.useEffect(() => {
+      hasMounted.current = true;
+      return () => {
+        hasMounted.current = false;
+      };
+    }, []);
+    const contextValue = reactExports.useMemo(() => ({
+      allColorSchemes,
+      colorScheme,
+      darkColorScheme,
+      lightColorScheme,
+      mode,
+      setColorScheme,
+      setMode,
+      systemMode
+    }), [allColorSchemes, colorScheme, darkColorScheme, lightColorScheme, mode, setColorScheme, setMode, systemMode, memoTheme2.colorSchemeSelector]);
+    let shouldGenerateStyleSheet = true;
+    if (disableStyleSheetGeneration || restThemeProp.cssVariables === false || nested2 && (upperTheme == null ? void 0 : upperTheme.cssVarPrefix) === cssVarPrefix) {
+      shouldGenerateStyleSheet = false;
+    }
+    const element = /* @__PURE__ */ jsxRuntimeExports.jsxs(reactExports.Fragment, {
+      children: [/* @__PURE__ */ jsxRuntimeExports.jsx(ThemeProvider$1, {
+        themeId: scopedTheme ? themeId : void 0,
+        theme: memoTheme2,
+        children
+      }), shouldGenerateStyleSheet && /* @__PURE__ */ jsxRuntimeExports.jsx(GlobalStyles$3, {
+        styles: ((_d = memoTheme2.generateStyleSheets) == null ? void 0 : _d.call(memoTheme2)) || []
+      })]
+    });
+    if (nested2) {
+      return element;
+    }
+    return /* @__PURE__ */ jsxRuntimeExports.jsx(ColorSchemeContext.Provider, {
+      value: contextValue,
+      children: element
+    });
+  }
+  const defaultLightColorScheme = typeof defaultColorScheme === "string" ? defaultColorScheme : defaultColorScheme.light;
+  const defaultDarkColorScheme = typeof defaultColorScheme === "string" ? defaultColorScheme : defaultColorScheme.dark;
+  const getInitColorSchemeScript = (params) => InitColorSchemeScript({
+    colorSchemeStorageKey: defaultColorSchemeStorageKey,
+    defaultLightColorScheme,
+    defaultDarkColorScheme,
+    modeStorageKey: defaultModeStorageKey,
+    ...params
+  });
+  return {
+    CssVarsProvider: CssVarsProvider2,
+    useColorScheme,
+    getInitColorSchemeScript
   };
 }
 function createGetCssVar$1(prefix2 = "") {
@@ -11281,7 +11907,7 @@ const getCssValue = (keys, value) => {
   }
   return value;
 };
-function cssVarsParser(theme, options) {
+function cssVarsParser(theme2, options) {
   const {
     prefix: prefix2,
     shouldSkipGeneratingVar: shouldSkipGeneratingVar2
@@ -11290,7 +11916,7 @@ function cssVarsParser(theme, options) {
   const vars = {};
   const varsWithDefaults = {};
   walkObjectDeep(
-    theme,
+    theme2,
     (keys, value, arrayKeys) => {
       if (typeof value === "string" || typeof value === "number") {
         if (!shouldSkipGeneratingVar2 || !shouldSkipGeneratingVar2(keys, value)) {
@@ -11313,7 +11939,7 @@ function cssVarsParser(theme, options) {
     varsWithDefaults
   };
 }
-function prepareCssVars(theme, parserConfig = {}) {
+function prepareCssVars(theme2, parserConfig = {}) {
   const {
     getSelector = defaultGetSelector2,
     disableCssColorScheme,
@@ -11324,7 +11950,7 @@ function prepareCssVars(theme, parserConfig = {}) {
     components,
     defaultColorScheme = "light",
     ...otherTheme
-  } = theme;
+  } = theme2;
   const {
     vars: rootVars,
     css: rootCss,
@@ -11374,7 +12000,7 @@ function prepareCssVars(theme, parserConfig = {}) {
     }
     if (colorScheme) {
       if (rule === "media") {
-        if (theme.defaultColorScheme === colorScheme) {
+        if (theme2.defaultColorScheme === colorScheme) {
           return ":root";
         }
         const mode = ((_b = (_a = colorSchemes[colorScheme]) == null ? void 0 : _a.palette) == null ? void 0 : _b.mode) || colorScheme;
@@ -11385,7 +12011,7 @@ function prepareCssVars(theme, parserConfig = {}) {
         };
       }
       if (rule) {
-        if (theme.defaultColorScheme === colorScheme) {
+        if (theme2.defaultColorScheme === colorScheme) {
           return `:root, ${rule.replace("%s", String(colorScheme))}`;
         }
         return rule.replace("%s", String(colorScheme));
@@ -11407,7 +12033,7 @@ function prepareCssVars(theme, parserConfig = {}) {
   const generateStyleSheets = () => {
     var _a, _b;
     const stylesheets = [];
-    const colorScheme = theme.defaultColorScheme || "light";
+    const colorScheme = theme2.defaultColorScheme || "light";
     function insertStyleSheet(key, css2) {
       if (Object.keys(css2).length) {
         stylesheets.push(typeof key === "string" ? {
@@ -12132,9 +12758,9 @@ function shouldSkipGeneratingVar(keys) {
   keys[0] === "palette" && !!((_a = keys[1]) == null ? void 0 : _a.match(/(mode|contrastThreshold|tonalOffset)/));
 }
 const excludeVariablesFromRoot = (cssVarPrefix) => [...[...Array(25)].map((_, index) => `--${cssVarPrefix ? `${cssVarPrefix}-` : ""}overlays-${index}`), `--${cssVarPrefix ? `${cssVarPrefix}-` : ""}palette-AppBar-darkBg`, `--${cssVarPrefix ? `${cssVarPrefix}-` : ""}palette-AppBar-darkColor`];
-const defaultGetSelector = (theme) => (colorScheme, css2) => {
-  const root = theme.rootSelector || ":root";
-  const selector = theme.colorSchemeSelector;
+const defaultGetSelector = (theme2) => (colorScheme, css2) => {
+  const root = theme2.rootSelector || ":root";
+  const selector = theme2.colorSchemeSelector;
   let rule = selector;
   if (selector === "class") {
     rule = ".%s";
@@ -12145,10 +12771,10 @@ const defaultGetSelector = (theme) => (colorScheme, css2) => {
   if ((selector == null ? void 0 : selector.startsWith("data-")) && !selector.includes("%s")) {
     rule = `[${selector}="%s"]`;
   }
-  if (theme.defaultColorScheme === colorScheme) {
+  if (theme2.defaultColorScheme === colorScheme) {
     if (colorScheme === "dark") {
       const excludedVariables = {};
-      excludeVariablesFromRoot(theme.cssVarPrefix).forEach((cssVar) => {
+      excludeVariablesFromRoot(theme2.cssVarPrefix).forEach((cssVar) => {
         excludedVariables[cssVar] = css2[cssVar];
         delete css2[cssVar];
       });
@@ -12306,7 +12932,7 @@ function createThemeWithVars(options = {}, ...args) {
   if (builtInDark && !colorSchemes.dark) {
     attachColorScheme$1(colorSchemes, builtInDark, void 0, "dark");
   }
-  let theme = {
+  let theme2 = {
     defaultColorScheme,
     ...muiTheme,
     cssVarPrefix,
@@ -12320,8 +12946,8 @@ function createThemeWithVars(options = {}, ...args) {
     },
     spacing: getSpacingVal(input.spacing)
   };
-  Object.keys(theme.colorSchemes).forEach((key) => {
-    const palette = theme.colorSchemes[key].palette;
+  Object.keys(theme2.colorSchemes).forEach((key) => {
+    const palette = theme2.colorSchemes[key].palette;
     const setCssVarColor = (cssVar) => {
       const tokens = cssVar.split("-");
       const color2 = tokens[1];
@@ -12496,49 +13122,49 @@ function createThemeWithVars(options = {}, ...args) {
       }
     });
   });
-  theme = args.reduce((acc, argument) => deepmerge(acc, argument), theme);
+  theme2 = args.reduce((acc, argument) => deepmerge(acc, argument), theme2);
   const parserConfig = {
     prefix: cssVarPrefix,
     disableCssColorScheme,
     shouldSkipGeneratingVar: shouldSkipGeneratingVar$1,
-    getSelector: defaultGetSelector(theme)
+    getSelector: defaultGetSelector(theme2)
   };
   const {
     vars,
     generateThemeVars,
     generateStyleSheets
-  } = prepareCssVars(theme, parserConfig);
-  theme.vars = vars;
-  Object.entries(theme.colorSchemes[theme.defaultColorScheme]).forEach(([key, value]) => {
-    theme[key] = value;
+  } = prepareCssVars(theme2, parserConfig);
+  theme2.vars = vars;
+  Object.entries(theme2.colorSchemes[theme2.defaultColorScheme]).forEach(([key, value]) => {
+    theme2[key] = value;
   });
-  theme.generateThemeVars = generateThemeVars;
-  theme.generateStyleSheets = generateStyleSheets;
-  theme.generateSpacing = function generateSpacing() {
+  theme2.generateThemeVars = generateThemeVars;
+  theme2.generateStyleSheets = generateStyleSheets;
+  theme2.generateSpacing = function generateSpacing() {
     return createSpacing(input.spacing, createUnarySpacing(this));
   };
-  theme.getColorSchemeSelector = createGetColorSchemeSelector(selector);
-  theme.spacing = theme.generateSpacing();
-  theme.shouldSkipGeneratingVar = shouldSkipGeneratingVar$1;
-  theme.unstable_sxConfig = {
+  theme2.getColorSchemeSelector = createGetColorSchemeSelector(selector);
+  theme2.spacing = theme2.generateSpacing();
+  theme2.shouldSkipGeneratingVar = shouldSkipGeneratingVar$1;
+  theme2.unstable_sxConfig = {
     ...defaultSxConfig,
     ...input == null ? void 0 : input.unstable_sxConfig
   };
-  theme.unstable_sx = function sx(props) {
+  theme2.unstable_sx = function sx(props) {
     return styleFunctionSx({
       sx: props,
       theme: this
     });
   };
-  theme.toRuntimeSource = stringifyTheme;
-  return theme;
+  theme2.toRuntimeSource = stringifyTheme;
+  return theme2;
 }
-function attachColorScheme(theme, scheme, colorScheme) {
-  if (!theme.colorSchemes) {
+function attachColorScheme(theme2, scheme, colorScheme) {
+  if (!theme2.colorSchemes) {
     return void 0;
   }
   if (colorScheme) {
-    theme.colorSchemes[scheme] = {
+    theme2.colorSchemes[scheme] = {
       ...colorScheme !== true && colorScheme,
       palette: createPalette({
         ...colorScheme === true ? {} : colorScheme.palette,
@@ -12585,27 +13211,27 @@ function createTheme(options = {}, ...args) {
         }
       }
     }
-    const theme = createThemeNoVars({
+    const theme2 = createThemeNoVars({
       ...options,
       palette: paletteOptions
     }, ...args);
-    theme.defaultColorScheme = defaultColorSchemeInput;
-    theme.colorSchemes = colorSchemesInput;
-    if (theme.palette.mode === "light") {
-      theme.colorSchemes.light = {
+    theme2.defaultColorScheme = defaultColorSchemeInput;
+    theme2.colorSchemes = colorSchemesInput;
+    if (theme2.palette.mode === "light") {
+      theme2.colorSchemes.light = {
         ...colorSchemesInput.light !== true && colorSchemesInput.light,
-        palette: theme.palette
+        palette: theme2.palette
       };
-      attachColorScheme(theme, "dark", colorSchemesInput.dark);
+      attachColorScheme(theme2, "dark", colorSchemesInput.dark);
     }
-    if (theme.palette.mode === "dark") {
-      theme.colorSchemes.dark = {
+    if (theme2.palette.mode === "dark") {
+      theme2.colorSchemes.dark = {
         ...colorSchemesInput.dark !== true && colorSchemesInput.dark,
-        palette: theme.palette
+        palette: theme2.palette
       };
-      attachColorScheme(theme, "light", colorSchemesInput.light);
+      attachColorScheme(theme2, "light", colorSchemesInput.light);
     }
-    return theme;
+    return theme2;
   }
   if (!palette && !("light" in colorSchemesInput) && defaultColorSchemeInput === "light") {
     colorSchemesInput.light = true;
@@ -12618,17 +13244,9 @@ function createTheme(options = {}, ...args) {
   }, ...args);
 }
 const defaultTheme$1 = createTheme();
-const THEME_ID = "$$material";
 function useTheme() {
-  const theme = useTheme$1(defaultTheme$1);
-  return theme[THEME_ID] || theme;
-}
-function GlobalStyles(props) {
-  return /* @__PURE__ */ jsxRuntimeExports.jsx(GlobalStyles$1, {
-    ...props,
-    defaultTheme: defaultTheme$1,
-    themeId: THEME_ID
-  });
+  const theme2 = useTheme$2(defaultTheme$1);
+  return theme2[THEME_ID] || theme2;
 }
 function slotShouldForwardProp(prop) {
   return prop !== "ownerState" && prop !== "theme" && prop !== "sx" && prop !== "as";
@@ -12639,13 +13257,88 @@ const styled = createStyled2({
   defaultTheme: defaultTheme$1,
   rootShouldForwardProp
 });
+function ThemeProviderNoVars({
+  theme: themeInput,
+  ...props
+}) {
+  const scopedTheme = THEME_ID in themeInput ? themeInput[THEME_ID] : void 0;
+  return /* @__PURE__ */ jsxRuntimeExports.jsx(ThemeProvider$1, {
+    ...props,
+    themeId: scopedTheme ? THEME_ID : void 0,
+    theme: scopedTheme || themeInput
+  });
+}
+const defaultConfig = {
+  colorSchemeStorageKey: "mui-color-scheme",
+  defaultLightColorScheme: "light",
+  defaultDarkColorScheme: "dark",
+  modeStorageKey: "mui-mode"
+};
+const {
+  CssVarsProvider: InternalCssVarsProvider
+} = createCssVarsProvider({
+  themeId: THEME_ID,
+  // @ts-ignore ignore module augmentation tests
+  theme: () => createTheme({
+    cssVariables: true
+  }),
+  colorSchemeStorageKey: defaultConfig.colorSchemeStorageKey,
+  modeStorageKey: defaultConfig.modeStorageKey,
+  defaultColorScheme: {
+    light: defaultConfig.defaultLightColorScheme,
+    dark: defaultConfig.defaultDarkColorScheme
+  },
+  resolveTheme: (theme2) => {
+    const newTheme = {
+      ...theme2,
+      typography: createTypography(theme2.palette, theme2.typography)
+    };
+    newTheme.unstable_sx = function sx(props) {
+      return styleFunctionSx({
+        sx: props,
+        theme: this
+      });
+    };
+    return newTheme;
+  }
+});
+const CssVarsProvider = InternalCssVarsProvider;
+function ThemeProvider({
+  theme: theme2,
+  ...props
+}) {
+  if (typeof theme2 === "function") {
+    return /* @__PURE__ */ jsxRuntimeExports.jsx(ThemeProviderNoVars, {
+      theme: theme2,
+      ...props
+    });
+  }
+  const muiTheme = THEME_ID in theme2 ? theme2[THEME_ID] : theme2;
+  if (!("colorSchemes" in muiTheme)) {
+    return /* @__PURE__ */ jsxRuntimeExports.jsx(ThemeProviderNoVars, {
+      theme: theme2,
+      ...props
+    });
+  }
+  return /* @__PURE__ */ jsxRuntimeExports.jsx(CssVarsProvider, {
+    theme: theme2,
+    ...props
+  });
+}
+function GlobalStyles$1(props) {
+  return /* @__PURE__ */ jsxRuntimeExports.jsx(GlobalStyles$2, {
+    ...props,
+    defaultTheme: defaultTheme$1,
+    themeId: THEME_ID
+  });
+}
 function globalCss(styles2) {
   return function GlobalStylesWrapper(props) {
     return (
       // Pigment CSS `globalCss` support callback with theme inside an object but `GlobalStyles` support theme as a callback value.
-      /* @__PURE__ */ jsxRuntimeExports.jsx(GlobalStyles, {
-        styles: typeof styles2 === "function" ? (theme) => styles2({
-          theme,
+      /* @__PURE__ */ jsxRuntimeExports.jsx(GlobalStyles$1, {
+        styles: typeof styles2 === "function" ? (theme2) => styles2({
+          theme: theme2,
           ...props
         }) : styles2
       })
@@ -12655,10 +13348,137 @@ function globalCss(styles2) {
 function internal_createExtendSxProp() {
   return extendSxProp$1;
 }
-const memoTheme = unstable_memoTheme;
 function useDefaultProps(params) {
   return useDefaultProps$1(params);
 }
+const isDynamicSupport = typeof globalCss({}) === "function";
+const html = (theme2, enableColorScheme) => ({
+  WebkitFontSmoothing: "antialiased",
+  // Antialiasing.
+  MozOsxFontSmoothing: "grayscale",
+  // Antialiasing.
+  // Change from `box-sizing: content-box` so that `width`
+  // is not affected by `padding` or `border`.
+  boxSizing: "border-box",
+  // Fix font resize problem in iOS
+  WebkitTextSizeAdjust: "100%",
+  // When used under CssVarsProvider, colorScheme should not be applied dynamically because it will generate the stylesheet twice for server-rendered applications.
+  ...enableColorScheme && !theme2.vars && {
+    colorScheme: theme2.palette.mode
+  }
+});
+const body = (theme2) => ({
+  color: (theme2.vars || theme2).palette.text.primary,
+  ...theme2.typography.body1,
+  backgroundColor: (theme2.vars || theme2).palette.background.default,
+  "@media print": {
+    // Save printer ink.
+    backgroundColor: (theme2.vars || theme2).palette.common.white
+  }
+});
+const styles$3 = (theme2, enableColorScheme = false) => {
+  var _a, _b;
+  const colorSchemeStyles = {};
+  if (enableColorScheme && theme2.colorSchemes && typeof theme2.getColorSchemeSelector === "function") {
+    Object.entries(theme2.colorSchemes).forEach(([key, scheme]) => {
+      var _a2, _b2;
+      const selector = theme2.getColorSchemeSelector(key);
+      if (selector.startsWith("@")) {
+        colorSchemeStyles[selector] = {
+          ":root": {
+            colorScheme: (_a2 = scheme.palette) == null ? void 0 : _a2.mode
+          }
+        };
+      } else {
+        colorSchemeStyles[selector.replace(/\s*&/, "")] = {
+          colorScheme: (_b2 = scheme.palette) == null ? void 0 : _b2.mode
+        };
+      }
+    });
+  }
+  let defaultStyles = {
+    html: html(theme2, enableColorScheme),
+    "*, *::before, *::after": {
+      boxSizing: "inherit"
+    },
+    "strong, b": {
+      fontWeight: theme2.typography.fontWeightBold
+    },
+    body: {
+      margin: 0,
+      // Remove the margin in all browsers.
+      ...body(theme2),
+      // Add support for document.body.requestFullScreen().
+      // Other elements, if background transparent, are not supported.
+      "&::backdrop": {
+        backgroundColor: (theme2.vars || theme2).palette.background.default
+      }
+    },
+    ...colorSchemeStyles
+  };
+  const themeOverrides = (_b = (_a = theme2.components) == null ? void 0 : _a.MuiCssBaseline) == null ? void 0 : _b.styleOverrides;
+  if (themeOverrides) {
+    defaultStyles = [defaultStyles, themeOverrides];
+  }
+  return defaultStyles;
+};
+const SELECTOR = "mui-ecs";
+const staticStyles = (theme2) => {
+  const result = styles$3(theme2, false);
+  const baseStyles = Array.isArray(result) ? result[0] : result;
+  if (!theme2.vars && baseStyles) {
+    baseStyles.html[`:root:has(${SELECTOR})`] = {
+      colorScheme: theme2.palette.mode
+    };
+  }
+  if (theme2.colorSchemes) {
+    Object.entries(theme2.colorSchemes).forEach(([key, scheme]) => {
+      var _a, _b;
+      const selector = theme2.getColorSchemeSelector(key);
+      if (selector.startsWith("@")) {
+        baseStyles[selector] = {
+          [`:root:not(:has(.${SELECTOR}))`]: {
+            colorScheme: (_a = scheme.palette) == null ? void 0 : _a.mode
+          }
+        };
+      } else {
+        baseStyles[selector.replace(/\s*&/, "")] = {
+          [`&:not(:has(.${SELECTOR}))`]: {
+            colorScheme: (_b = scheme.palette) == null ? void 0 : _b.mode
+          }
+        };
+      }
+    });
+  }
+  return result;
+};
+const GlobalStyles = globalCss(isDynamicSupport ? ({
+  theme: theme2,
+  enableColorScheme
+}) => styles$3(theme2, enableColorScheme) : ({
+  theme: theme2
+}) => staticStyles(theme2));
+function CssBaseline(inProps) {
+  const props = useDefaultProps({
+    props: inProps,
+    name: "MuiCssBaseline"
+  });
+  const {
+    children,
+    enableColorScheme = false
+  } = props;
+  return /* @__PURE__ */ jsxRuntimeExports.jsxs(reactExports.Fragment, {
+    children: [isDynamicSupport && /* @__PURE__ */ jsxRuntimeExports.jsx(GlobalStyles, {
+      enableColorScheme
+    }), !isDynamicSupport && !enableColorScheme && /* @__PURE__ */ jsxRuntimeExports.jsx("span", {
+      className: SELECTOR,
+      style: {
+        display: "none"
+      }
+    }), children]
+  });
+}
+const memoTheme = unstable_memoTheme;
 function getSvgIconUtilityClass(slot) {
   return generateUtilityClass("MuiSvgIcon", slot);
 }
@@ -12684,7 +13504,7 @@ const SvgIconRoot = styled("svg", {
     return [styles2.root, ownerState.color !== "inherit" && styles2[`color${capitalize(ownerState.color)}`], styles2[`fontSize${capitalize(ownerState.fontSize)}`]];
   }
 })(memoTheme(({
-  theme
+  theme: theme2
 }) => {
   var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m, _n;
   return {
@@ -12693,8 +13513,8 @@ const SvgIconRoot = styled("svg", {
     height: "1em",
     display: "inline-block",
     flexShrink: 0,
-    transition: (_d = (_a = theme.transitions) == null ? void 0 : _a.create) == null ? void 0 : _d.call(_a, "fill", {
-      duration: (_c = (_b = (theme.vars ?? theme).transitions) == null ? void 0 : _b.duration) == null ? void 0 : _c.shorter
+    transition: (_d = (_a = theme2.transitions) == null ? void 0 : _a.create) == null ? void 0 : _d.call(_a, "fill", {
+      duration: (_c = (_b = (theme2.vars ?? theme2).transitions) == null ? void 0 : _b.duration) == null ? void 0 : _c.shorter
     }),
     variants: [
       {
@@ -12718,7 +13538,7 @@ const SvgIconRoot = styled("svg", {
           fontSize: "small"
         },
         style: {
-          fontSize: ((_f = (_e = theme.typography) == null ? void 0 : _e.pxToRem) == null ? void 0 : _f.call(_e, 20)) || "1.25rem"
+          fontSize: ((_f = (_e = theme2.typography) == null ? void 0 : _e.pxToRem) == null ? void 0 : _f.call(_e, 20)) || "1.25rem"
         }
       },
       {
@@ -12726,7 +13546,7 @@ const SvgIconRoot = styled("svg", {
           fontSize: "medium"
         },
         style: {
-          fontSize: ((_h = (_g = theme.typography) == null ? void 0 : _g.pxToRem) == null ? void 0 : _h.call(_g, 24)) || "1.5rem"
+          fontSize: ((_h = (_g = theme2.typography) == null ? void 0 : _g.pxToRem) == null ? void 0 : _h.call(_g, 24)) || "1.5rem"
         }
       },
       {
@@ -12734,18 +13554,18 @@ const SvgIconRoot = styled("svg", {
           fontSize: "large"
         },
         style: {
-          fontSize: ((_j = (_i = theme.typography) == null ? void 0 : _i.pxToRem) == null ? void 0 : _j.call(_i, 35)) || "2.1875rem"
+          fontSize: ((_j = (_i = theme2.typography) == null ? void 0 : _i.pxToRem) == null ? void 0 : _j.call(_i, 35)) || "2.1875rem"
         }
       },
       // TODO v5 deprecate color prop, v6 remove for sx
-      ...Object.entries((theme.vars ?? theme).palette).filter(([, value]) => value && value.main).map(([color2]) => {
+      ...Object.entries((theme2.vars ?? theme2).palette).filter(([, value]) => value && value.main).map(([color2]) => {
         var _a2, _b2;
         return {
           props: {
             color: color2
           },
           style: {
-            color: (_b2 = (_a2 = (theme.vars ?? theme).palette) == null ? void 0 : _a2[color2]) == null ? void 0 : _b2.main
+            color: (_b2 = (_a2 = (theme2.vars ?? theme2).palette) == null ? void 0 : _a2[color2]) == null ? void 0 : _b2.main
           }
         };
       }),
@@ -12754,7 +13574,7 @@ const SvgIconRoot = styled("svg", {
           color: "action"
         },
         style: {
-          color: (_l = (_k = (theme.vars ?? theme).palette) == null ? void 0 : _k.action) == null ? void 0 : _l.active
+          color: (_l = (_k = (theme2.vars ?? theme2).palette) == null ? void 0 : _k.action) == null ? void 0 : _l.active
         }
       },
       {
@@ -12762,7 +13582,7 @@ const SvgIconRoot = styled("svg", {
           color: "disabled"
         },
         style: {
-          color: (_n = (_m = (theme.vars ?? theme).palette) == null ? void 0 : _m.action) == null ? void 0 : _n.disabled
+          color: (_n = (_m = (theme2.vars ?? theme2).palette) == null ? void 0 : _m.action) == null ? void 0 : _n.disabled
         }
       },
       {
@@ -13337,24 +14157,24 @@ const PaperRoot = styled("div", {
     return [styles2.root, styles2[ownerState.variant], !ownerState.square && styles2.rounded, ownerState.variant === "elevation" && styles2[`elevation${ownerState.elevation}`]];
   }
 })(memoTheme(({
-  theme
+  theme: theme2
 }) => ({
-  backgroundColor: (theme.vars || theme).palette.background.paper,
-  color: (theme.vars || theme).palette.text.primary,
-  transition: theme.transitions.create("box-shadow"),
+  backgroundColor: (theme2.vars || theme2).palette.background.paper,
+  color: (theme2.vars || theme2).palette.text.primary,
+  transition: theme2.transitions.create("box-shadow"),
   variants: [{
     props: ({
       ownerState
     }) => !ownerState.square,
     style: {
-      borderRadius: theme.shape.borderRadius
+      borderRadius: theme2.shape.borderRadius
     }
   }, {
     props: {
       variant: "outlined"
     },
     style: {
-      border: `1px solid ${(theme.vars || theme).palette.divider}`
+      border: `1px solid ${(theme2.vars || theme2).palette.divider}`
     }
   }, {
     props: {
@@ -13372,7 +14192,7 @@ const Paper = /* @__PURE__ */ reactExports.forwardRef(function Paper2(inProps, r
     props: inProps,
     name: "MuiPaper"
   });
-  const theme = useTheme();
+  const theme2 = useTheme();
   const {
     className,
     component = "div",
@@ -13397,11 +14217,11 @@ const Paper = /* @__PURE__ */ reactExports.forwardRef(function Paper2(inProps, r
     ...other,
     style: {
       ...variant === "elevation" && {
-        "--Paper-shadow": (theme.vars || theme).shadows[elevation],
-        ...theme.vars && {
-          "--Paper-overlay": (_a = theme.vars.overlays) == null ? void 0 : _a[elevation]
+        "--Paper-shadow": (theme2.vars || theme2).shadows[elevation],
+        ...theme2.vars && {
+          "--Paper-overlay": (_a = theme2.vars.overlays) == null ? void 0 : _a[elevation]
         },
-        ...!theme.vars && theme.palette.mode === "dark" && {
+        ...!theme2.vars && theme2.palette.mode === "dark" && {
           "--Paper-overlay": `linear-gradient(${alpha("#fff", getOverlayAlpha(elevation))}, ${alpha("#fff", getOverlayAlpha(elevation))})`
         }
       },
@@ -13639,14 +14459,14 @@ const TouchRippleRipple = styled(Ripple, {
     animation-name: ${enterKeyframe};
     animation-duration: ${DURATION}ms;
     animation-timing-function: ${({
-  theme
-}) => theme.transitions.easing.easeInOut};
+  theme: theme2
+}) => theme2.transitions.easing.easeInOut};
   }
 
   &.${touchRippleClasses.ripplePulsate} {
     animation-duration: ${({
-  theme
-}) => theme.transitions.duration.shorter}ms;
+  theme: theme2
+}) => theme2.transitions.duration.shorter}ms;
   }
 
   & .${touchRippleClasses.child} {
@@ -13663,8 +14483,8 @@ const TouchRippleRipple = styled(Ripple, {
     animation-name: ${exitKeyframe};
     animation-duration: ${DURATION}ms;
     animation-timing-function: ${({
-  theme
-}) => theme.transitions.easing.easeInOut};
+  theme: theme2
+}) => theme2.transitions.easing.easeInOut};
   }
 
   & .${touchRippleClasses.childPulsate} {
@@ -13675,8 +14495,8 @@ const TouchRippleRipple = styled(Ripple, {
     animation-name: ${pulsateKeyframe};
     animation-duration: 2500ms;
     animation-timing-function: ${({
-  theme
-}) => theme.transitions.easing.easeInOut};
+  theme: theme2
+}) => theme2.transitions.easing.easeInOut};
     animation-iteration-count: infinite;
     animation-delay: 200ms;
   }
@@ -14188,7 +15008,7 @@ const CircularProgressRoot = styled("span", {
     return [styles2.root, styles2[ownerState.variant], styles2[`color${capitalize(ownerState.color)}`]];
   }
 })(memoTheme(({
-  theme
+  theme: theme2
 }) => ({
   display: "inline-block",
   variants: [{
@@ -14196,7 +15016,7 @@ const CircularProgressRoot = styled("span", {
       variant: "determinate"
     },
     style: {
-      transition: theme.transitions.create("transform")
+      transition: theme2.transitions.create("transform")
     }
   }, {
     props: {
@@ -14205,12 +15025,12 @@ const CircularProgressRoot = styled("span", {
     style: rotateAnimation || {
       animation: `${circularRotateKeyframe} 1.4s linear infinite`
     }
-  }, ...Object.entries(theme.palette).filter(createSimplePaletteValueFilter()).map(([color2]) => ({
+  }, ...Object.entries(theme2.palette).filter(createSimplePaletteValueFilter()).map(([color2]) => ({
     props: {
       color: color2
     },
     style: {
-      color: (theme.vars || theme).palette[color2].main
+      color: (theme2.vars || theme2).palette[color2].main
     }
   }))]
 })));
@@ -14232,7 +15052,7 @@ const CircularProgressCircle = styled("circle", {
     return [styles2.circle, styles2[`circle${capitalize(ownerState.variant)}`], ownerState.disableShrink && styles2.circleDisableShrink];
   }
 })(memoTheme(({
-  theme
+  theme: theme2
 }) => ({
   stroke: "currentColor",
   variants: [{
@@ -14240,7 +15060,7 @@ const CircularProgressCircle = styled("circle", {
       variant: "determinate"
     },
     style: {
-      transition: theme.transitions.create("stroke-dashoffset")
+      transition: theme2.transitions.create("stroke-dashoffset")
     }
   }, {
     props: {
@@ -14358,21 +15178,21 @@ const IconButtonRoot = styled(ButtonBase, {
     return [styles2.root, ownerState.loading && styles2.loading, ownerState.color !== "default" && styles2[`color${capitalize(ownerState.color)}`], ownerState.edge && styles2[`edge${capitalize(ownerState.edge)}`], styles2[`size${capitalize(ownerState.size)}`]];
   }
 })(memoTheme(({
-  theme
+  theme: theme2
 }) => ({
   textAlign: "center",
   flex: "0 0 auto",
-  fontSize: theme.typography.pxToRem(24),
+  fontSize: theme2.typography.pxToRem(24),
   padding: 8,
   borderRadius: "50%",
-  color: (theme.vars || theme).palette.action.active,
-  transition: theme.transitions.create("background-color", {
-    duration: theme.transitions.duration.shortest
+  color: (theme2.vars || theme2).palette.action.active,
+  transition: theme2.transitions.create("background-color", {
+    duration: theme2.transitions.duration.shortest
   }),
   variants: [{
     props: (props) => !props.disableRipple,
     style: {
-      "--IconButton-hoverBg": theme.vars ? `rgba(${theme.vars.palette.action.activeChannel} / ${theme.vars.palette.action.hoverOpacity})` : alpha(theme.palette.action.active, theme.palette.action.hoverOpacity),
+      "--IconButton-hoverBg": theme2.vars ? `rgba(${theme2.vars.palette.action.activeChannel} / ${theme2.vars.palette.action.hoverOpacity})` : alpha(theme2.palette.action.active, theme2.palette.action.hoverOpacity),
       "&:hover": {
         backgroundColor: "var(--IconButton-hoverBg)",
         // Reset on touch devices, it doesn't add specificity
@@ -14413,7 +15233,7 @@ const IconButtonRoot = styled(ButtonBase, {
     }
   }]
 })), memoTheme(({
-  theme
+  theme: theme2
 }) => ({
   variants: [{
     props: {
@@ -14422,19 +15242,19 @@ const IconButtonRoot = styled(ButtonBase, {
     style: {
       color: "inherit"
     }
-  }, ...Object.entries(theme.palette).filter(createSimplePaletteValueFilter()).map(([color2]) => ({
+  }, ...Object.entries(theme2.palette).filter(createSimplePaletteValueFilter()).map(([color2]) => ({
     props: {
       color: color2
     },
     style: {
-      color: (theme.vars || theme).palette[color2].main
+      color: (theme2.vars || theme2).palette[color2].main
     }
-  })), ...Object.entries(theme.palette).filter(createSimplePaletteValueFilter()).map(([color2]) => ({
+  })), ...Object.entries(theme2.palette).filter(createSimplePaletteValueFilter()).map(([color2]) => ({
     props: {
       color: color2
     },
     style: {
-      "--IconButton-hoverBg": theme.vars ? `rgba(${(theme.vars || theme).palette[color2].mainChannel} / ${theme.vars.palette.action.hoverOpacity})` : alpha((theme.vars || theme).palette[color2].main, theme.palette.action.hoverOpacity)
+      "--IconButton-hoverBg": theme2.vars ? `rgba(${(theme2.vars || theme2).palette[color2].mainChannel} / ${theme2.vars.palette.action.hoverOpacity})` : alpha((theme2.vars || theme2).palette[color2].main, theme2.palette.action.hoverOpacity)
     }
   })), {
     props: {
@@ -14442,7 +15262,7 @@ const IconButtonRoot = styled(ButtonBase, {
     },
     style: {
       padding: 5,
-      fontSize: theme.typography.pxToRem(18)
+      fontSize: theme2.typography.pxToRem(18)
     }
   }, {
     props: {
@@ -14450,12 +15270,12 @@ const IconButtonRoot = styled(ButtonBase, {
     },
     style: {
       padding: 12,
-      fontSize: theme.typography.pxToRem(28)
+      fontSize: theme2.typography.pxToRem(28)
     }
   }],
   [`&.${iconButtonClasses.disabled}`]: {
     backgroundColor: "transparent",
-    color: (theme.vars || theme).palette.action.disabled
+    color: (theme2.vars || theme2).palette.action.disabled
   },
   [`&.${iconButtonClasses.loading}`]: {
     color: "transparent"
@@ -14466,7 +15286,7 @@ const IconButtonLoadingIndicator = styled("span", {
   slot: "LoadingIndicator",
   overridesResolver: (props, styles2) => styles2.loadingIndicator
 })(({
-  theme
+  theme: theme2
 }) => ({
   display: "none",
   position: "absolute",
@@ -14474,7 +15294,7 @@ const IconButtonLoadingIndicator = styled("span", {
   top: "50%",
   left: "50%",
   transform: "translate(-50%, -50%)",
-  color: (theme.vars || theme).palette.action.disabled,
+  color: (theme2.vars || theme2).palette.action.disabled,
   variants: [{
     props: {
       loading: true
@@ -14582,56 +15402,56 @@ const AlertRoot = styled(Paper, {
     return [styles2.root, styles2[ownerState.variant], styles2[`${ownerState.variant}${capitalize(ownerState.color || ownerState.severity)}`]];
   }
 })(memoTheme(({
-  theme
+  theme: theme2
 }) => {
-  const getColor = theme.palette.mode === "light" ? darken : lighten;
-  const getBackgroundColor = theme.palette.mode === "light" ? lighten : darken;
+  const getColor = theme2.palette.mode === "light" ? darken : lighten;
+  const getBackgroundColor = theme2.palette.mode === "light" ? lighten : darken;
   return {
-    ...theme.typography.body2,
+    ...theme2.typography.body2,
     backgroundColor: "transparent",
     display: "flex",
     padding: "6px 16px",
-    variants: [...Object.entries(theme.palette).filter(createSimplePaletteValueFilter(["light"])).map(([color2]) => ({
+    variants: [...Object.entries(theme2.palette).filter(createSimplePaletteValueFilter(["light"])).map(([color2]) => ({
       props: {
         colorSeverity: color2,
         variant: "standard"
       },
       style: {
-        color: theme.vars ? theme.vars.palette.Alert[`${color2}Color`] : getColor(theme.palette[color2].light, 0.6),
-        backgroundColor: theme.vars ? theme.vars.palette.Alert[`${color2}StandardBg`] : getBackgroundColor(theme.palette[color2].light, 0.9),
-        [`& .${alertClasses.icon}`]: theme.vars ? {
-          color: theme.vars.palette.Alert[`${color2}IconColor`]
+        color: theme2.vars ? theme2.vars.palette.Alert[`${color2}Color`] : getColor(theme2.palette[color2].light, 0.6),
+        backgroundColor: theme2.vars ? theme2.vars.palette.Alert[`${color2}StandardBg`] : getBackgroundColor(theme2.palette[color2].light, 0.9),
+        [`& .${alertClasses.icon}`]: theme2.vars ? {
+          color: theme2.vars.palette.Alert[`${color2}IconColor`]
         } : {
-          color: theme.palette[color2].main
+          color: theme2.palette[color2].main
         }
       }
-    })), ...Object.entries(theme.palette).filter(createSimplePaletteValueFilter(["light"])).map(([color2]) => ({
+    })), ...Object.entries(theme2.palette).filter(createSimplePaletteValueFilter(["light"])).map(([color2]) => ({
       props: {
         colorSeverity: color2,
         variant: "outlined"
       },
       style: {
-        color: theme.vars ? theme.vars.palette.Alert[`${color2}Color`] : getColor(theme.palette[color2].light, 0.6),
-        border: `1px solid ${(theme.vars || theme).palette[color2].light}`,
-        [`& .${alertClasses.icon}`]: theme.vars ? {
-          color: theme.vars.palette.Alert[`${color2}IconColor`]
+        color: theme2.vars ? theme2.vars.palette.Alert[`${color2}Color`] : getColor(theme2.palette[color2].light, 0.6),
+        border: `1px solid ${(theme2.vars || theme2).palette[color2].light}`,
+        [`& .${alertClasses.icon}`]: theme2.vars ? {
+          color: theme2.vars.palette.Alert[`${color2}IconColor`]
         } : {
-          color: theme.palette[color2].main
+          color: theme2.palette[color2].main
         }
       }
-    })), ...Object.entries(theme.palette).filter(createSimplePaletteValueFilter(["dark"])).map(([color2]) => ({
+    })), ...Object.entries(theme2.palette).filter(createSimplePaletteValueFilter(["dark"])).map(([color2]) => ({
       props: {
         colorSeverity: color2,
         variant: "filled"
       },
       style: {
-        fontWeight: theme.typography.fontWeightMedium,
-        ...theme.vars ? {
-          color: theme.vars.palette.Alert[`${color2}FilledColor`],
-          backgroundColor: theme.vars.palette.Alert[`${color2}FilledBg`]
+        fontWeight: theme2.typography.fontWeightMedium,
+        ...theme2.vars ? {
+          color: theme2.vars.palette.Alert[`${color2}FilledColor`],
+          backgroundColor: theme2.vars.palette.Alert[`${color2}FilledBg`]
         } : {
-          backgroundColor: theme.palette.mode === "dark" ? theme.palette[color2].dark : theme.palette[color2].main,
-          color: theme.palette.getContrastText(theme.palette[color2].main)
+          backgroundColor: theme2.palette.mode === "dark" ? theme2.palette[color2].dark : theme2.palette[color2].main,
+          color: theme2.palette.getContrastText(theme2.palette[color2].main)
         }
       }
     }))]
@@ -14835,7 +15655,7 @@ const TypographyRoot = styled("span", {
     return [styles2.root, ownerState.variant && styles2[ownerState.variant], ownerState.align !== "inherit" && styles2[`align${capitalize(ownerState.align)}`], ownerState.noWrap && styles2.noWrap, ownerState.gutterBottom && styles2.gutterBottom, ownerState.paragraph && styles2.paragraph];
   }
 })(memoTheme(({
-  theme
+  theme: theme2
 }) => {
   var _a;
   return {
@@ -14850,24 +15670,24 @@ const TypographyRoot = styled("span", {
         lineHeight: "inherit",
         letterSpacing: "inherit"
       }
-    }, ...Object.entries(theme.typography).filter(([variant, value]) => variant !== "inherit" && value && typeof value === "object").map(([variant, value]) => ({
+    }, ...Object.entries(theme2.typography).filter(([variant, value]) => variant !== "inherit" && value && typeof value === "object").map(([variant, value]) => ({
       props: {
         variant
       },
       style: value
-    })), ...Object.entries(theme.palette).filter(createSimplePaletteValueFilter()).map(([color2]) => ({
+    })), ...Object.entries(theme2.palette).filter(createSimplePaletteValueFilter()).map(([color2]) => ({
       props: {
         color: color2
       },
       style: {
-        color: (theme.vars || theme).palette[color2].main
+        color: (theme2.vars || theme2).palette[color2].main
       }
-    })), ...Object.entries(((_a = theme.palette) == null ? void 0 : _a.text) || {}).filter(([, value]) => typeof value === "string").map(([color2]) => ({
+    })), ...Object.entries(((_a = theme2.palette) == null ? void 0 : _a.text) || {}).filter(([, value]) => typeof value === "string").map(([color2]) => ({
       props: {
         color: `text${capitalize(color2)}`
       },
       style: {
-        color: (theme.vars || theme).palette.text[color2]
+        color: (theme2.vars || theme2).palette.text[color2]
       }
     })), {
       props: ({
@@ -15519,10 +16339,10 @@ function getWindowScrollBarX(element) {
 }
 function getViewportRect(element, strategy) {
   var win = getWindow(element);
-  var html = getDocumentElement(element);
+  var html2 = getDocumentElement(element);
   var visualViewport = win.visualViewport;
-  var width2 = html.clientWidth;
-  var height2 = html.clientHeight;
+  var width2 = html2.clientWidth;
+  var height2 = html2.clientHeight;
   var x = 0;
   var y = 0;
   if (visualViewport) {
@@ -15543,15 +16363,15 @@ function getViewportRect(element, strategy) {
 }
 function getDocumentRect(element) {
   var _element$ownerDocumen;
-  var html = getDocumentElement(element);
+  var html2 = getDocumentElement(element);
   var winScroll = getWindowScroll(element);
-  var body = (_element$ownerDocumen = element.ownerDocument) == null ? void 0 : _element$ownerDocumen.body;
-  var width2 = max(html.scrollWidth, html.clientWidth, body ? body.scrollWidth : 0, body ? body.clientWidth : 0);
-  var height2 = max(html.scrollHeight, html.clientHeight, body ? body.scrollHeight : 0, body ? body.clientHeight : 0);
+  var body2 = (_element$ownerDocumen = element.ownerDocument) == null ? void 0 : _element$ownerDocumen.body;
+  var width2 = max(html2.scrollWidth, html2.clientWidth, body2 ? body2.scrollWidth : 0, body2 ? body2.clientWidth : 0);
+  var height2 = max(html2.scrollHeight, html2.clientHeight, body2 ? body2.scrollHeight : 0, body2 ? body2.clientHeight : 0);
   var x = -winScroll.scrollLeft + getWindowScrollBarX(element);
   var y = -winScroll.scrollTop;
-  if (getComputedStyle(body || html).direction === "rtl") {
-    x += max(html.clientWidth, body ? body.clientWidth : 0) - width2;
+  if (getComputedStyle(body2 || html2).direction === "rtl") {
+    x += max(html2.clientWidth, body2 ? body2.clientWidth : 0) - width2;
   }
   return {
     width: width2,
@@ -16859,10 +17679,10 @@ const InputBaseRoot = styled("div", {
   slot: "Root",
   overridesResolver: rootOverridesResolver
 })(memoTheme(({
-  theme
+  theme: theme2
 }) => ({
-  ...theme.typography.body1,
-  color: (theme.vars || theme).palette.text.primary,
+  ...theme2.typography.body1,
+  color: (theme2.vars || theme2).palette.text.primary,
   lineHeight: "1.4375em",
   // 23px
   boxSizing: "border-box",
@@ -16872,7 +17692,7 @@ const InputBaseRoot = styled("div", {
   display: "inline-flex",
   alignItems: "center",
   [`&.${inputBaseClasses.disabled}`]: {
-    color: (theme.vars || theme).palette.text.disabled,
+    color: (theme2.vars || theme2).palette.text.disabled,
     cursor: "default"
   },
   variants: [{
@@ -16904,25 +17724,25 @@ const InputBaseInput = styled("input", {
   slot: "Input",
   overridesResolver: inputOverridesResolver
 })(memoTheme(({
-  theme
+  theme: theme2
 }) => {
-  const light2 = theme.palette.mode === "light";
+  const light2 = theme2.palette.mode === "light";
   const placeholder = {
     color: "currentColor",
-    ...theme.vars ? {
-      opacity: theme.vars.opacity.inputPlaceholder
+    ...theme2.vars ? {
+      opacity: theme2.vars.opacity.inputPlaceholder
     } : {
       opacity: light2 ? 0.42 : 0.5
     },
-    transition: theme.transitions.create("opacity", {
-      duration: theme.transitions.duration.shorter
+    transition: theme2.transitions.create("opacity", {
+      duration: theme2.transitions.duration.shorter
     })
   };
   const placeholderHidden = {
     opacity: "0 !important"
   };
-  const placeholderVisible = theme.vars ? {
-    opacity: theme.vars.opacity.inputPlaceholder
+  const placeholderVisible = theme2.vars ? {
+    opacity: theme2.vars.opacity.inputPlaceholder
   } : {
     opacity: light2 ? 0.42 : 0.5
   };
@@ -16975,7 +17795,7 @@ const InputBaseInput = styled("input", {
     [`&.${inputBaseClasses.disabled}`]: {
       opacity: 1,
       // Reset iOS opacity
-      WebkitTextFillColor: (theme.vars || theme).palette.text.disabled
+      WebkitTextFillColor: (theme2.vars || theme2).palette.text.disabled
       // Fix opacity Safari bug
     },
     variants: [{
@@ -17314,10 +18134,10 @@ const styles$1 = {
   }
 };
 const Fade = /* @__PURE__ */ reactExports.forwardRef(function Fade2(props, ref) {
-  const theme = useTheme();
+  const theme2 = useTheme();
   const defaultTimeout = {
-    enter: theme.transitions.duration.enteringScreen,
-    exit: theme.transitions.duration.leavingScreen
+    enter: theme2.transitions.duration.enteringScreen,
+    exit: theme2.transitions.duration.leavingScreen
   };
   const {
     addEndListener,
@@ -17359,8 +18179,8 @@ const Fade = /* @__PURE__ */ reactExports.forwardRef(function Fade2(props, ref) 
     }, {
       mode: "enter"
     });
-    node2.style.webkitTransition = theme.transitions.create("opacity", transitionProps);
-    node2.style.transition = theme.transitions.create("opacity", transitionProps);
+    node2.style.webkitTransition = theme2.transitions.create("opacity", transitionProps);
+    node2.style.transition = theme2.transitions.create("opacity", transitionProps);
     if (onEnter) {
       onEnter(node2, isAppearing);
     }
@@ -17375,8 +18195,8 @@ const Fade = /* @__PURE__ */ reactExports.forwardRef(function Fade2(props, ref) 
     }, {
       mode: "exit"
     });
-    node2.style.webkitTransition = theme.transitions.create("opacity", transitionProps);
-    node2.style.transition = theme.transitions.create("opacity", transitionProps);
+    node2.style.webkitTransition = theme2.transitions.create("opacity", transitionProps);
+    node2.style.transition = theme2.transitions.create("opacity", transitionProps);
     if (onExit) {
       onExit(node2);
     }
@@ -17602,24 +18422,24 @@ const ButtonRoot = styled(ButtonBase, {
     return [styles2.root, styles2[ownerState.variant], styles2[`${ownerState.variant}${capitalize(ownerState.color)}`], styles2[`size${capitalize(ownerState.size)}`], styles2[`${ownerState.variant}Size${capitalize(ownerState.size)}`], ownerState.color === "inherit" && styles2.colorInherit, ownerState.disableElevation && styles2.disableElevation, ownerState.fullWidth && styles2.fullWidth, ownerState.loading && styles2.loading];
   }
 })(memoTheme(({
-  theme
+  theme: theme2
 }) => {
-  const inheritContainedBackgroundColor = theme.palette.mode === "light" ? theme.palette.grey[300] : theme.palette.grey[800];
-  const inheritContainedHoverBackgroundColor = theme.palette.mode === "light" ? theme.palette.grey.A100 : theme.palette.grey[700];
+  const inheritContainedBackgroundColor = theme2.palette.mode === "light" ? theme2.palette.grey[300] : theme2.palette.grey[800];
+  const inheritContainedHoverBackgroundColor = theme2.palette.mode === "light" ? theme2.palette.grey.A100 : theme2.palette.grey[700];
   return {
-    ...theme.typography.button,
+    ...theme2.typography.button,
     minWidth: 64,
     padding: "6px 16px",
     border: 0,
-    borderRadius: (theme.vars || theme).shape.borderRadius,
-    transition: theme.transitions.create(["background-color", "box-shadow", "border-color", "color"], {
-      duration: theme.transitions.duration.short
+    borderRadius: (theme2.vars || theme2).shape.borderRadius,
+    transition: theme2.transitions.create(["background-color", "box-shadow", "border-color", "color"], {
+      duration: theme2.transitions.duration.short
     }),
     "&:hover": {
       textDecoration: "none"
     },
     [`&.${buttonClasses.disabled}`]: {
-      color: (theme.vars || theme).palette.action.disabled
+      color: (theme2.vars || theme2).palette.action.disabled
     },
     variants: [{
       props: {
@@ -17628,24 +18448,24 @@ const ButtonRoot = styled(ButtonBase, {
       style: {
         color: `var(--variant-containedColor)`,
         backgroundColor: `var(--variant-containedBg)`,
-        boxShadow: (theme.vars || theme).shadows[2],
+        boxShadow: (theme2.vars || theme2).shadows[2],
         "&:hover": {
-          boxShadow: (theme.vars || theme).shadows[4],
+          boxShadow: (theme2.vars || theme2).shadows[4],
           // Reset on touch devices, it doesn't add specificity
           "@media (hover: none)": {
-            boxShadow: (theme.vars || theme).shadows[2]
+            boxShadow: (theme2.vars || theme2).shadows[2]
           }
         },
         "&:active": {
-          boxShadow: (theme.vars || theme).shadows[8]
+          boxShadow: (theme2.vars || theme2).shadows[8]
         },
         [`&.${buttonClasses.focusVisible}`]: {
-          boxShadow: (theme.vars || theme).shadows[6]
+          boxShadow: (theme2.vars || theme2).shadows[6]
         },
         [`&.${buttonClasses.disabled}`]: {
-          color: (theme.vars || theme).palette.action.disabled,
-          boxShadow: (theme.vars || theme).shadows[0],
-          backgroundColor: (theme.vars || theme).palette.action.disabledBackground
+          color: (theme2.vars || theme2).palette.action.disabled,
+          boxShadow: (theme2.vars || theme2).shadows[0],
+          backgroundColor: (theme2.vars || theme2).palette.action.disabledBackground
         }
       }
     }, {
@@ -17659,7 +18479,7 @@ const ButtonRoot = styled(ButtonBase, {
         backgroundColor: `var(--variant-outlinedBg)`,
         color: `var(--variant-outlinedColor)`,
         [`&.${buttonClasses.disabled}`]: {
-          border: `1px solid ${(theme.vars || theme).palette.action.disabledBackground}`
+          border: `1px solid ${(theme2.vars || theme2).palette.action.disabledBackground}`
         }
       }
     }, {
@@ -17671,22 +18491,22 @@ const ButtonRoot = styled(ButtonBase, {
         color: `var(--variant-textColor)`,
         backgroundColor: `var(--variant-textBg)`
       }
-    }, ...Object.entries(theme.palette).filter(createSimplePaletteValueFilter()).map(([color2]) => ({
+    }, ...Object.entries(theme2.palette).filter(createSimplePaletteValueFilter()).map(([color2]) => ({
       props: {
         color: color2
       },
       style: {
-        "--variant-textColor": (theme.vars || theme).palette[color2].main,
-        "--variant-outlinedColor": (theme.vars || theme).palette[color2].main,
-        "--variant-outlinedBorder": theme.vars ? `rgba(${theme.vars.palette[color2].mainChannel} / 0.5)` : alpha(theme.palette[color2].main, 0.5),
-        "--variant-containedColor": (theme.vars || theme).palette[color2].contrastText,
-        "--variant-containedBg": (theme.vars || theme).palette[color2].main,
+        "--variant-textColor": (theme2.vars || theme2).palette[color2].main,
+        "--variant-outlinedColor": (theme2.vars || theme2).palette[color2].main,
+        "--variant-outlinedBorder": theme2.vars ? `rgba(${theme2.vars.palette[color2].mainChannel} / 0.5)` : alpha(theme2.palette[color2].main, 0.5),
+        "--variant-containedColor": (theme2.vars || theme2).palette[color2].contrastText,
+        "--variant-containedBg": (theme2.vars || theme2).palette[color2].main,
         "@media (hover: hover)": {
           "&:hover": {
-            "--variant-containedBg": (theme.vars || theme).palette[color2].dark,
-            "--variant-textBg": theme.vars ? `rgba(${theme.vars.palette[color2].mainChannel} / ${theme.vars.palette.action.hoverOpacity})` : alpha(theme.palette[color2].main, theme.palette.action.hoverOpacity),
-            "--variant-outlinedBorder": (theme.vars || theme).palette[color2].main,
-            "--variant-outlinedBg": theme.vars ? `rgba(${theme.vars.palette[color2].mainChannel} / ${theme.vars.palette.action.hoverOpacity})` : alpha(theme.palette[color2].main, theme.palette.action.hoverOpacity)
+            "--variant-containedBg": (theme2.vars || theme2).palette[color2].dark,
+            "--variant-textBg": theme2.vars ? `rgba(${theme2.vars.palette[color2].mainChannel} / ${theme2.vars.palette.action.hoverOpacity})` : alpha(theme2.palette[color2].main, theme2.palette.action.hoverOpacity),
+            "--variant-outlinedBorder": (theme2.vars || theme2).palette[color2].main,
+            "--variant-outlinedBg": theme2.vars ? `rgba(${theme2.vars.palette[color2].mainChannel} / ${theme2.vars.palette.action.hoverOpacity})` : alpha(theme2.palette[color2].main, theme2.palette.action.hoverOpacity)
           }
         }
       }
@@ -17697,12 +18517,12 @@ const ButtonRoot = styled(ButtonBase, {
       style: {
         color: "inherit",
         borderColor: "currentColor",
-        "--variant-containedBg": theme.vars ? theme.vars.palette.Button.inheritContainedBg : inheritContainedBackgroundColor,
+        "--variant-containedBg": theme2.vars ? theme2.vars.palette.Button.inheritContainedBg : inheritContainedBackgroundColor,
         "@media (hover: hover)": {
           "&:hover": {
-            "--variant-containedBg": theme.vars ? theme.vars.palette.Button.inheritContainedHoverBg : inheritContainedHoverBackgroundColor,
-            "--variant-textBg": theme.vars ? `rgba(${theme.vars.palette.text.primaryChannel} / ${theme.vars.palette.action.hoverOpacity})` : alpha(theme.palette.text.primary, theme.palette.action.hoverOpacity),
-            "--variant-outlinedBg": theme.vars ? `rgba(${theme.vars.palette.text.primaryChannel} / ${theme.vars.palette.action.hoverOpacity})` : alpha(theme.palette.text.primary, theme.palette.action.hoverOpacity)
+            "--variant-containedBg": theme2.vars ? theme2.vars.palette.Button.inheritContainedHoverBg : inheritContainedHoverBackgroundColor,
+            "--variant-textBg": theme2.vars ? `rgba(${theme2.vars.palette.text.primaryChannel} / ${theme2.vars.palette.action.hoverOpacity})` : alpha(theme2.palette.text.primary, theme2.palette.action.hoverOpacity),
+            "--variant-outlinedBg": theme2.vars ? `rgba(${theme2.vars.palette.text.primaryChannel} / ${theme2.vars.palette.action.hoverOpacity})` : alpha(theme2.palette.text.primary, theme2.palette.action.hoverOpacity)
           }
         }
       }
@@ -17713,7 +18533,7 @@ const ButtonRoot = styled(ButtonBase, {
       },
       style: {
         padding: "4px 5px",
-        fontSize: theme.typography.pxToRem(13)
+        fontSize: theme2.typography.pxToRem(13)
       }
     }, {
       props: {
@@ -17722,7 +18542,7 @@ const ButtonRoot = styled(ButtonBase, {
       },
       style: {
         padding: "8px 11px",
-        fontSize: theme.typography.pxToRem(15)
+        fontSize: theme2.typography.pxToRem(15)
       }
     }, {
       props: {
@@ -17731,7 +18551,7 @@ const ButtonRoot = styled(ButtonBase, {
       },
       style: {
         padding: "3px 9px",
-        fontSize: theme.typography.pxToRem(13)
+        fontSize: theme2.typography.pxToRem(13)
       }
     }, {
       props: {
@@ -17740,7 +18560,7 @@ const ButtonRoot = styled(ButtonBase, {
       },
       style: {
         padding: "7px 21px",
-        fontSize: theme.typography.pxToRem(15)
+        fontSize: theme2.typography.pxToRem(15)
       }
     }, {
       props: {
@@ -17749,7 +18569,7 @@ const ButtonRoot = styled(ButtonBase, {
       },
       style: {
         padding: "4px 10px",
-        fontSize: theme.typography.pxToRem(13)
+        fontSize: theme2.typography.pxToRem(13)
       }
     }, {
       props: {
@@ -17758,7 +18578,7 @@ const ButtonRoot = styled(ButtonBase, {
       },
       style: {
         padding: "8px 22px",
-        fontSize: theme.typography.pxToRem(15)
+        fontSize: theme2.typography.pxToRem(15)
       }
     }, {
       props: {
@@ -17791,8 +18611,8 @@ const ButtonRoot = styled(ButtonBase, {
         loadingPosition: "center"
       },
       style: {
-        transition: theme.transitions.create(["background-color", "box-shadow", "border-color"], {
-          duration: theme.transitions.duration.short
+        transition: theme2.transitions.create(["background-color", "box-shadow", "border-color"], {
+          duration: theme2.transitions.duration.short
         }),
         [`&.${buttonClasses.loading}`]: {
           color: "transparent"
@@ -17811,7 +18631,7 @@ const ButtonStartIcon = styled("span", {
     return [styles2.startIcon, ownerState.loading && styles2.startIconLoadingStart, styles2[`iconSize${capitalize(ownerState.size)}`]];
   }
 })(({
-  theme
+  theme: theme2
 }) => ({
   display: "inherit",
   marginRight: 8,
@@ -17829,8 +18649,8 @@ const ButtonStartIcon = styled("span", {
       loading: true
     },
     style: {
-      transition: theme.transitions.create(["opacity"], {
-        duration: theme.transitions.duration.short
+      transition: theme2.transitions.create(["opacity"], {
+        duration: theme2.transitions.duration.short
       }),
       opacity: 0
     }
@@ -17855,7 +18675,7 @@ const ButtonEndIcon = styled("span", {
     return [styles2.endIcon, ownerState.loading && styles2.endIconLoadingEnd, styles2[`iconSize${capitalize(ownerState.size)}`]];
   }
 })(({
-  theme
+  theme: theme2
 }) => ({
   display: "inherit",
   marginRight: -4,
@@ -17873,8 +18693,8 @@ const ButtonEndIcon = styled("span", {
       loading: true
     },
     style: {
-      transition: theme.transitions.create(["opacity"], {
-        duration: theme.transitions.duration.short
+      transition: theme2.transitions.create(["opacity"], {
+        duration: theme2.transitions.duration.short
       }),
       opacity: 0
     }
@@ -17894,7 +18714,7 @@ const ButtonLoadingIndicator = styled("span", {
   slot: "LoadingIndicator",
   overridesResolver: (props, styles2) => styles2.loadingIndicator
 })(({
-  theme
+  theme: theme2
 }) => ({
   display: "none",
   position: "absolute",
@@ -17936,7 +18756,7 @@ const ButtonLoadingIndicator = styled("span", {
     style: {
       left: "50%",
       transform: "translate(-50%)",
-      color: (theme.vars || theme).palette.action.disabled
+      color: (theme2.vars || theme2).palette.action.disabled
     }
   }, {
     props: {
@@ -18844,10 +19664,10 @@ const ModalRoot = styled("div", {
     return [styles2.root, !ownerState.open && ownerState.exited && styles2.hidden];
   }
 })(memoTheme(({
-  theme
+  theme: theme2
 }) => ({
   position: "fixed",
-  zIndex: (theme.vars || theme).zIndex.modal,
+  zIndex: (theme2.vars || theme2).zIndex.modal,
   right: 0,
   bottom: 0,
   top: 0,
@@ -18902,7 +19722,7 @@ const Modal = /* @__PURE__ */ reactExports.forwardRef(function Modal2(inProps, r
     slotProps = {},
     slots = {},
     // eslint-disable-next-line react/prop-types
-    theme,
+    theme: theme2,
     ...other
   } = props;
   const propsWithDefaults = {
@@ -19104,7 +19924,7 @@ const DialogPaper = styled(Paper, {
     return [styles2.paper, styles2[`scrollPaper${capitalize(ownerState.scroll)}`], styles2[`paperWidth${capitalize(String(ownerState.maxWidth))}`], ownerState.fullWidth && styles2.paperFullWidth, ownerState.fullScreen && styles2.paperFullScreen];
   }
 })(memoTheme(({
-  theme
+  theme: theme2
 }) => ({
   margin: 32,
   position: "relative",
@@ -19143,21 +19963,21 @@ const DialogPaper = styled(Paper, {
       maxWidth: "xs"
     },
     style: {
-      maxWidth: theme.breakpoints.unit === "px" ? Math.max(theme.breakpoints.values.xs, 444) : `max(${theme.breakpoints.values.xs}${theme.breakpoints.unit}, 444px)`,
+      maxWidth: theme2.breakpoints.unit === "px" ? Math.max(theme2.breakpoints.values.xs, 444) : `max(${theme2.breakpoints.values.xs}${theme2.breakpoints.unit}, 444px)`,
       [`&.${dialogClasses.paperScrollBody}`]: {
-        [theme.breakpoints.down(Math.max(theme.breakpoints.values.xs, 444) + 32 * 2)]: {
+        [theme2.breakpoints.down(Math.max(theme2.breakpoints.values.xs, 444) + 32 * 2)]: {
           maxWidth: "calc(100% - 64px)"
         }
       }
     }
-  }, ...Object.keys(theme.breakpoints.values).filter((maxWidth2) => maxWidth2 !== "xs").map((maxWidth2) => ({
+  }, ...Object.keys(theme2.breakpoints.values).filter((maxWidth2) => maxWidth2 !== "xs").map((maxWidth2) => ({
     props: {
       maxWidth: maxWidth2
     },
     style: {
-      maxWidth: `${theme.breakpoints.values[maxWidth2]}${theme.breakpoints.unit}`,
+      maxWidth: `${theme2.breakpoints.values[maxWidth2]}${theme2.breakpoints.unit}`,
       [`&.${dialogClasses.paperScrollBody}`]: {
-        [theme.breakpoints.down(theme.breakpoints.values[maxWidth2] + 32 * 2)]: {
+        [theme2.breakpoints.down(theme2.breakpoints.values[maxWidth2] + 32 * 2)]: {
           maxWidth: "calc(100% - 64px)"
         }
       }
@@ -19192,10 +20012,10 @@ const Dialog = /* @__PURE__ */ reactExports.forwardRef(function Dialog2(inProps,
     props: inProps,
     name: "MuiDialog"
   });
-  const theme = useTheme();
+  const theme2 = useTheme();
   const defaultTransitionDuration = {
-    enter: theme.transitions.duration.enteringScreen,
-    exit: theme.transitions.duration.leavingScreen
+    enter: theme2.transitions.duration.enteringScreen,
+    exit: theme2.transitions.duration.leavingScreen
   };
   const {
     "aria-describedby": ariaDescribedby,
@@ -19439,7 +20259,7 @@ const DialogContentRoot = styled("div", {
     return [styles2.root, ownerState.dividers && styles2.dividers];
   }
 })(memoTheme(({
-  theme
+  theme: theme2
 }) => ({
   flex: "1 1 auto",
   // Add iOS momentum scrolling for iOS < 13.0
@@ -19452,8 +20272,8 @@ const DialogContentRoot = styled("div", {
     }) => ownerState.dividers,
     style: {
       padding: "16px 24px",
-      borderTop: `1px solid ${(theme.vars || theme).palette.divider}`,
-      borderBottom: `1px solid ${(theme.vars || theme).palette.divider}`
+      borderTop: `1px solid ${(theme2.vars || theme2).palette.divider}`,
+      borderBottom: `1px solid ${(theme2.vars || theme2).palette.divider}`
     }
   }, {
     props: ({
@@ -19561,14 +20381,14 @@ const DividerRoot = styled("div", {
     return [styles2.root, ownerState.absolute && styles2.absolute, styles2[ownerState.variant], ownerState.light && styles2.light, ownerState.orientation === "vertical" && styles2.vertical, ownerState.flexItem && styles2.flexItem, ownerState.children && styles2.withChildren, ownerState.children && ownerState.orientation === "vertical" && styles2.withChildrenVertical, ownerState.textAlign === "right" && ownerState.orientation !== "vertical" && styles2.textAlignRight, ownerState.textAlign === "left" && ownerState.orientation !== "vertical" && styles2.textAlignLeft];
   }
 })(memoTheme(({
-  theme
+  theme: theme2
 }) => ({
   margin: 0,
   // Reset browser default style.
   flexShrink: 0,
   borderWidth: 0,
   borderStyle: "solid",
-  borderColor: (theme.vars || theme).palette.divider,
+  borderColor: (theme2.vars || theme2).palette.divider,
   borderBottomWidth: "thin",
   variants: [{
     props: {
@@ -19585,7 +20405,7 @@ const DividerRoot = styled("div", {
       light: true
     },
     style: {
-      borderColor: theme.vars ? `rgba(${theme.vars.palette.dividerChannel} / 0.08)` : alpha(theme.palette.divider, 0.08)
+      borderColor: theme2.vars ? `rgba(${theme2.vars.palette.dividerChannel} / 0.08)` : alpha(theme2.palette.divider, 0.08)
     }
   }, {
     props: {
@@ -19600,8 +20420,8 @@ const DividerRoot = styled("div", {
       orientation: "horizontal"
     },
     style: {
-      marginLeft: theme.spacing(2),
-      marginRight: theme.spacing(2)
+      marginLeft: theme2.spacing(2),
+      marginRight: theme2.spacing(2)
     }
   }, {
     props: {
@@ -19609,8 +20429,8 @@ const DividerRoot = styled("div", {
       orientation: "vertical"
     },
     style: {
-      marginTop: theme.spacing(1),
-      marginBottom: theme.spacing(1)
+      marginTop: theme2.spacing(1),
+      marginBottom: theme2.spacing(1)
     }
   }, {
     props: {
@@ -19651,7 +20471,7 @@ const DividerRoot = styled("div", {
     style: {
       "&::before, &::after": {
         width: "100%",
-        borderTop: `thin solid ${(theme.vars || theme).palette.divider}`,
+        borderTop: `thin solid ${(theme2.vars || theme2).palette.divider}`,
         borderTopStyle: "inherit"
       }
     }
@@ -19663,7 +20483,7 @@ const DividerRoot = styled("div", {
       flexDirection: "column",
       "&::before, &::after": {
         height: "100%",
-        borderLeft: `thin solid ${(theme.vars || theme).palette.divider}`,
+        borderLeft: `thin solid ${(theme2.vars || theme2).palette.divider}`,
         borderLeftStyle: "inherit"
       }
     }
@@ -19703,19 +20523,19 @@ const DividerWrapper = styled("span", {
     return [styles2.wrapper, ownerState.orientation === "vertical" && styles2.wrapperVertical];
   }
 })(memoTheme(({
-  theme
+  theme: theme2
 }) => ({
   display: "inline-block",
-  paddingLeft: `calc(${theme.spacing(1)} * 1.2)`,
-  paddingRight: `calc(${theme.spacing(1)} * 1.2)`,
+  paddingLeft: `calc(${theme2.spacing(1)} * 1.2)`,
+  paddingRight: `calc(${theme2.spacing(1)} * 1.2)`,
   whiteSpace: "nowrap",
   variants: [{
     props: {
       orientation: "vertical"
     },
     style: {
-      paddingTop: `calc(${theme.spacing(1)} * 1.2)`,
-      paddingBottom: `calc(${theme.spacing(1)} * 1.2)`
+      paddingTop: `calc(${theme2.spacing(1)} * 1.2)`,
+      paddingBottom: `calc(${theme2.spacing(1)} * 1.2)`
     }
   }]
 })));
@@ -19799,34 +20619,34 @@ const FilledInputRoot = styled(InputBaseRoot, {
     return [...rootOverridesResolver(props, styles2), !ownerState.disableUnderline && styles2.underline];
   }
 })(memoTheme(({
-  theme
+  theme: theme2
 }) => {
-  const light2 = theme.palette.mode === "light";
+  const light2 = theme2.palette.mode === "light";
   const bottomLineColor = light2 ? "rgba(0, 0, 0, 0.42)" : "rgba(255, 255, 255, 0.7)";
   const backgroundColor2 = light2 ? "rgba(0, 0, 0, 0.06)" : "rgba(255, 255, 255, 0.09)";
   const hoverBackground = light2 ? "rgba(0, 0, 0, 0.09)" : "rgba(255, 255, 255, 0.13)";
   const disabledBackground = light2 ? "rgba(0, 0, 0, 0.12)" : "rgba(255, 255, 255, 0.12)";
   return {
     position: "relative",
-    backgroundColor: theme.vars ? theme.vars.palette.FilledInput.bg : backgroundColor2,
-    borderTopLeftRadius: (theme.vars || theme).shape.borderRadius,
-    borderTopRightRadius: (theme.vars || theme).shape.borderRadius,
-    transition: theme.transitions.create("background-color", {
-      duration: theme.transitions.duration.shorter,
-      easing: theme.transitions.easing.easeOut
+    backgroundColor: theme2.vars ? theme2.vars.palette.FilledInput.bg : backgroundColor2,
+    borderTopLeftRadius: (theme2.vars || theme2).shape.borderRadius,
+    borderTopRightRadius: (theme2.vars || theme2).shape.borderRadius,
+    transition: theme2.transitions.create("background-color", {
+      duration: theme2.transitions.duration.shorter,
+      easing: theme2.transitions.easing.easeOut
     }),
     "&:hover": {
-      backgroundColor: theme.vars ? theme.vars.palette.FilledInput.hoverBg : hoverBackground,
+      backgroundColor: theme2.vars ? theme2.vars.palette.FilledInput.hoverBg : hoverBackground,
       // Reset on touch devices, it doesn't add specificity
       "@media (hover: none)": {
-        backgroundColor: theme.vars ? theme.vars.palette.FilledInput.bg : backgroundColor2
+        backgroundColor: theme2.vars ? theme2.vars.palette.FilledInput.bg : backgroundColor2
       }
     },
     [`&.${filledInputClasses.focused}`]: {
-      backgroundColor: theme.vars ? theme.vars.palette.FilledInput.bg : backgroundColor2
+      backgroundColor: theme2.vars ? theme2.vars.palette.FilledInput.bg : backgroundColor2
     },
     [`&.${filledInputClasses.disabled}`]: {
-      backgroundColor: theme.vars ? theme.vars.palette.FilledInput.disabledBg : disabledBackground
+      backgroundColor: theme2.vars ? theme2.vars.palette.FilledInput.disabledBg : disabledBackground
     },
     variants: [{
       props: ({
@@ -19840,9 +20660,9 @@ const FilledInputRoot = styled(InputBaseRoot, {
           position: "absolute",
           right: 0,
           transform: "scaleX(0)",
-          transition: theme.transitions.create("transform", {
-            duration: theme.transitions.duration.shorter,
-            easing: theme.transitions.easing.easeOut
+          transition: theme2.transitions.create("transform", {
+            duration: theme2.transitions.duration.shorter,
+            easing: theme2.transitions.easing.easeOut
           }),
           pointerEvents: "none"
           // Transparent to the hover style.
@@ -19854,30 +20674,30 @@ const FilledInputRoot = styled(InputBaseRoot, {
         },
         [`&.${filledInputClasses.error}`]: {
           "&::before, &::after": {
-            borderBottomColor: (theme.vars || theme).palette.error.main
+            borderBottomColor: (theme2.vars || theme2).palette.error.main
           }
         },
         "&::before": {
-          borderBottom: `1px solid ${theme.vars ? `rgba(${theme.vars.palette.common.onBackgroundChannel} / ${theme.vars.opacity.inputUnderline})` : bottomLineColor}`,
+          borderBottom: `1px solid ${theme2.vars ? `rgba(${theme2.vars.palette.common.onBackgroundChannel} / ${theme2.vars.opacity.inputUnderline})` : bottomLineColor}`,
           left: 0,
           bottom: 0,
           content: '"\\00a0"',
           position: "absolute",
           right: 0,
-          transition: theme.transitions.create("border-bottom-color", {
-            duration: theme.transitions.duration.shorter
+          transition: theme2.transitions.create("border-bottom-color", {
+            duration: theme2.transitions.duration.shorter
           }),
           pointerEvents: "none"
           // Transparent to the hover style.
         },
         [`&:hover:not(.${filledInputClasses.disabled}, .${filledInputClasses.error}):before`]: {
-          borderBottom: `1px solid ${(theme.vars || theme).palette.text.primary}`
+          borderBottom: `1px solid ${(theme2.vars || theme2).palette.text.primary}`
         },
         [`&.${filledInputClasses.disabled}:before`]: {
           borderBottomStyle: "dotted"
         }
       }
-    }, ...Object.entries(theme.palette).filter(createSimplePaletteValueFilter()).map(([color2]) => {
+    }, ...Object.entries(theme2.palette).filter(createSimplePaletteValueFilter()).map(([color2]) => {
       var _a;
       return {
         props: {
@@ -19886,7 +20706,7 @@ const FilledInputRoot = styled(InputBaseRoot, {
         },
         style: {
           "&::after": {
-            borderBottom: `2px solid ${(_a = (theme.vars || theme).palette[color2]) == null ? void 0 : _a.main}`
+            borderBottom: `2px solid ${(_a = (theme2.vars || theme2).palette[color2]) == null ? void 0 : _a.main}`
           }
         }
       };
@@ -19944,27 +20764,27 @@ const FilledInputInput = styled(InputBaseInput, {
   slot: "Input",
   overridesResolver: inputOverridesResolver
 })(memoTheme(({
-  theme
+  theme: theme2
 }) => ({
   paddingTop: 25,
   paddingRight: 12,
   paddingBottom: 8,
   paddingLeft: 12,
-  ...!theme.vars && {
+  ...!theme2.vars && {
     "&:-webkit-autofill": {
-      WebkitBoxShadow: theme.palette.mode === "light" ? null : "0 0 0 100px #266798 inset",
-      WebkitTextFillColor: theme.palette.mode === "light" ? null : "#fff",
-      caretColor: theme.palette.mode === "light" ? null : "#fff",
+      WebkitBoxShadow: theme2.palette.mode === "light" ? null : "0 0 0 100px #266798 inset",
+      WebkitTextFillColor: theme2.palette.mode === "light" ? null : "#fff",
+      caretColor: theme2.palette.mode === "light" ? null : "#fff",
       borderTopLeftRadius: "inherit",
       borderTopRightRadius: "inherit"
     }
   },
-  ...theme.vars && {
+  ...theme2.vars && {
     "&:-webkit-autofill": {
       borderTopLeftRadius: "inherit",
       borderTopRightRadius: "inherit"
     },
-    [theme.getColorSchemeSelector("dark")]: {
+    [theme2.getColorSchemeSelector("dark")]: {
       "&:-webkit-autofill": {
         WebkitBoxShadow: "0 0 0 100px #266798 inset",
         WebkitTextFillColor: "#fff",
@@ -20282,7 +21102,7 @@ const FormControlLabelRoot = styled("label", {
     }, styles2.root, styles2[`labelPlacement${capitalize(ownerState.labelPlacement)}`]];
   }
 })(memoTheme(({
-  theme
+  theme: theme2
 }) => ({
   display: "inline-flex",
   alignItems: "center",
@@ -20298,7 +21118,7 @@ const FormControlLabelRoot = styled("label", {
   },
   [`& .${formControlLabelClasses.label}`]: {
     [`&.${formControlLabelClasses.disabled}`]: {
-      color: (theme.vars || theme).palette.text.disabled
+      color: (theme2.vars || theme2).palette.text.disabled
     }
   },
   variants: [{
@@ -20338,10 +21158,10 @@ const AsteriskComponent$1 = styled("span", {
   slot: "Asterisk",
   overridesResolver: (props, styles2) => styles2.asterisk
 })(memoTheme(({
-  theme
+  theme: theme2
 }) => ({
   [`&.${formControlLabelClasses.error}`]: {
-    color: (theme.vars || theme).palette.error.main
+    color: (theme2.vars || theme2).palette.error.main
   }
 })));
 const FormControlLabel = /* @__PURE__ */ reactExports.forwardRef(function FormControlLabel2(inProps, ref) {
@@ -20459,20 +21279,20 @@ const FormHelperTextRoot = styled("p", {
     return [styles2.root, ownerState.size && styles2[`size${capitalize(ownerState.size)}`], ownerState.contained && styles2.contained, ownerState.filled && styles2.filled];
   }
 })(memoTheme(({
-  theme
+  theme: theme2
 }) => ({
-  color: (theme.vars || theme).palette.text.secondary,
-  ...theme.typography.caption,
+  color: (theme2.vars || theme2).palette.text.secondary,
+  ...theme2.typography.caption,
   textAlign: "left",
   marginTop: 3,
   marginRight: 0,
   marginBottom: 0,
   marginLeft: 0,
   [`&.${formHelperTextClasses.disabled}`]: {
-    color: (theme.vars || theme).palette.text.disabled
+    color: (theme2.vars || theme2).palette.text.disabled
   },
   [`&.${formHelperTextClasses.error}`]: {
-    color: (theme.vars || theme).palette.error.main
+    color: (theme2.vars || theme2).palette.error.main
   },
   variants: [{
     props: {
@@ -20575,30 +21395,30 @@ const FormLabelRoot = styled("label", {
     return [styles2.root, ownerState.color === "secondary" && styles2.colorSecondary, ownerState.filled && styles2.filled];
   }
 })(memoTheme(({
-  theme
+  theme: theme2
 }) => ({
-  color: (theme.vars || theme).palette.text.secondary,
-  ...theme.typography.body1,
+  color: (theme2.vars || theme2).palette.text.secondary,
+  ...theme2.typography.body1,
   lineHeight: "1.4375em",
   padding: 0,
   position: "relative",
-  variants: [...Object.entries(theme.palette).filter(createSimplePaletteValueFilter()).map(([color2]) => ({
+  variants: [...Object.entries(theme2.palette).filter(createSimplePaletteValueFilter()).map(([color2]) => ({
     props: {
       color: color2
     },
     style: {
       [`&.${formLabelClasses.focused}`]: {
-        color: (theme.vars || theme).palette[color2].main
+        color: (theme2.vars || theme2).palette[color2].main
       }
     }
   })), {
     props: {},
     style: {
       [`&.${formLabelClasses.disabled}`]: {
-        color: (theme.vars || theme).palette.text.disabled
+        color: (theme2.vars || theme2).palette.text.disabled
       },
       [`&.${formLabelClasses.error}`]: {
-        color: (theme.vars || theme).palette.error.main
+        color: (theme2.vars || theme2).palette.error.main
       }
     }
   }]
@@ -20608,10 +21428,10 @@ const AsteriskComponent = styled("span", {
   slot: "Asterisk",
   overridesResolver: (props, styles2) => styles2.asterisk
 })(memoTheme(({
-  theme
+  theme: theme2
 }) => ({
   [`&.${formLabelClasses.error}`]: {
-    color: (theme.vars || theme).palette.error.main
+    color: (theme2.vars || theme2).palette.error.main
   }
 })));
 const FormLabel = /* @__PURE__ */ reactExports.forwardRef(function FormLabel2(inProps, ref) {
@@ -20689,11 +21509,11 @@ const gridClasses = generateUtilityClasses("MuiGrid", [
   ...GRID_SIZES.map((size) => `grid-xl-${size}`)
 ]);
 function generateGrid({
-  theme,
+  theme: theme2,
   ownerState
 }) {
   let size;
-  return theme.breakpoints.keys.reduce((globalStyles, breakpoint) => {
+  return theme2.breakpoints.keys.reduce((globalStyles, breakpoint) => {
     let styles2 = {};
     if (ownerState[breakpoint]) {
       size = ownerState[breakpoint];
@@ -20718,7 +21538,7 @@ function generateGrid({
     } else {
       const columnsBreakpointValues = resolveBreakpointValues({
         values: ownerState.columns,
-        breakpoints: theme.breakpoints.values
+        breakpoints: theme2.breakpoints.values
       });
       const columnValue = typeof columnsBreakpointValues === "object" ? columnsBreakpointValues[breakpoint] : columnsBreakpointValues;
       if (columnValue === void 0 || columnValue === null) {
@@ -20727,7 +21547,7 @@ function generateGrid({
       const width2 = `${Math.round(size / columnValue * 1e8) / 1e6}%`;
       let more = {};
       if (ownerState.container && ownerState.item && ownerState.columnSpacing !== 0) {
-        const themeSpacing = theme.spacing(ownerState.columnSpacing);
+        const themeSpacing = theme2.spacing(ownerState.columnSpacing);
         if (themeSpacing !== "0px") {
           const fullWidth = `calc(${width2} + ${themeSpacing})`;
           more = {
@@ -20743,24 +21563,24 @@ function generateGrid({
         ...more
       };
     }
-    if (theme.breakpoints.values[breakpoint] === 0) {
+    if (theme2.breakpoints.values[breakpoint] === 0) {
       Object.assign(globalStyles, styles2);
     } else {
-      globalStyles[theme.breakpoints.up(breakpoint)] = styles2;
+      globalStyles[theme2.breakpoints.up(breakpoint)] = styles2;
     }
     return globalStyles;
   }, {});
 }
 function generateDirection({
-  theme,
+  theme: theme2,
   ownerState
 }) {
   const directionValues = resolveBreakpointValues({
     values: ownerState.direction,
-    breakpoints: theme.breakpoints.values
+    breakpoints: theme2.breakpoints.values
   });
   return handleBreakpoints({
-    theme
+    theme: theme2
   }, directionValues, (propValue) => {
     const output = {
       flexDirection: propValue
@@ -20792,7 +21612,7 @@ function extractZeroValueBreakpointKeys({
   return sortedBreakpointKeysByValue.slice(0, sortedBreakpointKeysByValue.indexOf(nonZeroKey));
 }
 function generateRowGap({
-  theme,
+  theme: theme2,
   ownerState
 }) {
   const {
@@ -20803,19 +21623,19 @@ function generateRowGap({
   if (container && rowSpacing !== 0) {
     const rowSpacingValues = resolveBreakpointValues({
       values: rowSpacing,
-      breakpoints: theme.breakpoints.values
+      breakpoints: theme2.breakpoints.values
     });
     let zeroValueBreakpointKeys;
     if (typeof rowSpacingValues === "object") {
       zeroValueBreakpointKeys = extractZeroValueBreakpointKeys({
-        breakpoints: theme.breakpoints.values,
+        breakpoints: theme2.breakpoints.values,
         values: rowSpacingValues
       });
     }
     styles2 = handleBreakpoints({
-      theme
+      theme: theme2
     }, rowSpacingValues, (propValue, breakpoint) => {
-      const themeSpacing = theme.spacing(propValue);
+      const themeSpacing = theme2.spacing(propValue);
       if (themeSpacing !== "0px") {
         return {
           marginTop: `calc(-1 * ${themeSpacing})`,
@@ -20838,7 +21658,7 @@ function generateRowGap({
   return styles2;
 }
 function generateColumnGap({
-  theme,
+  theme: theme2,
   ownerState
 }) {
   const {
@@ -20849,19 +21669,19 @@ function generateColumnGap({
   if (container && columnSpacing !== 0) {
     const columnSpacingValues = resolveBreakpointValues({
       values: columnSpacing,
-      breakpoints: theme.breakpoints.values
+      breakpoints: theme2.breakpoints.values
     });
     let zeroValueBreakpointKeys;
     if (typeof columnSpacingValues === "object") {
       zeroValueBreakpointKeys = extractZeroValueBreakpointKeys({
-        breakpoints: theme.breakpoints.values,
+        breakpoints: theme2.breakpoints.values,
         values: columnSpacingValues
       });
     }
     styles2 = handleBreakpoints({
-      theme
+      theme: theme2
     }, columnSpacingValues, (propValue, breakpoint) => {
-      const themeSpacing = theme.spacing(propValue);
+      const themeSpacing = theme2.spacing(propValue);
       if (themeSpacing !== "0px") {
         const negativeValue = `calc(-1 * ${themeSpacing})`;
         return {
@@ -21100,7 +21920,7 @@ const Grow = /* @__PURE__ */ reactExports.forwardRef(function Grow2(props, ref) 
   } = props;
   const timer = useTimeout();
   const autoTimeout = reactExports.useRef();
-  const theme = useTheme();
+  const theme2 = useTheme();
   const nodeRef = reactExports.useRef(null);
   const handleRef = useForkRef(nodeRef, getReactElementRef(children), ref);
   const normalizedTransitionCallback = (callback) => (maybeIsAppearing) => {
@@ -21129,15 +21949,15 @@ const Grow = /* @__PURE__ */ reactExports.forwardRef(function Grow2(props, ref) 
     });
     let duration2;
     if (timeout === "auto") {
-      duration2 = theme.transitions.getAutoHeightDuration(node2.clientHeight);
+      duration2 = theme2.transitions.getAutoHeightDuration(node2.clientHeight);
       autoTimeout.current = duration2;
     } else {
       duration2 = transitionDuration;
     }
-    node2.style.transition = [theme.transitions.create("opacity", {
+    node2.style.transition = [theme2.transitions.create("opacity", {
       duration: duration2,
       delay
-    }), theme.transitions.create("transform", {
+    }), theme2.transitions.create("transform", {
       duration: isWebKit154 ? duration2 : duration2 * 0.666,
       delay,
       easing: transitionTimingFunction
@@ -21162,15 +21982,15 @@ const Grow = /* @__PURE__ */ reactExports.forwardRef(function Grow2(props, ref) 
     });
     let duration2;
     if (timeout === "auto") {
-      duration2 = theme.transitions.getAutoHeightDuration(node2.clientHeight);
+      duration2 = theme2.transitions.getAutoHeightDuration(node2.clientHeight);
       autoTimeout.current = duration2;
     } else {
       duration2 = transitionDuration;
     }
-    node2.style.transition = [theme.transitions.create("opacity", {
+    node2.style.transition = [theme2.transitions.create("opacity", {
       duration: duration2,
       delay
-    }), theme.transitions.create("transform", {
+    }), theme2.transitions.create("transform", {
       duration: isWebKit154 ? duration2 : duration2 * 0.666,
       delay: isWebKit154 ? delay : delay || duration2 * 0.333,
       easing: transitionTimingFunction
@@ -21255,12 +22075,12 @@ const InputRoot = styled(InputBaseRoot, {
     return [...rootOverridesResolver(props, styles2), !ownerState.disableUnderline && styles2.underline];
   }
 })(memoTheme(({
-  theme
+  theme: theme2
 }) => {
-  const light2 = theme.palette.mode === "light";
+  const light2 = theme2.palette.mode === "light";
   let bottomLineColor = light2 ? "rgba(0, 0, 0, 0.42)" : "rgba(255, 255, 255, 0.7)";
-  if (theme.vars) {
-    bottomLineColor = `rgba(${theme.vars.palette.common.onBackgroundChannel} / ${theme.vars.opacity.inputUnderline})`;
+  if (theme2.vars) {
+    bottomLineColor = `rgba(${theme2.vars.palette.common.onBackgroundChannel} / ${theme2.vars.opacity.inputUnderline})`;
   }
   return {
     position: "relative",
@@ -21285,9 +22105,9 @@ const InputRoot = styled(InputBaseRoot, {
           position: "absolute",
           right: 0,
           transform: "scaleX(0)",
-          transition: theme.transitions.create("transform", {
-            duration: theme.transitions.duration.shorter,
-            easing: theme.transitions.easing.easeOut
+          transition: theme2.transitions.create("transform", {
+            duration: theme2.transitions.duration.shorter,
+            easing: theme2.transitions.easing.easeOut
           }),
           pointerEvents: "none"
           // Transparent to the hover style.
@@ -21299,7 +22119,7 @@ const InputRoot = styled(InputBaseRoot, {
         },
         [`&.${inputClasses.error}`]: {
           "&::before, &::after": {
-            borderBottomColor: (theme.vars || theme).palette.error.main
+            borderBottomColor: (theme2.vars || theme2).palette.error.main
           }
         },
         "&::before": {
@@ -21309,14 +22129,14 @@ const InputRoot = styled(InputBaseRoot, {
           content: '"\\00a0"',
           position: "absolute",
           right: 0,
-          transition: theme.transitions.create("border-bottom-color", {
-            duration: theme.transitions.duration.shorter
+          transition: theme2.transitions.create("border-bottom-color", {
+            duration: theme2.transitions.duration.shorter
           }),
           pointerEvents: "none"
           // Transparent to the hover style.
         },
         [`&:hover:not(.${inputClasses.disabled}, .${inputClasses.error}):before`]: {
-          borderBottom: `2px solid ${(theme.vars || theme).palette.text.primary}`,
+          borderBottom: `2px solid ${(theme2.vars || theme2).palette.text.primary}`,
           // Reset on touch devices, it doesn't add specificity
           "@media (hover: none)": {
             borderBottom: `1px solid ${bottomLineColor}`
@@ -21326,14 +22146,14 @@ const InputRoot = styled(InputBaseRoot, {
           borderBottomStyle: "dotted"
         }
       }
-    }, ...Object.entries(theme.palette).filter(createSimplePaletteValueFilter()).map(([color2]) => ({
+    }, ...Object.entries(theme2.palette).filter(createSimplePaletteValueFilter()).map(([color2]) => ({
       props: {
         color: color2,
         disableUnderline: false
       },
       style: {
         "&::after": {
-          borderBottom: `2px solid ${(theme.vars || theme).palette[color2].main}`
+          borderBottom: `2px solid ${(theme2.vars || theme2).palette[color2].main}`
         }
       }
     }))]
@@ -21427,7 +22247,7 @@ const InputLabelRoot = styled(FormLabel, {
     }, styles2.root, ownerState.formControl && styles2.formControl, ownerState.size === "small" && styles2.sizeSmall, ownerState.shrink && styles2.shrink, !ownerState.disableAnimation && styles2.animated, ownerState.focused && styles2.focused, styles2[ownerState.variant]];
   }
 })(memoTheme(({
-  theme
+  theme: theme2
 }) => ({
   display: "block",
   transformOrigin: "top left",
@@ -21468,9 +22288,9 @@ const InputLabelRoot = styled(FormLabel, {
       ownerState
     }) => !ownerState.disableAnimation,
     style: {
-      transition: theme.transitions.create(["color", "transform", "max-width"], {
-        duration: theme.transitions.duration.shorter,
-        easing: theme.transitions.easing.easeOut
+      transition: theme2.transitions.create(["color", "transform", "max-width"], {
+        duration: theme2.transitions.duration.shorter,
+        easing: theme2.transitions.easing.easeOut
       })
     }
   }, {
@@ -21768,7 +22588,7 @@ const ListItemRoot = styled("div", {
   slot: "Root",
   overridesResolver
 })(memoTheme(({
-  theme
+  theme: theme2
 }) => ({
   display: "flex",
   justifyContent: "flex-start",
@@ -21832,7 +22652,7 @@ const ListItemRoot = styled("div", {
       ownerState
     }) => ownerState.divider,
     style: {
-      borderBottom: `1px solid ${(theme.vars || theme).palette.divider}`,
+      borderBottom: `1px solid ${(theme2.vars || theme2).palette.divider}`,
       backgroundClip: "padding-box"
     }
   }, {
@@ -21840,12 +22660,12 @@ const ListItemRoot = styled("div", {
       ownerState
     }) => ownerState.button,
     style: {
-      transition: theme.transitions.create("background-color", {
-        duration: theme.transitions.duration.shortest
+      transition: theme2.transitions.create("background-color", {
+        duration: theme2.transitions.duration.shortest
       }),
       "&:hover": {
         textDecoration: "none",
-        backgroundColor: (theme.vars || theme).palette.action.hover,
+        backgroundColor: (theme2.vars || theme2).palette.action.hover,
         // Reset on touch devices, it doesn't add specificity
         "@media (hover: none)": {
           backgroundColor: "transparent"
@@ -22794,7 +23614,7 @@ const useUtilityClasses$9 = (ownerState) => {
   return composeClasses(slots, getNativeSelectUtilityClasses, classes);
 };
 const StyledSelectSelect = styled("select")(({
-  theme
+  theme: theme2
 }) => ({
   // Reset
   MozAppearance: "none",
@@ -22817,7 +23637,7 @@ const StyledSelectSelect = styled("select")(({
     height: "auto"
   },
   "&:not([multiple]) option, &:not([multiple]) optgroup": {
-    backgroundColor: (theme.vars || theme).palette.background.paper
+    backgroundColor: (theme2.vars || theme2).palette.background.paper
   },
   variants: [{
     props: ({
@@ -22845,9 +23665,9 @@ const StyledSelectSelect = styled("select")(({
       variant: "outlined"
     },
     style: {
-      borderRadius: (theme.vars || theme).shape.borderRadius,
+      borderRadius: (theme2.vars || theme2).shape.borderRadius,
       "&:focus": {
-        borderRadius: (theme.vars || theme).shape.borderRadius
+        borderRadius: (theme2.vars || theme2).shape.borderRadius
         // Reset the reset for Chrome style
       },
       "&&&": {
@@ -22870,7 +23690,7 @@ const NativeSelectSelect = styled(StyledSelectSelect, {
   }
 })({});
 const StyledSelectIcon = styled("svg")(({
-  theme
+  theme: theme2
 }) => ({
   // We use a position absolute over a flexbox in order to forward the pointer events
   // to the input and to support wrapping tags..
@@ -22880,9 +23700,9 @@ const StyledSelectIcon = styled("svg")(({
   top: "calc(50% - .5em)",
   // Don't block pointer events on the select under the icon.
   pointerEvents: "none",
-  color: (theme.vars || theme).palette.action.active,
+  color: (theme2.vars || theme2).palette.action.active,
   [`&.${nativeSelectClasses.disabled}`]: {
-    color: (theme.vars || theme).palette.action.disabled
+    color: (theme2.vars || theme2).palette.action.disabled
   },
   variants: [{
     props: ({
@@ -22970,7 +23790,7 @@ const NotchedOutlineRoot$1 = styled("fieldset", {
 const NotchedOutlineLegend = styled("legend", {
   shouldForwardProp: rootShouldForwardProp
 })(memoTheme(({
-  theme
+  theme: theme2
 }) => ({
   float: "unset",
   // Fix conflict with bootstrap
@@ -22986,9 +23806,9 @@ const NotchedOutlineLegend = styled("legend", {
       padding: 0,
       lineHeight: "11px",
       // sync with `height` in `legend` styles
-      transition: theme.transitions.create("width", {
+      transition: theme2.transitions.create("width", {
         duration: 150,
-        easing: theme.transitions.easing.easeOut
+        easing: theme2.transitions.easing.easeOut
       })
     }
   }, {
@@ -23004,9 +23824,9 @@ const NotchedOutlineLegend = styled("legend", {
       fontSize: "0.75em",
       visibility: "hidden",
       maxWidth: 0.01,
-      transition: theme.transitions.create("max-width", {
+      transition: theme2.transitions.create("max-width", {
         duration: 50,
-        easing: theme.transitions.easing.easeOut
+        easing: theme2.transitions.easing.easeOut
       }),
       whiteSpace: "nowrap",
       "& > span": {
@@ -23023,9 +23843,9 @@ const NotchedOutlineLegend = styled("legend", {
     }) => ownerState.withLabel && ownerState.notched,
     style: {
       maxWidth: "100%",
-      transition: theme.transitions.create("max-width", {
+      transition: theme2.transitions.create("max-width", {
         duration: 100,
-        easing: theme.transitions.easing.easeOut,
+        easing: theme2.transitions.easing.easeOut,
         delay: 50
       })
     }
@@ -23088,31 +23908,31 @@ const OutlinedInputRoot = styled(InputBaseRoot, {
   slot: "Root",
   overridesResolver: rootOverridesResolver
 })(memoTheme(({
-  theme
+  theme: theme2
 }) => {
-  const borderColor2 = theme.palette.mode === "light" ? "rgba(0, 0, 0, 0.23)" : "rgba(255, 255, 255, 0.23)";
+  const borderColor2 = theme2.palette.mode === "light" ? "rgba(0, 0, 0, 0.23)" : "rgba(255, 255, 255, 0.23)";
   return {
     position: "relative",
-    borderRadius: (theme.vars || theme).shape.borderRadius,
+    borderRadius: (theme2.vars || theme2).shape.borderRadius,
     [`&:hover .${outlinedInputClasses.notchedOutline}`]: {
-      borderColor: (theme.vars || theme).palette.text.primary
+      borderColor: (theme2.vars || theme2).palette.text.primary
     },
     // Reset on touch devices, it doesn't add specificity
     "@media (hover: none)": {
       [`&:hover .${outlinedInputClasses.notchedOutline}`]: {
-        borderColor: theme.vars ? `rgba(${theme.vars.palette.common.onBackgroundChannel} / 0.23)` : borderColor2
+        borderColor: theme2.vars ? `rgba(${theme2.vars.palette.common.onBackgroundChannel} / 0.23)` : borderColor2
       }
     },
     [`&.${outlinedInputClasses.focused} .${outlinedInputClasses.notchedOutline}`]: {
       borderWidth: 2
     },
-    variants: [...Object.entries(theme.palette).filter(createSimplePaletteValueFilter()).map(([color2]) => ({
+    variants: [...Object.entries(theme2.palette).filter(createSimplePaletteValueFilter()).map(([color2]) => ({
       props: {
         color: color2
       },
       style: {
         [`&.${outlinedInputClasses.focused} .${outlinedInputClasses.notchedOutline}`]: {
-          borderColor: (theme.vars || theme).palette[color2].main
+          borderColor: (theme2.vars || theme2).palette[color2].main
         }
       }
     })), {
@@ -23120,10 +23940,10 @@ const OutlinedInputRoot = styled(InputBaseRoot, {
       // to overide the above style
       style: {
         [`&.${outlinedInputClasses.error} .${outlinedInputClasses.notchedOutline}`]: {
-          borderColor: (theme.vars || theme).palette.error.main
+          borderColor: (theme2.vars || theme2).palette.error.main
         },
         [`&.${outlinedInputClasses.disabled} .${outlinedInputClasses.notchedOutline}`]: {
-          borderColor: (theme.vars || theme).palette.action.disabled
+          borderColor: (theme2.vars || theme2).palette.action.disabled
         }
       }
     }, {
@@ -23163,11 +23983,11 @@ const NotchedOutlineRoot = styled(NotchedOutline, {
   slot: "NotchedOutline",
   overridesResolver: (props, styles2) => styles2.notchedOutline
 })(memoTheme(({
-  theme
+  theme: theme2
 }) => {
-  const borderColor2 = theme.palette.mode === "light" ? "rgba(0, 0, 0, 0.23)" : "rgba(255, 255, 255, 0.23)";
+  const borderColor2 = theme2.palette.mode === "light" ? "rgba(0, 0, 0, 0.23)" : "rgba(255, 255, 255, 0.23)";
   return {
-    borderColor: theme.vars ? `rgba(${theme.vars.palette.common.onBackgroundChannel} / 0.23)` : borderColor2
+    borderColor: theme2.vars ? `rgba(${theme2.vars.palette.common.onBackgroundChannel} / 0.23)` : borderColor2
   };
 }));
 const OutlinedInputInput = styled(InputBaseInput, {
@@ -23175,22 +23995,22 @@ const OutlinedInputInput = styled(InputBaseInput, {
   slot: "Input",
   overridesResolver: inputOverridesResolver
 })(memoTheme(({
-  theme
+  theme: theme2
 }) => ({
   padding: "16.5px 14px",
-  ...!theme.vars && {
+  ...!theme2.vars && {
     "&:-webkit-autofill": {
-      WebkitBoxShadow: theme.palette.mode === "light" ? null : "0 0 0 100px #266798 inset",
-      WebkitTextFillColor: theme.palette.mode === "light" ? null : "#fff",
-      caretColor: theme.palette.mode === "light" ? null : "#fff",
+      WebkitBoxShadow: theme2.palette.mode === "light" ? null : "0 0 0 100px #266798 inset",
+      WebkitTextFillColor: theme2.palette.mode === "light" ? null : "#fff",
+      caretColor: theme2.palette.mode === "light" ? null : "#fff",
       borderRadius: "inherit"
     }
   },
-  ...theme.vars && {
+  ...theme2.vars && {
     "&:-webkit-autofill": {
       borderRadius: "inherit"
     },
-    [theme.getColorSchemeSelector("dark")]: {
+    [theme2.getColorSchemeSelector("dark")]: {
       "&:-webkit-autofill": {
         WebkitBoxShadow: "0 0 0 100px #266798 inset",
         WebkitTextFillColor: "#fff",
@@ -24592,7 +25412,7 @@ const SliderRoot = styled("span", {
     return [styles2.root, styles2[`color${capitalize(ownerState.color)}`], ownerState.size !== "medium" && styles2[`size${capitalize(ownerState.size)}`], ownerState.marked && styles2.marked, ownerState.orientation === "vertical" && styles2.vertical, ownerState.track === "inverted" && styles2.trackInverted, ownerState.track === false && styles2.trackFalse];
   }
 })(memoTheme(({
-  theme
+  theme: theme2
 }) => ({
   borderRadius: 12,
   boxSizing: "content-box",
@@ -24607,19 +25427,19 @@ const SliderRoot = styled("span", {
   [`&.${sliderClasses.disabled}`]: {
     pointerEvents: "none",
     cursor: "default",
-    color: (theme.vars || theme).palette.grey[400]
+    color: (theme2.vars || theme2).palette.grey[400]
   },
   [`&.${sliderClasses.dragging}`]: {
     [`& .${sliderClasses.thumb}, & .${sliderClasses.track}`]: {
       transition: "none"
     }
   },
-  variants: [...Object.entries(theme.palette).filter(createSimplePaletteValueFilter()).map(([color2]) => ({
+  variants: [...Object.entries(theme2.palette).filter(createSimplePaletteValueFilter()).map(([color2]) => ({
     props: {
       color: color2
     },
     style: {
-      color: (theme.vars || theme).palette[color2].main
+      color: (theme2.vars || theme2).palette[color2].main
     }
   })), {
     props: {
@@ -24727,7 +25547,7 @@ const SliderTrack = styled("span", {
   slot: "Track",
   overridesResolver: (props, styles2) => styles2.track
 })(memoTheme(({
-  theme
+  theme: theme2
 }) => {
   return {
     display: "block",
@@ -24735,8 +25555,8 @@ const SliderTrack = styled("span", {
     borderRadius: "inherit",
     border: "1px solid currentColor",
     backgroundColor: "currentColor",
-    transition: theme.transitions.create(["left", "width", "bottom", "height"], {
-      duration: theme.transitions.duration.shortest
+    transition: theme2.transitions.create(["left", "width", "bottom", "height"], {
+      duration: theme2.transitions.duration.shortest
     }),
     variants: [{
       props: {
@@ -24770,23 +25590,23 @@ const SliderTrack = styled("span", {
       style: {
         display: "none"
       }
-    }, ...Object.entries(theme.palette).filter(createSimplePaletteValueFilter()).map(([color2]) => ({
+    }, ...Object.entries(theme2.palette).filter(createSimplePaletteValueFilter()).map(([color2]) => ({
       props: {
         color: color2,
         track: "inverted"
       },
       style: {
-        ...theme.vars ? {
-          backgroundColor: theme.vars.palette.Slider[`${color2}Track`],
-          borderColor: theme.vars.palette.Slider[`${color2}Track`]
+        ...theme2.vars ? {
+          backgroundColor: theme2.vars.palette.Slider[`${color2}Track`],
+          borderColor: theme2.vars.palette.Slider[`${color2}Track`]
         } : {
-          backgroundColor: lighten(theme.palette[color2].main, 0.62),
-          borderColor: lighten(theme.palette[color2].main, 0.62),
-          ...theme.applyStyles("dark", {
-            backgroundColor: darken(theme.palette[color2].main, 0.5)
+          backgroundColor: lighten(theme2.palette[color2].main, 0.62),
+          borderColor: lighten(theme2.palette[color2].main, 0.62),
+          ...theme2.applyStyles("dark", {
+            backgroundColor: darken(theme2.palette[color2].main, 0.5)
           }),
-          ...theme.applyStyles("dark", {
-            borderColor: darken(theme.palette[color2].main, 0.5)
+          ...theme2.applyStyles("dark", {
+            borderColor: darken(theme2.palette[color2].main, 0.5)
           })
         }
       }
@@ -24803,7 +25623,7 @@ const SliderThumb = styled("span", {
     return [styles2.thumb, styles2[`thumbColor${capitalize(ownerState.color)}`], ownerState.size !== "medium" && styles2[`thumbSize${capitalize(ownerState.size)}`]];
   }
 })(memoTheme(({
-  theme
+  theme: theme2
 }) => ({
   position: "absolute",
   width: 20,
@@ -24815,8 +25635,8 @@ const SliderThumb = styled("span", {
   display: "flex",
   alignItems: "center",
   justifyContent: "center",
-  transition: theme.transitions.create(["box-shadow", "left", "bottom"], {
-    duration: theme.transitions.duration.shortest
+  transition: theme2.transitions.create(["box-shadow", "left", "bottom"], {
+    duration: theme2.transitions.duration.shortest
   }),
   "&::before": {
     position: "absolute",
@@ -24824,7 +25644,7 @@ const SliderThumb = styled("span", {
     borderRadius: "inherit",
     width: "100%",
     height: "100%",
-    boxShadow: (theme.vars || theme).shadows[2]
+    boxShadow: (theme2.vars || theme2).shadows[2]
   },
   "&::after": {
     position: "absolute",
@@ -24869,26 +25689,26 @@ const SliderThumb = styled("span", {
       left: "50%",
       transform: "translate(-50%, 50%)"
     }
-  }, ...Object.entries(theme.palette).filter(createSimplePaletteValueFilter()).map(([color2]) => ({
+  }, ...Object.entries(theme2.palette).filter(createSimplePaletteValueFilter()).map(([color2]) => ({
     props: {
       color: color2
     },
     style: {
       [`&:hover, &.${sliderClasses.focusVisible}`]: {
-        ...theme.vars ? {
-          boxShadow: `0px 0px 0px 8px rgba(${theme.vars.palette[color2].mainChannel} / 0.16)`
+        ...theme2.vars ? {
+          boxShadow: `0px 0px 0px 8px rgba(${theme2.vars.palette[color2].mainChannel} / 0.16)`
         } : {
-          boxShadow: `0px 0px 0px 8px ${alpha(theme.palette[color2].main, 0.16)}`
+          boxShadow: `0px 0px 0px 8px ${alpha(theme2.palette[color2].main, 0.16)}`
         },
         "@media (hover: none)": {
           boxShadow: "none"
         }
       },
       [`&.${sliderClasses.active}`]: {
-        ...theme.vars ? {
-          boxShadow: `0px 0px 0px 14px rgba(${theme.vars.palette[color2].mainChannel} / 0.16)`
+        ...theme2.vars ? {
+          boxShadow: `0px 0px 0px 14px rgba(${theme2.vars.palette[color2].mainChannel} / 0.16)`
         } : {
-          boxShadow: `0px 0px 0px 14px ${alpha(theme.palette[color2].main, 0.16)}`
+          boxShadow: `0px 0px 0px 14px ${alpha(theme2.palette[color2].main, 0.16)}`
         }
       }
     }
@@ -24899,19 +25719,19 @@ const SliderValueLabel = styled(SliderValueLabel$1, {
   slot: "ValueLabel",
   overridesResolver: (props, styles2) => styles2.valueLabel
 })(memoTheme(({
-  theme
+  theme: theme2
 }) => ({
   zIndex: 1,
   whiteSpace: "nowrap",
-  ...theme.typography.body2,
+  ...theme2.typography.body2,
   fontWeight: 500,
-  transition: theme.transitions.create(["transform"], {
-    duration: theme.transitions.duration.shortest
+  transition: theme2.transitions.create(["transform"], {
+    duration: theme2.transitions.duration.shortest
   }),
   position: "absolute",
-  backgroundColor: (theme.vars || theme).palette.grey[600],
+  backgroundColor: (theme2.vars || theme2).palette.grey[600],
   borderRadius: 2,
-  color: (theme.vars || theme).palette.common.white,
+  color: (theme2.vars || theme2).palette.common.white,
   display: "flex",
   alignItems: "center",
   justifyContent: "center",
@@ -24966,7 +25786,7 @@ const SliderValueLabel = styled(SliderValueLabel$1, {
       size: "small"
     },
     style: {
-      fontSize: theme.typography.pxToRem(12),
+      fontSize: theme2.typography.pxToRem(12),
       padding: "0.25rem 0.5rem"
     }
   }, {
@@ -24990,7 +25810,7 @@ const SliderMark = styled("span", {
     return [styles2.mark, markActive && styles2.markActive];
   }
 })(memoTheme(({
-  theme
+  theme: theme2
 }) => ({
   position: "absolute",
   width: 2,
@@ -25018,7 +25838,7 @@ const SliderMark = styled("span", {
       markActive: true
     },
     style: {
-      backgroundColor: (theme.vars || theme).palette.background.paper,
+      backgroundColor: (theme2.vars || theme2).palette.background.paper,
       opacity: 0.8
     }
   }]
@@ -25029,10 +25849,10 @@ const SliderMarkLabel = styled("span", {
   shouldForwardProp: (prop) => slotShouldForwardProp(prop) && prop !== "markLabelActive",
   overridesResolver: (props, styles2) => styles2.markLabel
 })(memoTheme(({
-  theme
+  theme: theme2
 }) => ({
-  ...theme.typography.body2,
-  color: (theme.vars || theme).palette.text.secondary,
+  ...theme2.typography.body2,
+  color: (theme2.vars || theme2).palette.text.secondary,
   position: "absolute",
   whiteSpace: "nowrap",
   variants: [{
@@ -25062,7 +25882,7 @@ const SliderMarkLabel = styled("span", {
       markLabelActive: true
     },
     style: {
-      color: (theme.vars || theme).palette.text.primary
+      color: (theme2.vars || theme2).palette.text.primary
     }
   }]
 })));
@@ -25384,9 +26204,9 @@ const TooltipPopper = styled(Popper, {
     return [styles2.popper, !ownerState.disableInteractive && styles2.popperInteractive, ownerState.arrow && styles2.popperArrow, !ownerState.open && styles2.popperClose];
   }
 })(memoTheme(({
-  theme
+  theme: theme2
 }) => ({
-  zIndex: (theme.vars || theme).zIndex.tooltip,
+  zIndex: (theme2.vars || theme2).zIndex.tooltip,
   pointerEvents: "none",
   variants: [{
     props: ({
@@ -25488,18 +26308,18 @@ const TooltipTooltip = styled("div", {
     return [styles2.tooltip, ownerState.touch && styles2.touch, ownerState.arrow && styles2.tooltipArrow, styles2[`tooltipPlacement${capitalize(ownerState.placement.split("-")[0])}`]];
   }
 })(memoTheme(({
-  theme
+  theme: theme2
 }) => ({
-  backgroundColor: theme.vars ? theme.vars.palette.Tooltip.bg : alpha(theme.palette.grey[700], 0.92),
-  borderRadius: (theme.vars || theme).shape.borderRadius,
-  color: (theme.vars || theme).palette.common.white,
-  fontFamily: theme.typography.fontFamily,
+  backgroundColor: theme2.vars ? theme2.vars.palette.Tooltip.bg : alpha(theme2.palette.grey[700], 0.92),
+  borderRadius: (theme2.vars || theme2).shape.borderRadius,
+  color: (theme2.vars || theme2).palette.common.white,
+  fontFamily: theme2.typography.fontFamily,
   padding: "4px 8px",
-  fontSize: theme.typography.pxToRem(11),
+  fontSize: theme2.typography.pxToRem(11),
   maxWidth: 300,
   margin: 2,
   wordWrap: "break-word",
-  fontWeight: theme.typography.fontWeightMedium,
+  fontWeight: theme2.typography.fontWeightMedium,
   [`.${tooltipClasses.popper}[data-popper-placement*="left"] &`]: {
     transformOrigin: "right center"
   },
@@ -25528,9 +26348,9 @@ const TooltipTooltip = styled("div", {
     }) => ownerState.touch,
     style: {
       padding: "8px 16px",
-      fontSize: theme.typography.pxToRem(14),
+      fontSize: theme2.typography.pxToRem(14),
       lineHeight: `${round(16 / 14)}em`,
-      fontWeight: theme.typography.fontWeightRegular
+      fontWeight: theme2.typography.fontWeightRegular
     }
   }, {
     props: ({
@@ -25605,14 +26425,14 @@ const TooltipArrow = styled("span", {
   slot: "Arrow",
   overridesResolver: (props, styles2) => styles2.arrow
 })(memoTheme(({
-  theme
+  theme: theme2
 }) => ({
   overflow: "hidden",
   position: "absolute",
   width: "1em",
   height: "0.71em",
   boxSizing: "border-box",
-  color: theme.vars ? theme.vars.palette.Tooltip.bg : alpha(theme.palette.grey[700], 0.9),
+  color: theme2.vars ? theme2.vars.palette.Tooltip.bg : alpha(theme2.palette.grey[700], 0.9),
   "&::before": {
     content: '""',
     margin: "auto",
@@ -25676,7 +26496,7 @@ const Tooltip = /* @__PURE__ */ reactExports.forwardRef(function Tooltip2(inProp
   const children = /* @__PURE__ */ reactExports.isValidElement(childrenProp) ? childrenProp : /* @__PURE__ */ jsxRuntimeExports.jsx("span", {
     children: childrenProp
   });
-  const theme = useTheme();
+  const theme2 = useTheme();
   const isRtl = useRtl();
   const [childNode, setChildNode] = reactExports.useState();
   const [arrowRef, setArrowRef] = reactExports.useState(null);
@@ -25723,7 +26543,7 @@ const Tooltip = /* @__PURE__ */ reactExports.forwardRef(function Tooltip2(inProp
       if (onClose && open) {
         onClose(event);
       }
-      closeTimer.start(theme.transitions.duration.shortest, () => {
+      closeTimer.start(theme2.transitions.duration.shortest, () => {
         ignoreNonTouchEvents.current = false;
       });
     }
@@ -25972,7 +26792,7 @@ const Tooltip = /* @__PURE__ */ reactExports.forwardRef(function Tooltip2(inProp
       children: ({
         TransitionProps: TransitionPropsInner
       }) => /* @__PURE__ */ jsxRuntimeExports.jsx(TransitionSlot, {
-        timeout: theme.transitions.duration.shorter,
+        timeout: theme2.transitions.duration.shorter,
         ...TransitionPropsInner,
         ...transitionSlotProps,
         children: /* @__PURE__ */ jsxRuntimeExports.jsxs(TooltipSlot, {
@@ -26084,62 +26904,62 @@ const SwitchSwitchBase = styled(SwitchBase, {
     }, ownerState.color !== "default" && styles2[`color${capitalize(ownerState.color)}`]];
   }
 })(memoTheme(({
-  theme
+  theme: theme2
 }) => ({
   position: "absolute",
   top: 0,
   left: 0,
   zIndex: 1,
   // Render above the focus ripple.
-  color: theme.vars ? theme.vars.palette.Switch.defaultColor : `${theme.palette.mode === "light" ? theme.palette.common.white : theme.palette.grey[300]}`,
-  transition: theme.transitions.create(["left", "transform"], {
-    duration: theme.transitions.duration.shortest
+  color: theme2.vars ? theme2.vars.palette.Switch.defaultColor : `${theme2.palette.mode === "light" ? theme2.palette.common.white : theme2.palette.grey[300]}`,
+  transition: theme2.transitions.create(["left", "transform"], {
+    duration: theme2.transitions.duration.shortest
   }),
   [`&.${switchClasses.checked}`]: {
     transform: "translateX(20px)"
   },
   [`&.${switchClasses.disabled}`]: {
-    color: theme.vars ? theme.vars.palette.Switch.defaultDisabledColor : `${theme.palette.mode === "light" ? theme.palette.grey[100] : theme.palette.grey[600]}`
+    color: theme2.vars ? theme2.vars.palette.Switch.defaultDisabledColor : `${theme2.palette.mode === "light" ? theme2.palette.grey[100] : theme2.palette.grey[600]}`
   },
   [`&.${switchClasses.checked} + .${switchClasses.track}`]: {
     opacity: 0.5
   },
   [`&.${switchClasses.disabled} + .${switchClasses.track}`]: {
-    opacity: theme.vars ? theme.vars.opacity.switchTrackDisabled : `${theme.palette.mode === "light" ? 0.12 : 0.2}`
+    opacity: theme2.vars ? theme2.vars.opacity.switchTrackDisabled : `${theme2.palette.mode === "light" ? 0.12 : 0.2}`
   },
   [`& .${switchClasses.input}`]: {
     left: "-100%",
     width: "300%"
   }
 })), memoTheme(({
-  theme
+  theme: theme2
 }) => ({
   "&:hover": {
-    backgroundColor: theme.vars ? `rgba(${theme.vars.palette.action.activeChannel} / ${theme.vars.palette.action.hoverOpacity})` : alpha(theme.palette.action.active, theme.palette.action.hoverOpacity),
+    backgroundColor: theme2.vars ? `rgba(${theme2.vars.palette.action.activeChannel} / ${theme2.vars.palette.action.hoverOpacity})` : alpha(theme2.palette.action.active, theme2.palette.action.hoverOpacity),
     // Reset on touch devices, it doesn't add specificity
     "@media (hover: none)": {
       backgroundColor: "transparent"
     }
   },
-  variants: [...Object.entries(theme.palette).filter(createSimplePaletteValueFilter(["light"])).map(([color2]) => ({
+  variants: [...Object.entries(theme2.palette).filter(createSimplePaletteValueFilter(["light"])).map(([color2]) => ({
     props: {
       color: color2
     },
     style: {
       [`&.${switchClasses.checked}`]: {
-        color: (theme.vars || theme).palette[color2].main,
+        color: (theme2.vars || theme2).palette[color2].main,
         "&:hover": {
-          backgroundColor: theme.vars ? `rgba(${theme.vars.palette[color2].mainChannel} / ${theme.vars.palette.action.hoverOpacity})` : alpha(theme.palette[color2].main, theme.palette.action.hoverOpacity),
+          backgroundColor: theme2.vars ? `rgba(${theme2.vars.palette[color2].mainChannel} / ${theme2.vars.palette.action.hoverOpacity})` : alpha(theme2.palette[color2].main, theme2.palette.action.hoverOpacity),
           "@media (hover: none)": {
             backgroundColor: "transparent"
           }
         },
         [`&.${switchClasses.disabled}`]: {
-          color: theme.vars ? theme.vars.palette.Switch[`${color2}DisabledColor`] : `${theme.palette.mode === "light" ? lighten(theme.palette[color2].main, 0.62) : darken(theme.palette[color2].main, 0.55)}`
+          color: theme2.vars ? theme2.vars.palette.Switch[`${color2}DisabledColor`] : `${theme2.palette.mode === "light" ? lighten(theme2.palette[color2].main, 0.62) : darken(theme2.palette[color2].main, 0.55)}`
         }
       },
       [`&.${switchClasses.checked} + .${switchClasses.track}`]: {
-        backgroundColor: (theme.vars || theme).palette[color2].main
+        backgroundColor: (theme2.vars || theme2).palette[color2].main
       }
     }
   }))]
@@ -26149,26 +26969,26 @@ const SwitchTrack = styled("span", {
   slot: "Track",
   overridesResolver: (props, styles2) => styles2.track
 })(memoTheme(({
-  theme
+  theme: theme2
 }) => ({
   height: "100%",
   width: "100%",
   borderRadius: 14 / 2,
   zIndex: -1,
-  transition: theme.transitions.create(["opacity", "background-color"], {
-    duration: theme.transitions.duration.shortest
+  transition: theme2.transitions.create(["opacity", "background-color"], {
+    duration: theme2.transitions.duration.shortest
   }),
-  backgroundColor: theme.vars ? theme.vars.palette.common.onBackground : `${theme.palette.mode === "light" ? theme.palette.common.black : theme.palette.common.white}`,
-  opacity: theme.vars ? theme.vars.opacity.switchTrack : `${theme.palette.mode === "light" ? 0.38 : 0.3}`
+  backgroundColor: theme2.vars ? theme2.vars.palette.common.onBackground : `${theme2.palette.mode === "light" ? theme2.palette.common.black : theme2.palette.common.white}`,
+  opacity: theme2.vars ? theme2.vars.opacity.switchTrack : `${theme2.palette.mode === "light" ? 0.38 : 0.3}`
 })));
 const SwitchThumb = styled("span", {
   name: "MuiSwitch",
   slot: "Thumb",
   overridesResolver: (props, styles2) => styles2.thumb
 })(memoTheme(({
-  theme
+  theme: theme2
 }) => ({
-  boxShadow: (theme.vars || theme).shadows[1],
+  boxShadow: (theme2.vars || theme2).shadows[1],
   backgroundColor: "currentColor",
   width: 20,
   height: 20,
@@ -26447,21 +27267,21 @@ const ToggleButtonRoot = styled(ButtonBase, {
     return [styles2.root, styles2[`size${capitalize(ownerState.size)}`]];
   }
 })(memoTheme(({
-  theme
+  theme: theme2
 }) => ({
-  ...theme.typography.button,
-  borderRadius: (theme.vars || theme).shape.borderRadius,
+  ...theme2.typography.button,
+  borderRadius: (theme2.vars || theme2).shape.borderRadius,
   padding: 11,
-  border: `1px solid ${(theme.vars || theme).palette.divider}`,
-  color: (theme.vars || theme).palette.action.active,
+  border: `1px solid ${(theme2.vars || theme2).palette.divider}`,
+  color: (theme2.vars || theme2).palette.action.active,
   [`&.${toggleButtonClasses.disabled}`]: {
-    color: (theme.vars || theme).palette.action.disabled,
-    border: `1px solid ${(theme.vars || theme).palette.action.disabledBackground}`
+    color: (theme2.vars || theme2).palette.action.disabled,
+    border: `1px solid ${(theme2.vars || theme2).palette.action.disabledBackground}`
   },
   "&:hover": {
     textDecoration: "none",
     // Reset on mouse devices
-    backgroundColor: theme.vars ? `rgba(${theme.vars.palette.text.primaryChannel} / ${theme.vars.palette.action.hoverOpacity})` : alpha(theme.palette.text.primary, theme.palette.action.hoverOpacity),
+    backgroundColor: theme2.vars ? `rgba(${theme2.vars.palette.text.primaryChannel} / ${theme2.vars.palette.action.hoverOpacity})` : alpha(theme2.palette.text.primary, theme2.palette.action.hoverOpacity),
     "@media (hover: none)": {
       backgroundColor: "transparent"
     }
@@ -26472,30 +27292,30 @@ const ToggleButtonRoot = styled(ButtonBase, {
     },
     style: {
       [`&.${toggleButtonClasses.selected}`]: {
-        color: (theme.vars || theme).palette.text.primary,
-        backgroundColor: theme.vars ? `rgba(${theme.vars.palette.text.primaryChannel} / ${theme.vars.palette.action.selectedOpacity})` : alpha(theme.palette.text.primary, theme.palette.action.selectedOpacity),
+        color: (theme2.vars || theme2).palette.text.primary,
+        backgroundColor: theme2.vars ? `rgba(${theme2.vars.palette.text.primaryChannel} / ${theme2.vars.palette.action.selectedOpacity})` : alpha(theme2.palette.text.primary, theme2.palette.action.selectedOpacity),
         "&:hover": {
-          backgroundColor: theme.vars ? `rgba(${theme.vars.palette.text.primaryChannel} / calc(${theme.vars.palette.action.selectedOpacity} + ${theme.vars.palette.action.hoverOpacity}))` : alpha(theme.palette.text.primary, theme.palette.action.selectedOpacity + theme.palette.action.hoverOpacity),
+          backgroundColor: theme2.vars ? `rgba(${theme2.vars.palette.text.primaryChannel} / calc(${theme2.vars.palette.action.selectedOpacity} + ${theme2.vars.palette.action.hoverOpacity}))` : alpha(theme2.palette.text.primary, theme2.palette.action.selectedOpacity + theme2.palette.action.hoverOpacity),
           // Reset on touch devices, it doesn't add specificity
           "@media (hover: none)": {
-            backgroundColor: theme.vars ? `rgba(${theme.vars.palette.text.primaryChannel} / ${theme.vars.palette.action.selectedOpacity})` : alpha(theme.palette.text.primary, theme.palette.action.selectedOpacity)
+            backgroundColor: theme2.vars ? `rgba(${theme2.vars.palette.text.primaryChannel} / ${theme2.vars.palette.action.selectedOpacity})` : alpha(theme2.palette.text.primary, theme2.palette.action.selectedOpacity)
           }
         }
       }
     }
-  }, ...Object.entries(theme.palette).filter(createSimplePaletteValueFilter()).map(([color2]) => ({
+  }, ...Object.entries(theme2.palette).filter(createSimplePaletteValueFilter()).map(([color2]) => ({
     props: {
       color: color2
     },
     style: {
       [`&.${toggleButtonClasses.selected}`]: {
-        color: (theme.vars || theme).palette[color2].main,
-        backgroundColor: theme.vars ? `rgba(${theme.vars.palette[color2].mainChannel} / ${theme.vars.palette.action.selectedOpacity})` : alpha(theme.palette[color2].main, theme.palette.action.selectedOpacity),
+        color: (theme2.vars || theme2).palette[color2].main,
+        backgroundColor: theme2.vars ? `rgba(${theme2.vars.palette[color2].mainChannel} / ${theme2.vars.palette.action.selectedOpacity})` : alpha(theme2.palette[color2].main, theme2.palette.action.selectedOpacity),
         "&:hover": {
-          backgroundColor: theme.vars ? `rgba(${theme.vars.palette[color2].mainChannel} / calc(${theme.vars.palette.action.selectedOpacity} + ${theme.vars.palette.action.hoverOpacity}))` : alpha(theme.palette[color2].main, theme.palette.action.selectedOpacity + theme.palette.action.hoverOpacity),
+          backgroundColor: theme2.vars ? `rgba(${theme2.vars.palette[color2].mainChannel} / calc(${theme2.vars.palette.action.selectedOpacity} + ${theme2.vars.palette.action.hoverOpacity}))` : alpha(theme2.palette[color2].main, theme2.palette.action.selectedOpacity + theme2.palette.action.hoverOpacity),
           // Reset on touch devices, it doesn't add specificity
           "@media (hover: none)": {
-            backgroundColor: theme.vars ? `rgba(${theme.vars.palette[color2].mainChannel} / ${theme.vars.palette.action.selectedOpacity})` : alpha(theme.palette[color2].main, theme.palette.action.selectedOpacity)
+            backgroundColor: theme2.vars ? `rgba(${theme2.vars.palette[color2].mainChannel} / ${theme2.vars.palette.action.selectedOpacity})` : alpha(theme2.palette[color2].main, theme2.palette.action.selectedOpacity)
           }
         }
       }
@@ -26513,7 +27333,7 @@ const ToggleButtonRoot = styled(ButtonBase, {
     },
     style: {
       padding: 7,
-      fontSize: theme.typography.pxToRem(13)
+      fontSize: theme2.typography.pxToRem(13)
     }
   }, {
     props: {
@@ -26521,7 +27341,7 @@ const ToggleButtonRoot = styled(ButtonBase, {
     },
     style: {
       padding: 15,
-      fontSize: theme.typography.pxToRem(15)
+      fontSize: theme2.typography.pxToRem(15)
     }
   }]
 })));
@@ -26628,10 +27448,10 @@ const ToggleButtonGroupRoot = styled("div", {
     }, styles2.root, ownerState.orientation === "vertical" && styles2.vertical, ownerState.fullWidth && styles2.fullWidth];
   }
 })(memoTheme(({
-  theme
+  theme: theme2
 }) => ({
   display: "inline-flex",
-  borderRadius: (theme.vars || theme).shape.borderRadius,
+  borderRadius: (theme2.vars || theme2).shape.borderRadius,
   variants: [{
     props: {
       orientation: "vertical"
@@ -31102,35 +31922,38 @@ function Metric({ color: color2, label, value, description, details, onClick }) 
     Paper,
     {
       sx: {
-        p: 1,
-        height: "200px",
+        p: 0.8,
+        pt: 0,
+        height: "100%",
         cursor: onClick ? "pointer" : "default",
         "&:hover": onClick ? {
           bgcolor: "action.hover"
-        } : void 0
+        } : void 0,
+        display: "flex",
+        flexDirection: "column"
       },
       onClick,
       children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsxs(Box, { sx: { display: "flex", alignItems: "center", mb: 1 }, children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs(Box, { sx: { display: "flex", alignItems: "center", mb: 0.5, mt: 0.8 }, children: [
           color2 && /* @__PURE__ */ jsxRuntimeExports.jsx(
             Box,
             {
               sx: {
-                width: 16,
-                height: 16,
+                width: 12,
+                height: 12,
                 borderRadius: 1,
                 bgcolor: color2,
-                mr: 1
+                mr: 0.5
               }
             }
           ),
-          /* @__PURE__ */ jsxRuntimeExports.jsx(Typography, { variant: "subtitle2", color: "text.secondary", children: label })
+          /* @__PURE__ */ jsxRuntimeExports.jsx(Typography, { variant: "subtitle2", color: "text.secondary", sx: { fontSize: "0.7rem" }, children: label })
         ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx(Box, { sx: { display: "flex", alignItems: "baseline", gap: 1, mb: 0.5 }, children: /* @__PURE__ */ jsxRuntimeExports.jsx(Typography, { variant: "h6", children: value }) }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx(Typography, { variant: "caption", color: "text.secondary", children: description }),
-        details && /* @__PURE__ */ jsxRuntimeExports.jsx(Box, { sx: { mt: 1, pt: 1, borderTop: 1, borderColor: "divider" }, children: details.map((detail, index) => /* @__PURE__ */ jsxRuntimeExports.jsxs(Box, { sx: { display: "flex", justifyContent: "space-between", alignItems: "center", mt: 0.5 }, children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx(Typography, { variant: "caption", color: "text.secondary", children: detail.label }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx(Typography, { variant: "caption", children: detail.value })
+        /* @__PURE__ */ jsxRuntimeExports.jsx(Box, { sx: { display: "flex", alignItems: "baseline", gap: 0.5, mb: 0.3 }, children: /* @__PURE__ */ jsxRuntimeExports.jsx(Typography, { variant: "h6", sx: { fontSize: "1.1rem" }, children: value }) }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx(Typography, { variant: "caption", color: "text.secondary", sx: { fontSize: "0.7rem" }, children: description }),
+        details && /* @__PURE__ */ jsxRuntimeExports.jsx(Box, { sx: { mt: 0.5, flex: 1, overflow: "auto" }, children: details.map((detail, index) => /* @__PURE__ */ jsxRuntimeExports.jsxs(Box, { sx: { display: "flex", justifyContent: "space-between", mt: 0.3 }, children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx(Typography, { variant: "caption", color: "text.secondary", sx: { fontSize: "0.7rem" }, children: detail.label }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(Typography, { variant: "caption", sx: { fontSize: "0.7rem" }, children: detail.value })
         ] }, index)) })
       ]
     }
@@ -31154,8 +31977,8 @@ function CorrectionMetrics({
   const uncorrectedPercentage = totalWords > 0 ? Math.round(uncorrectedWordCount / totalWords * 100) : 0;
   const correctedWordCount = replacedCount + addedCount;
   const correctedPercentage = totalWords > 0 ? Math.round(correctedWordCount / totalWords * 100) : 0;
-  return /* @__PURE__ */ jsxRuntimeExports.jsxs(Grid, { container: true, spacing: 2, children: [
-    /* @__PURE__ */ jsxRuntimeExports.jsx(Grid, { item: true, xs: 12, sm: 6, md: 4, children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+  return /* @__PURE__ */ jsxRuntimeExports.jsx(Box, { sx: { height: "100%", display: "flex" }, children: /* @__PURE__ */ jsxRuntimeExports.jsxs(Box, { sx: { flex: 1, display: "flex", flexDirection: "row", gap: 1, height: "100%" }, children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsx(Box, { sx: { flex: 1, height: "100%" }, children: /* @__PURE__ */ jsxRuntimeExports.jsx(
       Metric,
       {
         color: COLORS.anchor,
@@ -31169,7 +31992,7 @@ function CorrectionMetrics({
         onClick: onMetricClick == null ? void 0 : onMetricClick.anchor
       }
     ) }),
-    /* @__PURE__ */ jsxRuntimeExports.jsx(Grid, { item: true, xs: 12, sm: 6, md: 4, children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+    /* @__PURE__ */ jsxRuntimeExports.jsx(Box, { sx: { flex: 1, height: "100%" }, children: /* @__PURE__ */ jsxRuntimeExports.jsx(
       Metric,
       {
         color: COLORS.corrected,
@@ -31183,7 +32006,7 @@ function CorrectionMetrics({
         onClick: onMetricClick == null ? void 0 : onMetricClick.corrected
       }
     ) }),
-    /* @__PURE__ */ jsxRuntimeExports.jsx(Grid, { item: true, xs: 12, sm: 6, md: 4, children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+    /* @__PURE__ */ jsxRuntimeExports.jsx(Box, { sx: { flex: 1, height: "100%" }, children: /* @__PURE__ */ jsxRuntimeExports.jsx(
       Metric,
       {
         color: COLORS.uncorrectedGap,
@@ -31192,284 +32015,12 @@ function CorrectionMetrics({
         description: "Sections that may need manual review",
         details: [
           { label: "Words Uncorrected", value: uncorrectedWordCount },
-          { label: "Number of Gaps", value: uncorrectedGapCount }
+          { label: "Number of Gaps", value: uncorrectedGaps.length }
         ],
         onClick: onMetricClick == null ? void 0 : onMetricClick.uncorrected
       }
     ) })
-  ] });
-}
-const CloseIcon = createSvgIcon(/* @__PURE__ */ jsxRuntimeExports.jsx("path", {
-  d: "M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"
-}), "Close");
-function findWordById(segments, wordId) {
-  for (const segment of segments) {
-    const word = segment.words.find((w) => w.id === wordId);
-    if (word) return word;
-  }
-  return void 0;
-}
-function getWordsFromIds(segments, wordIds) {
-  return wordIds.map((id) => findWordById(segments, id)).filter((word) => word !== void 0);
-}
-function formatReferenceWords(content, referenceLyrics) {
-  if (!content || !referenceLyrics) return "";
-  return Object.entries(content.data.reference_word_ids).map(([source, wordIds]) => {
-    var _a;
-    const words = getWordsFromIds(
-      ((_a = referenceLyrics[source]) == null ? void 0 : _a.segments) ?? [],
-      wordIds
-    );
-    return `${source}: "${words.map((w) => w.text).join(" ")}"`;
-  }).join("\n");
-}
-function getAnchorText(anchorId, anchors, referenceLyrics) {
-  var _a;
-  if (!anchorId || !referenceLyrics) return anchorId || "";
-  const anchor = anchors.find((a) => a.id === anchorId);
-  if (!anchor) return anchorId;
-  const firstSource = Object.entries(anchor.reference_word_ids)[0];
-  if (!firstSource) return anchorId;
-  const [source, wordIds] = firstSource;
-  const words = getWordsFromIds(
-    ((_a = referenceLyrics[source]) == null ? void 0 : _a.segments) ?? [],
-    wordIds
-  );
-  return `${anchorId} ("${words.map((w) => w.text).join(" ")}")`;
-}
-function DetailsModal({
-  open,
-  content,
-  onClose,
-  allCorrections,
-  referenceLyrics
-}) {
-  if (!content) return null;
-  const referenceWordsText = formatReferenceWords(content, referenceLyrics);
-  const relevantCorrections = content.type === "gap" ? allCorrections.filter(
-    (c) => c.word_id === content.data.wordId || c.corrected_word_id === content.data.wordId || content.data.transcribed_word_ids.includes(c.word_id)
-  ) : [];
-  const isCorrected = content.type === "gap" && relevantCorrections.length > 0;
-  const getCurrentWord = () => {
-    if (content.type === "gap") {
-      return content.data.word;
-    } else if (content.type === "anchor") {
-      return content.data.word ?? "";
-    }
-    return "";
-  };
-  const renderContent = () => {
-    var _a, _b, _c, _d, _e, _f, _g;
-    const anchorWords = content.type === "anchor" ? ((_a = content.data.transcribed_word_ids) == null ? void 0 : _a.length) ?? 0 : 0;
-    switch (content.type) {
-      case "anchor":
-        return /* @__PURE__ */ jsxRuntimeExports.jsxs(Grid, { container: true, spacing: 2, children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx(
-            GridItem,
-            {
-              title: "Selected Word",
-              value: `"${getCurrentWord()}"`
-            }
-          ),
-          /* @__PURE__ */ jsxRuntimeExports.jsx(
-            GridItem,
-            {
-              title: "Full Text",
-              value: `"${content.data.word ?? ""}"`
-            }
-          ),
-          /* @__PURE__ */ jsxRuntimeExports.jsx(GridItem, { title: "Word ID", value: content.data.wordId }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx(
-            GridItem,
-            {
-              title: "Length",
-              value: `${anchorWords} words`
-            }
-          ),
-          /* @__PURE__ */ jsxRuntimeExports.jsx(
-            GridItem,
-            {
-              title: "Reference Words",
-              value: /* @__PURE__ */ jsxRuntimeExports.jsx("pre", { style: { margin: 0, whiteSpace: "pre-wrap" }, children: referenceWordsText })
-            }
-          ),
-          /* @__PURE__ */ jsxRuntimeExports.jsx(GridItem, { title: "Confidence", value: ((_b = content.data.confidence) == null ? void 0 : _b.toFixed(3)) ?? "N/A" }),
-          content.data.phrase_score && /* @__PURE__ */ jsxRuntimeExports.jsx(
-            GridItem,
-            {
-              title: "Phrase Score Details",
-              value: /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsxs(Typography, { children: [
-                  "Type: ",
-                  content.data.phrase_score.phrase_type
-                ] }),
-                /* @__PURE__ */ jsxRuntimeExports.jsxs(Typography, { children: [
-                  "Natural Break: ",
-                  ((_c = content.data.phrase_score.natural_break_score) == null ? void 0 : _c.toFixed(3)) ?? "N/A"
-                ] }),
-                /* @__PURE__ */ jsxRuntimeExports.jsxs(Typography, { children: [
-                  "Length: ",
-                  ((_d = content.data.phrase_score.length_score) == null ? void 0 : _d.toFixed(3)) ?? "N/A"
-                ] }),
-                /* @__PURE__ */ jsxRuntimeExports.jsxs(Typography, { children: [
-                  "Total: ",
-                  ((_e = content.data.phrase_score.total_score) == null ? void 0 : _e.toFixed(3)) ?? "N/A"
-                ] })
-              ] })
-            }
-          ),
-          /* @__PURE__ */ jsxRuntimeExports.jsx(GridItem, { title: "Total Score", value: ((_f = content.data.total_score) == null ? void 0 : _f.toFixed(3)) ?? "N/A" })
-        ] });
-      case "gap":
-        return /* @__PURE__ */ jsxRuntimeExports.jsxs(Grid, { container: true, spacing: 2, children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx(
-            GridItem,
-            {
-              title: "Selected Word",
-              value: `"${getCurrentWord()}"`
-            }
-          ),
-          /* @__PURE__ */ jsxRuntimeExports.jsx(
-            GridItem,
-            {
-              title: "Word ID",
-              value: content.data.wordId
-            }
-          ),
-          /* @__PURE__ */ jsxRuntimeExports.jsx(
-            GridItem,
-            {
-              title: "Length",
-              value: `${((_g = content.data.transcribed_word_ids) == null ? void 0 : _g.length) ?? 0} words`
-            }
-          ),
-          content.data.preceding_anchor_id && /* @__PURE__ */ jsxRuntimeExports.jsx(
-            GridItem,
-            {
-              title: "Preceding Anchor",
-              value: getAnchorText(content.data.preceding_anchor_id, content.data.anchor_sequences, referenceLyrics)
-            }
-          ),
-          content.data.following_anchor_id && /* @__PURE__ */ jsxRuntimeExports.jsx(
-            GridItem,
-            {
-              title: "Following Anchor",
-              value: getAnchorText(content.data.following_anchor_id, content.data.anchor_sequences, referenceLyrics)
-            }
-          ),
-          /* @__PURE__ */ jsxRuntimeExports.jsx(
-            GridItem,
-            {
-              title: "Reference Words",
-              value: /* @__PURE__ */ jsxRuntimeExports.jsx("pre", { style: { margin: 0, whiteSpace: "pre-wrap" }, children: referenceWordsText })
-            }
-          ),
-          isCorrected && /* @__PURE__ */ jsxRuntimeExports.jsx(
-            GridItem,
-            {
-              title: "Correction Details",
-              value: /* @__PURE__ */ jsxRuntimeExports.jsx(jsxRuntimeExports.Fragment, { children: relevantCorrections.map((correction, index) => {
-                var _a2;
-                return /* @__PURE__ */ jsxRuntimeExports.jsxs(Box, { sx: { mb: 2, p: 1, border: "1px solid #ccc", borderRadius: "4px" }, children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsxs(Typography, { variant: "subtitle2", fontWeight: "bold", children: [
-                    "Correction ",
-                    index + 1
-                  ] }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsxs(Typography, { children: [
-                    "Original: ",
-                    /* @__PURE__ */ jsxRuntimeExports.jsxs("strong", { children: [
-                      '"',
-                      correction.original_word,
-                      '"'
-                    ] })
-                  ] }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsxs(Typography, { children: [
-                    "Corrected: ",
-                    /* @__PURE__ */ jsxRuntimeExports.jsxs("strong", { children: [
-                      '"',
-                      correction.corrected_word,
-                      '"'
-                    ] })
-                  ] }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsxs(Typography, { children: [
-                    "Word ID: ",
-                    correction.word_id
-                  ] }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsxs(Typography, { children: [
-                    "Confidence: ",
-                    ((_a2 = correction.confidence) == null ? void 0 : _a2.toFixed(3)) ?? "N/A"
-                  ] }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsxs(Typography, { children: [
-                    "Handler: ",
-                    correction.handler
-                  ] }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsxs(Typography, { children: [
-                    "Source: ",
-                    correction.source
-                  ] }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsxs(Typography, { children: [
-                    "Reason: ",
-                    correction.reason
-                  ] }),
-                  correction.is_deletion && /* @__PURE__ */ jsxRuntimeExports.jsx(Typography, { children: "Is Deletion: Yes" }),
-                  correction.split_total && /* @__PURE__ */ jsxRuntimeExports.jsxs(Typography, { children: [
-                    "Split: ",
-                    correction.split_index,
-                    " of ",
-                    correction.split_total
-                  ] }),
-                  correction.alternatives && Object.entries(correction.alternatives).length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
-                    /* @__PURE__ */ jsxRuntimeExports.jsx(Typography, { children: "Alternatives:" }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsx(Box, { sx: { pl: 2 }, children: Object.entries(correction.alternatives).map(([word, score]) => /* @__PURE__ */ jsxRuntimeExports.jsxs(Typography, { children: [
-                      '"',
-                      word,
-                      '": ',
-                      (score || 0).toFixed(3)
-                    ] }, word)) })
-                  ] })
-                ] }, index);
-              }) })
-            }
-          )
-        ] });
-      default:
-        return null;
-    }
-  };
-  return /* @__PURE__ */ jsxRuntimeExports.jsxs(
-    Dialog,
-    {
-      open,
-      onClose,
-      maxWidth: "md",
-      fullWidth: true,
-      children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsxs(DialogTitle, { children: [
-          content.type === "gap" && (isCorrected ? "Corrected " : "Uncorrected "),
-          content.type.charAt(0).toUpperCase() + content.type.slice(1),
-          ' Details - "',
-          getCurrentWord(),
-          '"',
-          /* @__PURE__ */ jsxRuntimeExports.jsx(
-            IconButton,
-            {
-              "aria-label": "close",
-              onClick: onClose,
-              sx: { position: "absolute", right: 8, top: 8 },
-              children: /* @__PURE__ */ jsxRuntimeExports.jsx(CloseIcon, {})
-            }
-          )
-        ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx(DialogContent, { children: renderContent() })
-      ]
-    }
-  );
-}
-function GridItem({ title, value }) {
-  return /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
-    /* @__PURE__ */ jsxRuntimeExports.jsx(Grid, { item: true, xs: 4, children: /* @__PURE__ */ jsxRuntimeExports.jsx(Typography, { variant: "subtitle1", fontWeight: "bold", children: title }) }),
-    /* @__PURE__ */ jsxRuntimeExports.jsx(Grid, { item: true, xs: 8, children: typeof value === "string" || typeof value === "number" ? /* @__PURE__ */ jsxRuntimeExports.jsx(Typography, { children: value }) : value })
-  ] });
+  ] }) });
 }
 function calculateReferenceLinePositions(corrected_segments, anchors, currentSource) {
   var _a;
@@ -31525,13 +32076,20 @@ function calculateReferenceLinePositions(corrected_segments, anchors, currentSou
   return { linePositions };
 }
 function SourceSelector({ currentSource, onSourceChange, availableSources }) {
-  return /* @__PURE__ */ jsxRuntimeExports.jsx(Box, { children: availableSources.map((source) => /* @__PURE__ */ jsxRuntimeExports.jsx(
+  return /* @__PURE__ */ jsxRuntimeExports.jsx(Box, { sx: { display: "flex", flexWrap: "wrap", gap: 0.3 }, children: availableSources.map((source) => /* @__PURE__ */ jsxRuntimeExports.jsx(
     Button,
     {
       size: "small",
       variant: currentSource === source ? "contained" : "outlined",
       onClick: () => onSourceChange(source),
-      sx: { mr: 1 },
+      sx: {
+        mr: 0,
+        py: 0.2,
+        px: 0.8,
+        minWidth: "auto",
+        fontSize: "0.7rem",
+        lineHeight: 1.2
+      },
       children: source.charAt(0).toUpperCase() + source.slice(1)
     },
     source
@@ -31554,14 +32112,15 @@ const WordComponent = React.memo(function Word({
   isCorrectedGap,
   isUncorrectedGap,
   isCurrentlyPlaying,
-  padding: padding2 = "2px 4px",
-  onClick
+  padding: padding2 = "1px 3px",
+  onClick,
+  correction
 }) {
   if (/^\s+$/.test(word)) {
     return word;
   }
   const backgroundColor2 = isCurrentlyPlaying ? COLORS.playing : shouldFlash ? COLORS.highlighted : isAnchor ? COLORS.anchor : isCorrectedGap ? COLORS.corrected : isUncorrectedGap ? COLORS.uncorrectedGap : "transparent";
-  return /* @__PURE__ */ jsxRuntimeExports.jsx(
+  const wordElement = /* @__PURE__ */ jsxRuntimeExports.jsx(
     HighlightedWord,
     {
       shouldFlash,
@@ -31569,8 +32128,13 @@ const WordComponent = React.memo(function Word({
         backgroundColor: backgroundColor2,
         padding: padding2,
         cursor: "pointer",
-        borderRadius: "3px",
-        color: isCurrentlyPlaying ? "#ffffff" : "inherit"
+        borderRadius: "2px",
+        color: isCurrentlyPlaying ? "#ffffff" : "inherit",
+        textDecoration: correction ? "underline dotted" : "none",
+        textDecorationColor: correction ? "#666" : "inherit",
+        textUnderlineOffset: "2px",
+        fontSize: "0.85rem",
+        lineHeight: 1.2
       },
       sx: {
         "&:hover": {
@@ -31581,6 +32145,25 @@ const WordComponent = React.memo(function Word({
       children: word
     }
   );
+  if (correction) {
+    const tooltipContent = /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: "Original:" }),
+      ' "',
+      correction.originalWord,
+      '"',
+      /* @__PURE__ */ jsxRuntimeExports.jsx("br", {}),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: "Corrected by:" }),
+      " ",
+      correction.handler,
+      /* @__PURE__ */ jsxRuntimeExports.jsx("br", {}),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: "Confidence:" }),
+      " ",
+      (correction.confidence * 100).toFixed(0),
+      "%"
+    ] });
+    return /* @__PURE__ */ jsxRuntimeExports.jsx(Tooltip, { title: tooltipContent, arrow: true, placement: "top", children: wordElement });
+  }
+  return wordElement;
 });
 function useWordClick({
   mode,
@@ -31719,6 +32302,16 @@ function useWordClick({
 const ContentCopyIcon = createSvgIcon(/* @__PURE__ */ jsxRuntimeExports.jsx("path", {
   d: "M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2m0 16H8V7h11z"
 }), "ContentCopy");
+function findWordById(segments, wordId) {
+  for (const segment of segments) {
+    const word = segment.words.find((w) => w.id === wordId);
+    if (word) return word;
+  }
+  return void 0;
+}
+function getWordsFromIds(segments, wordIds) {
+  return wordIds.map((id) => findWordById(segments, id)).filter((word) => word !== void 0);
+}
 function HighlightedText({
   text,
   segments,
@@ -31822,14 +32415,28 @@ function HighlightedText({
               wordPos.word.id,
               wordPos.type === "anchor" ? wordPos.sequence : void 0,
               wordPos.type === "gap" ? wordPos.sequence : void 0
-            )
+            ),
+            correction: (() => {
+              const correction = corrections == null ? void 0 : corrections.find(
+                (c) => c.corrected_word_id === wordPos.word.id || c.word_id === wordPos.word.id
+              );
+              return correction ? {
+                originalWord: correction.original_word,
+                handler: correction.handler,
+                confidence: correction.confidence
+              } : null;
+            })()
           },
           `${wordPos.word.id}-${index}`
         ),
         index < wordPositions.length - 1 && " "
       ] }, wordPos.word.id));
     } else if (segments) {
-      return segments.map((segment) => /* @__PURE__ */ jsxRuntimeExports.jsx(Box, { sx: { display: "flex", alignItems: "flex-start" }, children: /* @__PURE__ */ jsxRuntimeExports.jsx(Box, { sx: { flex: 1 }, children: segment.words.map((word, wordIndex) => {
+      return segments.map((segment) => /* @__PURE__ */ jsxRuntimeExports.jsx(Box, { sx: {
+        display: "flex",
+        alignItems: "flex-start",
+        mb: 0
+      }, children: /* @__PURE__ */ jsxRuntimeExports.jsx(Box, { sx: { flex: 1 }, children: segment.words.map((word, wordIndex) => {
         const wordPos = wordPositions.find(
           (pos) => pos.word.id === word.id
         );
@@ -31839,6 +32446,14 @@ function HighlightedText({
         const hasCorrection = referenceCorrections.has(word.id);
         const isUncorrectedGap = (wordPos == null ? void 0 : wordPos.type) === "gap" && !hasCorrection;
         const sequence = (wordPos == null ? void 0 : wordPos.type) === "gap" ? wordPos.sequence : void 0;
+        const correction = corrections == null ? void 0 : corrections.find(
+          (c) => c.corrected_word_id === word.id || c.word_id === word.id
+        );
+        const correctionInfo = correction ? {
+          originalWord: correction.original_word,
+          handler: correction.handler,
+          confidence: correction.confidence
+        } : null;
         return /* @__PURE__ */ jsxRuntimeExports.jsxs(React.Fragment, { children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx(
             WordComponent,
@@ -31849,7 +32464,8 @@ function HighlightedText({
               isCorrectedGap: hasCorrection,
               isUncorrectedGap,
               isCurrentlyPlaying: shouldHighlightWord(wordPos || { word: word.text, id: word.id }),
-              onClick: () => handleWordClick(word.text, word.id, anchor, sequence)
+              onClick: () => handleWordClick(word.text, word.id, anchor, sequence),
+              correction: correctionInfo
             }
           ),
           wordIndex < segment.words.length - 1 && " "
@@ -31862,7 +32478,12 @@ function HighlightedText({
         const currentLinePosition = linePositions == null ? void 0 : linePositions.find((pos) => pos.position === wordCount);
         if (currentLinePosition == null ? void 0 : currentLinePosition.isEmpty) {
           wordCount++;
-          return /* @__PURE__ */ jsxRuntimeExports.jsxs(Box, { sx: { display: "flex", alignItems: "flex-start" }, children: [
+          return /* @__PURE__ */ jsxRuntimeExports.jsxs(Box, { sx: {
+            display: "flex",
+            alignItems: "flex-start",
+            mb: 0,
+            lineHeight: 1
+          }, children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx(
               Typography,
               {
@@ -31875,18 +32496,55 @@ function HighlightedText({
                   marginRight: 1,
                   userSelect: "none",
                   fontFamily: "monospace",
-                  paddingTop: "4px"
+                  paddingTop: "1px",
+                  fontSize: "0.8rem",
+                  lineHeight: 1
                 },
                 children: currentLinePosition.lineNumber
               }
             ),
-            /* @__PURE__ */ jsxRuntimeExports.jsx(Box, { sx: { width: "28px" } }),
-            " ",
-            /* @__PURE__ */ jsxRuntimeExports.jsx(Box, { sx: { flex: 1, height: "1.5em" } })
+            /* @__PURE__ */ jsxRuntimeExports.jsx(Box, { sx: { width: "18px" } }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(Box, { sx: { flex: 1, height: "1em" } })
           ] }, `empty-${lineIndex}`);
         }
-        const lineContent = line2.split(/(\s+)/);
-        return /* @__PURE__ */ jsxRuntimeExports.jsxs(Box, { sx: { display: "flex", alignItems: "flex-start" }, children: [
+        const words = line2.split(" ");
+        const lineWords = [];
+        words.forEach((word, wordIndex) => {
+          if (word === "") return null;
+          if (/^\s+$/.test(word)) {
+            return lineWords.push(/* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: " " }, `space-${lineIndex}-${wordIndex}`));
+          }
+          const wordId = `${currentSource}-word-${wordCount}`;
+          wordCount++;
+          const anchor = currentSource ? anchors == null ? void 0 : anchors.find(
+            (a) => {
+              var _a;
+              return (_a = a.reference_word_ids[currentSource]) == null ? void 0 : _a.includes(wordId);
+            }
+          ) : void 0;
+          const hasCorrection = referenceCorrections.has(wordId);
+          lineWords.push(
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              WordComponent,
+              {
+                word,
+                shouldFlash: shouldWordFlash({ word, id: wordId }),
+                isAnchor: Boolean(anchor),
+                isCorrectedGap: hasCorrection,
+                isUncorrectedGap: false,
+                isCurrentlyPlaying: shouldHighlightWord({ word, id: wordId }),
+                onClick: () => handleWordClick(word, wordId, anchor, void 0)
+              },
+              wordId
+            )
+          );
+        });
+        return /* @__PURE__ */ jsxRuntimeExports.jsxs(Box, { sx: {
+          display: "flex",
+          alignItems: "flex-start",
+          mb: 0,
+          lineHeight: 1
+        }, children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx(
             Typography,
             {
@@ -31899,7 +32557,9 @@ function HighlightedText({
                 marginRight: 1,
                 userSelect: "none",
                 fontFamily: "monospace",
-                paddingTop: "4px"
+                paddingTop: "1px",
+                fontSize: "0.8rem",
+                lineHeight: 1
               },
               children: (currentLinePosition == null ? void 0 : currentLinePosition.lineNumber) ?? lineIndex
             }
@@ -31910,42 +32570,17 @@ function HighlightedText({
               size: "small",
               onClick: () => handleCopyLine(line2),
               sx: {
-                padding: "2px",
-                marginRight: 1,
-                height: "24px",
-                width: "24px"
+                padding: "1px",
+                marginRight: 0.5,
+                height: "18px",
+                width: "18px",
+                minHeight: "18px",
+                minWidth: "18px"
               },
-              children: /* @__PURE__ */ jsxRuntimeExports.jsx(ContentCopyIcon, { sx: { fontSize: "1rem" } })
+              children: /* @__PURE__ */ jsxRuntimeExports.jsx(ContentCopyIcon, { sx: { fontSize: "0.9rem" } })
             }
           ),
-          /* @__PURE__ */ jsxRuntimeExports.jsx(Box, { sx: { flex: 1 }, children: lineContent.map((word, wordIndex) => {
-            if (word === "") return null;
-            if (/^\s+$/.test(word)) {
-              return /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: " " }, `space-${lineIndex}-${wordIndex}`);
-            }
-            const wordId = `${currentSource}-word-${wordCount}`;
-            wordCount++;
-            const anchor = currentSource ? anchors == null ? void 0 : anchors.find(
-              (a) => {
-                var _a;
-                return (_a = a.reference_word_ids[currentSource]) == null ? void 0 : _a.includes(wordId);
-              }
-            ) : void 0;
-            const hasCorrection = referenceCorrections.has(wordId);
-            return /* @__PURE__ */ jsxRuntimeExports.jsx(
-              WordComponent,
-              {
-                word,
-                shouldFlash: shouldWordFlash({ word, id: wordId }),
-                isAnchor: Boolean(anchor),
-                isCorrectedGap: hasCorrection,
-                isUncorrectedGap: false,
-                isCurrentlyPlaying: shouldHighlightWord({ word, id: wordId }),
-                onClick: () => handleWordClick(word, wordId, anchor, void 0)
-              },
-              wordId
-            );
-          }) })
+          /* @__PURE__ */ jsxRuntimeExports.jsx(Box, { sx: { flex: 1 }, children: lineWords })
         ] }, `line-${lineIndex}`);
       });
     }
@@ -31968,9 +32603,9 @@ function HighlightedText({
 const SegmentControls$1 = styled(Box)({
   display: "flex",
   alignItems: "center",
-  gap: "4px",
-  paddingTop: "3px",
-  paddingRight: "8px"
+  gap: "2px",
+  paddingTop: "1px",
+  paddingRight: "4px"
 });
 const TextContainer$1 = styled(Box)({
   flex: 1,
@@ -32090,52 +32725,76 @@ function ReferenceView({
   const copyToClipboard = (text) => {
     navigator.clipboard.writeText(text);
   };
-  return /* @__PURE__ */ jsxRuntimeExports.jsxs(Paper, { sx: { p: 2 }, children: [
-    /* @__PURE__ */ jsxRuntimeExports.jsxs(Box, { sx: { display: "flex", justifyContent: "space-between", alignItems: "center", mb: 2 }, children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx(Typography, { variant: "h6", children: "Reference Lyrics" }),
+  return /* @__PURE__ */ jsxRuntimeExports.jsxs(Paper, { sx: { p: 0.8, position: "relative" }, children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsxs(Box, { sx: { display: "flex", justifyContent: "space-between", alignItems: "center", mb: 0.5 }, children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx(Typography, { variant: "h6", sx: { fontSize: "0.9rem", mb: 0 }, children: "Reference Lyrics" }),
       /* @__PURE__ */ jsxRuntimeExports.jsx(
         SourceSelector,
         {
+          availableSources,
           currentSource: effectiveCurrentSource,
-          onSourceChange,
-          availableSources
+          onSourceChange
         }
       )
     ] }),
-    /* @__PURE__ */ jsxRuntimeExports.jsx(Box, { sx: { display: "flex", flexDirection: "column" }, children: currentSourceSegments.map((segment, index) => /* @__PURE__ */ jsxRuntimeExports.jsxs(Box, { sx: { display: "flex", alignItems: "flex-start", width: "100%" }, children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx(SegmentControls$1, { children: /* @__PURE__ */ jsxRuntimeExports.jsx(
-        IconButton,
-        {
-          size: "small",
-          onClick: () => copyToClipboard(segment.words.map((w) => w.text).join(" ")),
-          sx: { padding: "2px" },
-          children: /* @__PURE__ */ jsxRuntimeExports.jsx(ContentCopyIcon, { fontSize: "small" })
-        }
-      ) }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx(TextContainer$1, { children: /* @__PURE__ */ jsxRuntimeExports.jsx(
-        HighlightedText,
-        {
-          wordPositions: referenceWordPositions.filter(
-            (wp) => segment.words.some((w) => w.id === wp.word.id)
-          ),
-          segments: [segment],
-          anchors,
-          onElementClick,
-          onWordClick,
-          flashingType,
-          highlightInfo,
-          mode,
-          isReference: true,
-          currentSource: effectiveCurrentSource,
-          linePositions,
-          referenceCorrections,
-          gaps,
-          preserveSegments: true
-        }
-      ) })
-    ] }, index)) })
+    /* @__PURE__ */ jsxRuntimeExports.jsx(Box, { sx: { display: "flex", flexDirection: "column", gap: 0.2 }, children: currentSourceSegments.map((segment, index) => /* @__PURE__ */ jsxRuntimeExports.jsxs(
+      Box,
+      {
+        sx: {
+          display: "flex",
+          alignItems: "flex-start",
+          width: "100%",
+          mb: 0,
+          "&:hover": {
+            backgroundColor: "rgba(0, 0, 0, 0.03)"
+          }
+        },
+        children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx(SegmentControls$1, { children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+            IconButton,
+            {
+              size: "small",
+              onClick: () => copyToClipboard(segment.words.map((w) => w.text).join(" ")),
+              sx: {
+                padding: "1px",
+                height: "18px",
+                width: "18px",
+                minHeight: "18px",
+                minWidth: "18px"
+              },
+              children: /* @__PURE__ */ jsxRuntimeExports.jsx(ContentCopyIcon, { sx: { fontSize: "0.9rem" } })
+            }
+          ) }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(TextContainer$1, { children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+            HighlightedText,
+            {
+              wordPositions: referenceWordPositions.filter(
+                (wp) => segment.words.some((w) => w.id === wp.word.id)
+              ),
+              segments: [segment],
+              anchors,
+              onElementClick,
+              onWordClick,
+              flashingType,
+              highlightInfo,
+              mode,
+              isReference: true,
+              currentSource: effectiveCurrentSource,
+              linePositions,
+              referenceCorrections,
+              gaps,
+              preserveSegments: true
+            }
+          ) })
+        ]
+      },
+      index
+    )) })
   ] });
 }
+const CloseIcon = createSvgIcon(/* @__PURE__ */ jsxRuntimeExports.jsx("path", {
+  d: "M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"
+}), "Close");
 function SegmentDetailsModal({
   open,
   onClose,
@@ -32192,16 +32851,18 @@ function SegmentDetailsModal({
 const PlayCircleOutlineIcon = createSvgIcon(/* @__PURE__ */ jsxRuntimeExports.jsx("path", {
   d: "m10 16.5 6-4.5-6-4.5zM12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2m0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8"
 }), "PlayCircleOutline");
-const SegmentIndex = styled(Typography)(({ theme }) => ({
-  color: theme.palette.text.secondary,
-  width: "2em",
-  minWidth: "2em",
+const SegmentIndex = styled(Typography)(({ theme: theme2 }) => ({
+  color: theme2.palette.text.secondary,
+  width: "1.8em",
+  minWidth: "1.8em",
   textAlign: "right",
-  marginRight: theme.spacing(1),
+  marginRight: theme2.spacing(0.8),
   userSelect: "none",
   fontFamily: "monospace",
   cursor: "pointer",
-  paddingTop: "3px",
+  paddingTop: "1px",
+  fontSize: "0.8rem",
+  lineHeight: 1.2,
   "&:hover": {
     textDecoration: "underline"
   }
@@ -32213,10 +32874,10 @@ const TextContainer = styled(Box)({
 const SegmentControls = styled(Box)({
   display: "flex",
   alignItems: "center",
-  gap: "4px",
-  minWidth: "3em",
-  paddingTop: "3px",
-  paddingRight: "8px"
+  gap: "2px",
+  minWidth: "2.5em",
+  paddingTop: "1px",
+  paddingRight: "4px"
 });
 function TranscriptionView({
   data,
@@ -32231,9 +32892,9 @@ function TranscriptionView({
   anchors = []
 }) {
   const [selectedSegmentIndex, setSelectedSegmentIndex] = reactExports.useState(null);
-  return /* @__PURE__ */ jsxRuntimeExports.jsxs(Paper, { sx: { p: 2 }, children: [
-    /* @__PURE__ */ jsxRuntimeExports.jsx(Typography, { variant: "h6", gutterBottom: true, children: "Corrected Transcription" }),
-    /* @__PURE__ */ jsxRuntimeExports.jsx(Box, { sx: { display: "flex", flexDirection: "column" }, children: data.corrected_segments.map((segment, segmentIndex) => {
+  return /* @__PURE__ */ jsxRuntimeExports.jsxs(Paper, { sx: { p: 0.8 }, children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsx(Box, { sx: { display: "flex", justifyContent: "space-between", alignItems: "center", mb: 0.5 }, children: /* @__PURE__ */ jsxRuntimeExports.jsx(Typography, { variant: "h6", sx: { fontSize: "0.9rem", mb: 0 }, children: "Corrected Transcription" }) }),
+    /* @__PURE__ */ jsxRuntimeExports.jsx(Box, { sx: { display: "flex", flexDirection: "column", gap: 0.2 }, children: data.corrected_segments.map((segment, segmentIndex) => {
       const segmentWords = segment.words.map((word) => {
         var _a, _b, _c;
         const correction = (_a = data.corrections) == null ? void 0 : _a.find(
@@ -32267,7 +32928,15 @@ function TranscriptionView({
           gap: gap2
         };
       });
-      return /* @__PURE__ */ jsxRuntimeExports.jsxs(Box, { sx: { display: "flex", alignItems: "flex-start", width: "100%" }, children: [
+      return /* @__PURE__ */ jsxRuntimeExports.jsxs(Box, { sx: {
+        display: "flex",
+        alignItems: "flex-start",
+        width: "100%",
+        mb: 0,
+        "&:hover": {
+          backgroundColor: "rgba(0, 0, 0, 0.03)"
+        }
+      }, children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs(SegmentControls, { children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx(
             SegmentIndex,
@@ -32282,8 +32951,14 @@ function TranscriptionView({
             {
               size: "small",
               onClick: () => onPlaySegment == null ? void 0 : onPlaySegment(segment.start_time),
-              sx: { padding: "2px" },
-              children: /* @__PURE__ */ jsxRuntimeExports.jsx(PlayCircleOutlineIcon, { fontSize: "small" })
+              sx: {
+                padding: "1px",
+                height: "18px",
+                width: "18px",
+                minHeight: "18px",
+                minWidth: "18px"
+              },
+              children: /* @__PURE__ */ jsxRuntimeExports.jsx(PlayCircleOutlineIcon, { sx: { fontSize: "0.9rem" } })
             }
           )
         ] }),
@@ -32338,52 +33013,52 @@ const StopIcon = createSvgIcon(/* @__PURE__ */ jsxRuntimeExports.jsx("path", {
 const HistoryIcon = createSvgIcon(/* @__PURE__ */ jsxRuntimeExports.jsx("path", {
   d: "M13 3c-4.97 0-9 4.03-9 9H1l3.89 3.89.07.14L9 12H6c0-3.87 3.13-7 7-7s7 3.13 7 7-3.13 7-7 7c-1.93 0-3.68-.79-4.94-2.06l-1.42 1.42C8.27 19.99 10.51 21 13 21c4.97 0 9-4.03 9-9s-4.03-9-9-9m-1 5v5l4.28 2.54.72-1.21-3.5-2.08V8z"
 }), "History");
-const TimelineContainer = styled(Box)(({ theme }) => ({
+const TimelineContainer = styled(Box)(({ theme: theme2 }) => ({
   position: "relative",
-  height: "80px",
-  backgroundColor: theme.palette.grey[200],
-  borderRadius: theme.shape.borderRadius,
-  margin: theme.spacing(2, 0),
-  padding: theme.spacing(0, 1)
+  height: "75px",
+  backgroundColor: theme2.palette.grey[200],
+  borderRadius: theme2.shape.borderRadius,
+  margin: theme2.spacing(1, 0),
+  padding: theme2.spacing(0, 1)
 }));
-const TimelineRuler = styled(Box)(({ theme }) => ({
+const TimelineRuler = styled(Box)(({ theme: theme2 }) => ({
   position: "absolute",
   top: 0,
   left: 0,
   right: 0,
   height: "40px",
-  borderBottom: `1px solid ${theme.palette.grey[300]}`,
+  borderBottom: `1px solid ${theme2.palette.grey[300]}`,
   cursor: "pointer"
 }));
-const TimelineMark = styled(Box)(({ theme }) => ({
+const TimelineMark = styled(Box)(({ theme: theme2 }) => ({
   position: "absolute",
   top: "20px",
   width: "1px",
   height: "18px",
-  backgroundColor: theme.palette.grey[700],
+  backgroundColor: theme2.palette.grey[700],
   "&.subsecond": {
     top: "25px",
     height: "13px",
-    backgroundColor: theme.palette.grey[500]
+    backgroundColor: theme2.palette.grey[500]
   }
 }));
-const TimelineLabel = styled(Box)(({ theme }) => ({
+const TimelineLabel = styled(Box)(({ theme: theme2 }) => ({
   position: "absolute",
   top: "5px",
   transform: "translateX(-50%)",
   fontSize: "0.8rem",
-  color: theme.palette.text.primary,
+  color: theme2.palette.text.primary,
   fontWeight: 700,
-  backgroundColor: theme.palette.grey[200]
+  backgroundColor: theme2.palette.grey[200]
 }));
-const TimelineWord = styled(Box)(({ theme }) => ({
+const TimelineWord = styled(Box)(({ theme: theme2 }) => ({
   position: "absolute",
   height: "30px",
   top: "40px",
-  backgroundColor: theme.palette.primary.main,
-  borderRadius: theme.shape.borderRadius,
-  color: theme.palette.primary.contrastText,
-  padding: theme.spacing(0.5, 1),
+  backgroundColor: theme2.palette.primary.main,
+  borderRadius: theme2.shape.borderRadius,
+  color: theme2.palette.primary.contrastText,
+  padding: theme2.spacing(0.5, 1),
   cursor: "move",
   userSelect: "none",
   display: "flex",
@@ -32392,32 +33067,42 @@ const TimelineWord = styled(Box)(({ theme }) => ({
   fontFamily: "sans-serif",
   transition: "background-color 0.1s ease",
   "&.highlighted": {
-    backgroundColor: theme.palette.secondary.main
+    backgroundColor: theme2.palette.secondary.main
   }
 }));
-const ResizeHandle = styled(Box)(({ theme }) => ({
+const ResizeHandle = styled(Box)(({ theme: theme2 }) => ({
   position: "absolute",
   top: 0,
-  width: 8,
+  width: 16,
   height: "100%",
   cursor: "col-resize",
   "&:hover": {
-    backgroundColor: theme.palette.primary.light
+    backgroundColor: theme2.palette.primary.light,
+    opacity: 0.8,
+    boxShadow: `0 0 0 1px ${theme2.palette.primary.dark}`
   },
   "&.left": {
-    left: -4
+    left: -8,
+    right: "auto",
+    paddingRight: 12,
+    borderTopLeftRadius: theme2.shape.borderRadius,
+    borderBottomLeftRadius: theme2.shape.borderRadius
   },
   "&.right": {
-    right: -4
+    right: -8,
+    left: "auto",
+    paddingLeft: 12,
+    borderTopRightRadius: theme2.shape.borderRadius,
+    borderBottomRightRadius: theme2.shape.borderRadius
   }
 }));
-const TimelineCursor = styled(Box)(({ theme }) => ({
+const TimelineCursor = styled(Box)(({ theme: theme2 }) => ({
   position: "absolute",
   top: 0,
   width: "2px",
   height: "100%",
   // Full height of container
-  backgroundColor: theme.palette.error.main,
+  backgroundColor: theme2.palette.error.main,
   // Red color
   pointerEvents: "none",
   // Ensure it doesn't interfere with clicks
@@ -32651,7 +33336,7 @@ const buttonTextStyle = {
   color: "rgba(0, 0, 0, 0.6)",
   fontFamily: '"Roboto", "Helvetica", "Arial", sans-serif',
   fontWeight: 400,
-  fontSize: "0.875rem",
+  fontSize: "0.7rem",
   lineHeight: "1.4375em",
   textTransform: "none"
 };
@@ -33205,7 +33890,7 @@ function EditModal({
               // Prevent double scrollbars
             },
             children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx(Box, { sx: { mb: 2 }, children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+              /* @__PURE__ */ jsxRuntimeExports.jsx(Box, { sx: { mb: 0 }, children: /* @__PURE__ */ jsxRuntimeExports.jsx(
                 TimelineEditor,
                 {
                   words: editedSegment.words,
@@ -33216,7 +33901,7 @@ function EditModal({
                   onPlaySegment
                 }
               ) }),
-              /* @__PURE__ */ jsxRuntimeExports.jsxs(Box, { sx: { mb: 2, display: "flex", alignItems: "center", justifyContent: "space-between" }, children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsxs(Box, { sx: { mb: 1, display: "flex", alignItems: "center", justifyContent: "space-between" }, children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsxs(Typography, { variant: "body2", color: "text.secondary", children: [
                   "Original Time Range: ",
                   ((_a = originalSegment == null ? void 0 : originalSegment.start_time) == null ? void 0 : _a.toFixed(2)) ?? "N/A",
@@ -33519,9 +34204,6 @@ const FindReplaceIcon = createSvgIcon(/* @__PURE__ */ jsxRuntimeExports.jsx("pat
 const HighlightIcon = createSvgIcon(/* @__PURE__ */ jsxRuntimeExports.jsx("path", {
   d: "m6 14 3 3v5h6v-5l3-3V9H6zm5-12h2v3h-2zM3.5 5.88l1.41-1.41 2.12 2.12L5.62 8zm13.46.71 2.12-2.12 1.41 1.41L18.38 8z"
 }), "Highlight");
-const InfoIcon = createSvgIcon(/* @__PURE__ */ jsxRuntimeExports.jsx("path", {
-  d: "M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2m1 15h-2v-6h2zm0-8h-2V7h2z"
-}), "Info");
 const LockIcon = createSvgIcon(/* @__PURE__ */ jsxRuntimeExports.jsx("path", {
   d: "M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2m-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2m3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1s3.1 1.39 3.1 3.1z"
 }), "Lock");
@@ -34078,6 +34760,7 @@ const setupKeyboardHandlers = (state) => {
   const handlerId = Math.random().toString(36).substr(2, 9);
   console.log(`Setting up keyboard handlers [${handlerId}]`);
   const handleKeyDown = (e) => {
+    var _a;
     console.log(`Keyboard event captured [${handlerId}]`, {
       key: e.key,
       code: e.code,
@@ -34095,7 +34778,7 @@ const setupKeyboardHandlers = (state) => {
       state.setIsShiftPressed(true);
       document.body.style.userSelect = "none";
     } else if (e.key === "Meta") {
-      state.setIsCtrlPressed(true);
+      (_a = state.setIsCtrlPressed) == null ? void 0 : _a.call(state, true);
     } else if (e.key === " " || e.code === "Space") {
       console.log("Keyboard handler - Spacebar pressed", {
         modalOpen: isModalOpen,
@@ -34116,11 +34799,12 @@ const setupKeyboardHandlers = (state) => {
     }
   };
   const handleKeyUp = (e) => {
+    var _a;
     if (e.key === "Shift") {
       state.setIsShiftPressed(false);
       document.body.style.userSelect = "";
     } else if (e.key === "Meta") {
-      state.setIsCtrlPressed(false);
+      (_a = state.setIsCtrlPressed) == null ? void 0 : _a.call(state, false);
     }
   };
   return { handleKeyDown, handleKeyUp };
@@ -34130,8 +34814,8 @@ const getModalState = () => ({
   isModalOpen
 });
 function ModeSelector({ effectiveMode, onChange }) {
-  return /* @__PURE__ */ jsxRuntimeExports.jsxs(Box, { sx: { display: "flex", alignItems: "center", gap: 2 }, children: [
-    /* @__PURE__ */ jsxRuntimeExports.jsx(Typography, { variant: "body2", color: "text.secondary", children: "Click Mode:" }),
+  return /* @__PURE__ */ jsxRuntimeExports.jsxs(Box, { sx: { display: "flex", alignItems: "center", gap: 1.2, height: "32px" }, children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsx(Typography, { variant: "body2", color: "text.secondary", sx: { fontSize: "0.8rem" }, children: "Mode:" }),
     /* @__PURE__ */ jsxRuntimeExports.jsxs(
       ToggleButtonGroup,
       {
@@ -34139,6 +34823,14 @@ function ModeSelector({ effectiveMode, onChange }) {
         exclusive: true,
         onChange: (_, newMode) => newMode && onChange(newMode),
         size: "small",
+        sx: {
+          height: "32px",
+          "& .MuiToggleButton-root": {
+            padding: "3px 8px",
+            fontSize: "0.75rem",
+            height: "32px"
+          }
+        },
         children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs(
             ToggleButton,
@@ -34146,19 +34838,8 @@ function ModeSelector({ effectiveMode, onChange }) {
               value: "edit",
               title: "Click to edit segments and make corrections in the transcription view",
               children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx(EditIcon, { sx: { mr: 1 } }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx(EditIcon, { sx: { mr: 0.5, fontSize: "1rem" } }),
                 "Edit"
-              ]
-            }
-          ),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs(
-            ToggleButton,
-            {
-              value: "details",
-              title: "Click words to view detailed information about anchors and gaps. You can also hold CTRL to temporarily activate this mode.",
-              children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx(InfoIcon, { sx: { mr: 1 } }),
-                "Details"
               ]
             }
           ),
@@ -34168,7 +34849,7 @@ function ModeSelector({ effectiveMode, onChange }) {
               value: "highlight",
               title: "Click words in the transcription view to highlight the matching anchor sequence in the reference lyrics. You can also hold SHIFT to temporarily activate this mode.",
               children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx(HighlightIcon, { sx: { mr: 1 } }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx(HighlightIcon, { sx: { mr: 0.5, fontSize: "1rem" } }),
                 "Highlight"
               ]
             }
@@ -34271,22 +34952,22 @@ function AudioPlayer({ apiClient, onTimeUpdate, audioHash }) {
   return /* @__PURE__ */ jsxRuntimeExports.jsxs(Box, { sx: {
     display: "flex",
     alignItems: "center",
-    gap: 1,
+    gap: 0.5,
     backgroundColor: "background.paper",
     borderRadius: 1,
-    height: 40
-    // Match ToggleButtonGroup height
+    height: "32px"
   }, children: [
-    /* @__PURE__ */ jsxRuntimeExports.jsx(Typography, { variant: "body2", color: "text.secondary", sx: { mr: 1 }, children: "Playback:" }),
+    /* @__PURE__ */ jsxRuntimeExports.jsx(Typography, { variant: "body2", color: "text.secondary", sx: { mr: 0.5, fontSize: "0.75rem" }, children: "Playback:" }),
     /* @__PURE__ */ jsxRuntimeExports.jsx(
       IconButton,
       {
         onClick: handlePlayPause,
         size: "small",
-        children: isPlaying ? /* @__PURE__ */ jsxRuntimeExports.jsx(PauseIcon, {}) : /* @__PURE__ */ jsxRuntimeExports.jsx(PlayArrowIcon, {})
+        sx: { p: 0.5 },
+        children: isPlaying ? /* @__PURE__ */ jsxRuntimeExports.jsx(PauseIcon, { fontSize: "small" }) : /* @__PURE__ */ jsxRuntimeExports.jsx(PlayArrowIcon, { fontSize: "small" })
       }
     ),
-    /* @__PURE__ */ jsxRuntimeExports.jsx(Typography, { variant: "body2", sx: { minWidth: 40 }, children: formatTime(currentTime) }),
+    /* @__PURE__ */ jsxRuntimeExports.jsx(Typography, { variant: "body2", sx: { minWidth: 32, fontSize: "0.75rem" }, children: formatTime(currentTime) }),
     /* @__PURE__ */ jsxRuntimeExports.jsx(
       Slider,
       {
@@ -34296,16 +34977,19 @@ function AudioPlayer({ apiClient, onTimeUpdate, audioHash }) {
         onChange: handleSeek,
         size: "small",
         sx: {
-          width: 200,
-          mx: 1,
+          width: 150,
+          mx: 0.5,
           "& .MuiSlider-thumb": {
-            width: 12,
-            height: 12
+            width: 10,
+            height: 10
+          },
+          "& .MuiSlider-rail, & .MuiSlider-track": {
+            height: 3
           }
         }
       }
     ),
-    /* @__PURE__ */ jsxRuntimeExports.jsx(Typography, { variant: "body2", sx: { minWidth: 40 }, children: formatTime(duration2) })
+    /* @__PURE__ */ jsxRuntimeExports.jsx(Typography, { variant: "body2", sx: { minWidth: 32, fontSize: "0.75rem" }, children: formatTime(duration2) })
   ] });
 }
 function Header({
@@ -34325,8 +35009,8 @@ function Header({
   onFindReplace
 }) {
   var _a, _b, _c;
-  const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down("md"));
+  const theme2 = useTheme();
+  const isMobile = useMediaQuery(theme2.breakpoints.down("md"));
   const handlerCounts = ((_a = data.corrections) == null ? void 0 : _a.reduce((counts, correction) => {
     counts[correction.handler] = (counts[correction.handler] || 0) + 1;
     return counts;
@@ -34355,23 +35039,24 @@ function Header({
   const addedCount = data.corrections.filter((c) => c.split_total).length;
   const deletedCount = data.corrections.filter((c) => c.is_deletion).length;
   return /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
-    isReadOnly && /* @__PURE__ */ jsxRuntimeExports.jsxs(Box, { sx: { display: "flex", alignItems: "center", mb: 2, color: "text.secondary" }, children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx(LockIcon, { sx: { mr: 1 } }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx(Typography, { variant: "body2", children: "View Only Mode" })
+    isReadOnly && /* @__PURE__ */ jsxRuntimeExports.jsxs(Box, { sx: { display: "flex", alignItems: "center", mb: 0.8, color: "text.secondary" }, children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx(LockIcon, { sx: { mr: 0.5 }, fontSize: "small" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx(Typography, { variant: "body2", sx: { fontSize: "0.75rem" }, children: "View Only Mode" })
     ] }),
     /* @__PURE__ */ jsxRuntimeExports.jsxs(Box, { sx: {
       display: "flex",
       flexDirection: isMobile ? "column" : "row",
-      gap: 2,
+      gap: 1,
       justifyContent: "space-between",
       alignItems: isMobile ? "stretch" : "center",
-      mb: 3
+      mb: 1
     }, children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx(Typography, { variant: "h4", sx: { fontSize: isMobile ? "1.75rem" : "2.125rem" }, children: "Nomad Karaoke: Lyrics Transcription Review" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx(Typography, { variant: "h4", sx: { fontSize: isMobile ? "1.3rem" : "1.5rem" }, children: "Nomad Karaoke: Lyrics Transcription Review" }),
       isReadOnly && /* @__PURE__ */ jsxRuntimeExports.jsx(
         Button,
         {
           variant: "outlined",
+          size: "small",
           startIcon: /* @__PURE__ */ jsxRuntimeExports.jsx(UploadFileIcon, {}),
           onClick: onFileLoad,
           fullWidth: isMobile,
@@ -34381,30 +35066,28 @@ function Header({
     ] }),
     /* @__PURE__ */ jsxRuntimeExports.jsxs(Box, { sx: {
       display: "flex",
-      gap: 2,
-      mb: 3,
-      flexDirection: isMobile ? "column" : "row"
+      gap: 1,
+      mb: 1,
+      flexDirection: isMobile ? "column" : "row",
+      height: "140px"
     }, children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx(Box, { sx: {
-        display: "flex",
-        flexDirection: "column",
-        minWidth: "300px",
-        position: "relative"
+        width: "280px",
+        position: "relative",
+        height: "100%"
       }, children: /* @__PURE__ */ jsxRuntimeExports.jsxs(Paper, { sx: {
-        p: 1,
+        p: 0.8,
         height: "100%",
-        maxHeight: "200px",
         display: "flex",
         flexDirection: "column"
       }, children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx(Typography, { variant: "subtitle2", color: "text.secondary", sx: { mb: 1 }, children: "Correction Handlers" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx(Typography, { variant: "subtitle2", color: "text.secondary", sx: { mb: 0.5, fontSize: "0.7rem" }, children: "Correction Handlers" }),
         /* @__PURE__ */ jsxRuntimeExports.jsx(Box, { sx: {
           flex: 1,
           overflow: "auto",
           display: "flex",
-          flexDirection: "column",
-          gap: 1
-        }, children: availableHandlers.map((handler) => /* @__PURE__ */ jsxRuntimeExports.jsx(
+          flexDirection: "column"
+        }, children: availableHandlers.map((handler) => /* @__PURE__ */ jsxRuntimeExports.jsx(Box, { sx: { mb: 0.5 }, children: /* @__PURE__ */ jsxRuntimeExports.jsx(
           Tooltip,
           {
             title: handler.description,
@@ -34431,18 +35114,21 @@ function Header({
                 },
                 sx: {
                   ml: 0,
+                  py: 0,
+                  my: 0,
+                  minHeight: "24px",
                   "& .MuiFormControlLabel-label": {
-                    fontSize: "0.875rem",
-                    cursor: "pointer"
+                    fontSize: "0.7rem",
+                    cursor: "pointer",
+                    lineHeight: 1.2
                   }
                 }
               }
             )
-          },
-          handler.id
-        )) })
+          }
+        ) }, handler.id)) })
       ] }) }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx(Box, { sx: { flexGrow: 1 }, children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+      /* @__PURE__ */ jsxRuntimeExports.jsx(Box, { sx: { flex: 1, height: "100%" }, children: /* @__PURE__ */ jsxRuntimeExports.jsx(
         CorrectionMetrics,
         {
           anchorCount: data.metadata.anchor_sequences_count,
@@ -34464,20 +35150,20 @@ function Header({
         }
       ) })
     ] }),
-    /* @__PURE__ */ jsxRuntimeExports.jsxs(Box, { sx: {
+    /* @__PURE__ */ jsxRuntimeExports.jsx(Paper, { sx: { p: 0.8, mb: 1 }, children: /* @__PURE__ */ jsxRuntimeExports.jsxs(Box, { sx: {
       display: "flex",
       flexDirection: isMobile ? "column" : "row",
-      gap: 5,
-      alignItems: "flex-start",
+      gap: 1,
+      alignItems: isMobile ? "flex-start" : "center",
       justifyContent: "space-between",
-      mb: 3,
       width: "100%"
     }, children: [
       /* @__PURE__ */ jsxRuntimeExports.jsxs(Box, { sx: {
         display: "flex",
-        gap: 5,
+        gap: 1,
         flexDirection: isMobile ? "column" : "row",
-        alignItems: "flex-start"
+        alignItems: isMobile ? "flex-start" : "center",
+        height: "32px"
       }, children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx(
           ModeSelector,
@@ -34490,9 +35176,10 @@ function Header({
           Button,
           {
             variant: "outlined",
+            size: "small",
             onClick: onFindReplace,
             startIcon: /* @__PURE__ */ jsxRuntimeExports.jsx(FindReplaceIcon, {}),
-            sx: { minWidth: "fit-content" },
+            sx: { minWidth: "fit-content", height: "32px" },
             children: "Find/Replace"
           }
         ),
@@ -34505,17 +35192,18 @@ function Header({
           }
         )
       ] }),
-      !isReadOnly && apiClient && /* @__PURE__ */ jsxRuntimeExports.jsx(
+      !isReadOnly && apiClient && onAddLyrics && /* @__PURE__ */ jsxRuntimeExports.jsx(
         Button,
         {
           variant: "outlined",
+          size: "small",
           onClick: onAddLyrics,
           startIcon: /* @__PURE__ */ jsxRuntimeExports.jsx(TextSnippetIcon, {}),
-          sx: { minWidth: "fit-content" },
+          sx: { minWidth: "fit-content", height: "32px" },
           children: "Add Reference Lyrics"
         }
       )
-    ] })
+    ] }) })
   ] });
 }
 function AddLyricsModal({
@@ -34963,7 +35651,6 @@ function LyricsAnalyzer({ data: initialData, onFileLoad, apiClient, isReadOnly, 
   const [originalData] = reactExports.useState(() => JSON.parse(JSON.stringify(initialData)));
   const [interactionMode, setInteractionMode] = reactExports.useState("edit");
   const [isShiftPressed, setIsShiftPressed] = reactExports.useState(false);
-  const [isCtrlPressed, setIsCtrlPressed] = reactExports.useState(false);
   const [editModalSegment, setEditModalSegment] = reactExports.useState(null);
   const [isReviewModalOpen, setIsReviewModalOpen] = reactExports.useState(false);
   const [currentAudioTime, setCurrentAudioTime] = reactExports.useState(0);
@@ -34973,8 +35660,8 @@ function LyricsAnalyzer({ data: initialData, onFileLoad, apiClient, isReadOnly, 
   const [isAddLyricsModalOpen, setIsAddLyricsModalOpen] = reactExports.useState(false);
   const [isAnyModalOpen, setIsAnyModalOpen] = reactExports.useState(false);
   const [isFindReplaceModalOpen, setIsFindReplaceModalOpen] = reactExports.useState(false);
-  const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down("md"));
+  const theme2 = useTheme();
+  const isMobile = useMediaQuery(theme2.breakpoints.down("md"));
   reactExports.useEffect(() => {
     var _a, _b, _c, _d, _e;
     console.log("LyricsAnalyzer Initial Data:", {
@@ -35008,15 +35695,13 @@ function LyricsAnalyzer({ data: initialData, onFileLoad, apiClient, isReadOnly, 
       hasSpacebarHandler: !!currentModalHandler2
     });
     const { handleKeyDown, handleKeyUp } = setupKeyboardHandlers({
-      setIsShiftPressed,
-      setIsCtrlPressed
+      setIsShiftPressed
     });
     console.log("LyricsAnalyzer - Adding keyboard event listeners");
     window.addEventListener("keydown", handleKeyDown);
     window.addEventListener("keyup", handleKeyUp);
     if (isAnyModalOpen) {
       setIsShiftPressed(false);
-      setIsCtrlPressed(false);
     }
     return () => {
       console.log("LyricsAnalyzer - Cleanup effect running");
@@ -35024,14 +35709,14 @@ function LyricsAnalyzer({ data: initialData, onFileLoad, apiClient, isReadOnly, 
       window.removeEventListener("keyup", handleKeyUp);
       document.body.style.userSelect = "";
     };
-  }, [setIsShiftPressed, setIsCtrlPressed, isAnyModalOpen]);
+  }, [setIsShiftPressed, isAnyModalOpen]);
   reactExports.useEffect(() => {
     const modalOpen = Boolean(
       modalContent || editModalSegment || isReviewModalOpen || isAddLyricsModalOpen || isFindReplaceModalOpen
     );
     setIsAnyModalOpen(modalOpen);
   }, [modalContent, editModalSegment, isReviewModalOpen, isAddLyricsModalOpen, isFindReplaceModalOpen]);
-  const effectiveMode = isShiftPressed ? "highlight" : isCtrlPressed ? "details" : interactionMode;
+  const effectiveMode = isShiftPressed ? "highlight" : interactionMode;
   const handleFlash = reactExports.useCallback((type, info) => {
     setFlashingType(null);
     setHighlightInfo(null);
@@ -35094,10 +35779,7 @@ function LyricsAnalyzer({ data: initialData, onFileLoad, apiClient, isReadOnly, 
               start_time: ((_a2 = sourceWords[0]) == null ? void 0 : _a2.start_time) ?? null,
               end_time: ((_b2 = sourceWords[sourceWords.length - 1]) == null ? void 0 : _b2.end_time) ?? null
             };
-            return [
-              source,
-              getWordsFromIds([tempSourceSegment], ids)
-            ];
+            return [source, getWordsFromIds([tempSourceSegment], ids)];
           })
         );
         setHighlightInfo({
@@ -35110,9 +35792,7 @@ function LyricsAnalyzer({ data: initialData, onFileLoad, apiClient, isReadOnly, 
         return;
       }
       const gap2 = (_e = data.gap_sequences) == null ? void 0 : _e.find(
-        (g) => g.transcribed_word_ids.includes(info.word_id) || Object.values(g.reference_word_ids).some(
-          (ids) => ids.includes(info.word_id)
-        )
+        (g) => g.transcribed_word_ids.includes(info.word_id)
       );
       if (gap2) {
         const allWords = data.corrected_segments.flatMap((s) => s.words);
@@ -35138,10 +35818,7 @@ function LyricsAnalyzer({ data: initialData, onFileLoad, apiClient, isReadOnly, 
               start_time: ((_a2 = sourceWords[0]) == null ? void 0 : _a2.start_time) ?? null,
               end_time: ((_b2 = sourceWords[sourceWords.length - 1]) == null ? void 0 : _b2.end_time) ?? null
             };
-            return [
-              source,
-              getWordsFromIds([tempSourceSegment], ids)
-            ];
+            return [source, getWordsFromIds([tempSourceSegment], ids)];
           })
         );
         setHighlightInfo({
@@ -35163,30 +35840,6 @@ function LyricsAnalyzer({ data: initialData, onFileLoad, apiClient, isReadOnly, 
           segment,
           index: segmentIndex,
           originalSegment: JSON.parse(JSON.stringify(segment))
-        });
-      }
-    } else if (effectiveMode === "details") {
-      if (info.type === "anchor" && info.anchor) {
-        const word = findWordById(data.corrected_segments, info.word_id);
-        setModalContent({
-          type: "anchor",
-          data: {
-            ...info.anchor,
-            wordId: info.word_id,
-            word: word == null ? void 0 : word.text,
-            anchor_sequences: data.anchor_sequences
-          }
-        });
-      } else if (info.type === "gap" && info.gap) {
-        const word = findWordById(data.corrected_segments, info.word_id);
-        setModalContent({
-          type: "gap",
-          data: {
-            ...info.gap,
-            wordId: info.word_id,
-            word: (word == null ? void 0 : word.text) || "",
-            anchor_sequences: data.anchor_sequences
-          }
         });
       }
     }
@@ -35229,7 +35882,7 @@ function LyricsAnalyzer({ data: initialData, onFileLoad, apiClient, isReadOnly, 
       setModalContent(null);
       setFlashingType(null);
       setHighlightInfo(null);
-      setInteractionMode("details");
+      setInteractionMode("edit");
     }
   }, [initialData]);
   const handleAddSegment = reactExports.useCallback((beforeIndex) => {
@@ -35304,8 +35957,8 @@ function LyricsAnalyzer({ data: initialData, onFileLoad, apiClient, isReadOnly, 
     setData(newData);
   };
   return /* @__PURE__ */ jsxRuntimeExports.jsxs(Box, { sx: {
-    p: 3,
-    pb: 6,
+    p: 1,
+    pb: 3,
     maxWidth: "100%",
     overflowX: "hidden"
   }, children: [
@@ -35332,7 +35985,7 @@ function LyricsAnalyzer({ data: initialData, onFileLoad, apiClient, isReadOnly, 
         onFindReplace: () => setIsFindReplaceModalOpen(true)
       }
     ),
-    /* @__PURE__ */ jsxRuntimeExports.jsxs(Grid, { container: true, spacing: 2, direction: isMobile ? "column" : "row", children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsxs(Grid, { container: true, spacing: 1, direction: isMobile ? "column" : "row", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsxs(Grid, { item: true, xs: 12, md: 6, children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx(
           TranscriptionView,
@@ -35396,16 +36049,6 @@ function LyricsAnalyzer({ data: initialData, onFileLoad, apiClient, isReadOnly, 
         }
       ) })
     ] }),
-    /* @__PURE__ */ jsxRuntimeExports.jsx(
-      DetailsModal,
-      {
-        open: modalContent !== null,
-        content: modalContent,
-        onClose: () => setModalContent(null),
-        allCorrections: data.corrections,
-        referenceLyrics: data.reference_lyrics
-      }
-    ),
     /* @__PURE__ */ jsxRuntimeExports.jsx(
       EditModal,
       {
@@ -35589,14 +36232,13 @@ function App() {
     ] });
   }
   return /* @__PURE__ */ jsxRuntimeExports.jsxs(Box, { sx: {
-    p: 3,
-    pb: 6,
-    // Add bottom padding to ensure content doesn't get cut off
+    p: 1.5,
+    pb: 3,
     maxWidth: "100%",
     overflowX: "hidden"
   }, children: [
-    error && /* @__PURE__ */ jsxRuntimeExports.jsx(Alert, { severity: "error", sx: { mb: 2 }, onClose: () => setError(null), children: error }),
-    isReadOnly && /* @__PURE__ */ jsxRuntimeExports.jsx(Alert, { severity: "info", sx: { mb: 2 }, children: "Running in read-only mode. Connect to an API to enable editing." }),
+    error && /* @__PURE__ */ jsxRuntimeExports.jsx(Alert, { severity: "error", sx: { mb: 1 }, onClose: () => setError(null), children: error }),
+    isReadOnly && /* @__PURE__ */ jsxRuntimeExports.jsx(Alert, { severity: "info", sx: { mb: 1 }, children: "Running in read-only mode. Connect to an API to enable editing." }),
     /* @__PURE__ */ jsxRuntimeExports.jsx(
       LyricsAnalyzer,
       {
@@ -35611,7 +36253,209 @@ function App() {
     renderMetadataModal()
   ] });
 }
+const theme = createTheme({
+  typography: {
+    // Scale down all typography by about 20%
+    fontSize: 14,
+    // Default is 16
+    h1: {
+      fontSize: "2.5rem"
+      // Default is ~3rem
+    },
+    h2: {
+      fontSize: "2rem"
+      // Default is ~2.5rem
+    },
+    h3: {
+      fontSize: "1.5rem"
+      // Default is ~1.75rem
+    },
+    h4: {
+      fontSize: "1.2rem",
+      // Default is ~1.5rem
+      marginBottom: "0.5rem"
+    },
+    h5: {
+      fontSize: "1rem"
+      // Default is ~1.25rem
+    },
+    h6: {
+      fontSize: "0.9rem",
+      // Default is ~1.1rem
+      marginBottom: "0.5rem"
+    },
+    body1: {
+      fontSize: "0.85rem"
+      // Default is ~1rem
+    },
+    body2: {
+      fontSize: "0.75rem"
+      // Default is ~0.875rem
+    },
+    button: {
+      fontSize: "0.8rem"
+      // Default is ~0.875rem
+    },
+    caption: {
+      fontSize: "0.7rem"
+      // Default is ~0.75rem
+    }
+  },
+  components: {
+    MuiButton: {
+      styleOverrides: {
+        root: {
+          padding: "3px 10px",
+          // Further reduced from 4px 12px
+          minHeight: "30px"
+          // Further reduced from 32px
+        },
+        sizeSmall: {
+          padding: "1px 6px",
+          // Further reduced from 2px 8px
+          minHeight: "24px"
+          // Further reduced from 28px
+        }
+      }
+    },
+    MuiIconButton: {
+      styleOverrides: {
+        root: {
+          padding: "4px"
+          // Further reduced from 6px
+        },
+        sizeSmall: {
+          padding: "2px"
+          // Further reduced from 4px
+        }
+      }
+    },
+    MuiTextField: {
+      styleOverrides: {
+        root: {
+          "& .MuiInputBase-root": {
+            minHeight: "32px"
+            // Further reduced from 36px
+          }
+        }
+      }
+    },
+    MuiDialog: {
+      styleOverrides: {
+        paper: {
+          padding: "8px"
+          // Further reduced from 12px
+        }
+      }
+    },
+    MuiDialogTitle: {
+      styleOverrides: {
+        root: {
+          padding: "8px 12px"
+          // Further reduced from 12px 16px
+        }
+      }
+    },
+    MuiDialogContent: {
+      styleOverrides: {
+        root: {
+          padding: "6px 12px"
+          // Further reduced from 8px 16px
+        }
+      }
+    },
+    MuiDialogActions: {
+      styleOverrides: {
+        root: {
+          padding: "6px 12px"
+          // Further reduced from 8px 16px
+        }
+      }
+    },
+    MuiPaper: {
+      styleOverrides: {
+        root: {
+          padding: "8px"
+          // Further reduced from 12px
+        }
+      }
+    },
+    MuiList: {
+      styleOverrides: {
+        root: {
+          padding: "2px 0"
+          // Further reduced from 4px 0
+        }
+      }
+    },
+    MuiListItem: {
+      styleOverrides: {
+        root: {
+          padding: "2px 8px"
+          // Further reduced from 4px 12px
+        }
+      }
+    },
+    MuiTableCell: {
+      styleOverrides: {
+        root: {
+          padding: "4px 8px"
+          // Further reduced from 8px 12px
+        }
+      }
+    },
+    MuiCard: {
+      styleOverrides: {
+        root: {
+          padding: "8px"
+        }
+      }
+    },
+    MuiCardContent: {
+      styleOverrides: {
+        root: {
+          padding: "8px",
+          "&:last-child": {
+            paddingBottom: "8px"
+          }
+        }
+      }
+    },
+    MuiCardHeader: {
+      styleOverrides: {
+        root: {
+          padding: "8px"
+        }
+      }
+    },
+    MuiCardActions: {
+      styleOverrides: {
+        root: {
+          padding: "4px 8px"
+        }
+      }
+    },
+    MuiGrid: {
+      styleOverrides: {
+        container: {
+          marginTop: "-4px",
+          marginLeft: "-4px",
+          width: "calc(100% + 8px)"
+        },
+        item: {
+          paddingTop: "4px",
+          paddingLeft: "4px"
+        }
+      }
+    }
+  },
+  spacing: (factor) => `${0.6 * factor}rem`
+  // Further reduced from 0.8 * factor
+});
 ReactDOM$1.createRoot(document.getElementById("root")).render(
-  /* @__PURE__ */ jsxRuntimeExports.jsx(App, {})
+  /* @__PURE__ */ jsxRuntimeExports.jsxs(ThemeProvider, { theme, children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsx(CssBaseline, {}),
+    /* @__PURE__ */ jsxRuntimeExports.jsx(App, {})
+  ] })
 );
-//# sourceMappingURL=index-Bm0gIClf.js.map
+//# sourceMappingURL=index-D5pIYx0d.js.map

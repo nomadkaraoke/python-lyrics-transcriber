@@ -12,9 +12,9 @@ import { styled } from '@mui/material/styles'
 const SegmentControls = styled(Box)({
     display: 'flex',
     alignItems: 'center',
-    gap: '4px',
-    paddingTop: '3px',
-    paddingRight: '8px'
+    gap: '2px',
+    paddingTop: '1px',
+    paddingRight: '4px'
 })
 
 const TextContainer = styled(Box)({
@@ -174,27 +174,44 @@ export default function ReferenceView({
     };
 
     return (
-        <Paper sx={{ p: 2 }}>
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-                <Typography variant="h6">
+        <Paper sx={{ p: 0.8, position: 'relative' }}>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 0.5 }}>
+                <Typography variant="h6" sx={{ fontSize: '0.9rem', mb: 0 }}>
                     Reference Lyrics
                 </Typography>
                 <SourceSelector
+                    availableSources={availableSources}
                     currentSource={effectiveCurrentSource}
                     onSourceChange={onSourceChange}
-                    availableSources={availableSources}
                 />
             </Box>
-            <Box sx={{ display: 'flex', flexDirection: 'column' }}>
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.2 }}>
                 {currentSourceSegments.map((segment, index) => (
-                    <Box key={index} sx={{ display: 'flex', alignItems: 'flex-start', width: '100%' }}>
+                    <Box 
+                        key={index} 
+                        sx={{ 
+                            display: 'flex', 
+                            alignItems: 'flex-start', 
+                            width: '100%', 
+                            mb: 0,
+                            '&:hover': {
+                                backgroundColor: 'rgba(0, 0, 0, 0.03)'
+                            }
+                        }}
+                    >
                         <SegmentControls>
                             <IconButton
                                 size="small"
                                 onClick={() => copyToClipboard(segment.words.map(w => w.text).join(' '))}
-                                sx={{ padding: '2px' }}
+                                sx={{ 
+                                    padding: '1px',
+                                    height: '18px',
+                                    width: '18px',
+                                    minHeight: '18px',
+                                    minWidth: '18px'
+                                }}
                             >
-                                <ContentCopyIcon fontSize="small" />
+                                <ContentCopyIcon sx={{ fontSize: '0.9rem' }} />
                             </IconButton>
                         </SegmentControls>
                         <TextContainer>

@@ -183,18 +183,18 @@ export default function App() {
 
   return (
     <Box sx={{
-      p: 3,
-      pb: 6, // Add bottom padding to ensure content doesn't get cut off
+      p: 1.5,
+      pb: 3,
       maxWidth: '100%',
       overflowX: 'hidden'
     }}>
       {error && (
-        <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError(null)}>
+        <Alert severity="error" sx={{ mb: 1 }} onClose={() => setError(null)}>
           {error}
         </Alert>
       )}
       {isReadOnly && (
-        <Alert severity="info" sx={{ mb: 2 }}>
+        <Alert severity="info" sx={{ mb: 1 }}>
           Running in read-only mode. Connect to an API to enable editing.
         </Alert>
       )}

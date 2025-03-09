@@ -173,13 +173,28 @@ export function HighlightedText({
                             wordPos.type === 'anchor' ? wordPos.sequence as AnchorSequence : undefined,
                             wordPos.type === 'gap' ? wordPos.sequence as GapSequence : undefined
                         )}
+                        correction={(() => {
+                            const correction = corrections?.find(c => 
+                                c.corrected_word_id === wordPos.word.id || 
+                                c.word_id === wordPos.word.id
+                            );
+                            return correction ? {
+                                originalWord: correction.original_word,
+                                handler: correction.handler,
+                                confidence: correction.confidence
+                            } : null;
+                        })()}
                     />
                     {index < wordPositions.length - 1 && ' '}
                 </React.Fragment>
             ))
         } else if (segments) {
             return segments.map((segment) => (
-                <Box key={segment.id} sx={{ display: 'flex', alignItems: 'flex-start' }}>
+                <Box key={segment.id} sx={{ 
+                    display: 'flex', 
+                    alignItems: 'flex-start',
+                    mb: 0
+                }}>
                     <Box sx={{ flex: 1 }}>
                         {segment.words.map((word, wordIndex) => {
                             const wordPos = wordPositions.find((pos: TranscriptionWordPosition) =>
@@ -195,6 +210,18 @@ export function HighlightedText({
 
                             const sequence = wordPos?.type === 'gap' ? wordPos.sequence as GapSequence : undefined;
 
+                            // Find correction information for the tooltip
+                            const correction = corrections?.find(c => 
+                                c.corrected_word_id === word.id || 
+                                c.word_id === word.id
+                            );
+                            
+                            const correctionInfo = correction ? {
+                                originalWord: correction.original_word,
+                                handler: correction.handler,
+                                confidence: correction.confidence
+                            } : null;
+
                             return (
                                 <React.Fragment key={word.id}>
                                     <WordComponent
@@ -205,6 +232,7 @@ export function HighlightedText({
                                         isUncorrectedGap={isUncorrectedGap}
                                         isCurrentlyPlaying={shouldHighlightWord(wordPos || { word: word.text, id: word.id })}
                                         onClick={() => handleWordClick(word.text, word.id, anchor, sequence)}
+                                        correction={correctionInfo}
                                     />
                                     {wordIndex < segment.words.length - 1 && ' '}
                                 </React.Fragment>
@@ -222,7 +250,12 @@ export function HighlightedText({
                 if (currentLinePosition?.isEmpty) {
                     wordCount++
                     return (
-                        <Box key={`empty-${lineIndex}`} sx={{ display: 'flex', alignItems: 'flex-start' }}>
+                        <Box key={`empty-${lineIndex}`} sx={{ 
+                            display: 'flex', 
+                            alignItems: 'flex-start',
+                            mb: 0,
+                            lineHeight: 1
+                        }}>
                             <Typography
                                 component="span"
                                 sx={{
@@ -233,20 +266,58 @@ export function HighlightedText({
                                     marginRight: 1,
                                     userSelect: 'none',
                                     fontFamily: 'monospace',
-                                    paddingTop: '4px',
+                                    paddingTop: '1px',
+                                    fontSize: '0.8rem',
+                                    lineHeight: 1
                                 }}
                             >
                                 {currentLinePosition.lineNumber}
                             </Typography>
-                            <Box sx={{ width: '28px' }} /> {/* Space for copy button */}
-                            <Box sx={{ flex: 1, height: '1.5em' }} />
+                            <Box sx={{ width: '18px' }} />
+                            <Box sx={{ flex: 1, height: '1em' }} />
                         </Box>
                     )
                 }
 
-                const lineContent = line.split(/(\s+)/)
+                const words = line.split(' ')
+                const lineWords: React.ReactNode[] = []
+                
+                words.forEach((word, wordIndex) => {
+                    if (word === '') return null
+                    if (/^\s+$/.test(word)) {
+                        return lineWords.push(<span key={`space-${lineIndex}-${wordIndex}`}> </span>)
+                    }
+
+                    const wordId = `${currentSource}-word-${wordCount}`
+                    wordCount++
+
+                    const anchor = currentSource ? anchors?.find(a =>
+                        a.reference_word_ids[currentSource]?.includes(wordId)
+                    ) : undefined
+
+                    const hasCorrection = referenceCorrections.has(wordId)
+
+                    lineWords.push(
+                        <WordComponent
+                            key={wordId}
+                            word={word}
+                            shouldFlash={shouldWordFlash({ word, id: wordId })}
+                            isAnchor={Boolean(anchor)}
+                            isCorrectedGap={hasCorrection}
+                            isUncorrectedGap={false}
+                            isCurrentlyPlaying={shouldHighlightWord({ word, id: wordId })}
+                            onClick={() => handleWordClick(word, wordId, anchor, undefined)}
+                        />
+                    )
+                })
+
                 return (
-                    <Box key={`line-${lineIndex}`} sx={{ display: 'flex', alignItems: 'flex-start' }}>
+                    <Box key={`line-${lineIndex}`} sx={{ 
+                        display: 'flex', 
+                        alignItems: 'flex-start',
+                        mb: 0,
+                        lineHeight: 1
+                    }}>
                         <Typography
                             component="span"
                             sx={{
@@ -257,7 +328,9 @@ export function HighlightedText({
                                 marginRight: 1,
                                 userSelect: 'none',
                                 fontFamily: 'monospace',
-                                paddingTop: '4px',
+                                paddingTop: '1px',
+                                fontSize: '0.8rem',
+                                lineHeight: 1
                             }}
                         >
                             {currentLinePosition?.lineNumber ?? lineIndex}
@@ -266,43 +339,18 @@ export function HighlightedText({
                             size="small"
                             onClick={() => handleCopyLine(line)}
                             sx={{
-                                padding: '2px',
-                                marginRight: 1,
-                                height: '24px',
-                                width: '24px'
+                                padding: '1px',
+                                marginRight: 0.5,
+                                height: '18px',
+                                width: '18px',
+                                minHeight: '18px',
+                                minWidth: '18px'
                             }}
                         >
-                            <ContentCopyIcon sx={{ fontSize: '1rem' }} />
+                            <ContentCopyIcon sx={{ fontSize: '0.9rem' }} />
                         </IconButton>
                         <Box sx={{ flex: 1 }}>
-                            {lineContent.map((word, wordIndex) => {
-                                if (word === '') return null
-                                if (/^\s+$/.test(word)) {
-                                    return <span key={`space-${lineIndex}-${wordIndex}`}> </span>
-                                }
-
-                                const wordId = `${currentSource}-word-${wordCount}`
-                                wordCount++
-
-                                const anchor = currentSource ? anchors?.find(a =>
-                                    a.reference_word_ids[currentSource]?.includes(wordId)
-                                ) : undefined
-
-                                const hasCorrection = referenceCorrections.has(wordId)
-
-                                return (
-                                    <WordComponent
-                                        key={wordId}
-                                        word={word}
-                                        shouldFlash={shouldWordFlash({ word, id: wordId })}
-                                        isAnchor={Boolean(anchor)}
-                                        isCorrectedGap={hasCorrection}
-                                        isUncorrectedGap={false}
-                                        isCurrentlyPlaying={shouldHighlightWord({ word, id: wordId })}
-                                        onClick={() => handleWordClick(word, wordId, anchor, undefined)}
-                                    />
-                                )
-                            })}
+                            {lineWords}
                         </Box>
                     </Box>
                 )

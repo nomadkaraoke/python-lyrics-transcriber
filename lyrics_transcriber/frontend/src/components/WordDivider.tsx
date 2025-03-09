@@ -20,7 +20,7 @@ const buttonTextStyle = {
     color: 'rgba(0, 0, 0, 0.6)',
     fontFamily: '"Roboto", "Helvetica", "Arial", sans-serif',
     fontWeight: 400,
-    fontSize: '0.875rem',
+    fontSize: '0.7rem',
     lineHeight: '1.4375em',
     textTransform: 'none'
 }

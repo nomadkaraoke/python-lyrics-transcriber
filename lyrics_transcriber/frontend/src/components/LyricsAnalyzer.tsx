@@ -1,3 +1,4 @@
+import { useState, useEffect, useCallback } from 'react'
 import {
     AnchorSequence,
     CorrectionData,
@@ -7,9 +8,7 @@ import {
     LyricsSegment
 } from '../types'
 import { Box, Button, Grid, useMediaQuery, useTheme } from '@mui/material'
-import { useCallback, useState, useEffect } from 'react'
 import { ApiClient } from '../api'
-import DetailsModal from './DetailsModal'
 import ReferenceView from './ReferenceView'
 import TranscriptionView from './TranscriptionView'
 import { WordClickInfo, FlashType } from './shared/types'
@@ -26,7 +25,7 @@ import {
 import { loadSavedData, saveData, clearSavedData } from './shared/utils/localStorage'
 import { setupKeyboardHandlers, setModalHandler, getModalState } from './shared/utils/keyboardHandlers'
 import Header from './Header'
-import { findWordById, getWordsFromIds } from './shared/utils/wordUtils'
+import { getWordsFromIds } from './shared/utils/wordUtils'
 import AddLyricsModal from './AddLyricsModal'
 import { RestoreFromTrash, OndemandVideo } from '@mui/icons-material'
 import FindReplaceModal from './FindReplaceModal'
@@ -80,7 +79,6 @@ export default function LyricsAnalyzer({ data: initialData, onFileLoad, apiClien
     const [originalData] = useState(() => JSON.parse(JSON.stringify(initialData)))
     const [interactionMode, setInteractionMode] = useState<InteractionMode>('edit')
     const [isShiftPressed, setIsShiftPressed] = useState(false)
-    const [isCtrlPressed, setIsCtrlPressed] = useState(false)
     const [editModalSegment, setEditModalSegment] = useState<{
         segment: LyricsSegment
         index: number
@@ -139,7 +137,6 @@ export default function LyricsAnalyzer({ data: initialData, onFileLoad, apiClien
 
         const { handleKeyDown, handleKeyUp } = setupKeyboardHandlers({
             setIsShiftPressed,
-            setIsCtrlPressed
         })
 
         // Always add keyboard listeners
@@ -150,7 +147,6 @@ export default function LyricsAnalyzer({ data: initialData, onFileLoad, apiClien
         // Reset modifier states when a modal opens
         if (isAnyModalOpen) {
             setIsShiftPressed(false)
-            setIsCtrlPressed(false)
         }
 
         // Cleanup function
@@ -160,7 +156,7 @@ export default function LyricsAnalyzer({ data: initialData, onFileLoad, apiClien
             window.removeEventListener('keyup', handleKeyUp)
             document.body.style.userSelect = ''
         }
-    }, [setIsShiftPressed, setIsCtrlPressed, isAnyModalOpen])
+    }, [setIsShiftPressed, isAnyModalOpen])
 
     // Update modal state tracking
     useEffect(() => {
@@ -175,9 +171,7 @@ export default function LyricsAnalyzer({ data: initialData, onFileLoad, apiClien
     }, [modalContent, editModalSegment, isReviewModalOpen, isAddLyricsModalOpen, isFindReplaceModalOpen])
 
     // Calculate effective mode based on modifier key states
-    const effectiveMode = isShiftPressed ? 'highlight' :
-        isCtrlPressed ? 'details' :
-            interactionMode
+    const effectiveMode = isShiftPressed ? 'highlight' : interactionMode
 
     const handleFlash = useCallback((type: FlashType, info?: HighlightInfo) => {
         setFlashingType(null)
@@ -251,10 +245,7 @@ export default function LyricsAnalyzer({ data: initialData, onFileLoad, apiClien
                             start_time: sourceWords[0]?.start_time ?? null,
                             end_time: sourceWords[sourceWords.length - 1]?.end_time ?? null
                         }
-                        return [
-                            source,
-                            getWordsFromIds([tempSourceSegment], ids)
-                        ]
+                        return [source, getWordsFromIds([tempSourceSegment], ids)]
                     })
                 );
 
@@ -270,13 +261,11 @@ export default function LyricsAnalyzer({ data: initialData, onFileLoad, apiClien
 
             // Find if this word is part of a gap sequence
             const gap = data.gap_sequences?.find(g =>
-                g.transcribed_word_ids.includes(info.word_id) ||
-                Object.values(g.reference_word_ids).some(ids =>
-                    ids.includes(info.word_id)
-                )
+                g.transcribed_word_ids.includes(info.word_id)
             );
 
             if (gap) {
+                // Create a temporary segment containing all words
                 const allWords = data.corrected_segments.flatMap(s => s.words)
                 const tempSegment: LyricsSegment = {
                     id: 'temp',
@@ -301,10 +290,7 @@ export default function LyricsAnalyzer({ data: initialData, onFileLoad, apiClien
                             start_time: sourceWords[0]?.start_time ?? null,
                             end_time: sourceWords[sourceWords.length - 1]?.end_time ?? null
                         }
-                        return [
-                            source,
-                            getWordsFromIds([tempSourceSegment], ids)
-                        ]
+                        return [source, getWordsFromIds([tempSourceSegment], ids)]
                     })
                 );
 
@@ -329,30 +315,6 @@ export default function LyricsAnalyzer({ data: initialData, onFileLoad, apiClien
                     segment,
                     index: segmentIndex,
                     originalSegment: JSON.parse(JSON.stringify(segment))
-                });
-            }
-        } else if (effectiveMode === 'details') {
-            if (info.type === 'anchor' && info.anchor) {
-                const word = findWordById(data.corrected_segments, info.word_id);
-                setModalContent({
-                    type: 'anchor',
-                    data: {
-                        ...info.anchor,
-                        wordId: info.word_id,
-                        word: word?.text,
-                        anchor_sequences: data.anchor_sequences
-                    }
-                });
-            } else if (info.type === 'gap' && info.gap) {
-                const word = findWordById(data.corrected_segments, info.word_id);
-                setModalContent({
-                    type: 'gap',
-                    data: {
-                        ...info.gap,
-                        wordId: info.word_id,
-                        word: word?.text || '',
-                        anchor_sequences: data.anchor_sequences
-                    }
                 });
             }
         }
@@ -406,7 +368,7 @@ export default function LyricsAnalyzer({ data: initialData, onFileLoad, apiClien
             setModalContent(null)
             setFlashingType(null)
             setHighlightInfo(null)
-            setInteractionMode('details')
+            setInteractionMode('edit')
         }
     }, [initialData])
 
@@ -510,8 +472,8 @@ export default function LyricsAnalyzer({ data: initialData, onFileLoad, apiClien
 
     return (
         <Box sx={{
-            p: 3,
-            pb: 6,
+            p: 1,
+            pb: 3,
             maxWidth: '100%',
             overflowX: 'hidden'
         }}>
@@ -536,7 +498,7 @@ export default function LyricsAnalyzer({ data: initialData, onFileLoad, apiClien
                 onFindReplace={() => setIsFindReplaceModalOpen(true)}
             />
 
-            <Grid container spacing={2} direction={isMobile ? 'column' : 'row'}>
+            <Grid container spacing={1} direction={isMobile ? 'column' : 'row'}>
                 <Grid item xs={12} md={6}>
                     <TranscriptionView
                         data={data}
@@ -594,14 +556,6 @@ export default function LyricsAnalyzer({ data: initialData, onFileLoad, apiClien
                     />
                 </Grid>
             </Grid>
-
-            <DetailsModal
-                open={modalContent !== null}
-                content={modalContent}
-                onClose={() => setModalContent(null)}
-                allCorrections={data.corrections}
-                referenceLyrics={data.reference_lyrics}
-            />
 
             <EditModal
                 open={Boolean(editModalSegment)}

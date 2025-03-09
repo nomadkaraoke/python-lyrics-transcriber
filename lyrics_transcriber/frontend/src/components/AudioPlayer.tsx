@@ -130,23 +130,24 @@ export default function AudioPlayer({ apiClient, onTimeUpdate, audioHash }: Audi
         <Box sx={{
             display: 'flex',
             alignItems: 'center',
-            gap: 1,
+            gap: 0.5,
             backgroundColor: 'background.paper',
             borderRadius: 1,
-            height: 40, // Match ToggleButtonGroup height
+            height: '32px',
         }}>
-            <Typography variant="body2" color="text.secondary" sx={{ mr: 1 }}>
+            <Typography variant="body2" color="text.secondary" sx={{ mr: 0.5, fontSize: '0.75rem' }}>
                 Playback:
             </Typography>
 
             <IconButton
                 onClick={handlePlayPause}
                 size="small"
+                sx={{ p: 0.5 }}
             >
-                {isPlaying ? <PauseIcon /> : <PlayArrowIcon />}
+                {isPlaying ? <PauseIcon fontSize="small" /> : <PlayArrowIcon fontSize="small" />}
             </IconButton>
 
-            <Typography variant="body2" sx={{ minWidth: 40 }}>
+            <Typography variant="body2" sx={{ minWidth: 32, fontSize: '0.75rem' }}>
                 {formatTime(currentTime)}
             </Typography>
 
@@ -157,16 +158,19 @@ export default function AudioPlayer({ apiClient, onTimeUpdate, audioHash }: Audi
                 onChange={handleSeek}
                 size="small"
                 sx={{
-                    width: 200,
-                    mx: 1,
+                    width: 150,
+                    mx: 0.5,
                     '& .MuiSlider-thumb': {
-                        width: 12,
-                        height: 12,
+                        width: 10,
+                        height: 10,
+                    },
+                    '& .MuiSlider-rail, & .MuiSlider-track': {
+                        height: 3
                     }
                 }}
             />
 
-            <Typography variant="body2" sx={{ minWidth: 40 }}>
+            <Typography variant="body2" sx={{ minWidth: 32, fontSize: '0.75rem' }}>
                 {formatTime(duration)}
             </Typography>
         </Box>

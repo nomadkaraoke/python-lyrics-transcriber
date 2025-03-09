@@ -9,14 +9,16 @@ import PlayCircleOutlineIcon from '@mui/icons-material/PlayCircleOutline'
 
 const SegmentIndex = styled(Typography)(({ theme }) => ({
     color: theme.palette.text.secondary,
-    width: '2em',
-    minWidth: '2em',
+    width: '1.8em',
+    minWidth: '1.8em',
     textAlign: 'right',
-    marginRight: theme.spacing(1),
+    marginRight: theme.spacing(0.8),
     userSelect: 'none',
     fontFamily: 'monospace',
     cursor: 'pointer',
-    paddingTop: '3px',
+    paddingTop: '1px',
+    fontSize: '0.8rem',
+    lineHeight: 1.2,
     '&:hover': {
         textDecoration: 'underline',
     },
@@ -30,10 +32,10 @@ const TextContainer = styled(Box)({
 const SegmentControls = styled(Box)({
     display: 'flex',
     alignItems: 'center',
-    gap: '4px',
-    minWidth: '3em',
-    paddingTop: '3px',
-    paddingRight: '8px'
+    gap: '2px',
+    minWidth: '2.5em',
+    paddingTop: '1px',
+    paddingRight: '4px'
 })
 
 export default function TranscriptionView({
@@ -51,11 +53,13 @@ export default function TranscriptionView({
     const [selectedSegmentIndex, setSelectedSegmentIndex] = useState<number | null>(null)
 
     return (
-        <Paper sx={{ p: 2 }}>
-            <Typography variant="h6" gutterBottom>
-                Corrected Transcription
-            </Typography>
-            <Box sx={{ display: 'flex', flexDirection: 'column' }}>
+        <Paper sx={{ p: 0.8 }}>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 0.5 }}>
+                <Typography variant="h6" sx={{ fontSize: '0.9rem', mb: 0 }}>
+                    Corrected Transcription
+                </Typography>
+            </Box>
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.2 }}>
                 {data.corrected_segments.map((segment, segmentIndex) => {
                     const segmentWords: TranscriptionWordPosition[] = segment.words.map(word => {
                         // Find if this word is part of a correction
@@ -105,7 +109,15 @@ export default function TranscriptionView({
                     })
 
                     return (
-                        <Box key={segment.id} sx={{ display: 'flex', alignItems: 'flex-start', width: '100%' }}>
+                        <Box key={segment.id} sx={{ 
+                            display: 'flex', 
+                            alignItems: 'flex-start', 
+                            width: '100%', 
+                            mb: 0,
+                            '&:hover': {
+                                backgroundColor: 'rgba(0, 0, 0, 0.03)'
+                            }
+                        }}>
                             <SegmentControls>
                                 <SegmentIndex
                                     variant="body2"
@@ -117,9 +129,15 @@ export default function TranscriptionView({
                                     <IconButton
                                         size="small"
                                         onClick={() => onPlaySegment?.(segment.start_time!)}
-                                        sx={{ padding: '2px' }}
+                                        sx={{ 
+                                            padding: '1px',
+                                            height: '18px',
+                                            width: '18px',
+                                            minHeight: '18px',
+                                            minWidth: '18px'
+                                        }}
                                     >
-                                        <PlayCircleOutlineIcon fontSize="small" />
+                                        <PlayCircleOutlineIcon sx={{ fontSize: '0.9rem' }} />
                                     </IconButton>
                                 )}
                             </SegmentControls>

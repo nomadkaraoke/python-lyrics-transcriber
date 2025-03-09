@@ -95,28 +95,29 @@ export default function Header({
     return (
         <>
             {isReadOnly && (
-                <Box sx={{ display: 'flex', alignItems: 'center', mb: 2, color: 'text.secondary' }}>
-                    <LockIcon sx={{ mr: 1 }} />
-                    <Typography variant="body2">
+                <Box sx={{ display: 'flex', alignItems: 'center', mb: 0.8, color: 'text.secondary' }}>
+                    <LockIcon sx={{ mr: 0.5 }} fontSize="small" />
+                    <Typography variant="body2" sx={{ fontSize: '0.75rem' }}>
                         View Only Mode
                     </Typography>
                 </Box>
             )}
 
-            <Box sx={{
-                display: 'flex',
+            <Box sx={{ 
+                display: 'flex', 
                 flexDirection: isMobile ? 'column' : 'row',
-                gap: 2,
+                gap: 1,
                 justifyContent: 'space-between',
                 alignItems: isMobile ? 'stretch' : 'center',
-                mb: 3
+                mb: 1
             }}>
-                <Typography variant="h4" sx={{ fontSize: isMobile ? '1.75rem' : '2.125rem' }}>
+                <Typography variant="h4" sx={{ fontSize: isMobile ? '1.3rem' : '1.5rem' }}>
                     Nomad Karaoke: Lyrics Transcription Review
                 </Typography>
                 {isReadOnly && (
                     <Button
                         variant="outlined"
+                        size="small"
                         startIcon={<UploadFileIcon />}
                         onClick={onFileLoad}
                         fullWidth={isMobile}
@@ -128,24 +129,23 @@ export default function Header({
 
             <Box sx={{
                 display: 'flex',
-                gap: 2,
-                mb: 3,
-                flexDirection: isMobile ? 'column' : 'row'
+                gap: 1,
+                mb: 1,
+                flexDirection: isMobile ? 'column' : 'row',
+                height: '140px'
             }}>
                 <Box sx={{
-                    display: 'flex',
-                    flexDirection: 'column',
-                    minWidth: '300px',
+                    width: '280px',
                     position: 'relative',
+                    height: '100%'
                 }}>
                     <Paper sx={{
-                        p: 1,
+                        p: 0.8,
                         height: '100%',
-                        maxHeight: '200px',
                         display: 'flex',
                         flexDirection: 'column'
                     }}>
-                        <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 1 }}>
+                        <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 0.5, fontSize: '0.7rem' }}>
                             Correction Handlers
                         </Typography>
 
@@ -153,46 +153,50 @@ export default function Header({
                             flex: 1,
                             overflow: 'auto',
                             display: 'flex',
-                            flexDirection: 'column',
-                            gap: 1
+                            flexDirection: 'column'
                         }}>
                             {availableHandlers.map(handler => (
-                                <Tooltip
-                                    key={handler.id}
-                                    title={handler.description}
-                                    placement="right"
-                                >
-                                    <FormControlLabel
-                                        control={
-                                            <Switch
-                                                checked={enabledHandlers.has(handler.id)}
-                                                onChange={(e) => onHandlerToggle(handler.id, e.target.checked)}
-                                                size="small"
-                                                disabled={isUpdatingHandlers}
-                                            />
-                                        }
-                                        label={`${handler.name} (${handlerCounts[handler.id] || 0})`}
-                                        onClick={(e) => {
-                                            if ((e.target as HTMLElement).tagName !== 'INPUT') {
-                                                e.preventDefault();
-                                                e.stopPropagation();
-                                                onHandlerClick?.(handler.id);
+                                <Box key={handler.id} sx={{ mb: 0.5 }}>
+                                    <Tooltip
+                                        title={handler.description}
+                                        placement="right"
+                                    >
+                                        <FormControlLabel
+                                            control={
+                                                <Switch
+                                                    checked={enabledHandlers.has(handler.id)}
+                                                    onChange={(e) => onHandlerToggle(handler.id, e.target.checked)}
+                                                    size="small"
+                                                    disabled={isUpdatingHandlers}
+                                                />
                                             }
-                                        }}
-                                        sx={{
-                                            ml: 0,
-                                            '& .MuiFormControlLabel-label': {
-                                                fontSize: '0.875rem',
-                                                cursor: 'pointer'
-                                            }
-                                        }}
-                                    />
-                                </Tooltip>
+                                            label={`${handler.name} (${handlerCounts[handler.id] || 0})`}
+                                            onClick={(e) => {
+                                                if ((e.target as HTMLElement).tagName !== 'INPUT') {
+                                                    e.preventDefault();
+                                                    e.stopPropagation();
+                                                    onHandlerClick?.(handler.id);
+                                                }
+                                            }}
+                                            sx={{
+                                                ml: 0,
+                                                py: 0,
+                                                my: 0,
+                                                minHeight: '24px',
+                                                '& .MuiFormControlLabel-label': {
+                                                    fontSize: '0.7rem',
+                                                    cursor: 'pointer',
+                                                    lineHeight: 1.2
+                                                }
+                                            }}
+                                        />
+                                    </Tooltip>
+                                </Box>
                             ))}
                         </Box>
                     </Paper>
                 </Box>
-                <Box sx={{ flexGrow: 1 }}>
+                <Box sx={{ flex: 1, height: '100%' }}>
                     <CorrectionMetrics
                         // Anchor metrics
                         anchorCount={data.metadata.anchor_sequences_count}
@@ -216,52 +220,56 @@ export default function Header({
                 </Box>
             </Box>
 
-            <Box sx={{
-                display: 'flex',
-                flexDirection: isMobile ? 'column' : 'row',
-                gap: 5,
-                alignItems: 'flex-start',
-                justifyContent: 'space-between',
-                mb: 3,
-                width: '100%'
-            }}>
-                <Box sx={{
-                    display: 'flex',
-                    gap: 5,
+            <Paper sx={{ p: 0.8, mb: 1 }}>
+                <Box sx={{ 
+                    display: 'flex', 
                     flexDirection: isMobile ? 'column' : 'row',
-                    alignItems: 'flex-start'
+                    gap: 1,
+                    alignItems: isMobile ? 'flex-start' : 'center',
+                    justifyContent: 'space-between',
+                    width: '100%'
                 }}>
-                    <ModeSelector
-                        effectiveMode={effectiveMode}
-                        onChange={onModeChange}
-                    />
-                    {!isReadOnly && (
+                    <Box sx={{
+                        display: 'flex',
+                        gap: 1,
+                        flexDirection: isMobile ? 'column' : 'row',
+                        alignItems: isMobile ? 'flex-start' : 'center',
+                        height: '32px'
+                    }}>
+                        <ModeSelector
+                            effectiveMode={effectiveMode}
+                            onChange={onModeChange}
+                        />
+                        {!isReadOnly && (
+                            <Button
+                                variant="outlined"
+                                size="small"
+                                onClick={onFindReplace}
+                                startIcon={<FindReplaceIcon />}
+                                sx={{ minWidth: 'fit-content', height: '32px' }}
+                            >
+                                Find/Replace
+                            </Button>
+                        )}
+                        <AudioPlayer
+                            apiClient={apiClient}
+                            onTimeUpdate={onTimeUpdate}
+                            audioHash={audioHash}
+                        />
+                    </Box>
+                    {!isReadOnly && apiClient && onAddLyrics && (
                         <Button
                             variant="outlined"
-                            onClick={onFindReplace}
-                            startIcon={<FindReplaceIcon />}
-                            sx={{ minWidth: 'fit-content' }}
+                            size="small"
+                            onClick={onAddLyrics}
+                            startIcon={<TextSnippetIcon />}
+                            sx={{ minWidth: 'fit-content', height: '32px' }}
                         >
-                            Find/Replace
+                            Add Reference Lyrics
                         </Button>
                     )}
-                    <AudioPlayer
-                        apiClient={apiClient}
-                        onTimeUpdate={onTimeUpdate}
-                        audioHash={audioHash}
-                    />
                 </Box>
-                {!isReadOnly && apiClient && (
-                    <Button
-                        variant="outlined"
-                        onClick={onAddLyrics}
-                        startIcon={<TextSnippetIcon />}
-                        sx={{ minWidth: 'fit-content' }}
-                    >
-                        Add Reference Lyrics
-                    </Button>
-                )}
-            </Box>
+            </Paper>
         </>
     )
 } 

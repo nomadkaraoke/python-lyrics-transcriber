@@ -4,7 +4,7 @@ let isModalOpen = false
 
 type KeyboardState = {
     setIsShiftPressed: (value: boolean) => void
-    setIsCtrlPressed: (value: boolean) => void
+    setIsCtrlPressed?: (value: boolean) => void
     modalHandler?: {
         isOpen: boolean
         onSpacebar?: (e: KeyboardEvent) => void
@@ -49,7 +49,7 @@ export const setupKeyboardHandlers = (state: KeyboardState) => {
             state.setIsShiftPressed(true)
             document.body.style.userSelect = 'none'
         } else if (e.key === 'Meta') {
-            state.setIsCtrlPressed(true)
+            state.setIsCtrlPressed?.(true)
         } else if (e.key === ' ' || e.code === 'Space') {
             console.log('Keyboard handler - Spacebar pressed', {
                 modalOpen: isModalOpen,
@@ -77,7 +77,7 @@ export const setupKeyboardHandlers = (state: KeyboardState) => {
             state.setIsShiftPressed(false)
             document.body.style.userSelect = ''
         } else if (e.key === 'Meta') {
-            state.setIsCtrlPressed(false)
+            state.setIsCtrlPressed?.(false)
         }
     }
 

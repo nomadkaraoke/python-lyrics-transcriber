@@ -1,4 +1,4 @@
-import { Grid, Paper, Box, Typography } from '@mui/material'
+import { Paper, Box, Typography } from '@mui/material'
 import { COLORS } from './shared/constants'
 
 interface MetricProps {
@@ -14,47 +14,50 @@ function Metric({ color, label, value, description, details, onClick }: MetricPr
     return (
         <Paper
             sx={{
-                p: 1,
-                height: '200px',
+                p: 0.8,
+                pt: 0,
+                height: '100%',
                 cursor: onClick ? 'pointer' : 'default',
                 '&:hover': onClick ? {
                     bgcolor: 'action.hover'
-                } : undefined
+                } : undefined,
+                display: 'flex',
+                flexDirection: 'column'
             }}
             onClick={onClick}
         >
-            <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', mb: 0.5, mt: 0.8 }}>
                 {color && (
                     <Box
                         sx={{
-                            width: 16,
-                            height: 16,
+                            width: 12,
+                            height: 12,
                             borderRadius: 1,
                             bgcolor: color,
-                            mr: 1,
+                            mr: 0.5,
                         }}
                     />
                 )}
-                <Typography variant="subtitle2" color="text.secondary">
+                <Typography variant="subtitle2" color="text.secondary" sx={{ fontSize: '0.7rem' }}>
                     {label}
                 </Typography>
             </Box>
-            <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 1, mb: 0.5 }}>
-                <Typography variant="h6">
+            <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 0.5, mb: 0.3 }}>
+                <Typography variant="h6" sx={{ fontSize: '1.1rem' }}>
                     {value}
                 </Typography>
             </Box>
-            <Typography variant="caption" color="text.secondary">
+            <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>
                 {description}
             </Typography>
             {details && (
-                <Box sx={{ mt: 1, pt: 1, borderTop: 1, borderColor: 'divider' }}>
+                <Box sx={{ mt: 0.5, flex: 1, overflow: 'auto' }}>
                     {details.map((detail, index) => (
-                        <Box key={index} sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 0.5 }}>
-                            <Typography variant="caption" color="text.secondary">
+                        <Box key={index} sx={{ display: 'flex', justifyContent: 'space-between', mt: 0.3 }}>
+                            <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>
                                 {detail.label}
                             </Typography>
-                            <Typography variant="caption">
+                            <Typography variant="caption" sx={{ fontSize: '0.7rem' }}>
                                 {detail.value}
                             </Typography>
                         </Box>
@@ -112,46 +115,48 @@ export default function CorrectionMetrics({
         Math.round((correctedWordCount / totalWords) * 100) : 0
 
     return (
-        <Grid container spacing={2}>
-            <Grid item xs={12} sm={6} md={4}>
-                <Metric
-                    color={COLORS.anchor}
-                    label="Anchor Sequences"
-                    value={`${anchorCount ?? '-'} (${anchorPercentage}%)`}
-                    description="Matched sections between transcription and reference"
-                    details={[
-                        { label: "Words in Anchors", value: anchorWordCount },
-                        { label: "Multi-source Matches", value: multiSourceAnchors },
-                    ]}
-                    onClick={onMetricClick?.anchor}
-                />
-            </Grid>
-            <Grid item xs={12} sm={6} md={4}>
-                <Metric
-                    color={COLORS.corrected}
-                    label="Corrected Gaps"
-                    value={`${correctedGapCount} (${correctedPercentage}%)`}
-                    description="Successfully corrected sections"
-                    details={[
-                        { label: "Words Replaced", value: replacedCount },
-                        { label: "Words Added / Deleted", value: `+${addedCount} / -${deletedCount}` },
-                    ]}
-                    onClick={onMetricClick?.corrected}
-                />
-            </Grid>
-            <Grid item xs={12} sm={6} md={4}>
-                <Metric
-                    color={COLORS.uncorrectedGap}
-                    label="Uncorrected Gaps"
-                    value={`${uncorrectedGapCount} (${uncorrectedPercentage}%)`}
-                    description="Sections that may need manual review"
-                    details={[
-                        { label: "Words Uncorrected", value: uncorrectedWordCount },
-                        { label: "Number of Gaps", value: uncorrectedGapCount },
-                    ]}
-                    onClick={onMetricClick?.uncorrected}
-                />
-            </Grid>
-        </Grid>
+        <Box sx={{ height: '100%', display: 'flex' }}>
+            <Box sx={{ flex: 1, display: 'flex', flexDirection: 'row', gap: 1, height: '100%' }}>
+                <Box sx={{ flex: 1, height: '100%' }}>
+                    <Metric
+                        color={COLORS.anchor}
+                        label="Anchor Sequences"
+                        value={`${anchorCount ?? '-'} (${anchorPercentage}%)`}
+                        description="Matched sections between transcription and reference"
+                        details={[
+                            { label: 'Words in Anchors', value: anchorWordCount },
+                            { label: 'Multi-source Matches', value: multiSourceAnchors }
+                        ]}
+                        onClick={onMetricClick?.anchor}
+                    />
+                </Box>
+                <Box sx={{ flex: 1, height: '100%' }}>
+                    <Metric
+                        color={COLORS.corrected}
+                        label="Corrected Gaps"
+                        value={`${correctedGapCount} (${correctedPercentage}%)`}
+                        description="Successfully corrected sections"
+                        details={[
+                            { label: 'Words Replaced', value: replacedCount },
+                            { label: 'Words Added / Deleted', value: `+${addedCount} / -${deletedCount}` }
+                        ]}
+                        onClick={onMetricClick?.corrected}
+                    />
+                </Box>
+                <Box sx={{ flex: 1, height: '100%' }}>
+                    <Metric
+                        color={COLORS.uncorrectedGap}
+                        label="Uncorrected Gaps"
+                        value={`${uncorrectedGapCount} (${uncorrectedPercentage}%)`}
+                        description="Sections that may need manual review"
+                        details={[
+                            { label: 'Words Uncorrected', value: uncorrectedWordCount },
+                            { label: 'Number of Gaps', value: uncorrectedGaps.length }
+                        ]}
+                        onClick={onMetricClick?.uncorrected}
+                    />
+                </Box>
+            </Box>
+        </Box>
     )
 } 
