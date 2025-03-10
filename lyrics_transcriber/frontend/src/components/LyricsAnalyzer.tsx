@@ -245,6 +245,7 @@ export default function LyricsAnalyzer({ data: initialData, onFileLoad, apiClien
     const [globalEditSegment, setGlobalEditSegment] = useState<LyricsSegment | null>(null)
     const [originalGlobalSegment, setOriginalGlobalSegment] = useState<LyricsSegment | null>(null)
     const [originalTranscribedGlobalSegment, setOriginalTranscribedGlobalSegment] = useState<LyricsSegment | null>(null)
+    const [isLoadingGlobalEdit, setIsLoadingGlobalEdit] = useState(false)
     const [isReviewModalOpen, setIsReviewModalOpen] = useState(false)
     const [currentAudioTime, setCurrentAudioTime] = useState(0)
     const [isUpdatingHandlers, setIsUpdatingHandlers] = useState(false)
@@ -653,56 +654,113 @@ export default function LyricsAnalyzer({ data: initialData, onFileLoad, apiClien
 
     // Add handler for Edit All functionality
     const handleEditAll = useCallback(() => {
-        // Create a combined segment with all words from all segments
-        const allWords = data.corrected_segments.flatMap(segment => segment.words)
+        console.log('EditAll - Starting process');
+        
+        // Create empty placeholder segments to prevent the modal from closing
+        const placeholderSegment: LyricsSegment = {
+            id: 'loading-placeholder',
+            words: [],
+            text: '',
+            start_time: 0,
+            end_time: 1
+        };
+        
+        // Set placeholder segments first
+        setGlobalEditSegment(placeholderSegment);
+        setOriginalGlobalSegment(placeholderSegment);
+        
+        // Show loading state
+        setIsLoadingGlobalEdit(true);
+        console.log('EditAll - Set loading state to true');
+        
+        // Open the modal with placeholder data
+        setIsEditAllModalOpen(true);
+        console.log('EditAll - Set modal open to true');
+        
+        // Use requestAnimationFrame to ensure the modal with loading state is rendered
+        // before doing the expensive operation
+        requestAnimationFrame(() => {
+            console.log('EditAll - Inside requestAnimationFrame');
+            
+            // Use setTimeout to allow the modal to render before doing the expensive operation
+            setTimeout(() => {
+                console.log('EditAll - Inside setTimeout, starting data processing');
+                
+                try {
+                    console.time('EditAll - Data processing');
+                    
+                    // Create a combined segment with all words from all segments
+                    const allWords = data.corrected_segments.flatMap(segment => segment.words)
+                    console.log(`EditAll - Collected ${allWords.length} words from all segments`);
 
-        // Sort words by start time to maintain chronological order
-        const sortedWords = [...allWords].sort((a, b) => {
-            const aTime = a.start_time ?? 0
-            const bTime = b.start_time ?? 0
-            return aTime - bTime
-        })
+                    // Sort words by start time to maintain chronological order
+                    const sortedWords = [...allWords].sort((a, b) => {
+                        const aTime = a.start_time ?? 0
+                        const bTime = b.start_time ?? 0
+                        return aTime - bTime
+                    })
+                    console.log('EditAll - Sorted words by start time');
 
-        // Create a global segment containing all words
-        const globalSegment: LyricsSegment = {
-            id: 'global-edit',
-            words: sortedWords,
-            text: sortedWords.map(w => w.text).join(' '),
-            start_time: sortedWords[0]?.start_time ?? null,
-            end_time: sortedWords[sortedWords.length - 1]?.end_time ?? null
-        }
+                    // Create a global segment containing all words
+                    const globalSegment: LyricsSegment = {
+                        id: 'global-edit',
+                        words: sortedWords,
+                        text: sortedWords.map(w => w.text).join(' '),
+                        start_time: sortedWords[0]?.start_time ?? null,
+                        end_time: sortedWords[sortedWords.length - 1]?.end_time ?? null
+                    }
+                    console.log('EditAll - Created global segment');
 
-        // Store the original global segment for reset functionality
-        setGlobalEditSegment(globalSegment)
-        setOriginalGlobalSegment(JSON.parse(JSON.stringify(globalSegment)))
-
-        // Create the original transcribed global segment for Un-Correct functionality
-        if (originalData.original_segments) {
-            // Get all words from original segments
-            const originalWords = originalData.original_segments.flatMap((segment: LyricsSegment) => segment.words)
-
-            // Sort words by start time
-            const sortedOriginalWords = [...originalWords].sort((a, b) => {
-                const aTime = a.start_time ?? 0
-                const bTime = b.start_time ?? 0
-                return aTime - bTime
-            })
-
-            // Create the original transcribed global segment
-            const originalTranscribedGlobal: LyricsSegment = {
-                id: 'original-transcribed-global',
-                words: sortedOriginalWords,
-                text: sortedOriginalWords.map(w => w.text).join(' '),
-                start_time: sortedOriginalWords[0]?.start_time ?? null,
-                end_time: sortedOriginalWords[sortedOriginalWords.length - 1]?.end_time ?? null
-            }
-
-            setOriginalTranscribedGlobalSegment(originalTranscribedGlobal)
-        } else {
-            setOriginalTranscribedGlobalSegment(null)
-        }
-
-        setIsEditAllModalOpen(true)
+                    // Store the original global segment for reset functionality
+                    setGlobalEditSegment(globalSegment)
+                    console.log('EditAll - Set global edit segment');
+                    
+                    setOriginalGlobalSegment(JSON.parse(JSON.stringify(globalSegment)))
+                    console.log('EditAll - Set original global segment');
+                    
+                    // Create the original transcribed global segment for Un-Correct functionality
+                    if (originalData.original_segments) {
+                        console.log('EditAll - Processing original segments for Un-Correct functionality');
+                        
+                        // Get all words from original segments
+                        const originalWords = originalData.original_segments.flatMap((segment: LyricsSegment) => segment.words)
+                        console.log(`EditAll - Collected ${originalWords.length} words from original segments`);
+                        
+                        // Sort words by start time
+                        const sortedOriginalWords = [...originalWords].sort((a, b) => {
+                            const aTime = a.start_time ?? 0
+                            const bTime = b.start_time ?? 0
+                            return aTime - bTime
+                        })
+                        console.log('EditAll - Sorted original words by start time');
+                        
+                        // Create the original transcribed global segment
+                        const originalTranscribedGlobal: LyricsSegment = {
+                            id: 'original-transcribed-global',
+                            words: sortedOriginalWords,
+                            text: sortedOriginalWords.map(w => w.text).join(' '),
+                            start_time: sortedOriginalWords[0]?.start_time ?? null,
+                            end_time: sortedOriginalWords[sortedOriginalWords.length - 1]?.end_time ?? null
+                        }
+                        console.log('EditAll - Created original transcribed global segment');
+                        
+                        setOriginalTranscribedGlobalSegment(originalTranscribedGlobal)
+                        console.log('EditAll - Set original transcribed global segment');
+                    } else {
+                        setOriginalTranscribedGlobalSegment(null)
+                        console.log('EditAll - No original segments found, set original transcribed global segment to null');
+                    }
+                    
+                    console.timeEnd('EditAll - Data processing');
+                } catch (error) {
+                    console.error('Error preparing global edit data:', error);
+                } finally {
+                    // Clear loading state
+                    console.log('EditAll - Finished processing, setting loading state to false');
+                    setIsLoadingGlobalEdit(false);
+                }
+            }, 100); // Small delay to allow the modal to render
+        });
     }, [data.corrected_segments, originalData.original_segments])
 
     // Handle saving the global edit
@@ -912,6 +970,7 @@ export default function LyricsAnalyzer({ data: initialData, onFileLoad, apiClien
                 setModalSpacebarHandler={handleSetModalSpacebarHandler}
                 originalTranscribedSegment={originalTranscribedGlobalSegment}
                 isGlobal={true}
+                isLoading={isLoadingGlobalEdit}
             />
 
             <EditModal

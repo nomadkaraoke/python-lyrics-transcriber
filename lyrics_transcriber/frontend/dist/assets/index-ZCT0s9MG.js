@@ -13646,7 +13646,7 @@ function getSvgIconUtilityClass(slot) {
   return generateUtilityClass("MuiSvgIcon", slot);
 }
 generateUtilityClasses("MuiSvgIcon", ["root", "colorPrimary", "colorSecondary", "colorAction", "colorError", "colorDisabled", "fontSizeInherit", "fontSizeSmall", "fontSizeMedium", "fontSizeLarge"]);
-const useUtilityClasses$F = (ownerState) => {
+const useUtilityClasses$H = (ownerState) => {
   const {
     color: color2,
     fontSize,
@@ -13791,7 +13791,7 @@ const SvgIcon = /* @__PURE__ */ reactExports.forwardRef(function SvgIcon2(inProp
   if (!inheritViewBox) {
     more.viewBox = viewBox;
   }
-  const classes = useUtilityClasses$F(ownerState);
+  const classes = useUtilityClasses$H(ownerState);
   return /* @__PURE__ */ jsxRuntimeExports.jsxs(SvgIconRoot, {
     as: component,
     className: clsx(classes.root, className),
@@ -14298,7 +14298,7 @@ function getPaperUtilityClass(slot) {
   return generateUtilityClass("MuiPaper", slot);
 }
 generateUtilityClasses("MuiPaper", ["root", "rounded", "outlined", "elevation", "elevation0", "elevation1", "elevation2", "elevation3", "elevation4", "elevation5", "elevation6", "elevation7", "elevation8", "elevation9", "elevation10", "elevation11", "elevation12", "elevation13", "elevation14", "elevation15", "elevation16", "elevation17", "elevation18", "elevation19", "elevation20", "elevation21", "elevation22", "elevation23", "elevation24"]);
-const useUtilityClasses$E = (ownerState) => {
+const useUtilityClasses$G = (ownerState) => {
   const {
     square,
     elevation,
@@ -14371,7 +14371,7 @@ const Paper = /* @__PURE__ */ reactExports.forwardRef(function Paper2(inProps, r
     square,
     variant
   };
-  const classes = useUtilityClasses$E(ownerState);
+  const classes = useUtilityClasses$G(ownerState);
   return /* @__PURE__ */ jsxRuntimeExports.jsx(PaperRoot, {
     as: component,
     ownerState,
@@ -14832,7 +14832,7 @@ function getButtonBaseUtilityClass(slot) {
   return generateUtilityClass("MuiButtonBase", slot);
 }
 const buttonBaseClasses = generateUtilityClasses("MuiButtonBase", ["root", "disabled", "focusVisible"]);
-const useUtilityClasses$D = (ownerState) => {
+const useUtilityClasses$F = (ownerState) => {
   const {
     disabled,
     focusVisible,
@@ -15049,7 +15049,7 @@ const ButtonBase = /* @__PURE__ */ reactExports.forwardRef(function ButtonBase2(
     tabIndex,
     focusVisible
   };
-  const classes = useUtilityClasses$D(ownerState);
+  const classes = useUtilityClasses$F(ownerState);
   return /* @__PURE__ */ jsxRuntimeExports.jsxs(ButtonBaseRoot, {
     as: ComponentProp,
     className: clsx(classes.root, className),
@@ -15147,7 +15147,7 @@ const rotateAnimation = typeof circularRotateKeyframe !== "string" ? css`
 const dashAnimation = typeof circularDashKeyframe !== "string" ? css`
         animation: ${circularDashKeyframe} 1.4s ease-in-out infinite;
       ` : null;
-const useUtilityClasses$C = (ownerState) => {
+const useUtilityClasses$E = (ownerState) => {
   const {
     classes,
     variant,
@@ -15270,7 +15270,7 @@ const CircularProgress = /* @__PURE__ */ reactExports.forwardRef(function Circul
     value,
     variant
   };
-  const classes = useUtilityClasses$C(ownerState);
+  const classes = useUtilityClasses$E(ownerState);
   const circleStyle = {};
   const rootStyle = {};
   const rootProps = {};
@@ -15315,7 +15315,7 @@ function getIconButtonUtilityClass(slot) {
   return generateUtilityClass("MuiIconButton", slot);
 }
 const iconButtonClasses = generateUtilityClasses("MuiIconButton", ["root", "disabled", "colorInherit", "colorPrimary", "colorSecondary", "colorError", "colorInfo", "colorSuccess", "colorWarning", "edgeStart", "edgeEnd", "sizeSmall", "sizeMedium", "sizeLarge", "loading", "loadingIndicator", "loadingWrapper"]);
-const useUtilityClasses$B = (ownerState) => {
+const useUtilityClasses$D = (ownerState) => {
   const {
     classes,
     disabled,
@@ -15501,7 +15501,7 @@ const IconButton = /* @__PURE__ */ reactExports.forwardRef(function IconButton2(
     loadingIndicator,
     size
   };
-  const classes = useUtilityClasses$B(ownerState);
+  const classes = useUtilityClasses$D(ownerState);
   return /* @__PURE__ */ jsxRuntimeExports.jsxs(IconButtonRoot, {
     id,
     className: clsx(classes.root, className),
@@ -15540,7 +15540,7 @@ const InfoOutlinedIcon = createSvgIcon(/* @__PURE__ */ jsxRuntimeExports.jsx("pa
 const ClearIcon = createSvgIcon(/* @__PURE__ */ jsxRuntimeExports.jsx("path", {
   d: "M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"
 }), "Close");
-const useUtilityClasses$A = (ownerState) => {
+const useUtilityClasses$C = (ownerState) => {
   const {
     variant,
     color: color2,
@@ -15695,7 +15695,7 @@ const Alert = /* @__PURE__ */ reactExports.forwardRef(function Alert2(inProps, r
     variant,
     colorSeverity: color2 || severity
   };
-  const classes = useUtilityClasses$A(ownerState);
+  const classes = useUtilityClasses$C(ownerState);
   const externalForwardedProps = {
     slots: {
       closeButton: components.CloseButton,
@@ -15794,7 +15794,7 @@ const v6Colors = {
   textDisabled: true
 };
 const extendSxProp = internal_createExtendSxProp();
-const useUtilityClasses$z = (ownerState) => {
+const useUtilityClasses$B = (ownerState) => {
   const {
     align,
     gutterBottom,
@@ -15937,7 +15937,7 @@ const Typography = /* @__PURE__ */ reactExports.forwardRef(function Typography2(
     variantMapping
   };
   const Component = component || (paragraph ? "p" : variantMapping[variant] || defaultVariantMapping[variant]) || "span";
-  const classes = useUtilityClasses$z(ownerState);
+  const classes = useUtilityClasses$B(ownerState);
   return /* @__PURE__ */ jsxRuntimeExports.jsx(TypographyRoot, {
     as: Component,
     ref,
@@ -17361,7 +17361,7 @@ function resolveAnchorEl$1(anchorEl) {
 function isHTMLElement(element) {
   return element.nodeType !== void 0;
 }
-const useUtilityClasses$y = (ownerState) => {
+const useUtilityClasses$A = (ownerState) => {
   const {
     classes
   } = ownerState;
@@ -17462,7 +17462,7 @@ const PopperTooltip = /* @__PURE__ */ reactExports.forwardRef(function PopperToo
   if (TransitionProps !== null) {
     childProps.TransitionProps = TransitionProps;
   }
-  const classes = useUtilityClasses$y(props);
+  const classes = useUtilityClasses$A(props);
   const Root = slots.root ?? "div";
   const rootProps = useSlotProps({
     elementType: Root,
@@ -17814,7 +17814,7 @@ const inputOverridesResolver = (props, styles2) => {
   } = props;
   return [styles2.input, ownerState.size === "small" && styles2.inputSizeSmall, ownerState.multiline && styles2.inputMultiline, ownerState.type === "search" && styles2.inputTypeSearch, ownerState.startAdornment && styles2.inputAdornedStart, ownerState.endAdornment && styles2.inputAdornedEnd, ownerState.hiddenLabel && styles2.inputHiddenLabel];
 };
-const useUtilityClasses$x = (ownerState) => {
+const useUtilityClasses$z = (ownerState) => {
   const {
     classes,
     color: color2,
@@ -18200,7 +18200,7 @@ const InputBase = /* @__PURE__ */ reactExports.forwardRef(function InputBase2(in
     startAdornment,
     type
   };
-  const classes = useUtilityClasses$x(ownerState);
+  const classes = useUtilityClasses$z(ownerState);
   const Root = slots.root || components.Root || InputBaseRoot;
   const rootProps = slotProps.root || componentsProps.root || {};
   const Input3 = slots.input || components.Input || InputBaseInput;
@@ -18405,7 +18405,7 @@ function getBackdropUtilityClass(slot) {
   return generateUtilityClass("MuiBackdrop", slot);
 }
 generateUtilityClasses("MuiBackdrop", ["root", "invisible"]);
-const useUtilityClasses$w = (ownerState) => {
+const useUtilityClasses$y = (ownerState) => {
   const {
     classes,
     invisible
@@ -18468,7 +18468,7 @@ const Backdrop = /* @__PURE__ */ reactExports.forwardRef(function Backdrop2(inPr
     component,
     invisible
   };
-  const classes = useUtilityClasses$w(ownerState);
+  const classes = useUtilityClasses$y(ownerState);
   const backwardCompatibleSlots = {
     transition: TransitionComponentProp,
     root: components.Root,
@@ -18521,7 +18521,7 @@ function getButtonUtilityClass(slot) {
 const buttonClasses = generateUtilityClasses("MuiButton", ["root", "text", "textInherit", "textPrimary", "textSecondary", "textSuccess", "textError", "textInfo", "textWarning", "outlined", "outlinedInherit", "outlinedPrimary", "outlinedSecondary", "outlinedSuccess", "outlinedError", "outlinedInfo", "outlinedWarning", "contained", "containedInherit", "containedPrimary", "containedSecondary", "containedSuccess", "containedError", "containedInfo", "containedWarning", "disableElevation", "focusVisible", "disabled", "colorInherit", "colorPrimary", "colorSecondary", "colorSuccess", "colorError", "colorInfo", "colorWarning", "textSizeSmall", "textSizeMedium", "textSizeLarge", "outlinedSizeSmall", "outlinedSizeMedium", "outlinedSizeLarge", "containedSizeSmall", "containedSizeMedium", "containedSizeLarge", "sizeMedium", "sizeSmall", "sizeLarge", "fullWidth", "startIcon", "endIcon", "icon", "iconSizeSmall", "iconSizeMedium", "iconSizeLarge", "loading", "loadingWrapper", "loadingIconPlaceholder", "loadingIndicator", "loadingPositionCenter", "loadingPositionStart", "loadingPositionEnd"]);
 const ButtonGroupContext = /* @__PURE__ */ reactExports.createContext({});
 const ButtonGroupButtonContext = /* @__PURE__ */ reactExports.createContext(void 0);
-const useUtilityClasses$v = (ownerState) => {
+const useUtilityClasses$x = (ownerState) => {
   const {
     color: color2,
     disableElevation,
@@ -19023,7 +19023,7 @@ const Button = /* @__PURE__ */ reactExports.forwardRef(function Button2(inProps,
     type,
     variant
   };
-  const classes = useUtilityClasses$v(ownerState);
+  const classes = useUtilityClasses$x(ownerState);
   const startIcon = (startIconProp || loading && loadingPosition === "start") && /* @__PURE__ */ jsxRuntimeExports.jsx(ButtonStartIcon, {
     className: classes.startIcon,
     ownerState,
@@ -19074,7 +19074,7 @@ function getSwitchBaseUtilityClass(slot) {
   return generateUtilityClass("PrivateSwitchBase", slot);
 }
 generateUtilityClasses("PrivateSwitchBase", ["root", "checked", "disabled", "input", "edgeStart", "edgeEnd"]);
-const useUtilityClasses$u = (ownerState) => {
+const useUtilityClasses$w = (ownerState) => {
   const {
     classes,
     checked,
@@ -19210,7 +19210,7 @@ const SwitchBase = /* @__PURE__ */ reactExports.forwardRef(function SwitchBase2(
     disableFocusRipple,
     edge
   };
-  const classes = useUtilityClasses$u(ownerState);
+  const classes = useUtilityClasses$w(ownerState);
   return /* @__PURE__ */ jsxRuntimeExports.jsxs(SwitchBaseRoot, {
     component: "span",
     className: clsx(classes.root, className),
@@ -19805,7 +19805,7 @@ function getModalUtilityClass(slot) {
   return generateUtilityClass("MuiModal", slot);
 }
 generateUtilityClasses("MuiModal", ["root", "hidden", "backdrop"]);
-const useUtilityClasses$t = (ownerState) => {
+const useUtilityClasses$v = (ownerState) => {
   const {
     open,
     exited,
@@ -19916,7 +19916,7 @@ const Modal = /* @__PURE__ */ reactExports.forwardRef(function Modal2(inProps, r
     ...propsWithDefaults,
     exited
   };
-  const classes = useUtilityClasses$t(ownerState);
+  const classes = useUtilityClasses$v(ownerState);
   const childProps = {};
   if (children.props.tabIndex === void 0) {
     childProps.tabIndex = "-1";
@@ -20009,7 +20009,7 @@ const DialogBackdrop = styled(Backdrop, {
   // Improve scrollable dialog support.
   zIndex: -1
 });
-const useUtilityClasses$s = (ownerState) => {
+const useUtilityClasses$u = (ownerState) => {
   const {
     classes,
     scroll,
@@ -20214,7 +20214,7 @@ const Dialog = /* @__PURE__ */ reactExports.forwardRef(function Dialog2(inProps,
     maxWidth: maxWidth2,
     scroll
   };
-  const classes = useUtilityClasses$s(ownerState);
+  const classes = useUtilityClasses$u(ownerState);
   const backdropClick = reactExports.useRef();
   const handleMouseDown = (event) => {
     backdropClick.current = event.target === event.currentTarget;
@@ -20336,7 +20336,7 @@ function getDialogActionsUtilityClass(slot) {
   return generateUtilityClass("MuiDialogActions", slot);
 }
 generateUtilityClasses("MuiDialogActions", ["root", "spacing"]);
-const useUtilityClasses$r = (ownerState) => {
+const useUtilityClasses$t = (ownerState) => {
   const {
     classes,
     disableSpacing
@@ -20386,7 +20386,7 @@ const DialogActions = /* @__PURE__ */ reactExports.forwardRef(function DialogAct
     ...props,
     disableSpacing
   };
-  const classes = useUtilityClasses$r(ownerState);
+  const classes = useUtilityClasses$t(ownerState);
   return /* @__PURE__ */ jsxRuntimeExports.jsx(DialogActionsRoot, {
     className: clsx(classes.root, className),
     ownerState,
@@ -20402,7 +20402,7 @@ function getDialogTitleUtilityClass(slot) {
   return generateUtilityClass("MuiDialogTitle", slot);
 }
 const dialogTitleClasses = generateUtilityClasses("MuiDialogTitle", ["root"]);
-const useUtilityClasses$q = (ownerState) => {
+const useUtilityClasses$s = (ownerState) => {
   const {
     classes,
     dividers
@@ -20463,7 +20463,7 @@ const DialogContent = /* @__PURE__ */ reactExports.forwardRef(function DialogCon
     ...props,
     dividers
   };
-  const classes = useUtilityClasses$q(ownerState);
+  const classes = useUtilityClasses$s(ownerState);
   return /* @__PURE__ */ jsxRuntimeExports.jsx(DialogContentRoot, {
     className: clsx(classes.root, className),
     ownerState,
@@ -20471,7 +20471,7 @@ const DialogContent = /* @__PURE__ */ reactExports.forwardRef(function DialogCon
     ...other
   });
 });
-const useUtilityClasses$p = (ownerState) => {
+const useUtilityClasses$r = (ownerState) => {
   const {
     classes
   } = ownerState;
@@ -20499,7 +20499,7 @@ const DialogTitle = /* @__PURE__ */ reactExports.forwardRef(function DialogTitle
     ...other
   } = props;
   const ownerState = props;
-  const classes = useUtilityClasses$p(ownerState);
+  const classes = useUtilityClasses$r(ownerState);
   const {
     titleId = idProp
   } = reactExports.useContext(DialogContext);
@@ -20517,7 +20517,7 @@ function getDividerUtilityClass(slot) {
   return generateUtilityClass("MuiDivider", slot);
 }
 generateUtilityClasses("MuiDivider", ["root", "absolute", "fullWidth", "inset", "middle", "flexItem", "light", "vertical", "withChildren", "withChildrenVertical", "textAlignRight", "textAlignLeft", "wrapper", "wrapperVertical"]);
-const useUtilityClasses$o = (ownerState) => {
+const useUtilityClasses$q = (ownerState) => {
   const {
     absolute,
     children,
@@ -20731,7 +20731,7 @@ const Divider = /* @__PURE__ */ reactExports.forwardRef(function Divider2(inProp
     textAlign,
     variant
   };
-  const classes = useUtilityClasses$o(ownerState);
+  const classes = useUtilityClasses$q(ownerState);
   return /* @__PURE__ */ jsxRuntimeExports.jsx(DividerRoot, {
     as: component,
     className: clsx(classes.root, className),
@@ -20750,7 +20750,7 @@ const Divider = /* @__PURE__ */ reactExports.forwardRef(function Divider2(inProp
 if (Divider) {
   Divider.muiSkipListHighlight = true;
 }
-const useUtilityClasses$n = (ownerState) => {
+const useUtilityClasses$p = (ownerState) => {
   const {
     classes,
     disableUnderline,
@@ -21032,7 +21032,7 @@ const FilledInput = /* @__PURE__ */ reactExports.forwardRef(function FilledInput
     multiline,
     type
   };
-  const classes = useUtilityClasses$n(props);
+  const classes = useUtilityClasses$p(props);
   const filledInputComponentsProps = {
     root: {
       ownerState
@@ -21064,7 +21064,7 @@ function getFormControlUtilityClasses(slot) {
   return generateUtilityClass("MuiFormControl", slot);
 }
 generateUtilityClasses("MuiFormControl", ["root", "marginNone", "marginNormal", "marginDense", "fullWidth", "disabled"]);
-const useUtilityClasses$m = (ownerState) => {
+const useUtilityClasses$o = (ownerState) => {
   const {
     classes,
     margin: margin2,
@@ -21154,7 +21154,7 @@ const FormControl = /* @__PURE__ */ reactExports.forwardRef(function FormControl
     size,
     variant
   };
-  const classes = useUtilityClasses$m(ownerState);
+  const classes = useUtilityClasses$o(ownerState);
   const [adornedStart, setAdornedStart] = reactExports.useState(() => {
     let initialAdornedStart = false;
     if (children) {
@@ -21238,7 +21238,7 @@ function getFormControlLabelUtilityClasses(slot) {
   return generateUtilityClass("MuiFormControlLabel", slot);
 }
 const formControlLabelClasses = generateUtilityClasses("MuiFormControlLabel", ["root", "labelPlacementStart", "labelPlacementTop", "labelPlacementBottom", "disabled", "label", "error", "required", "asterisk"]);
-const useUtilityClasses$l = (ownerState) => {
+const useUtilityClasses$n = (ownerState) => {
   const {
     classes,
     disabled,
@@ -21374,7 +21374,7 @@ const FormControlLabel = /* @__PURE__ */ reactExports.forwardRef(function FormCo
     required,
     error: fcs.error
   };
-  const classes = useUtilityClasses$l(ownerState);
+  const classes = useUtilityClasses$n(ownerState);
   const externalForwardedProps = {
     slots,
     slotProps: {
@@ -21416,7 +21416,7 @@ function getFormHelperTextUtilityClasses(slot) {
 }
 const formHelperTextClasses = generateUtilityClasses("MuiFormHelperText", ["root", "error", "disabled", "sizeSmall", "sizeMedium", "contained", "focused", "filled", "required"]);
 var _span$2;
-const useUtilityClasses$k = (ownerState) => {
+const useUtilityClasses$m = (ownerState) => {
   const {
     classes,
     contained,
@@ -21511,7 +21511,7 @@ const FormHelperText = /* @__PURE__ */ reactExports.forwardRef(function FormHelp
     required: fcs.required
   };
   delete ownerState.ownerState;
-  const classes = useUtilityClasses$k(ownerState);
+  const classes = useUtilityClasses$m(ownerState);
   return /* @__PURE__ */ jsxRuntimeExports.jsx(FormHelperTextRoot, {
     as: component,
     className: clsx(classes.root, className),
@@ -21532,7 +21532,7 @@ function getFormLabelUtilityClasses(slot) {
   return generateUtilityClass("MuiFormLabel", slot);
 }
 const formLabelClasses = generateUtilityClasses("MuiFormLabel", ["root", "colorSecondary", "focused", "disabled", "error", "filled", "required", "asterisk"]);
-const useUtilityClasses$j = (ownerState) => {
+const useUtilityClasses$l = (ownerState) => {
   const {
     classes,
     color: color2,
@@ -21630,7 +21630,7 @@ const FormLabel = /* @__PURE__ */ reactExports.forwardRef(function FormLabel2(in
     focused: fcs.focused,
     required: fcs.required
   };
-  const classes = useUtilityClasses$j(ownerState);
+  const classes = useUtilityClasses$l(ownerState);
   return /* @__PURE__ */ jsxRuntimeExports.jsxs(FormLabelRoot, {
     as: component,
     ownerState,
@@ -21958,7 +21958,7 @@ function resolveSpacingClasses(spacing, breakpoints) {
   });
   return classes;
 }
-const useUtilityClasses$i = (ownerState) => {
+const useUtilityClasses$k = (ownerState) => {
   const {
     classes,
     container,
@@ -22036,7 +22036,7 @@ const Grid = /* @__PURE__ */ reactExports.forwardRef(function Grid2(inProps, ref
     ...breakpointsValues,
     breakpoints: breakpoints.keys
   };
-  const classes = useUtilityClasses$i(ownerState);
+  const classes = useUtilityClasses$k(ownerState);
   return /* @__PURE__ */ jsxRuntimeExports.jsx(GridContext.Provider, {
     value: columns,
     children: /* @__PURE__ */ jsxRuntimeExports.jsx(GridRoot, {
@@ -22211,7 +22211,7 @@ if (Grow) {
 const useMediaQuery = unstable_createUseMediaQuery({
   themeId: THEME_ID
 });
-const useUtilityClasses$h = (ownerState) => {
+const useUtilityClasses$j = (ownerState) => {
   const {
     classes,
     disableUnderline
@@ -22344,7 +22344,7 @@ const Input = /* @__PURE__ */ reactExports.forwardRef(function Input2(inProps, r
     type = "text",
     ...other
   } = props;
-  const classes = useUtilityClasses$h(props);
+  const classes = useUtilityClasses$j(props);
   const ownerState = {
     disableUnderline
   };
@@ -22376,7 +22376,7 @@ function getInputLabelUtilityClasses(slot) {
   return generateUtilityClass("MuiInputLabel", slot);
 }
 generateUtilityClasses("MuiInputLabel", ["root", "focused", "disabled", "error", "required", "asterisk", "formControl", "sizeSmall", "shrink", "animated", "standard", "filled", "outlined"]);
-const useUtilityClasses$g = (ownerState) => {
+const useUtilityClasses$i = (ownerState) => {
   const {
     classes,
     formControl,
@@ -22565,7 +22565,7 @@ const InputLabel = /* @__PURE__ */ reactExports.forwardRef(function InputLabel2(
     required: fcs.required,
     focused: fcs.focused
   };
-  const classes = useUtilityClasses$g(ownerState);
+  const classes = useUtilityClasses$i(ownerState);
   return /* @__PURE__ */ jsxRuntimeExports.jsx(InputLabelRoot, {
     "data-shrink": shrink,
     ref,
@@ -22580,7 +22580,7 @@ function getListUtilityClass(slot) {
   return generateUtilityClass("MuiList", slot);
 }
 generateUtilityClasses("MuiList", ["root", "padding", "dense", "subheader"]);
-const useUtilityClasses$f = (ownerState) => {
+const useUtilityClasses$h = (ownerState) => {
   const {
     classes,
     disablePadding,
@@ -22646,7 +22646,7 @@ const List = /* @__PURE__ */ reactExports.forwardRef(function List2(inProps, ref
     dense,
     disablePadding
   };
-  const classes = useUtilityClasses$f(ownerState);
+  const classes = useUtilityClasses$h(ownerState);
   return /* @__PURE__ */ jsxRuntimeExports.jsx(ListContext.Provider, {
     value: context,
     children: /* @__PURE__ */ jsxRuntimeExports.jsxs(ListRoot, {
@@ -22668,7 +22668,7 @@ function getListItemSecondaryActionClassesUtilityClass(slot) {
   return generateUtilityClass("MuiListItemSecondaryAction", slot);
 }
 generateUtilityClasses("MuiListItemSecondaryAction", ["root", "disableGutters"]);
-const useUtilityClasses$e = (ownerState) => {
+const useUtilityClasses$g = (ownerState) => {
   const {
     disableGutters,
     classes
@@ -22715,7 +22715,7 @@ const ListItemSecondaryAction = /* @__PURE__ */ reactExports.forwardRef(function
     ...props,
     disableGutters: context.disableGutters
   };
-  const classes = useUtilityClasses$e(ownerState);
+  const classes = useUtilityClasses$g(ownerState);
   return /* @__PURE__ */ jsxRuntimeExports.jsx(ListItemSecondaryActionRoot, {
     className: clsx(classes.root, className),
     ownerState,
@@ -22724,13 +22724,13 @@ const ListItemSecondaryAction = /* @__PURE__ */ reactExports.forwardRef(function
   });
 });
 ListItemSecondaryAction.muiName = "ListItemSecondaryAction";
-const overridesResolver = (props, styles2) => {
+const overridesResolver$1 = (props, styles2) => {
   const {
     ownerState
   } = props;
   return [styles2.root, ownerState.dense && styles2.dense, ownerState.alignItems === "flex-start" && styles2.alignItemsFlexStart, ownerState.divider && styles2.divider, !ownerState.disableGutters && styles2.gutters, !ownerState.disablePadding && styles2.padding, ownerState.hasSecondaryAction && styles2.secondaryAction];
 };
-const useUtilityClasses$d = (ownerState) => {
+const useUtilityClasses$f = (ownerState) => {
   const {
     alignItems,
     classes,
@@ -22749,7 +22749,7 @@ const useUtilityClasses$d = (ownerState) => {
 const ListItemRoot = styled("div", {
   name: "MuiListItem",
   slot: "Root",
-  overridesResolver
+  overridesResolver: overridesResolver$1
 })(memoTheme(({
   theme: theme2
 }) => ({
@@ -22897,7 +22897,7 @@ const ListItem = /* @__PURE__ */ reactExports.forwardRef(function ListItem2(inPr
     divider,
     hasSecondaryAction
   };
-  const classes = useUtilityClasses$d(ownerState);
+  const classes = useUtilityClasses$f(ownerState);
   const handleRef = useForkRef(listItemRef, ref);
   const Root = slots.root || components.Root || ListItemRoot;
   const rootProps = slotProps.root || componentsProps.root || {};
@@ -22961,7 +22961,7 @@ function getListItemTextUtilityClass(slot) {
   return generateUtilityClass("MuiListItemText", slot);
 }
 const listItemTextClasses = generateUtilityClasses("MuiListItemText", ["root", "multiline", "dense", "inset", "primary", "secondary"]);
-const useUtilityClasses$c = (ownerState) => {
+const useUtilityClasses$e = (ownerState) => {
   const {
     classes,
     inset,
@@ -23048,7 +23048,7 @@ const ListItemText = /* @__PURE__ */ reactExports.forwardRef(function ListItemTe
     secondary: !!secondary,
     dense
   };
-  const classes = useUtilityClasses$c(ownerState);
+  const classes = useUtilityClasses$e(ownerState);
   const externalForwardedProps = {
     slots,
     slotProps: {
@@ -23318,7 +23318,7 @@ function getTransformOriginValue(transformOrigin) {
 function resolveAnchorEl(anchorEl) {
   return typeof anchorEl === "function" ? anchorEl() : anchorEl;
 }
-const useUtilityClasses$b = (ownerState) => {
+const useUtilityClasses$d = (ownerState) => {
   const {
     classes
   } = ownerState;
@@ -23400,7 +23400,7 @@ const Popover = /* @__PURE__ */ reactExports.forwardRef(function Popover2(inProp
     transitionDuration: transitionDurationProp,
     TransitionProps
   };
-  const classes = useUtilityClasses$b(ownerState);
+  const classes = useUtilityClasses$d(ownerState);
   const getAnchorOffset = reactExports.useCallback(() => {
     if (anchorReference === "anchorPosition") {
       return anchorPosition;
@@ -23598,7 +23598,7 @@ const LTR_ORIGIN = {
   vertical: "top",
   horizontal: "left"
 };
-const useUtilityClasses$a = (ownerState) => {
+const useUtilityClasses$c = (ownerState) => {
   const {
     classes
   } = ownerState;
@@ -23672,7 +23672,7 @@ const Menu = /* @__PURE__ */ reactExports.forwardRef(function Menu2(inProps, ref
     TransitionProps,
     variant
   };
-  const classes = useUtilityClasses$a(ownerState);
+  const classes = useUtilityClasses$c(ownerState);
   const autoFocusItem = autoFocus && !disableAutoFocusItem && open;
   const menuListActionsRef = reactExports.useRef(null);
   const handleEntering = (element, isAppearing) => {
@@ -23761,7 +23761,7 @@ function getNativeSelectUtilityClasses(slot) {
   return generateUtilityClass("MuiNativeSelect", slot);
 }
 const nativeSelectClasses = generateUtilityClasses("MuiNativeSelect", ["root", "select", "multiple", "filled", "outlined", "standard", "disabled", "icon", "iconOpen", "iconFilled", "iconOutlined", "iconStandard", "nativeInput", "error"]);
-const useUtilityClasses$9 = (ownerState) => {
+const useUtilityClasses$b = (ownerState) => {
   const {
     classes,
     variant,
@@ -23916,7 +23916,7 @@ const NativeSelectInput = /* @__PURE__ */ reactExports.forwardRef(function Nativ
     variant,
     error
   };
-  const classes = useUtilityClasses$9(ownerState);
+  const classes = useUtilityClasses$b(ownerState);
   return /* @__PURE__ */ jsxRuntimeExports.jsxs(reactExports.Fragment, {
     children: [/* @__PURE__ */ jsxRuntimeExports.jsx(NativeSelectSelect, {
       ownerState,
@@ -24049,7 +24049,7 @@ function NotchedOutline(props) {
     })
   });
 }
-const useUtilityClasses$8 = (ownerState) => {
+const useUtilityClasses$a = (ownerState) => {
   const {
     classes
   } = ownerState;
@@ -24228,7 +24228,7 @@ const OutlinedInput = /* @__PURE__ */ reactExports.forwardRef(function OutlinedI
     type = "text",
     ...other
   } = props;
-  const classes = useUtilityClasses$8(props);
+  const classes = useUtilityClasses$a(props);
   const muiFormControl = useFormControl();
   const fcs = formControlState({
     props,
@@ -24276,6 +24276,600 @@ const OutlinedInput = /* @__PURE__ */ reactExports.forwardRef(function OutlinedI
   });
 });
 OutlinedInput.muiName = "Input";
+function getPaginationUtilityClass(slot) {
+  return generateUtilityClass("MuiPagination", slot);
+}
+generateUtilityClasses("MuiPagination", ["root", "ul", "outlined", "text"]);
+function usePagination(props = {}) {
+  const {
+    boundaryCount = 1,
+    componentName = "usePagination",
+    count = 1,
+    defaultPage = 1,
+    disabled = false,
+    hideNextButton = false,
+    hidePrevButton = false,
+    onChange: handleChange,
+    page: pageProp,
+    showFirstButton = false,
+    showLastButton = false,
+    siblingCount = 1,
+    ...other
+  } = props;
+  const [page, setPageState] = useControlled({
+    controlled: pageProp,
+    default: defaultPage,
+    name: componentName,
+    state: "page"
+  });
+  const handleClick = (event, value) => {
+    if (!pageProp) {
+      setPageState(value);
+    }
+    if (handleChange) {
+      handleChange(event, value);
+    }
+  };
+  const range = (start2, end2) => {
+    const length2 = end2 - start2 + 1;
+    return Array.from({
+      length: length2
+    }, (_, i) => start2 + i);
+  };
+  const startPages = range(1, Math.min(boundaryCount, count));
+  const endPages = range(Math.max(count - boundaryCount + 1, boundaryCount + 1), count);
+  const siblingsStart = Math.max(
+    Math.min(
+      // Natural start
+      page - siblingCount,
+      // Lower boundary when page is high
+      count - boundaryCount - siblingCount * 2 - 1
+    ),
+    // Greater than startPages
+    boundaryCount + 2
+  );
+  const siblingsEnd = Math.min(
+    Math.max(
+      // Natural end
+      page + siblingCount,
+      // Upper boundary when page is low
+      boundaryCount + siblingCount * 2 + 2
+    ),
+    // Less than endPages
+    count - boundaryCount - 1
+  );
+  const itemList = [
+    ...showFirstButton ? ["first"] : [],
+    ...hidePrevButton ? [] : ["previous"],
+    ...startPages,
+    // Start ellipsis
+    // eslint-disable-next-line no-nested-ternary
+    ...siblingsStart > boundaryCount + 2 ? ["start-ellipsis"] : boundaryCount + 1 < count - boundaryCount ? [boundaryCount + 1] : [],
+    // Sibling pages
+    ...range(siblingsStart, siblingsEnd),
+    // End ellipsis
+    // eslint-disable-next-line no-nested-ternary
+    ...siblingsEnd < count - boundaryCount - 1 ? ["end-ellipsis"] : count - boundaryCount > boundaryCount ? [count - boundaryCount] : [],
+    ...endPages,
+    ...hideNextButton ? [] : ["next"],
+    ...showLastButton ? ["last"] : []
+  ];
+  const buttonPage = (type) => {
+    switch (type) {
+      case "first":
+        return 1;
+      case "previous":
+        return page - 1;
+      case "next":
+        return page + 1;
+      case "last":
+        return count;
+      default:
+        return null;
+    }
+  };
+  const items = itemList.map((item) => {
+    return typeof item === "number" ? {
+      onClick: (event) => {
+        handleClick(event, item);
+      },
+      type: "page",
+      page: item,
+      selected: item === page,
+      disabled,
+      "aria-current": item === page ? "page" : void 0
+    } : {
+      onClick: (event) => {
+        handleClick(event, buttonPage(item));
+      },
+      type: item,
+      page: buttonPage(item),
+      selected: false,
+      disabled: disabled || !item.includes("ellipsis") && (item === "next" || item === "last" ? page >= count : page <= 1)
+    };
+  });
+  return {
+    items,
+    ...other
+  };
+}
+function getPaginationItemUtilityClass(slot) {
+  return generateUtilityClass("MuiPaginationItem", slot);
+}
+const paginationItemClasses = generateUtilityClasses("MuiPaginationItem", ["root", "page", "sizeSmall", "sizeLarge", "text", "textPrimary", "textSecondary", "outlined", "outlinedPrimary", "outlinedSecondary", "rounded", "ellipsis", "firstLast", "previousNext", "focusVisible", "disabled", "selected", "icon", "colorPrimary", "colorSecondary"]);
+const FirstPageIconDefault = createSvgIcon(/* @__PURE__ */ jsxRuntimeExports.jsx("path", {
+  d: "M18.41 16.59L13.82 12l4.59-4.59L17 6l-6 6 6 6zM6 6h2v12H6z"
+}), "FirstPage");
+const LastPageIconDefault = createSvgIcon(/* @__PURE__ */ jsxRuntimeExports.jsx("path", {
+  d: "M5.59 7.41L10.18 12l-4.59 4.59L7 18l6-6-6-6zM16 6h2v12h-2z"
+}), "LastPage");
+const NavigateBeforeIcon = createSvgIcon(/* @__PURE__ */ jsxRuntimeExports.jsx("path", {
+  d: "M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"
+}), "NavigateBefore");
+const NavigateNextIcon = createSvgIcon(/* @__PURE__ */ jsxRuntimeExports.jsx("path", {
+  d: "M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"
+}), "NavigateNext");
+const overridesResolver = (props, styles2) => {
+  const {
+    ownerState
+  } = props;
+  return [styles2.root, styles2[ownerState.variant], styles2[`size${capitalize(ownerState.size)}`], ownerState.variant === "text" && styles2[`text${capitalize(ownerState.color)}`], ownerState.variant === "outlined" && styles2[`outlined${capitalize(ownerState.color)}`], ownerState.shape === "rounded" && styles2.rounded, ownerState.type === "page" && styles2.page, (ownerState.type === "start-ellipsis" || ownerState.type === "end-ellipsis") && styles2.ellipsis, (ownerState.type === "previous" || ownerState.type === "next") && styles2.previousNext, (ownerState.type === "first" || ownerState.type === "last") && styles2.firstLast];
+};
+const useUtilityClasses$9 = (ownerState) => {
+  const {
+    classes,
+    color: color2,
+    disabled,
+    selected,
+    size,
+    shape: shape2,
+    type,
+    variant
+  } = ownerState;
+  const slots = {
+    root: ["root", `size${capitalize(size)}`, variant, shape2, color2 !== "standard" && `color${capitalize(color2)}`, color2 !== "standard" && `${variant}${capitalize(color2)}`, disabled && "disabled", selected && "selected", {
+      page: "page",
+      first: "firstLast",
+      last: "firstLast",
+      "start-ellipsis": "ellipsis",
+      "end-ellipsis": "ellipsis",
+      previous: "previousNext",
+      next: "previousNext"
+    }[type]],
+    icon: ["icon"]
+  };
+  return composeClasses(slots, getPaginationItemUtilityClass, classes);
+};
+const PaginationItemEllipsis = styled("div", {
+  name: "MuiPaginationItem",
+  slot: "Root",
+  overridesResolver
+})(memoTheme(({
+  theme: theme2
+}) => ({
+  ...theme2.typography.body2,
+  borderRadius: 32 / 2,
+  textAlign: "center",
+  boxSizing: "border-box",
+  minWidth: 32,
+  padding: "0 6px",
+  margin: "0 3px",
+  color: (theme2.vars || theme2).palette.text.primary,
+  height: "auto",
+  [`&.${paginationItemClasses.disabled}`]: {
+    opacity: (theme2.vars || theme2).palette.action.disabledOpacity
+  },
+  variants: [{
+    props: {
+      size: "small"
+    },
+    style: {
+      minWidth: 26,
+      borderRadius: 26 / 2,
+      margin: "0 1px",
+      padding: "0 4px"
+    }
+  }, {
+    props: {
+      size: "large"
+    },
+    style: {
+      minWidth: 40,
+      borderRadius: 40 / 2,
+      padding: "0 10px",
+      fontSize: theme2.typography.pxToRem(15)
+    }
+  }]
+})));
+const PaginationItemPage = styled(ButtonBase, {
+  name: "MuiPaginationItem",
+  slot: "Root",
+  overridesResolver
+})(memoTheme(({
+  theme: theme2
+}) => ({
+  ...theme2.typography.body2,
+  borderRadius: 32 / 2,
+  textAlign: "center",
+  boxSizing: "border-box",
+  minWidth: 32,
+  height: 32,
+  padding: "0 6px",
+  margin: "0 3px",
+  color: (theme2.vars || theme2).palette.text.primary,
+  [`&.${paginationItemClasses.focusVisible}`]: {
+    backgroundColor: (theme2.vars || theme2).palette.action.focus
+  },
+  [`&.${paginationItemClasses.disabled}`]: {
+    opacity: (theme2.vars || theme2).palette.action.disabledOpacity
+  },
+  transition: theme2.transitions.create(["color", "background-color"], {
+    duration: theme2.transitions.duration.short
+  }),
+  "&:hover": {
+    backgroundColor: (theme2.vars || theme2).palette.action.hover,
+    // Reset on touch devices, it doesn't add specificity
+    "@media (hover: none)": {
+      backgroundColor: "transparent"
+    }
+  },
+  [`&.${paginationItemClasses.selected}`]: {
+    backgroundColor: (theme2.vars || theme2).palette.action.selected,
+    "&:hover": {
+      backgroundColor: theme2.vars ? `rgba(${theme2.vars.palette.action.selectedChannel} / calc(${theme2.vars.palette.action.selectedOpacity} + ${theme2.vars.palette.action.hoverOpacity}))` : alpha(theme2.palette.action.selected, theme2.palette.action.selectedOpacity + theme2.palette.action.hoverOpacity),
+      // Reset on touch devices, it doesn't add specificity
+      "@media (hover: none)": {
+        backgroundColor: (theme2.vars || theme2).palette.action.selected
+      }
+    },
+    [`&.${paginationItemClasses.focusVisible}`]: {
+      backgroundColor: theme2.vars ? `rgba(${theme2.vars.palette.action.selectedChannel} / calc(${theme2.vars.palette.action.selectedOpacity} + ${theme2.vars.palette.action.focusOpacity}))` : alpha(theme2.palette.action.selected, theme2.palette.action.selectedOpacity + theme2.palette.action.focusOpacity)
+    },
+    [`&.${paginationItemClasses.disabled}`]: {
+      opacity: 1,
+      color: (theme2.vars || theme2).palette.action.disabled,
+      backgroundColor: (theme2.vars || theme2).palette.action.selected
+    }
+  },
+  variants: [{
+    props: {
+      size: "small"
+    },
+    style: {
+      minWidth: 26,
+      height: 26,
+      borderRadius: 26 / 2,
+      margin: "0 1px",
+      padding: "0 4px"
+    }
+  }, {
+    props: {
+      size: "large"
+    },
+    style: {
+      minWidth: 40,
+      height: 40,
+      borderRadius: 40 / 2,
+      padding: "0 10px",
+      fontSize: theme2.typography.pxToRem(15)
+    }
+  }, {
+    props: {
+      shape: "rounded"
+    },
+    style: {
+      borderRadius: (theme2.vars || theme2).shape.borderRadius
+    }
+  }, {
+    props: {
+      variant: "outlined"
+    },
+    style: {
+      border: theme2.vars ? `1px solid rgba(${theme2.vars.palette.common.onBackgroundChannel} / 0.23)` : `1px solid ${theme2.palette.mode === "light" ? "rgba(0, 0, 0, 0.23)" : "rgba(255, 255, 255, 0.23)"}`,
+      [`&.${paginationItemClasses.selected}`]: {
+        [`&.${paginationItemClasses.disabled}`]: {
+          borderColor: (theme2.vars || theme2).palette.action.disabledBackground,
+          color: (theme2.vars || theme2).palette.action.disabled
+        }
+      }
+    }
+  }, {
+    props: {
+      variant: "text"
+    },
+    style: {
+      [`&.${paginationItemClasses.selected}`]: {
+        [`&.${paginationItemClasses.disabled}`]: {
+          color: (theme2.vars || theme2).palette.action.disabled
+        }
+      }
+    }
+  }, ...Object.entries(theme2.palette).filter(createSimplePaletteValueFilter(["dark", "contrastText"])).map(([color2]) => ({
+    props: {
+      variant: "text",
+      color: color2
+    },
+    style: {
+      [`&.${paginationItemClasses.selected}`]: {
+        color: (theme2.vars || theme2).palette[color2].contrastText,
+        backgroundColor: (theme2.vars || theme2).palette[color2].main,
+        "&:hover": {
+          backgroundColor: (theme2.vars || theme2).palette[color2].dark,
+          // Reset on touch devices, it doesn't add specificity
+          "@media (hover: none)": {
+            backgroundColor: (theme2.vars || theme2).palette[color2].main
+          }
+        },
+        [`&.${paginationItemClasses.focusVisible}`]: {
+          backgroundColor: (theme2.vars || theme2).palette[color2].dark
+        },
+        [`&.${paginationItemClasses.disabled}`]: {
+          color: (theme2.vars || theme2).palette.action.disabled
+        }
+      }
+    }
+  })), ...Object.entries(theme2.palette).filter(createSimplePaletteValueFilter(["light"])).map(([color2]) => ({
+    props: {
+      variant: "outlined",
+      color: color2
+    },
+    style: {
+      [`&.${paginationItemClasses.selected}`]: {
+        color: (theme2.vars || theme2).palette[color2].main,
+        border: `1px solid ${theme2.vars ? `rgba(${theme2.vars.palette[color2].mainChannel} / 0.5)` : alpha(theme2.palette[color2].main, 0.5)}`,
+        backgroundColor: theme2.vars ? `rgba(${theme2.vars.palette[color2].mainChannel} / ${theme2.vars.palette.action.activatedOpacity})` : alpha(theme2.palette[color2].main, theme2.palette.action.activatedOpacity),
+        "&:hover": {
+          backgroundColor: theme2.vars ? `rgba(${theme2.vars.palette[color2].mainChannel} / calc(${theme2.vars.palette.action.activatedOpacity} + ${theme2.vars.palette.action.focusOpacity}))` : alpha(theme2.palette[color2].main, theme2.palette.action.activatedOpacity + theme2.palette.action.focusOpacity),
+          // Reset on touch devices, it doesn't add specificity
+          "@media (hover: none)": {
+            backgroundColor: "transparent"
+          }
+        },
+        [`&.${paginationItemClasses.focusVisible}`]: {
+          backgroundColor: theme2.vars ? `rgba(${theme2.vars.palette[color2].mainChannel} / calc(${theme2.vars.palette.action.activatedOpacity} + ${theme2.vars.palette.action.focusOpacity}))` : alpha(theme2.palette[color2].main, theme2.palette.action.activatedOpacity + theme2.palette.action.focusOpacity)
+        }
+      }
+    }
+  }))]
+})));
+const PaginationItemPageIcon = styled("div", {
+  name: "MuiPaginationItem",
+  slot: "Icon",
+  overridesResolver: (props, styles2) => styles2.icon
+})(memoTheme(({
+  theme: theme2
+}) => ({
+  fontSize: theme2.typography.pxToRem(20),
+  margin: "0 -8px",
+  variants: [{
+    props: {
+      size: "small"
+    },
+    style: {
+      fontSize: theme2.typography.pxToRem(18)
+    }
+  }, {
+    props: {
+      size: "large"
+    },
+    style: {
+      fontSize: theme2.typography.pxToRem(22)
+    }
+  }]
+})));
+const PaginationItem = /* @__PURE__ */ reactExports.forwardRef(function PaginationItem2(inProps, ref) {
+  const props = useDefaultProps({
+    props: inProps,
+    name: "MuiPaginationItem"
+  });
+  const {
+    className,
+    color: color2 = "standard",
+    component,
+    components = {},
+    disabled = false,
+    page,
+    selected = false,
+    shape: shape2 = "circular",
+    size = "medium",
+    slots = {},
+    slotProps = {},
+    type = "page",
+    variant = "text",
+    ...other
+  } = props;
+  const ownerState = {
+    ...props,
+    color: color2,
+    disabled,
+    selected,
+    shape: shape2,
+    size,
+    type,
+    variant
+  };
+  const isRtl = useRtl();
+  const classes = useUtilityClasses$9(ownerState);
+  const externalForwardedProps = {
+    slots: {
+      previous: slots.previous ?? components.previous,
+      next: slots.next ?? components.next,
+      first: slots.first ?? components.first,
+      last: slots.last ?? components.last
+    },
+    slotProps
+  };
+  const [PreviousSlot, previousSlotProps] = useSlot("previous", {
+    elementType: NavigateBeforeIcon,
+    externalForwardedProps,
+    ownerState
+  });
+  const [NextSlot, nextSlotProps] = useSlot("next", {
+    elementType: NavigateNextIcon,
+    externalForwardedProps,
+    ownerState
+  });
+  const [FirstSlot, firstSlotProps] = useSlot("first", {
+    elementType: FirstPageIconDefault,
+    externalForwardedProps,
+    ownerState
+  });
+  const [LastSlot, lastSlotProps] = useSlot("last", {
+    elementType: LastPageIconDefault,
+    externalForwardedProps,
+    ownerState
+  });
+  const rtlAwareType = isRtl ? {
+    previous: "next",
+    next: "previous",
+    first: "last",
+    last: "first"
+  }[type] : type;
+  const IconSlot = {
+    previous: PreviousSlot,
+    next: NextSlot,
+    first: FirstSlot,
+    last: LastSlot
+  }[rtlAwareType];
+  const iconSlotProps = {
+    previous: previousSlotProps,
+    next: nextSlotProps,
+    first: firstSlotProps,
+    last: lastSlotProps
+  }[rtlAwareType];
+  return type === "start-ellipsis" || type === "end-ellipsis" ? /* @__PURE__ */ jsxRuntimeExports.jsx(PaginationItemEllipsis, {
+    ref,
+    ownerState,
+    className: clsx(classes.root, className),
+    children: "…"
+  }) : /* @__PURE__ */ jsxRuntimeExports.jsxs(PaginationItemPage, {
+    ref,
+    ownerState,
+    component,
+    disabled,
+    className: clsx(classes.root, className),
+    ...other,
+    children: [type === "page" && page, IconSlot ? /* @__PURE__ */ jsxRuntimeExports.jsx(PaginationItemPageIcon, {
+      ...iconSlotProps,
+      className: classes.icon,
+      as: IconSlot
+    }) : null]
+  });
+});
+const useUtilityClasses$8 = (ownerState) => {
+  const {
+    classes,
+    variant
+  } = ownerState;
+  const slots = {
+    root: ["root", variant],
+    ul: ["ul"]
+  };
+  return composeClasses(slots, getPaginationUtilityClass, classes);
+};
+const PaginationRoot = styled("nav", {
+  name: "MuiPagination",
+  slot: "Root",
+  overridesResolver: (props, styles2) => {
+    const {
+      ownerState
+    } = props;
+    return [styles2.root, styles2[ownerState.variant]];
+  }
+})({});
+const PaginationUl = styled("ul", {
+  name: "MuiPagination",
+  slot: "Ul",
+  overridesResolver: (props, styles2) => styles2.ul
+})({
+  display: "flex",
+  flexWrap: "wrap",
+  alignItems: "center",
+  padding: 0,
+  margin: 0,
+  listStyle: "none"
+});
+function defaultGetAriaLabel(type, page, selected) {
+  if (type === "page") {
+    return `${selected ? "" : "Go to "}page ${page}`;
+  }
+  return `Go to ${type} page`;
+}
+const Pagination = /* @__PURE__ */ reactExports.forwardRef(function Pagination2(inProps, ref) {
+  const props = useDefaultProps({
+    props: inProps,
+    name: "MuiPagination"
+  });
+  const {
+    boundaryCount = 1,
+    className,
+    color: color2 = "standard",
+    count = 1,
+    defaultPage = 1,
+    disabled = false,
+    getItemAriaLabel = defaultGetAriaLabel,
+    hideNextButton = false,
+    hidePrevButton = false,
+    onChange,
+    page,
+    renderItem = (item) => /* @__PURE__ */ jsxRuntimeExports.jsx(PaginationItem, {
+      ...item
+    }),
+    shape: shape2 = "circular",
+    showFirstButton = false,
+    showLastButton = false,
+    siblingCount = 1,
+    size = "medium",
+    variant = "text",
+    ...other
+  } = props;
+  const {
+    items
+  } = usePagination({
+    ...props,
+    componentName: "Pagination"
+  });
+  const ownerState = {
+    ...props,
+    boundaryCount,
+    color: color2,
+    count,
+    defaultPage,
+    disabled,
+    getItemAriaLabel,
+    hideNextButton,
+    hidePrevButton,
+    renderItem,
+    shape: shape2,
+    showFirstButton,
+    showLastButton,
+    siblingCount,
+    size,
+    variant
+  };
+  const classes = useUtilityClasses$8(ownerState);
+  return /* @__PURE__ */ jsxRuntimeExports.jsx(PaginationRoot, {
+    "aria-label": "pagination navigation",
+    className: clsx(classes.root, className),
+    ownerState,
+    ref,
+    ...other,
+    children: /* @__PURE__ */ jsxRuntimeExports.jsx(PaginationUl, {
+      className: classes.ul,
+      ownerState,
+      children: items.map((item, index) => /* @__PURE__ */ jsxRuntimeExports.jsx("li", {
+        children: renderItem({
+          ...item,
+          color: color2,
+          "aria-label": getItemAriaLabel(item.type, item.page, item.selected),
+          shape: shape2,
+          size,
+          variant
+        })
+      }, index))
+    })
+  });
+});
 function getSelectUtilityClasses(slot) {
   return generateUtilityClass("MuiSelect", slot);
 }
@@ -33869,20 +34463,7 @@ function EditTimelineSection({
         "Current Time Range: ",
         (currentStartTime == null ? void 0 : currentStartTime.toFixed(2)) ?? "N/A",
         " - ",
-        (currentEndTime == null ? void 0 : currentEndTime.toFixed(2)) ?? "N/A",
-        isGlobal && /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("br", {}),
-          "Visible Range: ",
-          visibleStartTime.toFixed(2),
-          " - ",
-          visibleEndTime.toFixed(2),
-          " (",
-          (visibleEndTime - visibleStartTime).toFixed(2),
-          "s)",
-          /* @__PURE__ */ jsxRuntimeExports.jsx("br", {}),
-          "Auto-Scroll: ",
-          autoScrollEnabled ? "On" : "Off"
-        ] })
+        (currentEndTime == null ? void 0 : currentEndTime.toFixed(2)) ?? "N/A"
       ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs(Stack, { direction: "row", spacing: 1, alignItems: "center", children: [
         isGlobal && /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
@@ -34158,7 +34739,8 @@ const WordRow = reactExports.memo(function WordRow2({
   return /* @__PURE__ */ jsxRuntimeExports.jsxs(Box, { sx: {
     display: "flex",
     gap: 2,
-    alignItems: "center"
+    alignItems: "center",
+    padding: "4px 0"
   }, children: [
     /* @__PURE__ */ jsxRuntimeExports.jsx(
       TextField,
@@ -34217,6 +34799,56 @@ const WordRow = reactExports.memo(function WordRow2({
     )
   ] });
 });
+const WordItem = reactExports.memo(function WordItem2({
+  word,
+  index,
+  onWordUpdate,
+  onSplitWord,
+  onRemoveWord,
+  onAddWord,
+  onMergeWords,
+  onSplitSegment,
+  onAddSegment,
+  onMergeSegment,
+  wordsLength,
+  isGlobal
+}) {
+  return /* @__PURE__ */ jsxRuntimeExports.jsxs(Box, { children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsx(
+      WordRow,
+      {
+        word,
+        index,
+        onWordUpdate,
+        onSplitWord,
+        onRemoveWord,
+        wordsLength
+      }
+    ),
+    !isGlobal && /* @__PURE__ */ jsxRuntimeExports.jsx(
+      WordDivider,
+      {
+        onAddWord: () => onAddWord(index),
+        onMergeWords: () => onMergeWords(index),
+        onSplitSegment: () => onSplitSegment == null ? void 0 : onSplitSegment(index),
+        onAddSegmentAfter: index === wordsLength - 1 ? () => onAddSegment == null ? void 0 : onAddSegment(index + 1) : void 0,
+        onMergeSegment: index === wordsLength - 1 ? () => onMergeSegment == null ? void 0 : onMergeSegment(true) : void 0,
+        canMerge: index < wordsLength - 1,
+        isLast: index === wordsLength - 1,
+        sx: { ml: 15 }
+      }
+    ),
+    isGlobal && /* @__PURE__ */ jsxRuntimeExports.jsx(
+      WordDivider,
+      {
+        onAddWord: () => onAddWord(index),
+        onMergeWords: index < wordsLength - 1 ? () => onMergeWords(index) : void 0,
+        canMerge: index < wordsLength - 1,
+        sx: { ml: 15 }
+      }
+    )
+  ] }, word.id);
+});
 function EditWordList({
   words,
   onWordUpdate,
@@ -34230,6 +34862,8 @@ function EditWordList({
   isGlobal = false
 }) {
   const [replacementText, setReplacementText] = reactExports.useState("");
+  const [page, setPage] = reactExports.useState(1);
+  const pageSize = isGlobal ? 50 : words.length;
   const handleReplaceAllWords = () => {
     const newWords = replacementText.trim().split(/\s+/);
     newWords.forEach((text, index) => {
@@ -34239,8 +34873,34 @@ function EditWordList({
     });
     setReplacementText("");
   };
+  const pageCount = Math.ceil(words.length / pageSize);
+  const startIndex = (page - 1) * pageSize;
+  const endIndex = Math.min(startIndex + pageSize, words.length);
+  const visibleWords = reactExports.useMemo(() => {
+    return isGlobal ? words.slice(startIndex, endIndex) : words;
+  }, [words, isGlobal, startIndex, endIndex]);
+  const handlePageChange = (_event, value) => {
+    setPage(value);
+  };
   return /* @__PURE__ */ jsxRuntimeExports.jsxs(Box, { sx: { display: "flex", flexDirection: "column", gap: 1, flexGrow: 1, minHeight: 0 }, children: [
-    /* @__PURE__ */ jsxRuntimeExports.jsxs(Box, { sx: {
+    !isGlobal && /* @__PURE__ */ jsxRuntimeExports.jsx(
+      WordDivider,
+      {
+        onAddWord: () => onAddWord(-1),
+        onAddSegmentBefore: () => onAddSegment == null ? void 0 : onAddSegment(0),
+        onMergeSegment: () => onMergeSegment == null ? void 0 : onMergeSegment(false),
+        isFirst: true,
+        sx: { ml: 15 }
+      }
+    ),
+    isGlobal && /* @__PURE__ */ jsxRuntimeExports.jsx(
+      WordDivider,
+      {
+        onAddWord: () => onAddWord(-1),
+        sx: { ml: 15 }
+      }
+    ),
+    /* @__PURE__ */ jsxRuntimeExports.jsx(Box, { sx: {
       display: "flex",
       flexDirection: "column",
       gap: 0.5,
@@ -34257,59 +34917,46 @@ function EditWordList({
       },
       scrollbarWidth: "thin",
       msOverflowStyle: "autohiding-scrollbar"
-    }, children: [
-      !isGlobal && /* @__PURE__ */ jsxRuntimeExports.jsx(
-        WordDivider,
+    }, children: visibleWords.map((word, visibleIndex) => {
+      const actualIndex = isGlobal ? startIndex + visibleIndex : visibleIndex;
+      return /* @__PURE__ */ jsxRuntimeExports.jsx(
+        WordItem,
         {
-          onAddWord: () => onAddWord(-1),
-          onAddSegmentBefore: () => onAddSegment == null ? void 0 : onAddSegment(0),
-          onMergeSegment: () => onMergeSegment == null ? void 0 : onMergeSegment(false),
-          isFirst: true,
-          sx: { ml: 15 }
+          word,
+          index: actualIndex,
+          onWordUpdate,
+          onSplitWord,
+          onRemoveWord,
+          onAddWord,
+          onMergeWords,
+          onSplitSegment,
+          onAddSegment,
+          onMergeSegment,
+          wordsLength: words.length,
+          isGlobal
+        },
+        word.id
+      );
+    }) }),
+    isGlobal && pageCount > 1 && /* @__PURE__ */ jsxRuntimeExports.jsxs(Box, { sx: { display: "flex", justifyContent: "center", alignItems: "center", mb: 1 }, children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx(
+        Pagination,
+        {
+          count: pageCount,
+          page,
+          onChange: handlePageChange,
+          color: "primary",
+          size: "small"
         }
       ),
-      isGlobal && /* @__PURE__ */ jsxRuntimeExports.jsx(
-        WordDivider,
-        {
-          onAddWord: () => onAddWord(-1),
-          sx: { ml: 15 }
-        }
-      ),
-      words.map((word, index) => /* @__PURE__ */ jsxRuntimeExports.jsxs(Box, { children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx(
-          WordRow,
-          {
-            word,
-            index,
-            onWordUpdate,
-            onSplitWord,
-            onRemoveWord,
-            wordsLength: words.length
-          }
-        ),
-        !isGlobal && /* @__PURE__ */ jsxRuntimeExports.jsx(
-          WordDivider,
-          {
-            onAddWord: () => onAddWord(index),
-            onMergeWords: () => onMergeWords(index),
-            onSplitSegment: () => onSplitSegment == null ? void 0 : onSplitSegment(index),
-            onAddSegmentAfter: index === words.length - 1 ? () => onAddSegment == null ? void 0 : onAddSegment(index + 1) : void 0,
-            onMergeSegment: index === words.length - 1 ? () => onMergeSegment == null ? void 0 : onMergeSegment(true) : void 0,
-            canMerge: index < words.length - 1,
-            isLast: index === words.length - 1,
-            sx: { ml: 15 }
-          }
-        ),
-        isGlobal && /* @__PURE__ */ jsxRuntimeExports.jsx(
-          WordDivider,
-          {
-            onAddWord: () => onAddWord(index),
-            onMergeWords: index < words.length - 1 ? () => onMergeWords(index) : void 0,
-            canMerge: index < words.length - 1,
-            sx: { ml: 15 }
-          }
-        )
-      ] }, word.id))
+      /* @__PURE__ */ jsxRuntimeExports.jsxs(Typography, { variant: "body2", sx: { ml: 2 }, children: [
+        "Showing words ",
+        startIndex + 1,
+        "-",
+        endIndex,
+        " of ",
+        words.length
+      ] })
     ] }),
     /* @__PURE__ */ jsxRuntimeExports.jsxs(Box, { sx: { display: "flex", gap: 2, mb: 0.6 }, children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -34496,8 +35143,18 @@ function EditModal({
   onMergeSegment,
   setModalSpacebarHandler,
   originalTranscribedSegment,
-  isGlobal = false
+  isGlobal = false,
+  isLoading = false
 }) {
+  console.log("EditModal - Render", {
+    open,
+    isGlobal,
+    isLoading,
+    hasSegment: !!segment,
+    segmentIndex,
+    hasOriginalSegment: !!originalSegment,
+    hasOriginalTranscribedSegment: !!originalTranscribedSegment
+  });
   const [editedSegment, setEditedSegment] = reactExports.useState(segment);
   const [isPlaying, setIsPlaying] = reactExports.useState(false);
   const updateSegment2 = reactExports.useCallback((newWords) => {
@@ -34528,6 +35185,7 @@ function EditModal({
     updateSegment: updateSegment2
   });
   const handleClose = reactExports.useCallback(() => {
+    console.log("EditModal - handleClose called");
     cleanupManualSync();
     onClose();
   }, [onClose, cleanupManualSync]);
@@ -34537,7 +35195,8 @@ function EditModal({
       console.log("EditModal - Setting up modal spacebar handler", {
         hasPlaySegment: !!onPlaySegment,
         editedSegmentId: editedSegment == null ? void 0 : editedSegment.id,
-        handlerFunction: spacebarHandler.toString().slice(0, 100)
+        handlerFunction: spacebarHandler.toString().slice(0, 100),
+        isLoading
       });
       const handleKeyEvent = (e) => {
         if (e.code === "Space") {
@@ -34557,7 +35216,8 @@ function EditModal({
     handleSpacebar,
     setModalSpacebarHandler,
     editedSegment == null ? void 0 : editedSegment.id,
-    onPlaySegment
+    onPlaySegment,
+    isLoading
   ]);
   reactExports.useEffect(() => {
     if (editedSegment) {
@@ -34568,6 +35228,11 @@ function EditModal({
     }
   }, [currentTime, editedSegment]);
   reactExports.useEffect(() => {
+    console.log("EditModal - segment changed", {
+      hasSegment: !!segment,
+      segmentId: segment == null ? void 0 : segment.id,
+      wordCount: segment == null ? void 0 : segment.words.length
+    });
     setEditedSegment(segment);
   }, [segment]);
   reactExports.useEffect(() => {
@@ -34733,7 +35398,22 @@ function EditModal({
       onPlaySegment(segment.start_time);
     }
   }, [segment == null ? void 0 : segment.start_time, onPlaySegment, isPlaying]);
+  const timeRange = reactExports.useMemo(() => {
+    if (!editedSegment) return { start: 0, end: 1 };
+    return getSafeTimeRange(editedSegment);
+  }, [getSafeTimeRange, editedSegment]);
   const dialogTitle = reactExports.useMemo(() => {
+    console.log("EditModal - Rendering dialog title", { isLoading, isGlobal });
+    if (isLoading) {
+      return /* @__PURE__ */ jsxRuntimeExports.jsxs(DialogTitle, { sx: { display: "flex", alignItems: "center", gap: 1 }, children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs(Box, { sx: { flex: 1, display: "flex", alignItems: "center", gap: 1 }, children: [
+          "Loading ",
+          isGlobal ? "All Words" : `Segment ${segmentIndex}`,
+          "..."
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx(IconButton, { onClick: onClose, sx: { ml: "auto" }, children: /* @__PURE__ */ jsxRuntimeExports.jsx(CloseIcon, {}) })
+      ] });
+    }
     if (!segment) return null;
     return /* @__PURE__ */ jsxRuntimeExports.jsxs(DialogTitle, { sx: { display: "flex", alignItems: "center", gap: 1 }, children: [
       /* @__PURE__ */ jsxRuntimeExports.jsxs(Box, { sx: { flex: 1, display: "flex", alignItems: "center", gap: 1 }, children: [
@@ -34751,13 +35431,25 @@ function EditModal({
       ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsx(IconButton, { onClick: onClose, sx: { ml: "auto" }, children: /* @__PURE__ */ jsxRuntimeExports.jsx(CloseIcon, {}) })
     ] });
-  }, [isGlobal, segmentIndex, segment, onPlaySegment, handlePlayButtonClick, isPlaying, onClose]);
-  const timeRange = reactExports.useMemo(() => {
-    if (!editedSegment) return { start: 0, end: 1 };
-    return getSafeTimeRange(editedSegment);
-  }, [getSafeTimeRange, editedSegment]);
-  if (!segment || !editedSegment || !originalSegment) return null;
-  if (!isGlobal && segmentIndex === null) return null;
+  }, [isGlobal, segmentIndex, segment, onPlaySegment, handlePlayButtonClick, isPlaying, onClose, isLoading]);
+  if (!isLoading && (!segment || !editedSegment || !originalSegment)) {
+    console.log("EditModal - Early return: missing required data", {
+      hasSegment: !!segment,
+      hasEditedSegment: !!editedSegment,
+      hasOriginalSegment: !!originalSegment,
+      isLoading
+    });
+    return null;
+  }
+  if (!isLoading && !isGlobal && segmentIndex === null) {
+    console.log("EditModal - Early return: non-global mode with null segmentIndex");
+    return null;
+  }
+  console.log("EditModal - Rendering dialog content", {
+    isLoading,
+    hasEditedSegment: !!editedSegment,
+    hasOriginalSegment: !!originalSegment
+  });
   return /* @__PURE__ */ jsxRuntimeExports.jsxs(
     Dialog,
     {
@@ -34766,7 +35458,7 @@ function EditModal({
       maxWidth: "md",
       fullWidth: true,
       onKeyDown: (e) => {
-        if (e.key === "Enter" && !e.shiftKey) {
+        if (e.key === "Enter" && !e.shiftKey && !isLoading) {
           e.preventDefault();
           handleSave();
         }
@@ -34787,45 +35479,75 @@ function EditModal({
               display: "flex",
               flexDirection: "column",
               flexGrow: 1,
-              overflow: "hidden"
+              overflow: "hidden",
+              position: "relative"
             },
             children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx(
-                MemoizedTimelineSection,
-                {
-                  words: editedSegment.words,
-                  timeRange,
-                  originalSegment,
-                  editedSegment,
-                  currentTime,
-                  isManualSyncing,
-                  syncWordIndex,
-                  isSpacebarPressed,
-                  onWordUpdate: handleWordChange,
-                  onPlaySegment,
-                  startManualSync,
-                  isGlobal
-                }
-              ),
-              /* @__PURE__ */ jsxRuntimeExports.jsx(
-                MemoizedWordList,
-                {
-                  words: editedSegment.words,
-                  onWordUpdate: handleWordChange,
-                  onSplitWord: handleSplitWord,
-                  onMergeWords: handleMergeWords,
-                  onAddWord: handleAddWord,
-                  onRemoveWord: handleRemoveWord,
-                  onSplitSegment: handleSplitSegment,
-                  onAddSegment,
-                  onMergeSegment: handleMergeSegment,
-                  isGlobal
-                }
-              )
+              isLoading && /* @__PURE__ */ jsxRuntimeExports.jsxs(Box, { sx: {
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                justifyContent: "center",
+                height: "100%",
+                width: "100%",
+                position: "absolute",
+                top: 0,
+                left: 0,
+                backgroundColor: "rgba(255, 255, 255, 0.9)",
+                zIndex: 10
+              }, children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx(CircularProgress, { size: 60, thickness: 4 }),
+                /* @__PURE__ */ jsxRuntimeExports.jsxs(Typography, { variant: "h6", sx: { mt: 2, fontWeight: "bold" }, children: [
+                  "Loading ",
+                  isGlobal ? "all words" : "segment",
+                  "..."
+                ] }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx(Typography, { variant: "body2", sx: { mt: 1, maxWidth: "80%", textAlign: "center" }, children: isGlobal ? "This may take a few seconds for songs with many words." : "Please wait..." })
+              ] }),
+              !isLoading && editedSegment && originalSegment && /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  MemoizedTimelineSection,
+                  {
+                    words: editedSegment.words,
+                    timeRange,
+                    originalSegment,
+                    editedSegment,
+                    currentTime,
+                    isManualSyncing,
+                    syncWordIndex,
+                    isSpacebarPressed,
+                    onWordUpdate: handleWordChange,
+                    onPlaySegment,
+                    startManualSync,
+                    isGlobal
+                  }
+                ),
+                /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  MemoizedWordList,
+                  {
+                    words: editedSegment.words,
+                    onWordUpdate: handleWordChange,
+                    onSplitWord: handleSplitWord,
+                    onMergeWords: handleMergeWords,
+                    onAddWord: handleAddWord,
+                    onRemoveWord: handleRemoveWord,
+                    onSplitSegment: handleSplitSegment,
+                    onAddSegment,
+                    onMergeSegment: handleMergeSegment,
+                    isGlobal
+                  }
+                )
+              ] }),
+              !isLoading && (!editedSegment || !originalSegment) && /* @__PURE__ */ jsxRuntimeExports.jsx(Box, { sx: {
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                height: "100%"
+              }, children: /* @__PURE__ */ jsxRuntimeExports.jsx(Typography, { variant: "h6", children: "No segment data available" }) })
             ]
           }
         ),
-        /* @__PURE__ */ jsxRuntimeExports.jsx(DialogActions, { children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+        /* @__PURE__ */ jsxRuntimeExports.jsx(DialogActions, { children: !isLoading && editedSegment && /* @__PURE__ */ jsxRuntimeExports.jsx(
           MemoizedActionBar,
           {
             onReset: handleReset,
@@ -36476,6 +37198,7 @@ function LyricsAnalyzer({ data: initialData, onFileLoad, apiClient, isReadOnly, 
   const [globalEditSegment, setGlobalEditSegment] = reactExports.useState(null);
   const [originalGlobalSegment, setOriginalGlobalSegment] = reactExports.useState(null);
   const [originalTranscribedGlobalSegment, setOriginalTranscribedGlobalSegment] = reactExports.useState(null);
+  const [isLoadingGlobalEdit, setIsLoadingGlobalEdit] = reactExports.useState(false);
   const [isReviewModalOpen, setIsReviewModalOpen] = reactExports.useState(false);
   const [currentAudioTime, setCurrentAudioTime] = reactExports.useState(0);
   const [isUpdatingHandlers, setIsUpdatingHandlers] = reactExports.useState(false);
@@ -36753,41 +37476,80 @@ function LyricsAnalyzer({ data: initialData, onFileLoad, apiClient, isReadOnly, 
     setData(newData);
   };
   const handleEditAll = reactExports.useCallback(() => {
-    var _a, _b, _c, _d;
-    const allWords = data.corrected_segments.flatMap((segment) => segment.words);
-    const sortedWords = [...allWords].sort((a, b) => {
-      const aTime = a.start_time ?? 0;
-      const bTime = b.start_time ?? 0;
-      return aTime - bTime;
-    });
-    const globalSegment = {
-      id: "global-edit",
-      words: sortedWords,
-      text: sortedWords.map((w) => w.text).join(" "),
-      start_time: ((_a = sortedWords[0]) == null ? void 0 : _a.start_time) ?? null,
-      end_time: ((_b = sortedWords[sortedWords.length - 1]) == null ? void 0 : _b.end_time) ?? null
+    console.log("EditAll - Starting process");
+    const placeholderSegment = {
+      id: "loading-placeholder",
+      words: [],
+      text: "",
+      start_time: 0,
+      end_time: 1
     };
-    setGlobalEditSegment(globalSegment);
-    setOriginalGlobalSegment(JSON.parse(JSON.stringify(globalSegment)));
-    if (originalData.original_segments) {
-      const originalWords = originalData.original_segments.flatMap((segment) => segment.words);
-      const sortedOriginalWords = [...originalWords].sort((a, b) => {
-        const aTime = a.start_time ?? 0;
-        const bTime = b.start_time ?? 0;
-        return aTime - bTime;
-      });
-      const originalTranscribedGlobal = {
-        id: "original-transcribed-global",
-        words: sortedOriginalWords,
-        text: sortedOriginalWords.map((w) => w.text).join(" "),
-        start_time: ((_c = sortedOriginalWords[0]) == null ? void 0 : _c.start_time) ?? null,
-        end_time: ((_d = sortedOriginalWords[sortedOriginalWords.length - 1]) == null ? void 0 : _d.end_time) ?? null
-      };
-      setOriginalTranscribedGlobalSegment(originalTranscribedGlobal);
-    } else {
-      setOriginalTranscribedGlobalSegment(null);
-    }
+    setGlobalEditSegment(placeholderSegment);
+    setOriginalGlobalSegment(placeholderSegment);
+    setIsLoadingGlobalEdit(true);
+    console.log("EditAll - Set loading state to true");
     setIsEditAllModalOpen(true);
+    console.log("EditAll - Set modal open to true");
+    requestAnimationFrame(() => {
+      console.log("EditAll - Inside requestAnimationFrame");
+      setTimeout(() => {
+        var _a, _b, _c, _d;
+        console.log("EditAll - Inside setTimeout, starting data processing");
+        try {
+          console.time("EditAll - Data processing");
+          const allWords = data.corrected_segments.flatMap((segment) => segment.words);
+          console.log(`EditAll - Collected ${allWords.length} words from all segments`);
+          const sortedWords = [...allWords].sort((a, b) => {
+            const aTime = a.start_time ?? 0;
+            const bTime = b.start_time ?? 0;
+            return aTime - bTime;
+          });
+          console.log("EditAll - Sorted words by start time");
+          const globalSegment = {
+            id: "global-edit",
+            words: sortedWords,
+            text: sortedWords.map((w) => w.text).join(" "),
+            start_time: ((_a = sortedWords[0]) == null ? void 0 : _a.start_time) ?? null,
+            end_time: ((_b = sortedWords[sortedWords.length - 1]) == null ? void 0 : _b.end_time) ?? null
+          };
+          console.log("EditAll - Created global segment");
+          setGlobalEditSegment(globalSegment);
+          console.log("EditAll - Set global edit segment");
+          setOriginalGlobalSegment(JSON.parse(JSON.stringify(globalSegment)));
+          console.log("EditAll - Set original global segment");
+          if (originalData.original_segments) {
+            console.log("EditAll - Processing original segments for Un-Correct functionality");
+            const originalWords = originalData.original_segments.flatMap((segment) => segment.words);
+            console.log(`EditAll - Collected ${originalWords.length} words from original segments`);
+            const sortedOriginalWords = [...originalWords].sort((a, b) => {
+              const aTime = a.start_time ?? 0;
+              const bTime = b.start_time ?? 0;
+              return aTime - bTime;
+            });
+            console.log("EditAll - Sorted original words by start time");
+            const originalTranscribedGlobal = {
+              id: "original-transcribed-global",
+              words: sortedOriginalWords,
+              text: sortedOriginalWords.map((w) => w.text).join(" "),
+              start_time: ((_c = sortedOriginalWords[0]) == null ? void 0 : _c.start_time) ?? null,
+              end_time: ((_d = sortedOriginalWords[sortedOriginalWords.length - 1]) == null ? void 0 : _d.end_time) ?? null
+            };
+            console.log("EditAll - Created original transcribed global segment");
+            setOriginalTranscribedGlobalSegment(originalTranscribedGlobal);
+            console.log("EditAll - Set original transcribed global segment");
+          } else {
+            setOriginalTranscribedGlobalSegment(null);
+            console.log("EditAll - No original segments found, set original transcribed global segment to null");
+          }
+          console.timeEnd("EditAll - Data processing");
+        } catch (error) {
+          console.error("Error preparing global edit data:", error);
+        } finally {
+          console.log("EditAll - Finished processing, setting loading state to false");
+          setIsLoadingGlobalEdit(false);
+        }
+      }, 100);
+    });
   }, [data.corrected_segments, originalData.original_segments]);
   const handleSaveGlobalEdit = reactExports.useCallback((updatedSegment) => {
     var _a;
@@ -36967,7 +37729,8 @@ function LyricsAnalyzer({ data: initialData, onFileLoad, apiClient, isReadOnly, 
         currentTime: currentAudioTime,
         setModalSpacebarHandler: handleSetModalSpacebarHandler,
         originalTranscribedSegment: originalTranscribedGlobalSegment,
-        isGlobal: true
+        isGlobal: true,
+        isLoading: isLoadingGlobalEdit
       }
     ),
     /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -37378,4 +38141,4 @@ ReactDOM$1.createRoot(document.getElementById("root")).render(
     /* @__PURE__ */ jsxRuntimeExports.jsx(App, {})
   ] })
 );
-//# sourceMappingURL=index-Dum9hcDj.js.map
+//# sourceMappingURL=index-ZCT0s9MG.js.map

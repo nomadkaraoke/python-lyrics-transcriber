@@ -280,14 +280,6 @@ export default function EditTimelineSection({
                     Original Time Range: {originalStartTime?.toFixed(2) ?? 'N/A'} - {originalEndTime?.toFixed(2) ?? 'N/A'}
                     <br />
                     Current Time Range: {currentStartTime?.toFixed(2) ?? 'N/A'} - {currentEndTime?.toFixed(2) ?? 'N/A'}
-                    {isGlobal && (
-                        <>
-                            <br />
-                            Visible Range: {visibleStartTime.toFixed(2)} - {visibleEndTime.toFixed(2)} ({(visibleEndTime - visibleStartTime).toFixed(2)}s)
-                            <br />
-                            Auto-Scroll: {autoScrollEnabled ? 'On' : 'Off'}
-                        </>
-                    )}
                 </Typography>
 
                 <Stack direction="row" spacing={1} alignItems="center">

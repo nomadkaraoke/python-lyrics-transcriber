@@ -5,6 +5,8 @@ import {
     DialogActions,
     IconButton,
     Box,
+    CircularProgress,
+    Typography
 } from '@mui/material'
 import CloseIcon from '@mui/icons-material/Close'
 import PlayCircleOutlineIcon from '@mui/icons-material/PlayCircleOutline'
@@ -162,6 +164,7 @@ interface EditModalProps {
     setModalSpacebarHandler: (handler: (() => (e: KeyboardEvent) => void) | undefined) => void
     originalTranscribedSegment?: LyricsSegment | null
     isGlobal?: boolean
+    isLoading?: boolean
 }
 
 export default function EditModal({
@@ -179,8 +182,19 @@ export default function EditModal({
     onMergeSegment,
     setModalSpacebarHandler,
     originalTranscribedSegment,
-    isGlobal = false
+    isGlobal = false,
+    isLoading = false
 }: EditModalProps) {
+    console.log('EditModal - Render', { 
+        open, 
+        isGlobal, 
+        isLoading, 
+        hasSegment: !!segment, 
+        segmentIndex,
+        hasOriginalSegment: !!originalSegment,
+        hasOriginalTranscribedSegment: !!originalTranscribedSegment
+    });
+    
     const [editedSegment, setEditedSegment] = useState<LyricsSegment | null>(segment)
     const [isPlaying, setIsPlaying] = useState(false)
 
@@ -219,6 +233,7 @@ export default function EditModal({
     })
 
     const handleClose = useCallback(() => {
+        console.log('EditModal - handleClose called');
         cleanupManualSync()
         onClose()
     }, [onClose, cleanupManualSync])
@@ -231,7 +246,8 @@ export default function EditModal({
             console.log('EditModal - Setting up modal spacebar handler', {
                 hasPlaySegment: !!onPlaySegment,
                 editedSegmentId: editedSegment?.id,
-                handlerFunction: spacebarHandler.toString().slice(0, 100)
+                handlerFunction: spacebarHandler.toString().slice(0, 100),
+                isLoading
             })
 
             // Create a function that will be called by the global event listeners
@@ -256,7 +272,8 @@ export default function EditModal({
         handleSpacebar,
         setModalSpacebarHandler,
         editedSegment?.id,
-        onPlaySegment
+        onPlaySegment,
+        isLoading
     ])
 
     // Update isPlaying when currentTime changes
@@ -272,6 +289,11 @@ export default function EditModal({
 
     // All useEffect hooks
     useEffect(() => {
+        console.log('EditModal - segment changed', { 
+            hasSegment: !!segment, 
+            segmentId: segment?.id,
+            wordCount: segment?.words.length
+        });
         setEditedSegment(segment)
     }, [segment])
 
@@ -413,31 +435,31 @@ export default function EditModal({
 
     const handleReset = useCallback(() => {
         if (!originalSegment) return
-        
+
         console.log('EditModal - Resetting to original:', {
             isGlobal,
             originalSegmentId: originalSegment.id,
             originalWordCount: originalSegment.words.length
         })
-        
+
         setEditedSegment(JSON.parse(JSON.stringify(originalSegment)))
     }, [originalSegment, isGlobal])
 
     const handleRevertToOriginal = useCallback(() => {
         if (!originalTranscribedSegment) return
-        
+
         console.log('EditModal - Reverting to original transcribed:', {
             isGlobal,
             originalTranscribedSegmentId: originalTranscribedSegment.id,
             originalTranscribedWordCount: originalTranscribedSegment.words.length
         })
-        
+
         setEditedSegment(JSON.parse(JSON.stringify(originalTranscribedSegment)))
     }, [originalTranscribedSegment, isGlobal])
 
     const handleSave = useCallback(() => {
         if (!editedSegment || !segment) return;
-        
+
         console.log('EditModal - Saving segment:', {
             isGlobal,
             segmentIndex,
@@ -489,8 +511,29 @@ export default function EditModal({
         }
     }, [segment?.start_time, onPlaySegment, isPlaying])
 
+    // Calculate timeRange before the early return
+    const timeRange = useMemo(() => {
+        if (!editedSegment) return { start: 0, end: 1 };
+        return getSafeTimeRange(editedSegment);
+    }, [getSafeTimeRange, editedSegment]);
+
     // Memoize the dialog title to prevent re-renders
     const dialogTitle = useMemo(() => {
+        console.log('EditModal - Rendering dialog title', { isLoading, isGlobal });
+        
+        if (isLoading) {
+            return (
+                <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <Box sx={{ flex: 1, display: 'flex', alignItems: 'center', gap: 1 }}>
+                        Loading {isGlobal ? 'All Words' : `Segment ${segmentIndex}`}...
+                    </Box>
+                    <IconButton onClick={onClose} sx={{ ml: 'auto' }}>
+                        <CloseIcon />
+                    </IconButton>
+                </DialogTitle>
+            );
+        }
+        
         if (!segment) return null;
         
         return (
@@ -516,17 +559,28 @@ export default function EditModal({
                 </IconButton>
             </DialogTitle>
         );
-    }, [isGlobal, segmentIndex, segment, onPlaySegment, handlePlayButtonClick, isPlaying, onClose])
-
-    // Calculate timeRange before the early return
-    const timeRange = useMemo(() => {
-        if (!editedSegment) return { start: 0, end: 1 };
-        return getSafeTimeRange(editedSegment);
-    }, [getSafeTimeRange, editedSegment]);
+    }, [isGlobal, segmentIndex, segment, onPlaySegment, handlePlayButtonClick, isPlaying, onClose, isLoading])
 
     // Early return after all hooks and function definitions
-    if (!segment || !editedSegment || !originalSegment) return null
-    if (!isGlobal && segmentIndex === null) return null
+    if (!isLoading && (!segment || !editedSegment || !originalSegment)) {
+        console.log('EditModal - Early return: missing required data', {
+            hasSegment: !!segment,
+            hasEditedSegment: !!editedSegment,
+            hasOriginalSegment: !!originalSegment,
+            isLoading
+        });
+        return null;
+    }
+    if (!isLoading && !isGlobal && segmentIndex === null) {
+        console.log('EditModal - Early return: non-global mode with null segmentIndex');
+        return null;
+    }
+
+    console.log('EditModal - Rendering dialog content', { 
+        isLoading, 
+        hasEditedSegment: !!editedSegment, 
+        hasOriginalSegment: !!originalSegment 
+    });
 
     return (
         <Dialog
@@ -535,7 +589,7 @@ export default function EditModal({
             maxWidth="md"
             fullWidth
             onKeyDown={(e) => {
-                if (e.key === 'Enter' && !e.shiftKey) {
+                if (e.key === 'Enter' && !e.shiftKey && !isLoading) {
                     e.preventDefault()
                     handleSave()
                 }
@@ -555,49 +609,93 @@ export default function EditModal({
                     display: 'flex',
                     flexDirection: 'column',
                     flexGrow: 1,
-                    overflow: 'hidden'
+                    overflow: 'hidden',
+                    position: 'relative'
                 }}
             >
-                <MemoizedTimelineSection
-                    words={editedSegment.words}
-                    timeRange={timeRange}
-                    originalSegment={originalSegment}
-                    editedSegment={editedSegment}
-                    currentTime={currentTime}
-                    isManualSyncing={isManualSyncing}
-                    syncWordIndex={syncWordIndex}
-                    isSpacebarPressed={isSpacebarPressed}
-                    onWordUpdate={handleWordChange}
-                    onPlaySegment={onPlaySegment}
-                    startManualSync={startManualSync}
-                    isGlobal={isGlobal}
-                />
+                {isLoading && (
+                    <Box sx={{ 
+                        display: 'flex', 
+                        flexDirection: 'column',
+                        alignItems: 'center', 
+                        justifyContent: 'center', 
+                        height: '100%',
+                        width: '100%',
+                        position: 'absolute',
+                        top: 0,
+                        left: 0,
+                        backgroundColor: 'rgba(255, 255, 255, 0.9)',
+                        zIndex: 10
+                    }}>
+                        <CircularProgress size={60} thickness={4} />
+                        <Typography variant="h6" sx={{ mt: 2, fontWeight: 'bold' }}>
+                            Loading {isGlobal ? 'all words' : 'segment'}...
+                        </Typography>
+                        <Typography variant="body2" sx={{ mt: 1, maxWidth: '80%', textAlign: 'center' }}>
+                            {isGlobal ? 'This may take a few seconds for songs with many words.' : 'Please wait...'}
+                        </Typography>
+                    </Box>
+                )}
 
-                <MemoizedWordList
-                    words={editedSegment.words}
-                    onWordUpdate={handleWordChange}
-                    onSplitWord={handleSplitWord}
-                    onMergeWords={handleMergeWords}
-                    onAddWord={handleAddWord}
-                    onRemoveWord={handleRemoveWord}
-                    onSplitSegment={handleSplitSegment}
-                    onAddSegment={onAddSegment}
-                    onMergeSegment={handleMergeSegment}
-                    isGlobal={isGlobal}
-                />
+                {!isLoading && editedSegment && originalSegment && (
+                    <>
+                        <MemoizedTimelineSection
+                            words={editedSegment.words}
+                            timeRange={timeRange}
+                            originalSegment={originalSegment}
+                            editedSegment={editedSegment}
+                            currentTime={currentTime}
+                            isManualSyncing={isManualSyncing}
+                            syncWordIndex={syncWordIndex}
+                            isSpacebarPressed={isSpacebarPressed}
+                            onWordUpdate={handleWordChange}
+                            onPlaySegment={onPlaySegment}
+                            startManualSync={startManualSync}
+                            isGlobal={isGlobal}
+                        />
+
+                        <MemoizedWordList
+                            words={editedSegment.words}
+                            onWordUpdate={handleWordChange}
+                            onSplitWord={handleSplitWord}
+                            onMergeWords={handleMergeWords}
+                            onAddWord={handleAddWord}
+                            onRemoveWord={handleRemoveWord}
+                            onSplitSegment={handleSplitSegment}
+                            onAddSegment={onAddSegment}
+                            onMergeSegment={handleMergeSegment}
+                            isGlobal={isGlobal}
+                        />
+                    </>
+                )}
+
+                {!isLoading && (!editedSegment || !originalSegment) && (
+                    <Box sx={{ 
+                        display: 'flex', 
+                        alignItems: 'center', 
+                        justifyContent: 'center', 
+                        height: '100%' 
+                    }}>
+                        <Typography variant="h6">
+                            No segment data available
+                        </Typography>
+                    </Box>
+                )}
             </DialogContent>
 
             <DialogActions>
-                <MemoizedActionBar
-                    onReset={handleReset}
-                    onRevertToOriginal={handleRevertToOriginal}
-                    onDelete={handleDelete}
-                    onClose={handleClose}
-                    onSave={handleSave}
-                    editedSegment={editedSegment}
-                    originalTranscribedSegment={originalTranscribedSegment}
-                    isGlobal={isGlobal}
-                />
+                {!isLoading && editedSegment && (
+                    <MemoizedActionBar
+                        onReset={handleReset}
+                        onRevertToOriginal={handleRevertToOriginal}
+                        onDelete={handleDelete}
+                        onClose={handleClose}
+                        onSave={handleSave}
+                        editedSegment={editedSegment}
+                        originalTranscribedSegment={originalTranscribedSegment}
+                        isGlobal={isGlobal}
+                    />
+                )}
             </DialogActions>
         </Dialog>
     )

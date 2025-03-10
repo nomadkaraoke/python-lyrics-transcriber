@@ -3,12 +3,14 @@ import {
     TextField,
     IconButton,
     Button,
+    Pagination,
+    Typography
 } from '@mui/material'
 import DeleteIcon from '@mui/icons-material/Delete'
 import SplitIcon from '@mui/icons-material/CallSplit'
 import AutoFixHighIcon from '@mui/icons-material/AutoFixHigh'
 import { Word } from '../types'
-import { useState, memo } from 'react'
+import { useState, memo, useMemo } from 'react'
 import WordDivider from './WordDivider'
 
 interface EditWordListProps {
@@ -45,6 +47,7 @@ const WordRow = memo(function WordRow({
             display: 'flex',
             gap: 2,
             alignItems: 'center',
+            padding: '4px 0',
         }}>
             <TextField
                 label={`Word ${index}`}
@@ -92,6 +95,78 @@ const WordRow = memo(function WordRow({
     );
 });
 
+// Memoized word item component that includes the word row and divider
+const WordItem = memo(function WordItem({
+    word,
+    index,
+    onWordUpdate,
+    onSplitWord,
+    onRemoveWord,
+    onAddWord,
+    onMergeWords,
+    onSplitSegment,
+    onAddSegment,
+    onMergeSegment,
+    wordsLength,
+    isGlobal
+}: {
+    word: Word
+    index: number
+    onWordUpdate: (index: number, updates: Partial<Word>) => void
+    onSplitWord: (index: number) => void
+    onRemoveWord: (index: number) => void
+    onAddWord: (index: number) => void
+    onMergeWords: (index: number) => void
+    onSplitSegment?: (index: number) => void
+    onAddSegment?: (index: number) => void
+    onMergeSegment?: (mergeWithNext: boolean) => void
+    wordsLength: number
+    isGlobal: boolean
+}) {
+    return (
+        <Box key={word.id}>
+            <WordRow
+                word={word}
+                index={index}
+                onWordUpdate={onWordUpdate}
+                onSplitWord={onSplitWord}
+                onRemoveWord={onRemoveWord}
+                wordsLength={wordsLength}
+            />
+
+            {/* Word divider with merge/split functionality */}
+            {!isGlobal && (
+                <WordDivider
+                    onAddWord={() => onAddWord(index)}
+                    onMergeWords={() => onMergeWords(index)}
+                    onSplitSegment={() => onSplitSegment?.(index)}
+                    onAddSegmentAfter={
+                        index === wordsLength - 1
+                            ? () => onAddSegment?.(index + 1)
+                            : undefined
+                    }
+                    onMergeSegment={
+                        index === wordsLength - 1
+                            ? () => onMergeSegment?.(true)
+                            : undefined
+                    }
+                    canMerge={index < wordsLength - 1}
+                    isLast={index === wordsLength - 1}
+                    sx={{ ml: 15 }}
+                />
+            )}
+            {isGlobal && (
+                <WordDivider
+                    onAddWord={() => onAddWord(index)}
+                    onMergeWords={index < wordsLength - 1 ? () => onMergeWords(index) : undefined}
+                    canMerge={index < wordsLength - 1}
+                    sx={{ ml: 15 }}
+                />
+            )}
+        </Box>
+    );
+});
+
 export default function EditWordList({
     words,
     onWordUpdate,
@@ -105,7 +180,9 @@ export default function EditWordList({
     isGlobal = false
 }: EditWordListProps) {
     const [replacementText, setReplacementText] = useState('')
-
+    const [page, setPage] = useState(1)
+    const pageSize = isGlobal ? 50 : words.length // Use pagination only in global mode
+    
     const handleReplaceAllWords = () => {
         const newWords = replacementText.trim().split(/\s+/)
         newWords.forEach((text, index) => {
@@ -115,9 +192,44 @@ export default function EditWordList({
         })
         setReplacementText('')
     }
+    
+    // Calculate pagination values
+    const pageCount = Math.ceil(words.length / pageSize)
+    const startIndex = (page - 1) * pageSize
+    const endIndex = Math.min(startIndex + pageSize, words.length)
+    
+    // Get the words for the current page
+    const visibleWords = useMemo(() => {
+        return isGlobal 
+            ? words.slice(startIndex, endIndex) 
+            : words;
+    }, [words, isGlobal, startIndex, endIndex]);
+    
+    // Handle page change
+    const handlePageChange = (_event: React.ChangeEvent<unknown>, value: number) => {
+        setPage(value);
+    };
 
     return (
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, flexGrow: 1, minHeight: 0 }}>
+            {/* Initial divider with Add Segment Before button */}
+            {!isGlobal && (
+                <WordDivider
+                    onAddWord={() => onAddWord(-1)}
+                    onAddSegmentBefore={() => onAddSegment?.(0)}
+                    onMergeSegment={() => onMergeSegment?.(false)}
+                    isFirst={true}
+                    sx={{ ml: 15 }}
+                />
+            )}
+            {isGlobal && (
+                <WordDivider
+                    onAddWord={() => onAddWord(-1)}
+                    sx={{ ml: 15 }}
+                />
+            )}
+            
+            {/* Word list with scrolling */}
             <Box sx={{
                 display: 'flex',
                 flexDirection: 'column',
@@ -136,66 +248,43 @@ export default function EditWordList({
                 scrollbarWidth: 'thin',
                 msOverflowStyle: 'autohiding-scrollbar',
             }}>
-                {/* Initial divider with Add Segment Before button */}
-                {!isGlobal && (
-                    <WordDivider
-                        onAddWord={() => onAddWord(-1)}
-                        onAddSegmentBefore={() => onAddSegment?.(0)}
-                        onMergeSegment={() => onMergeSegment?.(false)}
-                        isFirst={true}
-                        sx={{ ml: 15 }}
-                    />
-                )}
-                {isGlobal && (
-                    <WordDivider
-                        onAddWord={() => onAddWord(-1)}
-                        sx={{ ml: 15 }}
-                    />
-                )}
-
-                {words.map((word, index) => (
-                    <Box key={word.id}>
-                        <WordRow
+                {visibleWords.map((word, visibleIndex) => {
+                    const actualIndex = isGlobal ? startIndex + visibleIndex : visibleIndex;
+                    return (
+                        <WordItem
+                            key={word.id}
                             word={word}
-                            index={index}
+                            index={actualIndex}
                             onWordUpdate={onWordUpdate}
                             onSplitWord={onSplitWord}
                             onRemoveWord={onRemoveWord}
+                            onAddWord={onAddWord}
+                            onMergeWords={onMergeWords}
+                            onSplitSegment={onSplitSegment}
+                            onAddSegment={onAddSegment}
+                            onMergeSegment={onMergeSegment}
                             wordsLength={words.length}
+                            isGlobal={isGlobal}
                         />
-
-                        {/* Word divider with merge/split functionality */}
-                        {!isGlobal && (
-                            <WordDivider
-                                onAddWord={() => onAddWord(index)}
-                                onMergeWords={() => onMergeWords(index)}
-                                onSplitSegment={() => onSplitSegment?.(index)}
-                                onAddSegmentAfter={
-                                    index === words.length - 1
-                                        ? () => onAddSegment?.(index + 1)
-                                        : undefined
-                                }
-                                onMergeSegment={
-                                    index === words.length - 1
-                                        ? () => onMergeSegment?.(true)
-                                        : undefined
-                                }
-                                canMerge={index < words.length - 1}
-                                isLast={index === words.length - 1}
-                                sx={{ ml: 15 }}
-                            />
-                        )}
-                        {isGlobal && (
-                            <WordDivider
-                                onAddWord={() => onAddWord(index)}
-                                onMergeWords={index < words.length - 1 ? () => onMergeWords(index) : undefined}
-                                canMerge={index < words.length - 1}
-                                sx={{ ml: 15 }}
-                            />
-                        )}
-                    </Box>
-                ))}
+                    );
+                })}
             </Box>
+            
+            {/* Pagination controls (only in global mode) */}
+            {isGlobal && pageCount > 1 && (
+                <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', mb: 1 }}>
+                    <Pagination 
+                        count={pageCount} 
+                        page={page} 
+                        onChange={handlePageChange} 
+                        color="primary" 
+                        size="small"
+                    />
+                    <Typography variant="body2" sx={{ ml: 2 }}>
+                        Showing words {startIndex + 1}-{endIndex} of {words.length}
+                    </Typography>
+                </Box>
+            )}
 
             <Box sx={{ display: 'flex', gap: 2, mb: 0.6 }}>
                 <TextField
