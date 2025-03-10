@@ -1,11 +1,13 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo, memo } from 'react'
 import {
     AnchorSequence,
     CorrectionData,
     GapSequence,
     HighlightInfo,
     InteractionMode,
-    LyricsSegment
+    LyricsSegment,
+    ReferenceSource,
+    WordCorrection
 } from '../types'
 import { Box, Button, Grid, useMediaQuery, useTheme } from '@mui/material'
 import { ApiClient } from '../api'
@@ -38,6 +40,7 @@ declare global {
     }
 }
 
+const debugLog = false;
 export interface LyricsAnalyzerProps {
     data: CorrectionData
     onFileLoad: () => void
@@ -62,6 +65,160 @@ export type ModalContent = {
         anchor_sequences: AnchorSequence[]
     }
 }
+
+// Define types for the memoized components
+interface MemoizedTranscriptionViewProps {
+    data: CorrectionData
+    mode: InteractionMode
+    onElementClick: (content: ModalContent) => void
+    onWordClick: (info: WordClickInfo) => void
+    flashingType: FlashType
+    flashingHandler: string | null
+    highlightInfo: HighlightInfo | null
+    onPlaySegment?: (time: number) => void
+    currentTime: number
+    anchors: AnchorSequence[]
+    disableHighlighting: boolean
+}
+
+// Create a memoized TranscriptionView component
+const MemoizedTranscriptionView = memo(function MemoizedTranscriptionView({
+    data,
+    mode,
+    onElementClick,
+    onWordClick,
+    flashingType,
+    flashingHandler,
+    highlightInfo,
+    onPlaySegment,
+    currentTime,
+    anchors,
+    disableHighlighting
+}: MemoizedTranscriptionViewProps) {
+    return (
+        <TranscriptionView
+            data={data}
+            mode={mode}
+            onElementClick={onElementClick}
+            onWordClick={onWordClick}
+            flashingType={flashingType}
+            flashingHandler={flashingHandler}
+            highlightInfo={highlightInfo}
+            onPlaySegment={onPlaySegment}
+            currentTime={disableHighlighting ? undefined : currentTime}
+            anchors={anchors}
+        />
+    );
+});
+
+interface MemoizedReferenceViewProps {
+    referenceSources: Record<string, ReferenceSource>
+    anchors: AnchorSequence[]
+    gaps: GapSequence[]
+    mode: InteractionMode
+    onElementClick: (content: ModalContent) => void
+    onWordClick: (info: WordClickInfo) => void
+    flashingType: FlashType
+    highlightInfo: HighlightInfo | null
+    currentSource: string
+    onSourceChange: (source: string) => void
+    corrected_segments: LyricsSegment[]
+    corrections: WordCorrection[]
+}
+
+// Create a memoized ReferenceView component
+const MemoizedReferenceView = memo(function MemoizedReferenceView({
+    referenceSources,
+    anchors,
+    gaps,
+    mode,
+    onElementClick,
+    onWordClick,
+    flashingType,
+    highlightInfo,
+    currentSource,
+    onSourceChange,
+    corrected_segments,
+    corrections
+}: MemoizedReferenceViewProps) {
+    return (
+        <ReferenceView
+            referenceSources={referenceSources}
+            anchors={anchors}
+            gaps={gaps}
+            mode={mode}
+            onElementClick={onElementClick}
+            onWordClick={onWordClick}
+            flashingType={flashingType}
+            highlightInfo={highlightInfo}
+            currentSource={currentSource}
+            onSourceChange={onSourceChange}
+            corrected_segments={corrected_segments}
+            corrections={corrections}
+        />
+    );
+});
+
+interface MemoizedHeaderProps {
+    isReadOnly: boolean
+    onFileLoad: () => void
+    data: CorrectionData
+    onMetricClick: {
+        anchor: () => void
+        corrected: () => void
+        uncorrected: () => void
+    }
+    effectiveMode: InteractionMode
+    onModeChange: (mode: InteractionMode) => void
+    apiClient: ApiClient | null
+    audioHash: string
+    onTimeUpdate: (time: number) => void
+    onHandlerToggle: (handler: string, enabled: boolean) => void
+    isUpdatingHandlers: boolean
+    onHandlerClick?: (handler: string) => void
+    onAddLyrics?: () => void
+    onFindReplace?: () => void
+    onEditAll?: () => void
+}
+
+// Create a memoized Header component
+const MemoizedHeader = memo(function MemoizedHeader({
+    isReadOnly,
+    onFileLoad,
+    data,
+    onMetricClick,
+    effectiveMode,
+    onModeChange,
+    apiClient,
+    audioHash,
+    onTimeUpdate,
+    onHandlerToggle,
+    isUpdatingHandlers,
+    onHandlerClick,
+    onAddLyrics,
+    onFindReplace,
+    onEditAll
+}: MemoizedHeaderProps) {
+    return (
+        <Header
+            isReadOnly={isReadOnly}
+            onFileLoad={onFileLoad}
+            data={data}
+            onMetricClick={onMetricClick}
+            effectiveMode={effectiveMode}
+            onModeChange={onModeChange}
+            apiClient={apiClient}
+            audioHash={audioHash}
+            onTimeUpdate={onTimeUpdate}
+            onHandlerToggle={onHandlerToggle}
+            isUpdatingHandlers={isUpdatingHandlers}
+            onHandlerClick={onHandlerClick}
+            onAddLyrics={onAddLyrics}
+            onFindReplace={onFindReplace}
+            onEditAll={onEditAll}
+        />
+    );
+});
 
 export default function LyricsAnalyzer({ data: initialData, onFileLoad, apiClient, isReadOnly, audioHash }: LyricsAnalyzerProps) {
     const [modalContent, setModalContent] = useState<ModalContent | null>(null)
@@ -101,18 +258,20 @@ export default function LyricsAnalyzer({ data: initialData, onFileLoad, apiClien
 
     // Update debug logging to use new ID-based structure
     useEffect(() => {
-        console.log('LyricsAnalyzer Initial Data:', {
-            hasData: !!initialData,
-            segmentsCount: initialData?.corrected_segments?.length ?? 0,
-            anchorsCount: initialData?.anchor_sequences?.length ?? 0,
-            gapsCount: initialData?.gap_sequences?.length ?? 0,
-            firstAnchor: initialData?.anchor_sequences?.[0] && {
-                transcribedWordIds: initialData.anchor_sequences[0].transcribed_word_ids,
-                referenceWordIds: initialData.anchor_sequences[0].reference_word_ids
-            },
-            firstSegment: initialData?.corrected_segments?.[0],
-            referenceSources: Object.keys(initialData?.reference_lyrics ?? {})
-        });
+        if (debugLog) {
+            console.log('LyricsAnalyzer Initial Data:', {
+                hasData: !!initialData,
+                segmentsCount: initialData?.corrected_segments?.length ?? 0,
+                anchorsCount: initialData?.anchor_sequences?.length ?? 0,
+                gapsCount: initialData?.gap_sequences?.length ?? 0,
+                firstAnchor: initialData?.anchor_sequences?.[0] && {
+                    transcribedWordIds: initialData.anchor_sequences[0].transcribed_word_ids,
+                    referenceWordIds: initialData.anchor_sequences[0].reference_word_ids
+                },
+                firstSegment: initialData?.corrected_segments?.[0],
+                referenceSources: Object.keys(initialData?.reference_lyrics ?? {})
+            });
+        }
     }, [initialData]);
 
     // Load saved data
@@ -134,17 +293,21 @@ export default function LyricsAnalyzer({ data: initialData, onFileLoad, apiClien
     useEffect(() => {
         const { currentModalHandler } = getModalState()
 
-        console.log('LyricsAnalyzer - Setting up keyboard effect', {
-            isAnyModalOpen,
-            hasSpacebarHandler: !!currentModalHandler
-        })
+        if (debugLog) {
+            console.log('LyricsAnalyzer - Setting up keyboard effect', {
+                isAnyModalOpen,
+                hasSpacebarHandler: !!currentModalHandler
+            })
+        }
 
         const { handleKeyDown, handleKeyUp } = setupKeyboardHandlers({
             setIsShiftPressed,
         })
 
         // Always add keyboard listeners
-        console.log('LyricsAnalyzer - Adding keyboard event listeners')
+        if (debugLog) {
+            console.log('LyricsAnalyzer - Adding keyboard event listeners')
+        }
         window.addEventListener('keydown', handleKeyDown)
         window.addEventListener('keyup', handleKeyUp)
 
@@ -155,7 +318,9 @@ export default function LyricsAnalyzer({ data: initialData, onFileLoad, apiClien
 
         // Cleanup function
         return () => {
-            console.log('LyricsAnalyzer - Cleanup effect running')
+            if (debugLog) {
+                console.log('LyricsAnalyzer - Cleanup effect running')
+            }
             window.removeEventListener('keydown', handleKeyDown)
             window.removeEventListener('keyup', handleKeyUp)
             document.body.style.userSelect = ''
@@ -197,7 +362,9 @@ export default function LyricsAnalyzer({ data: initialData, onFileLoad, apiClien
     }, [])
 
     const handleWordClick = useCallback((info: WordClickInfo) => {
-        console.log('LyricsAnalyzer handleWordClick:', { info });
+        if (debugLog) {
+            console.log('LyricsAnalyzer handleWordClick:', { info });
+        }
 
         if (effectiveMode === 'highlight') {
             // Find if this word is part of a correction
@@ -345,7 +512,9 @@ export default function LyricsAnalyzer({ data: initialData, onFileLoad, apiClien
         if (!apiClient) return
 
         try {
-            console.log('Submitting changes to server')
+            if (debugLog) {
+                console.log('Submitting changes to server')
+            }
             await apiClient.submitCorrections(data)
 
             setIsReviewComplete(true)
@@ -434,15 +603,20 @@ export default function LyricsAnalyzer({ data: initialData, onFileLoad, apiClien
     }, [apiClient, data.metadata.enabled_handlers, handleFlash])
 
     const handleHandlerClick = useCallback((handler: string) => {
-        console.log('Handler clicked:', handler);
+        if (debugLog) {
+            console.log('Handler clicked:', handler);
+        }
         setFlashingHandler(handler);
         setFlashingType('handler');
-        console.log('Set flashingHandler to:', handler);
-        console.log('Set flashingType to: handler');
-
+        if (debugLog) {
+            console.log('Set flashingHandler to:', handler);
+            console.log('Set flashingType to: handler');
+        }
         // Clear the flash after a short delay
         setTimeout(() => {
-            console.log('Clearing flash state');
+            if (debugLog) {
+                console.log('Clearing flash state');
+            }
             setFlashingHandler(null);
             setFlashingType(null);
         }, 1500);
@@ -450,9 +624,11 @@ export default function LyricsAnalyzer({ data: initialData, onFileLoad, apiClien
 
     // Wrap setModalSpacebarHandler in useCallback
     const handleSetModalSpacebarHandler = useCallback((handler: (() => (e: KeyboardEvent) => void) | undefined) => {
-        console.log('LyricsAnalyzer - Setting modal handler:', {
-            hasHandler: !!handler
-        })
+        if (debugLog) {
+            console.log('LyricsAnalyzer - Setting modal handler:', {
+                hasHandler: !!handler
+            })
+        }
         // Update the global modal handler
         setModalHandler(handler ? handler() : undefined, !!handler)
     }, [])
@@ -499,19 +675,19 @@ export default function LyricsAnalyzer({ data: initialData, onFileLoad, apiClien
         // Store the original global segment for reset functionality
         setGlobalEditSegment(globalSegment)
         setOriginalGlobalSegment(JSON.parse(JSON.stringify(globalSegment)))
-        
+
         // Create the original transcribed global segment for Un-Correct functionality
         if (originalData.original_segments) {
             // Get all words from original segments
             const originalWords = originalData.original_segments.flatMap((segment: LyricsSegment) => segment.words)
-            
+
             // Sort words by start time
             const sortedOriginalWords = [...originalWords].sort((a, b) => {
                 const aTime = a.start_time ?? 0
                 const bTime = b.start_time ?? 0
                 return aTime - bTime
             })
-            
+
             // Create the original transcribed global segment
             const originalTranscribedGlobal: LyricsSegment = {
                 id: 'original-transcribed-global',
@@ -520,12 +696,12 @@ export default function LyricsAnalyzer({ data: initialData, onFileLoad, apiClien
                 start_time: sortedOriginalWords[0]?.start_time ?? null,
                 end_time: sortedOriginalWords[sortedOriginalWords.length - 1]?.end_time ?? null
             }
-            
+
             setOriginalTranscribedGlobalSegment(originalTranscribedGlobal)
         } else {
             setOriginalTranscribedGlobalSegment(null)
         }
-        
+
         setIsEditAllModalOpen(true)
     }, [data.corrected_segments, originalData.original_segments])
 
@@ -623,6 +799,16 @@ export default function LyricsAnalyzer({ data: initialData, onFileLoad, apiClien
         setGlobalEditSegment(null)
     }, [data])
 
+    // Memoize the metric click handlers
+    const metricClickHandlers = useMemo(() => ({
+        anchor: () => handleFlash('anchor'),
+        corrected: () => handleFlash('corrected'),
+        uncorrected: () => handleFlash('uncorrected')
+    }), [handleFlash]);
+
+    // Determine if any modal is open to disable highlighting
+    const isAnyModalOpenMemo = useMemo(() => isAnyModalOpen, [isAnyModalOpen]);
+
     return (
         <Box sx={{
             p: 1,
@@ -630,15 +816,11 @@ export default function LyricsAnalyzer({ data: initialData, onFileLoad, apiClien
             maxWidth: '100%',
             overflowX: 'hidden'
         }}>
-            <Header
+            <MemoizedHeader
                 isReadOnly={isReadOnly}
                 onFileLoad={onFileLoad}
                 data={data}
-                onMetricClick={{
-                    anchor: () => handleFlash('anchor'),
-                    corrected: () => handleFlash('corrected'),
-                    uncorrected: () => handleFlash('uncorrected')
-                }}
+                onMetricClick={metricClickHandlers}
                 effectiveMode={effectiveMode}
                 onModeChange={setInteractionMode}
                 apiClient={apiClient}
@@ -654,7 +836,7 @@ export default function LyricsAnalyzer({ data: initialData, onFileLoad, apiClien
 
             <Grid container direction={isMobile ? 'column' : 'row'}>
                 <Grid item xs={12} md={6}>
-                    <TranscriptionView
+                    <MemoizedTranscriptionView
                         data={data}
                         mode={effectiveMode}
                         onElementClick={setModalContent}
@@ -665,6 +847,7 @@ export default function LyricsAnalyzer({ data: initialData, onFileLoad, apiClien
                         onPlaySegment={handlePlaySegment}
                         currentTime={currentAudioTime}
                         anchors={data.anchor_sequences}
+                        disableHighlighting={isAnyModalOpenMemo}
                     />
                     {!isReadOnly && apiClient && (
                         <Box sx={{
@@ -694,7 +877,7 @@ export default function LyricsAnalyzer({ data: initialData, onFileLoad, apiClien
                     )}
                 </Grid>
                 <Grid item xs={12} md={6}>
-                    <ReferenceView
+                    <MemoizedReferenceView
                         referenceSources={data.reference_lyrics}
                         anchors={data.anchor_sequences}
                         gaps={data.gap_sequences}

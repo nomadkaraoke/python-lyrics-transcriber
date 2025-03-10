@@ -10,12 +10,141 @@ import CloseIcon from '@mui/icons-material/Close'
 import PlayCircleOutlineIcon from '@mui/icons-material/PlayCircleOutline'
 import StopIcon from '@mui/icons-material/Stop'
 import { LyricsSegment, Word } from '../types'
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo, memo } from 'react'
 import { nanoid } from 'nanoid'
 import useManualSync from '../hooks/useManualSync'
 import EditTimelineSection from './EditTimelineSection'
 import EditWordList from './EditWordList'
 import EditActionBar from './EditActionBar'
+
+// Extract TimelineSection into a separate memoized component
+interface TimelineSectionProps {
+    words: Word[]
+    timeRange: { start: number, end: number }
+    originalSegment: LyricsSegment
+    editedSegment: LyricsSegment
+    currentTime: number
+    isManualSyncing: boolean
+    syncWordIndex: number
+    isSpacebarPressed: boolean
+    onWordUpdate: (index: number, updates: Partial<Word>) => void
+    onPlaySegment?: (startTime: number) => void
+    startManualSync: () => void
+    isGlobal: boolean
+}
+
+const MemoizedTimelineSection = memo(function TimelineSection({
+    words,
+    timeRange,
+    originalSegment,
+    editedSegment,
+    currentTime,
+    isManualSyncing,
+    syncWordIndex,
+    isSpacebarPressed,
+    onWordUpdate,
+    onPlaySegment,
+    startManualSync,
+    isGlobal
+}: TimelineSectionProps) {
+    return (
+        <EditTimelineSection
+            words={words}
+            startTime={timeRange.start}
+            endTime={timeRange.end}
+            originalStartTime={originalSegment.start_time}
+            originalEndTime={originalSegment.end_time}
+            currentStartTime={editedSegment.start_time}
+            currentEndTime={editedSegment.end_time}
+            currentTime={currentTime}
+            isManualSyncing={isManualSyncing}
+            syncWordIndex={syncWordIndex}
+            isSpacebarPressed={isSpacebarPressed}
+            onWordUpdate={onWordUpdate}
+            onPlaySegment={onPlaySegment}
+            startManualSync={startManualSync}
+            isGlobal={isGlobal}
+        />
+    )
+})
+
+// Extract WordList into a separate memoized component
+interface WordListProps {
+    words: Word[]
+    onWordUpdate: (index: number, updates: Partial<Word>) => void
+    onSplitWord: (index: number) => void
+    onMergeWords: (index: number) => void
+    onAddWord: (index?: number) => void
+    onRemoveWord: (index: number) => void
+    onSplitSegment?: (wordIndex: number) => void
+    onAddSegment?: (beforeIndex: number) => void
+    onMergeSegment?: (mergeWithNext: boolean) => void
+    isGlobal: boolean
+}
+
+const MemoizedWordList = memo(function WordList({
+    words,
+    onWordUpdate,
+    onSplitWord,
+    onMergeWords,
+    onAddWord,
+    onRemoveWord,
+    onSplitSegment,
+    onAddSegment,
+    onMergeSegment,
+    isGlobal
+}: WordListProps) {
+    return (
+        <EditWordList
+            words={words}
+            onWordUpdate={onWordUpdate}
+            onSplitWord={onSplitWord}
+            onMergeWords={onMergeWords}
+            onAddWord={onAddWord}
+            onRemoveWord={onRemoveWord}
+            onSplitSegment={onSplitSegment}
+            onAddSegment={onAddSegment}
+            onMergeSegment={onMergeSegment}
+            isGlobal={isGlobal}
+        />
+    )
+})
+
+// Extract ActionBar into a separate memoized component
+interface ActionBarProps {
+    onReset: () => void
+    onRevertToOriginal?: () => void
+    onDelete?: () => void
+    onClose: () => void
+    onSave: () => void
+    editedSegment: LyricsSegment | null
+    originalTranscribedSegment?: LyricsSegment | null
+    isGlobal: boolean
+}
+
+const MemoizedActionBar = memo(function ActionBar({
+    onReset,
+    onRevertToOriginal,
+    onDelete,
+    onClose,
+    onSave,
+    editedSegment,
+    originalTranscribedSegment,
+    isGlobal
+}: ActionBarProps) {
+    return (
+        <EditActionBar
+            onReset={onReset}
+            onRevertToOriginal={onRevertToOriginal}
+            onDelete={onDelete}
+            onClose={onClose}
+            onSave={onSave}
+            editedSegment={editedSegment}
+            originalTranscribedSegment={originalTranscribedSegment}
+            isGlobal={isGlobal}
+        />
+    )
+})
 
 interface EditModalProps {
     open: boolean
@@ -161,30 +290,26 @@ export default function EditModal({
     }, [isManualSyncing, editedSegment, currentTime, cleanupManualSync])
 
     // Add a function to get safe time values
-    const getSafeTimeRange = (segment: LyricsSegment | null) => {
+    const getSafeTimeRange = useCallback((segment: LyricsSegment | null) => {
         if (!segment) return { start: 0, end: 1 }; // Default 1-second range
         const start = segment.start_time ?? 0;
         const end = segment.end_time ?? (start + 1);
         return { start, end };
-    }
+    }, [])
 
-    // Early return after all hooks and function definitions
-    if (!segment || !editedSegment || !originalSegment) return null
-    if (!isGlobal && segmentIndex === null) return null
-
-    // Get safe time values for TimelineEditor
-    const timeRange = getSafeTimeRange(editedSegment)
-
-    const handleWordChange = (index: number, updates: Partial<Word>) => {
+    // Define all handler functions with useCallback before the early return
+    const handleWordChange = useCallback((index: number, updates: Partial<Word>) => {
+        if (!editedSegment) return;
         const newWords = [...editedSegment.words]
         newWords[index] = {
             ...newWords[index],
             ...updates
         }
         updateSegment(newWords)
-    }
+    }, [editedSegment, updateSegment])
 
-    const handleAddWord = (index?: number) => {
+    const handleAddWord = useCallback((index?: number) => {
+        if (!editedSegment) return;
         const newWords = [...editedSegment.words]
         let newWord: Word
 
@@ -222,9 +347,10 @@ export default function EditModal({
         }
 
         updateSegment(newWords)
-    }
+    }, [editedSegment, updateSegment])
 
-    const handleSplitWord = (index: number) => {
+    const handleSplitWord = useCallback((index: number) => {
+        if (!editedSegment) return;
         const word = editedSegment.words[index]
         const startTime = word.start_time ?? 0
         const endTime = word.end_time ?? startTime + 0.5
@@ -258,9 +384,10 @@ export default function EditModal({
         allWords.splice(index, 1, ...newWords)
 
         updateSegment(allWords)
-    }
+    }, [editedSegment, updateSegment])
 
-    const handleMergeWords = (index: number) => {
+    const handleMergeWords = useCallback((index: number) => {
+        if (!editedSegment) return;
         if (index >= editedSegment.words.length - 1) return
 
         const word1 = editedSegment.words[index]
@@ -276,14 +403,15 @@ export default function EditModal({
         })
 
         updateSegment(newWords)
-    }
+    }, [editedSegment, updateSegment])
 
-    const handleRemoveWord = (index: number) => {
+    const handleRemoveWord = useCallback((index: number) => {
+        if (!editedSegment) return;
         const newWords = editedSegment.words.filter((_, i) => i !== index)
         updateSegment(newWords)
-    }
+    }, [editedSegment, updateSegment])
 
-    const handleReset = () => {
+    const handleReset = useCallback(() => {
         if (!originalSegment) return
         
         console.log('EditModal - Resetting to original:', {
@@ -293,9 +421,9 @@ export default function EditModal({
         })
         
         setEditedSegment(JSON.parse(JSON.stringify(originalSegment)))
-    }
+    }, [originalSegment, isGlobal])
 
-    const handleRevertToOriginal = () => {
+    const handleRevertToOriginal = useCallback(() => {
         if (!originalTranscribedSegment) return
         
         console.log('EditModal - Reverting to original transcribed:', {
@@ -305,49 +433,49 @@ export default function EditModal({
         })
         
         setEditedSegment(JSON.parse(JSON.stringify(originalTranscribedSegment)))
-    }
+    }, [originalTranscribedSegment, isGlobal])
 
-    const handleSave = () => {
-        if (editedSegment) {
-            console.log('EditModal - Saving segment:', {
-                isGlobal,
-                segmentIndex,
-                originalText: segment?.text,
-                editedText: editedSegment.text,
-                wordCount: editedSegment.words.length,
-                firstWord: editedSegment.words[0],
-                lastWord: editedSegment.words[editedSegment.words.length - 1],
-                timeRange: `${editedSegment.start_time?.toFixed(4) ?? 'N/A'} - ${editedSegment.end_time?.toFixed(4) ?? 'N/A'}`
-            })
-            onSave(editedSegment)
-            onClose()
-        }
-    }
+    const handleSave = useCallback(() => {
+        if (!editedSegment || !segment) return;
+        
+        console.log('EditModal - Saving segment:', {
+            isGlobal,
+            segmentIndex,
+            originalText: segment?.text,
+            editedText: editedSegment.text,
+            wordCount: editedSegment.words.length,
+            firstWord: editedSegment.words[0],
+            lastWord: editedSegment.words[editedSegment.words.length - 1],
+            timeRange: `${editedSegment.start_time?.toFixed(4) ?? 'N/A'} - ${editedSegment.end_time?.toFixed(4) ?? 'N/A'}`
+        })
+        onSave(editedSegment)
+        onClose()
+    }, [editedSegment, isGlobal, segmentIndex, segment, onSave, onClose])
 
-    const handleDelete = () => {
+    const handleDelete = useCallback(() => {
         if (segmentIndex !== null) {
             onDelete?.(segmentIndex)
             onClose()
         }
-    }
+    }, [segmentIndex, onDelete, onClose])
 
-    const handleSplitSegment = (wordIndex: number) => {
+    const handleSplitSegment = useCallback((wordIndex: number) => {
         if (segmentIndex !== null && editedSegment) {
             handleSave()  // Save current changes first
             onSplitSegment?.(segmentIndex, wordIndex)
         }
-    }
+    }, [segmentIndex, editedSegment, handleSave, onSplitSegment])
 
-    const handleMergeSegment = (mergeWithNext: boolean) => {
+    const handleMergeSegment = useCallback((mergeWithNext: boolean) => {
         if (segmentIndex !== null && editedSegment) {
             handleSave()  // Save current changes first
             onMergeSegment?.(segmentIndex, mergeWithNext)
             onClose()
         }
-    }
+    }, [segmentIndex, editedSegment, handleSave, onMergeSegment, onClose])
 
     // Handle play/stop button click
-    const handlePlayButtonClick = () => {
+    const handlePlayButtonClick = useCallback(() => {
         if (!segment?.start_time || !onPlaySegment) return
 
         if (isPlaying) {
@@ -359,27 +487,13 @@ export default function EditModal({
             // Start playback
             onPlaySegment(segment.start_time)
         }
-    }
+    }, [segment?.start_time, onPlaySegment, isPlaying])
 
-    return (
-        <Dialog
-            open={open}
-            onClose={handleClose}
-            maxWidth="md"
-            fullWidth
-            onKeyDown={(e) => {
-                if (e.key === 'Enter' && !e.shiftKey) {
-                    e.preventDefault()
-                    handleSave()
-                }
-            }}
-            PaperProps={{
-                sx: {
-                    height: '90vh',
-                    margin: '5vh 0'
-                }
-            }}
-        >
+    // Memoize the dialog title to prevent re-renders
+    const dialogTitle = useMemo(() => {
+        if (!segment) return null;
+        
+        return (
             <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                 <Box sx={{ flex: 1, display: 'flex', alignItems: 'center', gap: 1 }}>
                     Edit {isGlobal ? 'All Words' : `Segment ${segmentIndex}`}
@@ -401,6 +515,39 @@ export default function EditModal({
                     <CloseIcon />
                 </IconButton>
             </DialogTitle>
+        );
+    }, [isGlobal, segmentIndex, segment, onPlaySegment, handlePlayButtonClick, isPlaying, onClose])
+
+    // Calculate timeRange before the early return
+    const timeRange = useMemo(() => {
+        if (!editedSegment) return { start: 0, end: 1 };
+        return getSafeTimeRange(editedSegment);
+    }, [getSafeTimeRange, editedSegment]);
+
+    // Early return after all hooks and function definitions
+    if (!segment || !editedSegment || !originalSegment) return null
+    if (!isGlobal && segmentIndex === null) return null
+
+    return (
+        <Dialog
+            open={open}
+            onClose={handleClose}
+            maxWidth="md"
+            fullWidth
+            onKeyDown={(e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault()
+                    handleSave()
+                }
+            }}
+            PaperProps={{
+                sx: {
+                    height: '90vh',
+                    margin: '5vh 0'
+                }
+            }}
+        >
+            {dialogTitle}
 
             <DialogContent
                 dividers
@@ -411,14 +558,11 @@ export default function EditModal({
                     overflow: 'hidden'
                 }}
             >
-                <EditTimelineSection
+                <MemoizedTimelineSection
                     words={editedSegment.words}
-                    startTime={timeRange.start}
-                    endTime={timeRange.end}
-                    originalStartTime={originalSegment.start_time}
-                    originalEndTime={originalSegment.end_time}
-                    currentStartTime={editedSegment.start_time}
-                    currentEndTime={editedSegment.end_time}
+                    timeRange={timeRange}
+                    originalSegment={originalSegment}
+                    editedSegment={editedSegment}
                     currentTime={currentTime}
                     isManualSyncing={isManualSyncing}
                     syncWordIndex={syncWordIndex}
@@ -429,7 +573,7 @@ export default function EditModal({
                     isGlobal={isGlobal}
                 />
 
-                <EditWordList
+                <MemoizedWordList
                     words={editedSegment.words}
                     onWordUpdate={handleWordChange}
                     onSplitWord={handleSplitWord}
@@ -439,13 +583,12 @@ export default function EditModal({
                     onSplitSegment={handleSplitSegment}
                     onAddSegment={onAddSegment}
                     onMergeSegment={handleMergeSegment}
-                    currentTime={currentTime}
                     isGlobal={isGlobal}
                 />
             </DialogContent>
 
             <DialogActions>
-                <EditActionBar
+                <MemoizedActionBar
                     onReset={handleReset}
                     onRevertToOriginal={handleRevertToOriginal}
                     onDelete={handleDelete}

@@ -34146,6 +34146,77 @@ function WordDivider({
     }
   );
 }
+const WordRow = reactExports.memo(function WordRow2({
+  word,
+  index,
+  onWordUpdate,
+  onSplitWord,
+  onRemoveWord,
+  wordsLength
+}) {
+  var _a, _b;
+  return /* @__PURE__ */ jsxRuntimeExports.jsxs(Box, { sx: {
+    display: "flex",
+    gap: 2,
+    alignItems: "center"
+  }, children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsx(
+      TextField,
+      {
+        label: `Word ${index}`,
+        value: word.text,
+        onChange: (e) => onWordUpdate(index, { text: e.target.value }),
+        fullWidth: true,
+        size: "small"
+      }
+    ),
+    /* @__PURE__ */ jsxRuntimeExports.jsx(
+      TextField,
+      {
+        label: "Start Time",
+        value: ((_a = word.start_time) == null ? void 0 : _a.toFixed(2)) ?? "",
+        onChange: (e) => onWordUpdate(index, { start_time: parseFloat(e.target.value) }),
+        type: "number",
+        inputProps: { step: 0.01 },
+        sx: { width: "150px" },
+        size: "small"
+      }
+    ),
+    /* @__PURE__ */ jsxRuntimeExports.jsx(
+      TextField,
+      {
+        label: "End Time",
+        value: ((_b = word.end_time) == null ? void 0 : _b.toFixed(2)) ?? "",
+        onChange: (e) => onWordUpdate(index, { end_time: parseFloat(e.target.value) }),
+        type: "number",
+        inputProps: { step: 0.01 },
+        sx: { width: "150px" },
+        size: "small"
+      }
+    ),
+    /* @__PURE__ */ jsxRuntimeExports.jsx(
+      IconButton,
+      {
+        onClick: () => onSplitWord(index),
+        title: "Split Word",
+        sx: { color: "primary.main" },
+        size: "small",
+        children: /* @__PURE__ */ jsxRuntimeExports.jsx(SplitIcon, { fontSize: "small" })
+      }
+    ),
+    /* @__PURE__ */ jsxRuntimeExports.jsx(
+      IconButton,
+      {
+        onClick: () => onRemoveWord(index),
+        disabled: wordsLength <= 1,
+        title: "Remove Word",
+        sx: { color: "error.main" },
+        size: "small",
+        children: /* @__PURE__ */ jsxRuntimeExports.jsx(DeleteIcon, { fontSize: "small" })
+      }
+    )
+  ] });
+});
 function EditWordList({
   words,
   onWordUpdate,
@@ -34156,7 +34227,6 @@ function EditWordList({
   onSplitSegment,
   onAddSegment,
   onMergeSegment,
-  currentTime,
   isGlobal = false
 }) {
   const [replacementText, setReplacementText] = reactExports.useState("");
@@ -34168,10 +34238,6 @@ function EditWordList({
       }
     });
     setReplacementText("");
-  };
-  const isWordHighlighted = (word) => {
-    if (!currentTime || word.start_time === null || word.end_time === null) return false;
-    return currentTime >= word.start_time && currentTime <= word.end_time;
   };
   return /* @__PURE__ */ jsxRuntimeExports.jsxs(Box, { sx: { display: "flex", flexDirection: "column", gap: 1, flexGrow: 1, minHeight: 0 }, children: [
     /* @__PURE__ */ jsxRuntimeExports.jsxs(Box, { sx: {
@@ -34209,95 +34275,41 @@ function EditWordList({
           sx: { ml: 15 }
         }
       ),
-      words.map((word, index) => {
-        var _a, _b;
-        return /* @__PURE__ */ jsxRuntimeExports.jsxs(Box, { children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsxs(Box, { sx: {
-            display: "flex",
-            gap: 2,
-            alignItems: "center",
-            backgroundColor: isWordHighlighted(word) ? "action.selected" : "transparent"
-          }, children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx(
-              TextField,
-              {
-                label: `Word ${index}`,
-                value: word.text,
-                onChange: (e) => onWordUpdate(index, { text: e.target.value }),
-                fullWidth: true,
-                size: "small"
-              }
-            ),
-            /* @__PURE__ */ jsxRuntimeExports.jsx(
-              TextField,
-              {
-                label: "Start Time",
-                value: ((_a = word.start_time) == null ? void 0 : _a.toFixed(2)) ?? "",
-                onChange: (e) => onWordUpdate(index, { start_time: parseFloat(e.target.value) }),
-                type: "number",
-                inputProps: { step: 0.01 },
-                sx: { width: "150px" },
-                size: "small"
-              }
-            ),
-            /* @__PURE__ */ jsxRuntimeExports.jsx(
-              TextField,
-              {
-                label: "End Time",
-                value: ((_b = word.end_time) == null ? void 0 : _b.toFixed(2)) ?? "",
-                onChange: (e) => onWordUpdate(index, { end_time: parseFloat(e.target.value) }),
-                type: "number",
-                inputProps: { step: 0.01 },
-                sx: { width: "150px" },
-                size: "small"
-              }
-            ),
-            /* @__PURE__ */ jsxRuntimeExports.jsx(
-              IconButton,
-              {
-                onClick: () => onSplitWord(index),
-                title: "Split Word",
-                sx: { color: "primary.main" },
-                size: "small",
-                children: /* @__PURE__ */ jsxRuntimeExports.jsx(SplitIcon, { fontSize: "small" })
-              }
-            ),
-            /* @__PURE__ */ jsxRuntimeExports.jsx(
-              IconButton,
-              {
-                onClick: () => onRemoveWord(index),
-                disabled: words.length <= 1,
-                title: "Remove Word",
-                sx: { color: "error.main" },
-                size: "small",
-                children: /* @__PURE__ */ jsxRuntimeExports.jsx(DeleteIcon, { fontSize: "small" })
-              }
-            )
-          ] }),
-          !isGlobal && /* @__PURE__ */ jsxRuntimeExports.jsx(
-            WordDivider,
-            {
-              onAddWord: () => onAddWord(index),
-              onMergeWords: () => onMergeWords(index),
-              onSplitSegment: () => onSplitSegment == null ? void 0 : onSplitSegment(index),
-              onAddSegmentAfter: index === words.length - 1 ? () => onAddSegment == null ? void 0 : onAddSegment(index + 1) : void 0,
-              onMergeSegment: index === words.length - 1 ? () => onMergeSegment == null ? void 0 : onMergeSegment(true) : void 0,
-              canMerge: index < words.length - 1,
-              isLast: index === words.length - 1,
-              sx: { ml: 15 }
-            }
-          ),
-          isGlobal && /* @__PURE__ */ jsxRuntimeExports.jsx(
-            WordDivider,
-            {
-              onAddWord: () => onAddWord(index),
-              onMergeWords: index < words.length - 1 ? () => onMergeWords(index) : void 0,
-              canMerge: index < words.length - 1,
-              sx: { ml: 15 }
-            }
-          )
-        ] }, word.id);
-      })
+      words.map((word, index) => /* @__PURE__ */ jsxRuntimeExports.jsxs(Box, { children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx(
+          WordRow,
+          {
+            word,
+            index,
+            onWordUpdate,
+            onSplitWord,
+            onRemoveWord,
+            wordsLength: words.length
+          }
+        ),
+        !isGlobal && /* @__PURE__ */ jsxRuntimeExports.jsx(
+          WordDivider,
+          {
+            onAddWord: () => onAddWord(index),
+            onMergeWords: () => onMergeWords(index),
+            onSplitSegment: () => onSplitSegment == null ? void 0 : onSplitSegment(index),
+            onAddSegmentAfter: index === words.length - 1 ? () => onAddSegment == null ? void 0 : onAddSegment(index + 1) : void 0,
+            onMergeSegment: index === words.length - 1 ? () => onMergeSegment == null ? void 0 : onMergeSegment(true) : void 0,
+            canMerge: index < words.length - 1,
+            isLast: index === words.length - 1,
+            sx: { ml: 15 }
+          }
+        ),
+        isGlobal && /* @__PURE__ */ jsxRuntimeExports.jsx(
+          WordDivider,
+          {
+            onAddWord: () => onAddWord(index),
+            onMergeWords: index < words.length - 1 ? () => onMergeWords(index) : void 0,
+            canMerge: index < words.length - 1,
+            sx: { ml: 15 }
+          }
+        )
+      ] }, word.id))
     ] }),
     /* @__PURE__ */ jsxRuntimeExports.jsxs(Box, { sx: { display: "flex", gap: 2, mb: 0.6 }, children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -34382,6 +34394,93 @@ function EditActionBar({
     ] })
   ] });
 }
+const MemoizedTimelineSection = reactExports.memo(function TimelineSection({
+  words,
+  timeRange,
+  originalSegment,
+  editedSegment,
+  currentTime,
+  isManualSyncing,
+  syncWordIndex,
+  isSpacebarPressed,
+  onWordUpdate,
+  onPlaySegment,
+  startManualSync,
+  isGlobal
+}) {
+  return /* @__PURE__ */ jsxRuntimeExports.jsx(
+    EditTimelineSection,
+    {
+      words,
+      startTime: timeRange.start,
+      endTime: timeRange.end,
+      originalStartTime: originalSegment.start_time,
+      originalEndTime: originalSegment.end_time,
+      currentStartTime: editedSegment.start_time,
+      currentEndTime: editedSegment.end_time,
+      currentTime,
+      isManualSyncing,
+      syncWordIndex,
+      isSpacebarPressed,
+      onWordUpdate,
+      onPlaySegment,
+      startManualSync,
+      isGlobal
+    }
+  );
+});
+const MemoizedWordList = reactExports.memo(function WordList({
+  words,
+  onWordUpdate,
+  onSplitWord,
+  onMergeWords,
+  onAddWord,
+  onRemoveWord,
+  onSplitSegment,
+  onAddSegment,
+  onMergeSegment,
+  isGlobal
+}) {
+  return /* @__PURE__ */ jsxRuntimeExports.jsx(
+    EditWordList,
+    {
+      words,
+      onWordUpdate,
+      onSplitWord,
+      onMergeWords,
+      onAddWord,
+      onRemoveWord,
+      onSplitSegment,
+      onAddSegment,
+      onMergeSegment,
+      isGlobal
+    }
+  );
+});
+const MemoizedActionBar = reactExports.memo(function ActionBar({
+  onReset,
+  onRevertToOriginal,
+  onDelete,
+  onClose,
+  onSave,
+  editedSegment,
+  originalTranscribedSegment,
+  isGlobal
+}) {
+  return /* @__PURE__ */ jsxRuntimeExports.jsx(
+    EditActionBar,
+    {
+      onReset,
+      onRevertToOriginal,
+      onDelete,
+      onClose,
+      onSave,
+      editedSegment,
+      originalTranscribedSegment,
+      isGlobal
+    }
+  );
+});
 function EditModal({
   open,
   onClose,
@@ -34481,24 +34580,23 @@ function EditModal({
       cleanupManualSync();
     }
   }, [isManualSyncing, editedSegment, currentTime, cleanupManualSync]);
-  const getSafeTimeRange = (segment2) => {
+  const getSafeTimeRange = reactExports.useCallback((segment2) => {
     if (!segment2) return { start: 0, end: 1 };
     const start2 = segment2.start_time ?? 0;
     const end2 = segment2.end_time ?? start2 + 1;
     return { start: start2, end: end2 };
-  };
-  if (!segment || !editedSegment || !originalSegment) return null;
-  if (!isGlobal && segmentIndex === null) return null;
-  const timeRange = getSafeTimeRange(editedSegment);
-  const handleWordChange = (index, updates) => {
+  }, []);
+  const handleWordChange = reactExports.useCallback((index, updates) => {
+    if (!editedSegment) return;
     const newWords = [...editedSegment.words];
     newWords[index] = {
       ...newWords[index],
       ...updates
     };
     updateSegment2(newWords);
-  };
-  const handleAddWord = (index) => {
+  }, [editedSegment, updateSegment2]);
+  const handleAddWord = reactExports.useCallback((index) => {
+    if (!editedSegment) return;
     const newWords = [...editedSegment.words];
     let newWord;
     if (index === void 0) {
@@ -34526,8 +34624,9 @@ function EditModal({
       newWords.splice(index + 1, 0, newWord);
     }
     updateSegment2(newWords);
-  };
-  const handleSplitWord = (index) => {
+  }, [editedSegment, updateSegment2]);
+  const handleSplitWord = reactExports.useCallback((index) => {
+    if (!editedSegment) return;
     const word = editedSegment.words[index];
     const startTime = word.start_time ?? 0;
     const endTime = word.end_time ?? startTime + 0.5;
@@ -34550,8 +34649,9 @@ function EditModal({
     const allWords = [...editedSegment.words];
     allWords.splice(index, 1, ...newWords);
     updateSegment2(allWords);
-  };
-  const handleMergeWords = (index) => {
+  }, [editedSegment, updateSegment2]);
+  const handleMergeWords = reactExports.useCallback((index) => {
+    if (!editedSegment) return;
     if (index >= editedSegment.words.length - 1) return;
     const word1 = editedSegment.words[index];
     const word2 = editedSegment.words[index + 1];
@@ -34564,12 +34664,13 @@ function EditModal({
       confidence: 1
     });
     updateSegment2(newWords);
-  };
-  const handleRemoveWord = (index) => {
+  }, [editedSegment, updateSegment2]);
+  const handleRemoveWord = reactExports.useCallback((index) => {
+    if (!editedSegment) return;
     const newWords = editedSegment.words.filter((_, i) => i !== index);
     updateSegment2(newWords);
-  };
-  const handleReset = () => {
+  }, [editedSegment, updateSegment2]);
+  const handleReset = reactExports.useCallback(() => {
     if (!originalSegment) return;
     console.log("EditModal - Resetting to original:", {
       isGlobal,
@@ -34577,8 +34678,8 @@ function EditModal({
       originalWordCount: originalSegment.words.length
     });
     setEditedSegment(JSON.parse(JSON.stringify(originalSegment)));
-  };
-  const handleRevertToOriginal = () => {
+  }, [originalSegment, isGlobal]);
+  const handleRevertToOriginal = reactExports.useCallback(() => {
     if (!originalTranscribedSegment) return;
     console.log("EditModal - Reverting to original transcribed:", {
       isGlobal,
@@ -34586,44 +34687,43 @@ function EditModal({
       originalTranscribedWordCount: originalTranscribedSegment.words.length
     });
     setEditedSegment(JSON.parse(JSON.stringify(originalTranscribedSegment)));
-  };
-  const handleSave = () => {
+  }, [originalTranscribedSegment, isGlobal]);
+  const handleSave = reactExports.useCallback(() => {
     var _a, _b;
-    if (editedSegment) {
-      console.log("EditModal - Saving segment:", {
-        isGlobal,
-        segmentIndex,
-        originalText: segment == null ? void 0 : segment.text,
-        editedText: editedSegment.text,
-        wordCount: editedSegment.words.length,
-        firstWord: editedSegment.words[0],
-        lastWord: editedSegment.words[editedSegment.words.length - 1],
-        timeRange: `${((_a = editedSegment.start_time) == null ? void 0 : _a.toFixed(4)) ?? "N/A"} - ${((_b = editedSegment.end_time) == null ? void 0 : _b.toFixed(4)) ?? "N/A"}`
-      });
-      onSave(editedSegment);
-      onClose();
-    }
-  };
-  const handleDelete = () => {
+    if (!editedSegment || !segment) return;
+    console.log("EditModal - Saving segment:", {
+      isGlobal,
+      segmentIndex,
+      originalText: segment == null ? void 0 : segment.text,
+      editedText: editedSegment.text,
+      wordCount: editedSegment.words.length,
+      firstWord: editedSegment.words[0],
+      lastWord: editedSegment.words[editedSegment.words.length - 1],
+      timeRange: `${((_a = editedSegment.start_time) == null ? void 0 : _a.toFixed(4)) ?? "N/A"} - ${((_b = editedSegment.end_time) == null ? void 0 : _b.toFixed(4)) ?? "N/A"}`
+    });
+    onSave(editedSegment);
+    onClose();
+  }, [editedSegment, isGlobal, segmentIndex, segment, onSave, onClose]);
+  const handleDelete = reactExports.useCallback(() => {
     if (segmentIndex !== null) {
       onDelete == null ? void 0 : onDelete(segmentIndex);
       onClose();
     }
-  };
-  const handleSplitSegment = (wordIndex) => {
+  }, [segmentIndex, onDelete, onClose]);
+  const handleSplitSegment = reactExports.useCallback((wordIndex) => {
     if (segmentIndex !== null && editedSegment) {
       handleSave();
       onSplitSegment == null ? void 0 : onSplitSegment(segmentIndex, wordIndex);
     }
-  };
-  const handleMergeSegment = (mergeWithNext) => {
+  }, [segmentIndex, editedSegment, handleSave, onSplitSegment]);
+  const handleMergeSegment = reactExports.useCallback((mergeWithNext) => {
     if (segmentIndex !== null && editedSegment) {
       handleSave();
       onMergeSegment == null ? void 0 : onMergeSegment(segmentIndex, mergeWithNext);
       onClose();
     }
-  };
-  const handlePlayButtonClick = () => {
+  }, [segmentIndex, editedSegment, handleSave, onMergeSegment, onClose]);
+  const handlePlayButtonClick = reactExports.useCallback(() => {
     if (!(segment == null ? void 0 : segment.start_time) || !onPlaySegment) return;
     if (isPlaying) {
       if (window.toggleAudioPlayback) {
@@ -34632,7 +34732,32 @@ function EditModal({
     } else {
       onPlaySegment(segment.start_time);
     }
-  };
+  }, [segment == null ? void 0 : segment.start_time, onPlaySegment, isPlaying]);
+  const dialogTitle = reactExports.useMemo(() => {
+    if (!segment) return null;
+    return /* @__PURE__ */ jsxRuntimeExports.jsxs(DialogTitle, { sx: { display: "flex", alignItems: "center", gap: 1 }, children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs(Box, { sx: { flex: 1, display: "flex", alignItems: "center", gap: 1 }, children: [
+        "Edit ",
+        isGlobal ? "All Words" : `Segment ${segmentIndex}`,
+        (segment == null ? void 0 : segment.start_time) !== null && onPlaySegment && /* @__PURE__ */ jsxRuntimeExports.jsx(
+          IconButton,
+          {
+            size: "small",
+            onClick: handlePlayButtonClick,
+            sx: { padding: "4px" },
+            children: isPlaying ? /* @__PURE__ */ jsxRuntimeExports.jsx(StopIcon, {}) : /* @__PURE__ */ jsxRuntimeExports.jsx(PlayCircleOutlineIcon, {})
+          }
+        )
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx(IconButton, { onClick: onClose, sx: { ml: "auto" }, children: /* @__PURE__ */ jsxRuntimeExports.jsx(CloseIcon, {}) })
+    ] });
+  }, [isGlobal, segmentIndex, segment, onPlaySegment, handlePlayButtonClick, isPlaying, onClose]);
+  const timeRange = reactExports.useMemo(() => {
+    if (!editedSegment) return { start: 0, end: 1 };
+    return getSafeTimeRange(editedSegment);
+  }, [getSafeTimeRange, editedSegment]);
+  if (!segment || !editedSegment || !originalSegment) return null;
+  if (!isGlobal && segmentIndex === null) return null;
   return /* @__PURE__ */ jsxRuntimeExports.jsxs(
     Dialog,
     {
@@ -34653,22 +34778,7 @@ function EditModal({
         }
       },
       children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsxs(DialogTitle, { sx: { display: "flex", alignItems: "center", gap: 1 }, children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsxs(Box, { sx: { flex: 1, display: "flex", alignItems: "center", gap: 1 }, children: [
-            "Edit ",
-            isGlobal ? "All Words" : `Segment ${segmentIndex}`,
-            (segment == null ? void 0 : segment.start_time) !== null && onPlaySegment && /* @__PURE__ */ jsxRuntimeExports.jsx(
-              IconButton,
-              {
-                size: "small",
-                onClick: handlePlayButtonClick,
-                sx: { padding: "4px" },
-                children: isPlaying ? /* @__PURE__ */ jsxRuntimeExports.jsx(StopIcon, {}) : /* @__PURE__ */ jsxRuntimeExports.jsx(PlayCircleOutlineIcon, {})
-              }
-            )
-          ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx(IconButton, { onClick: onClose, sx: { ml: "auto" }, children: /* @__PURE__ */ jsxRuntimeExports.jsx(CloseIcon, {}) })
-        ] }),
+        dialogTitle,
         /* @__PURE__ */ jsxRuntimeExports.jsxs(
           DialogContent,
           {
@@ -34681,15 +34791,12 @@ function EditModal({
             },
             children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx(
-                EditTimelineSection,
+                MemoizedTimelineSection,
                 {
                   words: editedSegment.words,
-                  startTime: timeRange.start,
-                  endTime: timeRange.end,
-                  originalStartTime: originalSegment.start_time,
-                  originalEndTime: originalSegment.end_time,
-                  currentStartTime: editedSegment.start_time,
-                  currentEndTime: editedSegment.end_time,
+                  timeRange,
+                  originalSegment,
+                  editedSegment,
                   currentTime,
                   isManualSyncing,
                   syncWordIndex,
@@ -34701,7 +34808,7 @@ function EditModal({
                 }
               ),
               /* @__PURE__ */ jsxRuntimeExports.jsx(
-                EditWordList,
+                MemoizedWordList,
                 {
                   words: editedSegment.words,
                   onWordUpdate: handleWordChange,
@@ -34712,7 +34819,6 @@ function EditModal({
                   onSplitSegment: handleSplitSegment,
                   onAddSegment,
                   onMergeSegment: handleMergeSegment,
-                  currentTime,
                   isGlobal
                 }
               )
@@ -34720,7 +34826,7 @@ function EditModal({
           }
         ),
         /* @__PURE__ */ jsxRuntimeExports.jsx(DialogActions, { children: /* @__PURE__ */ jsxRuntimeExports.jsx(
-          EditActionBar,
+          MemoizedActionBar,
           {
             onReset: handleReset,
             onRevertToOriginal: handleRevertToOriginal,
@@ -35375,34 +35481,14 @@ const clearSavedData = (data) => {
 let currentModalHandler;
 let isModalOpen = false;
 const setModalHandler = (handler, open) => {
-  console.log("setModalHandler called", {
-    hasHandler: !!handler,
-    open,
-    previousState: {
-      hadHandler: !!currentModalHandler,
-      wasOpen: isModalOpen
-    }
-  });
   currentModalHandler = handler;
   isModalOpen = open;
 };
 const setupKeyboardHandlers = (state) => {
-  const handlerId = Math.random().toString(36).substr(2, 9);
-  console.log(`Setting up keyboard handlers [${handlerId}]`);
+  Math.random().toString(36).substr(2, 9);
   const handleKeyDown = (e) => {
     var _a;
-    console.log(`Keyboard event captured [${handlerId}]`, {
-      key: e.key,
-      code: e.code,
-      type: e.type,
-      target: e.target,
-      currentTarget: e.currentTarget,
-      eventPhase: e.eventPhase,
-      isModalOpen,
-      hasModalHandler: !!currentModalHandler
-    });
     if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
-      console.log(`[${handlerId}] Ignoring keydown in input/textarea`);
       return;
     }
     if (e.key === "Shift") {
@@ -35411,60 +35497,30 @@ const setupKeyboardHandlers = (state) => {
     } else if (e.key === "Meta") {
       (_a = state.setIsCtrlPressed) == null ? void 0 : _a.call(state, true);
     } else if (e.key === " " || e.code === "Space") {
-      console.log("Keyboard handler - Spacebar pressed down", {
-        modalOpen: isModalOpen,
-        hasModalHandler: !!currentModalHandler,
-        hasGlobalToggle: !!window.toggleAudioPlayback,
-        target: e.target,
-        eventPhase: e.eventPhase,
-        handlerFunction: currentModalHandler == null ? void 0 : currentModalHandler.toString().slice(0, 100)
-      });
       e.preventDefault();
       if (isModalOpen && currentModalHandler) {
-        console.log("Keyboard handler - Delegating to modal handler");
         currentModalHandler(e);
       } else if (window.toggleAudioPlayback && !isModalOpen) {
-        console.log("Keyboard handler - Using global audio toggle");
         window.toggleAudioPlayback();
       }
     }
   };
   const handleKeyUp = (e) => {
     var _a;
-    console.log(`Keyboard up event captured [${handlerId}]`, {
-      key: e.key,
-      code: e.code,
-      type: e.type,
-      target: e.target,
-      eventPhase: e.eventPhase,
-      isModalOpen,
-      hasModalHandler: !!currentModalHandler
-    });
     if (e.key === "Shift") {
       state.setIsShiftPressed(false);
       document.body.style.userSelect = "";
     } else if (e.key === "Meta") {
       (_a = state.setIsCtrlPressed) == null ? void 0 : _a.call(state, false);
     } else if (e.key === " " || e.code === "Space") {
-      console.log("Keyboard handler - Spacebar released", {
-        modalOpen: isModalOpen,
-        hasModalHandler: !!currentModalHandler,
-        target: e.target,
-        eventPhase: e.eventPhase
-      });
       e.preventDefault();
       if (isModalOpen && currentModalHandler) {
-        console.log("Keyboard handler - Delegating keyup to modal handler");
         currentModalHandler(e);
       }
     }
   };
   return { handleKeyDown, handleKeyUp };
 };
-const getModalState = () => ({
-  currentModalHandler,
-  isModalOpen
-});
 function ModeSelector({ effectiveMode, onChange }) {
   return /* @__PURE__ */ jsxRuntimeExports.jsxs(Box, { sx: { display: "flex", alignItems: "center", gap: 1.2, height: "32px" }, children: [
     /* @__PURE__ */ jsxRuntimeExports.jsx(Typography, { variant: "body2", color: "text.secondary", sx: { fontSize: "0.8rem" }, children: "Mode:" }),
@@ -36299,6 +36355,106 @@ function FindReplaceModal({
     }
   );
 }
+const debugLog = false;
+const MemoizedTranscriptionView = reactExports.memo(function MemoizedTranscriptionView2({
+  data,
+  mode,
+  onElementClick,
+  onWordClick,
+  flashingType,
+  flashingHandler,
+  highlightInfo,
+  onPlaySegment,
+  currentTime,
+  anchors,
+  disableHighlighting
+}) {
+  return /* @__PURE__ */ jsxRuntimeExports.jsx(
+    TranscriptionView,
+    {
+      data,
+      mode,
+      onElementClick,
+      onWordClick,
+      flashingType,
+      flashingHandler,
+      highlightInfo,
+      onPlaySegment,
+      currentTime: disableHighlighting ? void 0 : currentTime,
+      anchors
+    }
+  );
+});
+const MemoizedReferenceView = reactExports.memo(function MemoizedReferenceView2({
+  referenceSources,
+  anchors,
+  gaps,
+  mode,
+  onElementClick,
+  onWordClick,
+  flashingType,
+  highlightInfo,
+  currentSource,
+  onSourceChange,
+  corrected_segments,
+  corrections
+}) {
+  return /* @__PURE__ */ jsxRuntimeExports.jsx(
+    ReferenceView,
+    {
+      referenceSources,
+      anchors,
+      gaps,
+      mode,
+      onElementClick,
+      onWordClick,
+      flashingType,
+      highlightInfo,
+      currentSource,
+      onSourceChange,
+      corrected_segments,
+      corrections
+    }
+  );
+});
+const MemoizedHeader = reactExports.memo(function MemoizedHeader2({
+  isReadOnly,
+  onFileLoad,
+  data,
+  onMetricClick,
+  effectiveMode,
+  onModeChange,
+  apiClient,
+  audioHash,
+  onTimeUpdate,
+  onHandlerToggle,
+  isUpdatingHandlers,
+  onHandlerClick,
+  onAddLyrics,
+  onFindReplace,
+  onEditAll
+}) {
+  return /* @__PURE__ */ jsxRuntimeExports.jsx(
+    Header,
+    {
+      isReadOnly,
+      onFileLoad,
+      data,
+      onMetricClick,
+      effectiveMode,
+      onModeChange,
+      apiClient,
+      audioHash,
+      onTimeUpdate,
+      onHandlerToggle,
+      isUpdatingHandlers,
+      onHandlerClick,
+      onAddLyrics,
+      onFindReplace,
+      onEditAll
+    }
+  );
+});
 function LyricsAnalyzer({ data: initialData, onFileLoad, apiClient, isReadOnly, audioHash }) {
   const [modalContent, setModalContent] = reactExports.useState(null);
   const [flashingType, setFlashingType] = reactExports.useState(null);
@@ -36331,19 +36487,6 @@ function LyricsAnalyzer({ data: initialData, onFileLoad, apiClient, isReadOnly, 
   const theme2 = useTheme();
   const isMobile = useMediaQuery(theme2.breakpoints.down("md"));
   reactExports.useEffect(() => {
-    var _a, _b, _c, _d, _e;
-    console.log("LyricsAnalyzer Initial Data:", {
-      hasData: !!initialData,
-      segmentsCount: ((_a = initialData == null ? void 0 : initialData.corrected_segments) == null ? void 0 : _a.length) ?? 0,
-      anchorsCount: ((_b = initialData == null ? void 0 : initialData.anchor_sequences) == null ? void 0 : _b.length) ?? 0,
-      gapsCount: ((_c = initialData == null ? void 0 : initialData.gap_sequences) == null ? void 0 : _c.length) ?? 0,
-      firstAnchor: ((_d = initialData == null ? void 0 : initialData.anchor_sequences) == null ? void 0 : _d[0]) && {
-        transcribedWordIds: initialData.anchor_sequences[0].transcribed_word_ids,
-        referenceWordIds: initialData.anchor_sequences[0].reference_word_ids
-      },
-      firstSegment: (_e = initialData == null ? void 0 : initialData.corrected_segments) == null ? void 0 : _e[0],
-      referenceSources: Object.keys((initialData == null ? void 0 : initialData.reference_lyrics) ?? {})
-    });
   }, [initialData]);
   reactExports.useEffect(() => {
     const savedData = loadSavedData(initialData);
@@ -36357,22 +36500,15 @@ function LyricsAnalyzer({ data: initialData, onFileLoad, apiClient, isReadOnly, 
     }
   }, [data, isReadOnly, initialData]);
   reactExports.useEffect(() => {
-    const { currentModalHandler: currentModalHandler2 } = getModalState();
-    console.log("LyricsAnalyzer - Setting up keyboard effect", {
-      isAnyModalOpen,
-      hasSpacebarHandler: !!currentModalHandler2
-    });
     const { handleKeyDown, handleKeyUp } = setupKeyboardHandlers({
       setIsShiftPressed
     });
-    console.log("LyricsAnalyzer - Adding keyboard event listeners");
     window.addEventListener("keydown", handleKeyDown);
     window.addEventListener("keyup", handleKeyUp);
     if (isAnyModalOpen) {
       setIsShiftPressed(false);
     }
     return () => {
-      console.log("LyricsAnalyzer - Cleanup effect running");
       window.removeEventListener("keydown", handleKeyDown);
       window.removeEventListener("keyup", handleKeyUp);
       document.body.style.userSelect = "";
@@ -36403,7 +36539,6 @@ function LyricsAnalyzer({ data: initialData, onFileLoad, apiClient, isReadOnly, 
   }, []);
   const handleWordClick = reactExports.useCallback((info) => {
     var _a, _b, _c, _d, _e, _f, _g;
-    console.log("LyricsAnalyzer handleWordClick:", { info });
     if (effectiveMode === "highlight") {
       const correction = (_a = data.corrections) == null ? void 0 : _a.find(
         (c) => c.corrected_word_id === info.word_id || c.word_id === info.word_id
@@ -36528,7 +36663,7 @@ function LyricsAnalyzer({ data: initialData, onFileLoad, apiClient, isReadOnly, 
   const handleSubmitToServer = reactExports.useCallback(async () => {
     if (!apiClient) return;
     try {
-      console.log("Submitting changes to server");
+      if (debugLog) ;
       await apiClient.submitCorrections(data);
       setIsReviewComplete(true);
       setIsReviewModalOpen(false);
@@ -36593,21 +36728,14 @@ function LyricsAnalyzer({ data: initialData, onFileLoad, apiClient, isReadOnly, 
     }
   }, [apiClient, data.metadata.enabled_handlers, handleFlash]);
   const handleHandlerClick = reactExports.useCallback((handler) => {
-    console.log("Handler clicked:", handler);
     setFlashingHandler(handler);
     setFlashingType("handler");
-    console.log("Set flashingHandler to:", handler);
-    console.log("Set flashingType to: handler");
     setTimeout(() => {
-      console.log("Clearing flash state");
       setFlashingHandler(null);
       setFlashingType(null);
     }, 1500);
   }, []);
   const handleSetModalSpacebarHandler = reactExports.useCallback((handler) => {
-    console.log("LyricsAnalyzer - Setting modal handler:", {
-      hasHandler: !!handler
-    });
     setModalHandler(handler ? handler() : void 0, !!handler);
   }, []);
   const handleAddLyrics = reactExports.useCallback(async (source, lyrics) => {
@@ -36723,6 +36851,12 @@ function LyricsAnalyzer({ data: initialData, onFileLoad, apiClient, isReadOnly, 
     setIsEditAllModalOpen(false);
     setGlobalEditSegment(null);
   }, [data]);
+  const metricClickHandlers = reactExports.useMemo(() => ({
+    anchor: () => handleFlash("anchor"),
+    corrected: () => handleFlash("corrected"),
+    uncorrected: () => handleFlash("uncorrected")
+  }), [handleFlash]);
+  const isAnyModalOpenMemo = reactExports.useMemo(() => isAnyModalOpen, [isAnyModalOpen]);
   return /* @__PURE__ */ jsxRuntimeExports.jsxs(Box, { sx: {
     p: 1,
     pb: 3,
@@ -36730,16 +36864,12 @@ function LyricsAnalyzer({ data: initialData, onFileLoad, apiClient, isReadOnly, 
     overflowX: "hidden"
   }, children: [
     /* @__PURE__ */ jsxRuntimeExports.jsx(
-      Header,
+      MemoizedHeader,
       {
         isReadOnly,
         onFileLoad,
         data,
-        onMetricClick: {
-          anchor: () => handleFlash("anchor"),
-          corrected: () => handleFlash("corrected"),
-          uncorrected: () => handleFlash("uncorrected")
-        },
+        onMetricClick: metricClickHandlers,
         effectiveMode,
         onModeChange: setInteractionMode,
         apiClient,
@@ -36756,7 +36886,7 @@ function LyricsAnalyzer({ data: initialData, onFileLoad, apiClient, isReadOnly, 
     /* @__PURE__ */ jsxRuntimeExports.jsxs(Grid, { container: true, direction: isMobile ? "column" : "row", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsxs(Grid, { item: true, xs: 12, md: 6, children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx(
-          TranscriptionView,
+          MemoizedTranscriptionView,
           {
             data,
             mode: effectiveMode,
@@ -36767,7 +36897,8 @@ function LyricsAnalyzer({ data: initialData, onFileLoad, apiClient, isReadOnly, 
             highlightInfo,
             onPlaySegment: handlePlaySegment,
             currentTime: currentAudioTime,
-            anchors: data.anchor_sequences
+            anchors: data.anchor_sequences,
+            disableHighlighting: isAnyModalOpenMemo
           }
         ),
         !isReadOnly && apiClient && /* @__PURE__ */ jsxRuntimeExports.jsxs(Box, { sx: {
@@ -36800,7 +36931,7 @@ function LyricsAnalyzer({ data: initialData, onFileLoad, apiClient, isReadOnly, 
         ] })
       ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsx(Grid, { item: true, xs: 12, md: 6, children: /* @__PURE__ */ jsxRuntimeExports.jsx(
-        ReferenceView,
+        MemoizedReferenceView,
         {
           referenceSources: data.reference_lyrics,
           anchors: data.anchor_sequences,
@@ -36923,7 +37054,6 @@ function App() {
     try {
       const client2 = new LiveApiClient(baseUrl);
       const data2 = await client2.getCorrectionData();
-      console.log("Full correction data from API:", data2);
       setData(data2);
     } catch (err) {
       const error2 = err;
@@ -37248,4 +37378,4 @@ ReactDOM$1.createRoot(document.getElementById("root")).render(
     /* @__PURE__ */ jsxRuntimeExports.jsx(App, {})
   ] })
 );
-//# sourceMappingURL=index-CFzXa7Bu.js.map
+//# sourceMappingURL=index-Dum9hcDj.js.map

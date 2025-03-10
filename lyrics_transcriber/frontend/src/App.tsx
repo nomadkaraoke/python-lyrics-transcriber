@@ -39,7 +39,7 @@ export default function App() {
     try {
       const client = new LiveApiClient(baseUrl)
       const data = await client.getCorrectionData()
-      console.log('Full correction data from API:', data)
+      // console.log('Full correction data from API:', data)
       setData(data)
     } catch (err) {
       const error = err as Error

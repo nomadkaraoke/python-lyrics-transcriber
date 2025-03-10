@@ -8,7 +8,7 @@ import DeleteIcon from '@mui/icons-material/Delete'
 import SplitIcon from '@mui/icons-material/CallSplit'
 import AutoFixHighIcon from '@mui/icons-material/AutoFixHigh'
 import { Word } from '../types'
-import { useState } from 'react'
+import { useState, memo } from 'react'
 import WordDivider from './WordDivider'
 
 interface EditWordListProps {
@@ -21,9 +21,76 @@ interface EditWordListProps {
     onSplitSegment?: (wordIndex: number) => void
     onAddSegment?: (beforeIndex: number) => void
     onMergeSegment?: (mergeWithNext: boolean) => void
-    currentTime?: number
     isGlobal?: boolean
 }
+
+// Create a memoized word row component to prevent re-renders
+const WordRow = memo(function WordRow({
+    word,
+    index,
+    onWordUpdate,
+    onSplitWord,
+    onRemoveWord,
+    wordsLength
+}: {
+    word: Word
+    index: number
+    onWordUpdate: (index: number, updates: Partial<Word>) => void
+    onSplitWord: (index: number) => void
+    onRemoveWord: (index: number) => void
+    wordsLength: number
+}) {
+    return (
+        <Box sx={{
+            display: 'flex',
+            gap: 2,
+            alignItems: 'center',
+        }}>
+            <TextField
+                label={`Word ${index}`}
+                value={word.text}
+                onChange={(e) => onWordUpdate(index, { text: e.target.value })}
+                fullWidth
+                size="small"
+            />
+            <TextField
+                label="Start Time"
+                value={word.start_time?.toFixed(2) ?? ''}
+                onChange={(e) => onWordUpdate(index, { start_time: parseFloat(e.target.value) })}
+                type="number"
+                inputProps={{ step: 0.01 }}
+                sx={{ width: '150px' }}
+                size="small"
+            />
+            <TextField
+                label="End Time"
+                value={word.end_time?.toFixed(2) ?? ''}
+                onChange={(e) => onWordUpdate(index, { end_time: parseFloat(e.target.value) })}
+                type="number"
+                inputProps={{ step: 0.01 }}
+                sx={{ width: '150px' }}
+                size="small"
+            />
+            <IconButton
+                onClick={() => onSplitWord(index)}
+                title="Split Word"
+                sx={{ color: 'primary.main' }}
+                size="small"
+            >
+                <SplitIcon fontSize="small" />
+            </IconButton>
+            <IconButton
+                onClick={() => onRemoveWord(index)}
+                disabled={wordsLength <= 1}
+                title="Remove Word"
+                sx={{ color: 'error.main' }}
+                size="small"
+            >
+                <DeleteIcon fontSize="small" />
+            </IconButton>
+        </Box>
+    );
+});
 
 export default function EditWordList({
     words,
@@ -35,7 +102,6 @@ export default function EditWordList({
     onSplitSegment,
     onAddSegment,
     onMergeSegment,
-    currentTime,
     isGlobal = false
 }: EditWordListProps) {
     const [replacementText, setReplacementText] = useState('')
@@ -48,12 +114,6 @@ export default function EditWordList({
             }
         })
         setReplacementText('')
-    }
-
-    // Check if a word is currently being played
-    const isWordHighlighted = (word: Word): boolean => {
-        if (!currentTime || word.start_time === null || word.end_time === null) return false
-        return currentTime >= word.start_time && currentTime <= word.end_time
     }
 
     return (
@@ -95,55 +155,14 @@ export default function EditWordList({
 
                 {words.map((word, index) => (
                     <Box key={word.id}>
-                        <Box sx={{
-                            display: 'flex',
-                            gap: 2,
-                            alignItems: 'center',
-                            backgroundColor: isWordHighlighted(word) ? 'action.selected' : 'transparent',
-                        }}>
-                            <TextField
-                                label={`Word ${index}`}
-                                value={word.text}
-                                onChange={(e) => onWordUpdate(index, { text: e.target.value })}
-                                fullWidth
-                                size="small"
-                            />
-                            <TextField
-                                label="Start Time"
-                                value={word.start_time?.toFixed(2) ?? ''}
-                                onChange={(e) => onWordUpdate(index, { start_time: parseFloat(e.target.value) })}
-                                type="number"
-                                inputProps={{ step: 0.01 }}
-                                sx={{ width: '150px' }}
-                                size="small"
-                            />
-                            <TextField
-                                label="End Time"
-                                value={word.end_time?.toFixed(2) ?? ''}
-                                onChange={(e) => onWordUpdate(index, { end_time: parseFloat(e.target.value) })}
-                                type="number"
-                                inputProps={{ step: 0.01 }}
-                                sx={{ width: '150px' }}
-                                size="small"
-                            />
-                            <IconButton
-                                onClick={() => onSplitWord(index)}
-                                title="Split Word"
-                                sx={{ color: 'primary.main' }}
-                                size="small"
-                            >
-                                <SplitIcon fontSize="small" />
-                            </IconButton>
-                            <IconButton
-                                onClick={() => onRemoveWord(index)}
-                                disabled={words.length <= 1}
-                                title="Remove Word"
-                                sx={{ color: 'error.main' }}
-                                size="small"
-                            >
-                                <DeleteIcon fontSize="small" />
-                            </IconButton>
-                        </Box>
+                        <WordRow
+                            word={word}
+                            index={index}
+                            onWordUpdate={onWordUpdate}
+                            onSplitWord={onSplitWord}
+                            onRemoveWord={onRemoveWord}
+                            wordsLength={words.length}
+                        />
 
                         {/* Word divider with merge/split functionality */}
                         {!isGlobal && (
