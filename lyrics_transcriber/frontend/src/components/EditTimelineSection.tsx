@@ -58,7 +58,7 @@ export default function EditTimelineSection({
     const [zoomLevel, setZoomLevel] = useState(10) // Default 10 seconds visible
     const [visibleStartTime, setVisibleStartTime] = useState(startTime)
     const [visibleEndTime, setVisibleEndTime] = useState(Math.min(startTime + zoomLevel, endTime))
-    const [autoScrollEnabled, setAutoScrollEnabled] = useState(false) // Default to disabled
+    const [autoScrollEnabled, setAutoScrollEnabled] = useState(true) // Default to enabled
     const timelineRef = useRef<HTMLDivElement>(null)
 
     // Initial setup of visible time range
@@ -86,13 +86,13 @@ export default function EditTimelineSection({
             const newEnd = Math.min(endTime, newStart + zoomLevel)
             setVisibleStartTime(newStart)
             setVisibleEndTime(newEnd)
-        } else if (currentTime > visibleEndTime - (zoomLevel * 0.15)) {
-            // If current time is near the end of visible window (within 15% of zoom level from the end),
-            // jump to the next "page" with current time at 20% from the left
-            const pageOffset = zoomLevel * 0.2 // Position current time 20% from the left edge
+        } else if (currentTime > visibleEndTime - (zoomLevel * 0.05)) {
+            // If current time is near the end of visible window (within 5% of zoom level from the end),
+            // jump to the next "page" with current time at 5% from the left
+            const pageOffset = zoomLevel * 0.05 // Position current time 5% from the left edge
             const newStart = Math.max(startTime, currentTime - pageOffset)
             const newEnd = Math.min(endTime, newStart + zoomLevel)
-
+            
             // Only update if we're actually moving forward
             if (newStart > visibleStartTime) {
                 setVisibleStartTime(newStart)

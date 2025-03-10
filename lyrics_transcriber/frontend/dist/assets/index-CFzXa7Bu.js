@@ -33711,7 +33711,7 @@ function EditTimelineSection({
   const [zoomLevel, setZoomLevel] = reactExports.useState(10);
   const [visibleStartTime, setVisibleStartTime] = reactExports.useState(startTime);
   const [visibleEndTime, setVisibleEndTime] = reactExports.useState(Math.min(startTime + zoomLevel, endTime));
-  const [autoScrollEnabled, setAutoScrollEnabled] = reactExports.useState(false);
+  const [autoScrollEnabled, setAutoScrollEnabled] = reactExports.useState(true);
   const timelineRef = reactExports.useRef(null);
   reactExports.useEffect(() => {
     if (isGlobal) {
@@ -33729,8 +33729,8 @@ function EditTimelineSection({
       const newEnd = Math.min(endTime, newStart + zoomLevel);
       setVisibleStartTime(newStart);
       setVisibleEndTime(newEnd);
-    } else if (currentTime > visibleEndTime - zoomLevel * 0.15) {
-      const pageOffset = zoomLevel * 0.2;
+    } else if (currentTime > visibleEndTime - zoomLevel * 0.05) {
+      const pageOffset = zoomLevel * 0.05;
       const newStart = Math.max(startTime, currentTime - pageOffset);
       const newEnd = Math.min(endTime, newStart + zoomLevel);
       if (newStart > visibleStartTime) {
@@ -34570,12 +34570,22 @@ function EditModal({
     updateSegment2(newWords);
   };
   const handleReset = () => {
+    if (!originalSegment) return;
+    console.log("EditModal - Resetting to original:", {
+      isGlobal,
+      originalSegmentId: originalSegment.id,
+      originalWordCount: originalSegment.words.length
+    });
     setEditedSegment(JSON.parse(JSON.stringify(originalSegment)));
   };
   const handleRevertToOriginal = () => {
-    if (originalTranscribedSegment) {
-      setEditedSegment(JSON.parse(JSON.stringify(originalTranscribedSegment)));
-    }
+    if (!originalTranscribedSegment) return;
+    console.log("EditModal - Reverting to original transcribed:", {
+      isGlobal,
+      originalTranscribedSegmentId: originalTranscribedSegment.id,
+      originalTranscribedWordCount: originalTranscribedSegment.words.length
+    });
+    setEditedSegment(JSON.parse(JSON.stringify(originalTranscribedSegment)));
   };
   const handleSave = () => {
     var _a, _b;
@@ -36308,6 +36318,8 @@ function LyricsAnalyzer({ data: initialData, onFileLoad, apiClient, isReadOnly, 
   const [editModalSegment, setEditModalSegment] = reactExports.useState(null);
   const [isEditAllModalOpen, setIsEditAllModalOpen] = reactExports.useState(false);
   const [globalEditSegment, setGlobalEditSegment] = reactExports.useState(null);
+  const [originalGlobalSegment, setOriginalGlobalSegment] = reactExports.useState(null);
+  const [originalTranscribedGlobalSegment, setOriginalTranscribedGlobalSegment] = reactExports.useState(null);
   const [isReviewModalOpen, setIsReviewModalOpen] = reactExports.useState(false);
   const [currentAudioTime, setCurrentAudioTime] = reactExports.useState(0);
   const [isUpdatingHandlers, setIsUpdatingHandlers] = reactExports.useState(false);
@@ -36613,7 +36625,7 @@ function LyricsAnalyzer({ data: initialData, onFileLoad, apiClient, isReadOnly, 
     setData(newData);
   };
   const handleEditAll = reactExports.useCallback(() => {
-    var _a, _b;
+    var _a, _b, _c, _d;
     const allWords = data.corrected_segments.flatMap((segment) => segment.words);
     const sortedWords = [...allWords].sort((a, b) => {
       const aTime = a.start_time ?? 0;
@@ -36628,8 +36640,27 @@ function LyricsAnalyzer({ data: initialData, onFileLoad, apiClient, isReadOnly, 
       end_time: ((_b = sortedWords[sortedWords.length - 1]) == null ? void 0 : _b.end_time) ?? null
     };
     setGlobalEditSegment(globalSegment);
+    setOriginalGlobalSegment(JSON.parse(JSON.stringify(globalSegment)));
+    if (originalData.original_segments) {
+      const originalWords = originalData.original_segments.flatMap((segment) => segment.words);
+      const sortedOriginalWords = [...originalWords].sort((a, b) => {
+        const aTime = a.start_time ?? 0;
+        const bTime = b.start_time ?? 0;
+        return aTime - bTime;
+      });
+      const originalTranscribedGlobal = {
+        id: "original-transcribed-global",
+        words: sortedOriginalWords,
+        text: sortedOriginalWords.map((w) => w.text).join(" "),
+        start_time: ((_c = sortedOriginalWords[0]) == null ? void 0 : _c.start_time) ?? null,
+        end_time: ((_d = sortedOriginalWords[sortedOriginalWords.length - 1]) == null ? void 0 : _d.end_time) ?? null
+      };
+      setOriginalTranscribedGlobalSegment(originalTranscribedGlobal);
+    } else {
+      setOriginalTranscribedGlobalSegment(null);
+    }
     setIsEditAllModalOpen(true);
-  }, [data.corrected_segments]);
+  }, [data.corrected_segments, originalData.original_segments]);
   const handleSaveGlobalEdit = reactExports.useCallback((updatedSegment) => {
     var _a;
     console.log("Global Edit - Saving with new approach:", {
@@ -36793,15 +36824,18 @@ function LyricsAnalyzer({ data: initialData, onFileLoad, apiClient, isReadOnly, 
         onClose: () => {
           setIsEditAllModalOpen(false);
           setGlobalEditSegment(null);
+          setOriginalGlobalSegment(null);
+          setOriginalTranscribedGlobalSegment(null);
           handleSetModalSpacebarHandler(void 0);
         },
         segment: globalEditSegment,
         segmentIndex: null,
-        originalSegment: globalEditSegment,
+        originalSegment: originalGlobalSegment,
         onSave: handleSaveGlobalEdit,
         onPlaySegment: handlePlaySegment,
         currentTime: currentAudioTime,
         setModalSpacebarHandler: handleSetModalSpacebarHandler,
+        originalTranscribedSegment: originalTranscribedGlobalSegment,
         isGlobal: true
       }
     ),
@@ -37214,4 +37248,4 @@ ReactDOM$1.createRoot(document.getElementById("root")).render(
     /* @__PURE__ */ jsxRuntimeExports.jsx(App, {})
   ] })
 );
-//# sourceMappingURL=index-D7IgFdph.js.map
+//# sourceMappingURL=index-CFzXa7Bu.js.map

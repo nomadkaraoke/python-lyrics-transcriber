@@ -284,13 +284,27 @@ export default function EditModal({
     }
 
     const handleReset = () => {
+        if (!originalSegment) return
+        
+        console.log('EditModal - Resetting to original:', {
+            isGlobal,
+            originalSegmentId: originalSegment.id,
+            originalWordCount: originalSegment.words.length
+        })
+        
         setEditedSegment(JSON.parse(JSON.stringify(originalSegment)))
     }
 
     const handleRevertToOriginal = () => {
-        if (originalTranscribedSegment) {
-            setEditedSegment(JSON.parse(JSON.stringify(originalTranscribedSegment)))
-        }
+        if (!originalTranscribedSegment) return
+        
+        console.log('EditModal - Reverting to original transcribed:', {
+            isGlobal,
+            originalTranscribedSegmentId: originalTranscribedSegment.id,
+            originalTranscribedWordCount: originalTranscribedSegment.words.length
+        })
+        
+        setEditedSegment(JSON.parse(JSON.stringify(originalTranscribedSegment)))
     }
 
     const handleSave = () => {

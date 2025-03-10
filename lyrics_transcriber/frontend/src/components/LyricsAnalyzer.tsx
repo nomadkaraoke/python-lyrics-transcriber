@@ -86,6 +86,8 @@ export default function LyricsAnalyzer({ data: initialData, onFileLoad, apiClien
     } | null>(null)
     const [isEditAllModalOpen, setIsEditAllModalOpen] = useState(false)
     const [globalEditSegment, setGlobalEditSegment] = useState<LyricsSegment | null>(null)
+    const [originalGlobalSegment, setOriginalGlobalSegment] = useState<LyricsSegment | null>(null)
+    const [originalTranscribedGlobalSegment, setOriginalTranscribedGlobalSegment] = useState<LyricsSegment | null>(null)
     const [isReviewModalOpen, setIsReviewModalOpen] = useState(false)
     const [currentAudioTime, setCurrentAudioTime] = useState(0)
     const [isUpdatingHandlers, setIsUpdatingHandlers] = useState(false)
@@ -494,9 +496,38 @@ export default function LyricsAnalyzer({ data: initialData, onFileLoad, apiClien
             end_time: sortedWords[sortedWords.length - 1]?.end_time ?? null
         }
 
+        // Store the original global segment for reset functionality
         setGlobalEditSegment(globalSegment)
+        setOriginalGlobalSegment(JSON.parse(JSON.stringify(globalSegment)))
+        
+        // Create the original transcribed global segment for Un-Correct functionality
+        if (originalData.original_segments) {
+            // Get all words from original segments
+            const originalWords = originalData.original_segments.flatMap((segment: LyricsSegment) => segment.words)
+            
+            // Sort words by start time
+            const sortedOriginalWords = [...originalWords].sort((a, b) => {
+                const aTime = a.start_time ?? 0
+                const bTime = b.start_time ?? 0
+                return aTime - bTime
+            })
+            
+            // Create the original transcribed global segment
+            const originalTranscribedGlobal: LyricsSegment = {
+                id: 'original-transcribed-global',
+                words: sortedOriginalWords,
+                text: sortedOriginalWords.map(w => w.text).join(' '),
+                start_time: sortedOriginalWords[0]?.start_time ?? null,
+                end_time: sortedOriginalWords[sortedOriginalWords.length - 1]?.end_time ?? null
+            }
+            
+            setOriginalTranscribedGlobalSegment(originalTranscribedGlobal)
+        } else {
+            setOriginalTranscribedGlobalSegment(null)
+        }
+        
         setIsEditAllModalOpen(true)
-    }, [data.corrected_segments])
+    }, [data.corrected_segments, originalData.original_segments])
 
     // Handle saving the global edit
     const handleSaveGlobalEdit = useCallback((updatedSegment: LyricsSegment) => {
@@ -685,15 +716,18 @@ export default function LyricsAnalyzer({ data: initialData, onFileLoad, apiClien
                 onClose={() => {
                     setIsEditAllModalOpen(false)
                     setGlobalEditSegment(null)
+                    setOriginalGlobalSegment(null)
+                    setOriginalTranscribedGlobalSegment(null)
                     handleSetModalSpacebarHandler(undefined)
                 }}
                 segment={globalEditSegment}
                 segmentIndex={null}
-                originalSegment={globalEditSegment}
+                originalSegment={originalGlobalSegment}
                 onSave={handleSaveGlobalEdit}
                 onPlaySegment={handlePlaySegment}
                 currentTime={currentAudioTime}
                 setModalSpacebarHandler={handleSetModalSpacebarHandler}
+                originalTranscribedSegment={originalTranscribedGlobalSegment}
                 isGlobal={true}
             />
 
