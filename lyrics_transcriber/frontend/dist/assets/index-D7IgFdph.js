@@ -9209,6 +9209,11 @@ function removeUnusedBreakpoints(breakpointKeys, style2) {
     return acc;
   }, style2);
 }
+function mergeBreakpointsInOrder(breakpointsInput, ...styles2) {
+  const emptyBreakpoints = createEmptyBreakpointObject(breakpointsInput);
+  const mergedOutput = [emptyBreakpoints, ...styles2].reduce((prev2, next2) => deepmerge(prev2, next2), {});
+  return removeUnusedBreakpoints(Object.keys(emptyBreakpoints), mergedOutput);
+}
 function computeBreakpointsBase(breakpointValues, themeBreakpoints) {
   if (typeof breakpointValues !== "object") {
     return {};
@@ -9291,7 +9296,7 @@ function getStyleValue$1(themeMapping, transform, propValueFinal, userValue = pr
   }
   return value;
 }
-function style$1(options) {
+function style$2(options) {
   const {
     prop,
     cssProperty = options.prop,
@@ -9424,17 +9429,17 @@ function resolveCssProperty(props, keys, prop, transformer) {
   const propValue = props[prop];
   return handleBreakpoints(props, propValue, styleFromPropValue);
 }
-function style(props, keys) {
+function style$1(props, keys) {
   const transformer = createUnarySpacing(props.theme);
   return Object.keys(props).map((prop) => resolveCssProperty(props, keys, prop, transformer)).reduce(merge, {});
 }
 function margin(props) {
-  return style(props, marginKeys);
+  return style$1(props, marginKeys);
 }
 margin.propTypes = {};
 margin.filterProps = marginKeys;
 function padding(props) {
-  return style(props, paddingKeys);
+  return style$1(props, paddingKeys);
 }
 padding.propTypes = {};
 padding.filterProps = paddingKeys;
@@ -9480,7 +9485,7 @@ function borderTransform(value) {
   return `${value}px solid`;
 }
 function createBorderStyle(prop, transform) {
-  return style$1({
+  return style$2({
     prop,
     themeKey: "borders",
     transform
@@ -9547,31 +9552,31 @@ const rowGap = (props) => {
 };
 rowGap.propTypes = {};
 rowGap.filterProps = ["rowGap"];
-const gridColumn = style$1({
+const gridColumn = style$2({
   prop: "gridColumn"
 });
-const gridRow = style$1({
+const gridRow = style$2({
   prop: "gridRow"
 });
-const gridAutoFlow = style$1({
+const gridAutoFlow = style$2({
   prop: "gridAutoFlow"
 });
-const gridAutoColumns = style$1({
+const gridAutoColumns = style$2({
   prop: "gridAutoColumns"
 });
-const gridAutoRows = style$1({
+const gridAutoRows = style$2({
   prop: "gridAutoRows"
 });
-const gridTemplateColumns = style$1({
+const gridTemplateColumns = style$2({
   prop: "gridTemplateColumns"
 });
-const gridTemplateRows = style$1({
+const gridTemplateRows = style$2({
   prop: "gridTemplateRows"
 });
-const gridTemplateAreas = style$1({
+const gridTemplateAreas = style$2({
   prop: "gridTemplateAreas"
 });
-const gridArea = style$1({
+const gridArea = style$2({
   prop: "gridArea"
 });
 compose(gap, columnGap, rowGap, gridColumn, gridRow, gridAutoFlow, gridAutoColumns, gridAutoRows, gridTemplateColumns, gridTemplateRows, gridTemplateAreas, gridArea);
@@ -9581,18 +9586,18 @@ function paletteTransform(value, userValue) {
   }
   return value;
 }
-const color = style$1({
+const color = style$2({
   prop: "color",
   themeKey: "palette",
   transform: paletteTransform
 });
-const bgcolor = style$1({
+const bgcolor = style$2({
   prop: "bgcolor",
   cssProperty: "backgroundColor",
   themeKey: "palette",
   transform: paletteTransform
 });
-const backgroundColor = style$1({
+const backgroundColor = style$2({
   prop: "backgroundColor",
   themeKey: "palette",
   transform: paletteTransform
@@ -9601,7 +9606,7 @@ compose(color, bgcolor, backgroundColor);
 function sizingTransform(value) {
   return value <= 1 && value !== 0 ? `${value * 100}%` : value;
 }
-const width = style$1({
+const width = style$2({
   prop: "width",
   transform: sizingTransform
 });
@@ -9629,33 +9634,33 @@ const maxWidth = (props) => {
   return null;
 };
 maxWidth.filterProps = ["maxWidth"];
-const minWidth = style$1({
+const minWidth = style$2({
   prop: "minWidth",
   transform: sizingTransform
 });
-const height = style$1({
+const height = style$2({
   prop: "height",
   transform: sizingTransform
 });
-const maxHeight = style$1({
+const maxHeight = style$2({
   prop: "maxHeight",
   transform: sizingTransform
 });
-const minHeight = style$1({
+const minHeight = style$2({
   prop: "minHeight",
   transform: sizingTransform
 });
-style$1({
+style$2({
   prop: "size",
   cssProperty: "width",
   transform: sizingTransform
 });
-style$1({
+style$2({
   prop: "size",
   cssProperty: "height",
   transform: sizingTransform
 });
-const boxSizing = style$1({
+const boxSizing = style$2({
   prop: "boxSizing"
 });
 compose(width, maxWidth, minWidth, height, maxHeight, minHeight, boxSizing);
@@ -10550,6 +10555,22 @@ function getThemeProps$1(params) {
     return props;
   }
   return resolveProps(theme2.components[name].defaultProps, props);
+}
+function useThemeProps({
+  props,
+  name,
+  defaultTheme: defaultTheme2,
+  themeId
+}) {
+  let theme2 = useTheme$2(defaultTheme2);
+  if (themeId) {
+    theme2 = theme2[themeId] || theme2;
+  }
+  return getThemeProps$1({
+    theme: theme2,
+    name,
+    props
+  });
 }
 const useEnhancedEffect = typeof window !== "undefined" ? reactExports.useLayoutEffect : reactExports.useEffect;
 function useMediaQueryOld(query, defaultMatches, matchMedia, ssrMatchMedia, noSsr) {
@@ -12107,6 +12128,148 @@ function createGetColorSchemeSelector(selector) {
     }
     return "&";
   };
+}
+const defaultTheme$2 = createTheme$1();
+const defaultCreateStyledComponent = styled$1("div", {
+  name: "MuiStack",
+  slot: "Root",
+  overridesResolver: (props, styles2) => styles2.root
+});
+function useThemePropsDefault(props) {
+  return useThemeProps({
+    props,
+    name: "MuiStack",
+    defaultTheme: defaultTheme$2
+  });
+}
+function joinChildren(children, separator) {
+  const childrenArray = reactExports.Children.toArray(children).filter(Boolean);
+  return childrenArray.reduce((output, child, index) => {
+    output.push(child);
+    if (index < childrenArray.length - 1) {
+      output.push(/* @__PURE__ */ reactExports.cloneElement(separator, {
+        key: `separator-${index}`
+      }));
+    }
+    return output;
+  }, []);
+}
+const getSideFromDirection = (direction) => {
+  return {
+    row: "Left",
+    "row-reverse": "Right",
+    column: "Top",
+    "column-reverse": "Bottom"
+  }[direction];
+};
+const style = ({
+  ownerState,
+  theme: theme2
+}) => {
+  let styles2 = {
+    display: "flex",
+    flexDirection: "column",
+    ...handleBreakpoints({
+      theme: theme2
+    }, resolveBreakpointValues({
+      values: ownerState.direction,
+      breakpoints: theme2.breakpoints.values
+    }), (propValue) => ({
+      flexDirection: propValue
+    }))
+  };
+  if (ownerState.spacing) {
+    const transformer = createUnarySpacing(theme2);
+    const base = Object.keys(theme2.breakpoints.values).reduce((acc, breakpoint) => {
+      if (typeof ownerState.spacing === "object" && ownerState.spacing[breakpoint] != null || typeof ownerState.direction === "object" && ownerState.direction[breakpoint] != null) {
+        acc[breakpoint] = true;
+      }
+      return acc;
+    }, {});
+    const directionValues = resolveBreakpointValues({
+      values: ownerState.direction,
+      base
+    });
+    const spacingValues = resolveBreakpointValues({
+      values: ownerState.spacing,
+      base
+    });
+    if (typeof directionValues === "object") {
+      Object.keys(directionValues).forEach((breakpoint, index, breakpoints) => {
+        const directionValue = directionValues[breakpoint];
+        if (!directionValue) {
+          const previousDirectionValue = index > 0 ? directionValues[breakpoints[index - 1]] : "column";
+          directionValues[breakpoint] = previousDirectionValue;
+        }
+      });
+    }
+    const styleFromPropValue = (propValue, breakpoint) => {
+      if (ownerState.useFlexGap) {
+        return {
+          gap: getValue(transformer, propValue)
+        };
+      }
+      return {
+        // The useFlexGap={false} implement relies on each child to give up control of the margin.
+        // We need to reset the margin to avoid double spacing.
+        "& > :not(style):not(style)": {
+          margin: 0
+        },
+        "& > :not(style) ~ :not(style)": {
+          [`margin${getSideFromDirection(breakpoint ? directionValues[breakpoint] : ownerState.direction)}`]: getValue(transformer, propValue)
+        }
+      };
+    };
+    styles2 = deepmerge(styles2, handleBreakpoints({
+      theme: theme2
+    }, spacingValues, styleFromPropValue));
+  }
+  styles2 = mergeBreakpointsInOrder(theme2.breakpoints, styles2);
+  return styles2;
+};
+function createStack(options = {}) {
+  const {
+    // This will allow adding custom styled fn (for example for custom sx style function)
+    createStyledComponent = defaultCreateStyledComponent,
+    useThemeProps: useThemeProps2 = useThemePropsDefault,
+    componentName = "MuiStack"
+  } = options;
+  const useUtilityClasses2 = () => {
+    const slots = {
+      root: ["root"]
+    };
+    return composeClasses(slots, (slot) => generateUtilityClass(componentName, slot), {});
+  };
+  const StackRoot = createStyledComponent(style);
+  const Stack2 = /* @__PURE__ */ reactExports.forwardRef(function Grid3(inProps, ref) {
+    const themeProps = useThemeProps2(inProps);
+    const props = extendSxProp$1(themeProps);
+    const {
+      component = "div",
+      direction = "column",
+      spacing = 0,
+      divider,
+      children,
+      className,
+      useFlexGap = false,
+      ...other
+    } = props;
+    const ownerState = {
+      direction,
+      spacing,
+      useFlexGap
+    };
+    const classes = useUtilityClasses2();
+    return /* @__PURE__ */ jsxRuntimeExports.jsx(StackRoot, {
+      as: component,
+      ownerState,
+      ref,
+      className: clsx(classes.root, className),
+      ...other,
+      children: divider ? joinChildren(children, divider) : children
+    });
+  });
+  return Stack2;
 }
 const common = {
   black: "#000",
@@ -26805,6 +26968,17 @@ const Tooltip = /* @__PURE__ */ reactExports.forwardRef(function Tooltip2(inProp
     })]
   });
 });
+const Stack = createStack({
+  createStyledComponent: styled("div", {
+    name: "MuiStack",
+    slot: "Root",
+    overridesResolver: (props, styles2) => styles2.root
+  }),
+  useThemeProps: (inProps) => useDefaultProps({
+    props: inProps,
+    name: "MuiStack"
+  })
+});
 function getSwitchUtilityClass(slot) {
   return generateUtilityClass("MuiSwitch", slot);
 }
@@ -33189,6 +33363,29 @@ function useManualSync({
 const CancelIcon = createSvgIcon(/* @__PURE__ */ jsxRuntimeExports.jsx("path", {
   d: "M12 2C6.47 2 2 6.47 2 12s4.47 10 10 10 10-4.47 10-10S17.53 2 12 2m5 13.59L15.59 17 12 13.41 8.41 17 7 15.59 10.59 12 7 8.41 8.41 7 12 10.59 15.59 7 17 8.41 13.41 12z"
 }), "Cancel");
+const ZoomInIcon = createSvgIcon([/* @__PURE__ */ jsxRuntimeExports.jsx("path", {
+  d: "M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14"
+}, "0"), /* @__PURE__ */ jsxRuntimeExports.jsx("path", {
+  d: "M12 10h-2v2H9v-2H7V9h2V7h1v2h2z"
+}, "1")], "ZoomIn");
+const ZoomOutIcon = createSvgIcon(/* @__PURE__ */ jsxRuntimeExports.jsx("path", {
+  d: "M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14M7 9h5v1H7z"
+}), "ZoomOut");
+const ArrowBack = createSvgIcon(/* @__PURE__ */ jsxRuntimeExports.jsx("path", {
+  d: "M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20z"
+}), "ArrowBack");
+const ArrowForwardIcon = createSvgIcon(/* @__PURE__ */ jsxRuntimeExports.jsx("path", {
+  d: "m12 4-1.41 1.41L16.17 11H4v2h12.17l-5.58 5.59L12 20l8-8z"
+}), "ArrowForward");
+const AutorenewIcon = createSvgIcon(/* @__PURE__ */ jsxRuntimeExports.jsx("path", {
+  d: "M12 6v3l4-4-4-4v3c-4.42 0-8 3.58-8 8 0 1.57.46 3.03 1.24 4.26L6.7 14.8c-.45-.83-.7-1.79-.7-2.8 0-3.31 2.69-6 6-6m6.76 1.74L17.3 9.2c.44.84.7 1.79.7 2.8 0 3.31-2.69 6-6 6v-3l-4 4 4 4v-3c4.42 0 8-3.58 8-8 0-1.57-.46-3.03-1.24-4.26"
+}), "Autorenew");
+const PauseCircleOutlineIcon = createSvgIcon(/* @__PURE__ */ jsxRuntimeExports.jsx("path", {
+  d: "M9 16h2V8H9zm3-14C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2m0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8m1-4h2V8h-2z"
+}), "PauseCircleOutline");
+const CenterFocusStrongIcon = createSvgIcon(/* @__PURE__ */ jsxRuntimeExports.jsx("path", {
+  d: "M12 8c-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4-1.79-4-4-4m-7 7H3v4c0 1.1.9 2 2 2h4v-2H5zM5 5h4V3H5c-1.1 0-2 .9-2 2v4h2zm14-2h-4v2h4v4h2V5c0-1.1-.9-2-2-2m0 16h-4v2h4c1.1 0 2-.9 2-2v-4h-2z"
+}), "CenterFocusStrong");
 const TimelineContainer = styled(Box)(({ theme: theme2 }) => ({
   position: "relative",
   height: "75px",
@@ -33507,21 +33704,161 @@ function EditTimelineSection({
   isSpacebarPressed,
   onWordUpdate,
   onPlaySegment,
-  startManualSync
+  startManualSync,
+  isGlobal = false
 }) {
   var _a;
-  return /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
-    /* @__PURE__ */ jsxRuntimeExports.jsx(Box, { sx: { mb: 0 }, children: /* @__PURE__ */ jsxRuntimeExports.jsx(
-      TimelineEditor,
-      {
-        words,
-        startTime,
-        endTime,
-        onWordUpdate,
-        currentTime,
-        onPlaySegment
+  const [zoomLevel, setZoomLevel] = reactExports.useState(10);
+  const [visibleStartTime, setVisibleStartTime] = reactExports.useState(startTime);
+  const [visibleEndTime, setVisibleEndTime] = reactExports.useState(Math.min(startTime + zoomLevel, endTime));
+  const [autoScrollEnabled, setAutoScrollEnabled] = reactExports.useState(false);
+  const timelineRef = reactExports.useRef(null);
+  reactExports.useEffect(() => {
+    if (isGlobal) {
+      setVisibleStartTime(startTime);
+      setVisibleEndTime(Math.min(startTime + zoomLevel, endTime));
+    } else {
+      setVisibleStartTime(startTime);
+      setVisibleEndTime(endTime);
+    }
+  }, [startTime, endTime, zoomLevel, isGlobal]);
+  reactExports.useEffect(() => {
+    if (!isGlobal || !currentTime || !autoScrollEnabled) return;
+    if (currentTime < visibleStartTime) {
+      const newStart = Math.max(startTime, currentTime);
+      const newEnd = Math.min(endTime, newStart + zoomLevel);
+      setVisibleStartTime(newStart);
+      setVisibleEndTime(newEnd);
+    } else if (currentTime > visibleEndTime - zoomLevel * 0.15) {
+      const pageOffset = zoomLevel * 0.2;
+      const newStart = Math.max(startTime, currentTime - pageOffset);
+      const newEnd = Math.min(endTime, newStart + zoomLevel);
+      if (newStart > visibleStartTime) {
+        setVisibleStartTime(newStart);
+        setVisibleEndTime(newEnd);
       }
-    ) }),
+    }
+  }, [currentTime, visibleStartTime, visibleEndTime, startTime, endTime, zoomLevel, isGlobal, autoScrollEnabled]);
+  reactExports.useEffect(() => {
+    if (isGlobal) {
+      const newEnd = Math.min(endTime, visibleStartTime + zoomLevel);
+      if (newEnd === endTime) {
+        const newStart = Math.max(startTime, endTime - zoomLevel);
+        setVisibleStartTime(newStart);
+      }
+      setVisibleEndTime(newEnd);
+    } else {
+      setVisibleStartTime(startTime);
+      setVisibleEndTime(endTime);
+    }
+  }, [zoomLevel, startTime, endTime, isGlobal, visibleStartTime]);
+  const toggleAutoScroll = () => {
+    setAutoScrollEnabled(!autoScrollEnabled);
+  };
+  const jumpToCurrentTime = reactExports.useCallback(() => {
+    if (!isGlobal || !currentTime) return;
+    const halfZoom = zoomLevel / 2;
+    let newStart = Math.max(startTime, currentTime - halfZoom);
+    const newEnd = Math.min(endTime, newStart + zoomLevel);
+    if (newEnd === endTime) {
+      newStart = Math.max(startTime, endTime - zoomLevel);
+    }
+    setVisibleStartTime(newStart);
+    setVisibleEndTime(newEnd);
+  }, [currentTime, zoomLevel, startTime, endTime, isGlobal]);
+  reactExports.useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (isGlobal) {
+        if (e.altKey && e.key === "a") {
+          e.preventDefault();
+          toggleAutoScroll();
+        }
+        if (e.altKey && e.key === "j") {
+          e.preventDefault();
+          jumpToCurrentTime();
+        }
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [isGlobal, toggleAutoScroll, jumpToCurrentTime]);
+  const handleZoomIn = () => {
+    if (zoomLevel > 2) {
+      setZoomLevel(zoomLevel - 2);
+    }
+  };
+  const handleZoomOut = () => {
+    if (zoomLevel < endTime - startTime) {
+      setZoomLevel(zoomLevel + 2);
+    }
+  };
+  const handleScroll = reactExports.useCallback((event) => {
+    if (isGlobal && event.deltaX !== 0) {
+      event.preventDefault();
+      setAutoScrollEnabled(false);
+      const scrollAmount = event.deltaX / 100 * (zoomLevel / 10);
+      let newStart = visibleStartTime + scrollAmount;
+      let newEnd = visibleEndTime + scrollAmount;
+      if (newStart < startTime) {
+        newStart = startTime;
+        newEnd = newStart + zoomLevel;
+      }
+      if (newEnd > endTime) {
+        newEnd = endTime;
+        newStart = Math.max(startTime, newEnd - zoomLevel);
+      }
+      setVisibleStartTime(newStart);
+      setVisibleEndTime(newEnd);
+    }
+  }, [isGlobal, visibleStartTime, visibleEndTime, startTime, endTime, zoomLevel]);
+  const handleScrollLeft = () => {
+    if (!isGlobal) return;
+    setAutoScrollEnabled(false);
+    const scrollAmount = zoomLevel * 0.25;
+    const newStart = Math.max(startTime, visibleStartTime - scrollAmount);
+    const newEnd = newStart + zoomLevel;
+    setVisibleStartTime(newStart);
+    setVisibleEndTime(newEnd);
+  };
+  const handleScrollRight = () => {
+    if (!isGlobal) return;
+    setAutoScrollEnabled(false);
+    const scrollAmount = zoomLevel * 0.25;
+    const newEnd = Math.min(endTime, visibleEndTime + scrollAmount);
+    let newStart = newEnd - zoomLevel;
+    if (newStart < startTime) {
+      newStart = startTime;
+      const adjustedNewEnd = Math.min(endTime, newStart + zoomLevel);
+      setVisibleEndTime(adjustedNewEnd);
+    } else {
+      setVisibleEndTime(newEnd);
+    }
+    setVisibleStartTime(newStart);
+  };
+  const effectiveStartTime = isGlobal ? visibleStartTime : startTime;
+  const effectiveEndTime = isGlobal ? visibleEndTime : endTime;
+  return /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsx(
+      Box,
+      {
+        sx: { height: "120px", mb: 2 },
+        ref: timelineRef,
+        onWheel: handleScroll,
+        children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+          TimelineEditor,
+          {
+            words,
+            startTime: effectiveStartTime,
+            endTime: effectiveEndTime,
+            onWordUpdate,
+            currentTime,
+            onPlaySegment
+          }
+        )
+      }
+    ),
     /* @__PURE__ */ jsxRuntimeExports.jsxs(Box, { sx: { display: "flex", alignItems: "center", justifyContent: "space-between" }, children: [
       /* @__PURE__ */ jsxRuntimeExports.jsxs(Typography, { variant: "body2", color: "text.secondary", children: [
         "Original Time Range: ",
@@ -33532,9 +33869,84 @@ function EditTimelineSection({
         "Current Time Range: ",
         (currentStartTime == null ? void 0 : currentStartTime.toFixed(2)) ?? "N/A",
         " - ",
-        (currentEndTime == null ? void 0 : currentEndTime.toFixed(2)) ?? "N/A"
+        (currentEndTime == null ? void 0 : currentEndTime.toFixed(2)) ?? "N/A",
+        isGlobal && /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("br", {}),
+          "Visible Range: ",
+          visibleStartTime.toFixed(2),
+          " - ",
+          visibleEndTime.toFixed(2),
+          " (",
+          (visibleEndTime - visibleStartTime).toFixed(2),
+          "s)",
+          /* @__PURE__ */ jsxRuntimeExports.jsx("br", {}),
+          "Auto-Scroll: ",
+          autoScrollEnabled ? "On" : "Off"
+        ] })
       ] }),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs(Box, { sx: { display: "flex", alignItems: "center", gap: 2 }, children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs(Stack, { direction: "row", spacing: 1, alignItems: "center", children: [
+        isGlobal && /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx(Tooltip, { title: "Scroll Left", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+            IconButton,
+            {
+              onClick: handleScrollLeft,
+              disabled: visibleStartTime <= startTime,
+              size: "small",
+              children: /* @__PURE__ */ jsxRuntimeExports.jsx(ArrowBack, {})
+            }
+          ) }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(Tooltip, { title: "Zoom Out (Show More Time)", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+            IconButton,
+            {
+              onClick: handleZoomOut,
+              disabled: zoomLevel >= endTime - startTime,
+              size: "small",
+              children: /* @__PURE__ */ jsxRuntimeExports.jsx(ZoomOutIcon, {})
+            }
+          ) }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(Tooltip, { title: "Zoom In (Show Less Time)", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+            IconButton,
+            {
+              onClick: handleZoomIn,
+              disabled: zoomLevel <= 2,
+              size: "small",
+              children: /* @__PURE__ */ jsxRuntimeExports.jsx(ZoomInIcon, {})
+            }
+          ) }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(Tooltip, { title: "Scroll Right", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+            IconButton,
+            {
+              onClick: handleScrollRight,
+              disabled: visibleEndTime >= endTime,
+              size: "small",
+              children: /* @__PURE__ */ jsxRuntimeExports.jsx(ArrowForwardIcon, {})
+            }
+          ) }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            Tooltip,
+            {
+              title: autoScrollEnabled ? "Disable Auto-Page Turn During Playback (Alt+A)" : "Enable Auto-Page Turn During Playback (Alt+A)",
+              children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+                IconButton,
+                {
+                  onClick: toggleAutoScroll,
+                  color: autoScrollEnabled ? "primary" : "default",
+                  size: "small",
+                  children: autoScrollEnabled ? /* @__PURE__ */ jsxRuntimeExports.jsx(AutorenewIcon, {}) : /* @__PURE__ */ jsxRuntimeExports.jsx(PauseCircleOutlineIcon, {})
+                }
+              )
+            }
+          ),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(Tooltip, { title: "Jump to Current Playback Position (Alt+J)", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+            IconButton,
+            {
+              onClick: jumpToCurrentTime,
+              disabled: !currentTime,
+              size: "small",
+              children: /* @__PURE__ */ jsxRuntimeExports.jsx(CenterFocusStrongIcon, {})
+            }
+          ) })
+        ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsx(
           Button,
           {
@@ -33641,7 +34053,7 @@ function WordDivider({
             children: /* @__PURE__ */ jsxRuntimeExports.jsx(Typography, { sx: buttonTextStyle, children: "Add Word" })
           }
         ),
-        isFirst && /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+        isFirst && onAddSegmentBefore && onMergeSegment && /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx(
             Button,
             {
@@ -33700,7 +34112,7 @@ function WordDivider({
             children: /* @__PURE__ */ jsxRuntimeExports.jsx(Typography, { sx: buttonTextStyle, children: "Split Segment" })
           }
         ),
-        isLast && /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+        isLast && onAddSegmentAfter && onMergeSegment && /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx(
             Button,
             {
@@ -33790,6 +34202,13 @@ function EditWordList({
           sx: { ml: 15 }
         }
       ),
+      isGlobal && /* @__PURE__ */ jsxRuntimeExports.jsx(
+        WordDivider,
+        {
+          onAddWord: () => onAddWord(-1),
+          sx: { ml: 15 }
+        }
+      ),
       words.map((word, index) => {
         var _a, _b;
         return /* @__PURE__ */ jsxRuntimeExports.jsxs(Box, { children: [
@@ -33865,6 +34284,15 @@ function EditWordList({
               onMergeSegment: index === words.length - 1 ? () => onMergeSegment == null ? void 0 : onMergeSegment(true) : void 0,
               canMerge: index < words.length - 1,
               isLast: index === words.length - 1,
+              sx: { ml: 15 }
+            }
+          ),
+          isGlobal && /* @__PURE__ */ jsxRuntimeExports.jsx(
+            WordDivider,
+            {
+              onAddWord: () => onAddWord(index),
+              onMergeWords: index < words.length - 1 ? () => onMergeWords(index) : void 0,
+              canMerge: index < words.length - 1,
               sx: { ml: 15 }
             }
           )
@@ -34059,7 +34487,8 @@ function EditModal({
     const end2 = segment2.end_time ?? start2 + 1;
     return { start: start2, end: end2 };
   };
-  if (!segment || segmentIndex === null || !editedSegment || !originalSegment) return null;
+  if (!segment || !editedSegment || !originalSegment) return null;
+  if (!isGlobal && segmentIndex === null) return null;
   const timeRange = getSafeTimeRange(editedSegment);
   const handleWordChange = (index, updates) => {
     const newWords = [...editedSegment.words];
@@ -34152,10 +34581,13 @@ function EditModal({
     var _a, _b;
     if (editedSegment) {
       console.log("EditModal - Saving segment:", {
+        isGlobal,
         segmentIndex,
         originalText: segment == null ? void 0 : segment.text,
         editedText: editedSegment.text,
         wordCount: editedSegment.words.length,
+        firstWord: editedSegment.words[0],
+        lastWord: editedSegment.words[editedSegment.words.length - 1],
         timeRange: `${((_a = editedSegment.start_time) == null ? void 0 : _a.toFixed(4)) ?? "N/A"} - ${((_b = editedSegment.end_time) == null ? void 0 : _b.toFixed(4)) ?? "N/A"}`
       });
       onSave(editedSegment);
@@ -34254,7 +34686,8 @@ function EditModal({
                   isSpacebarPressed,
                   onWordUpdate: handleWordChange,
                   onPlaySegment,
-                  startManualSync
+                  startManualSync,
+                  isGlobal
                 }
               ),
               /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -34379,9 +34812,6 @@ function PreviewVideoSection({
     ) })
   ] });
 }
-const ArrowBack = createSvgIcon(/* @__PURE__ */ jsxRuntimeExports.jsx("path", {
-  d: "M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20z"
-}), "ArrowBack");
 const CloudUpload = createSvgIcon(/* @__PURE__ */ jsxRuntimeExports.jsx("path", {
   d: "M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96M14 13v4h-4v-4H7l5-5 5 5z"
 }), "CloudUpload");
@@ -35218,7 +35648,8 @@ function Header({
   isUpdatingHandlers,
   onHandlerClick,
   onAddLyrics,
-  onFindReplace
+  onFindReplace,
+  onEditAll
 }) {
   var _a, _b, _c;
   const theme2 = useTheme();
@@ -35393,6 +35824,17 @@ function Header({
             startIcon: /* @__PURE__ */ jsxRuntimeExports.jsx(FindReplaceIcon, {}),
             sx: { minWidth: "fit-content", height: "32px" },
             children: "Find/Replace"
+          }
+        ),
+        !isReadOnly && onEditAll && /* @__PURE__ */ jsxRuntimeExports.jsx(
+          Button,
+          {
+            variant: "outlined",
+            size: "small",
+            onClick: onEditAll,
+            startIcon: /* @__PURE__ */ jsxRuntimeExports.jsx(EditIcon, {}),
+            sx: { minWidth: "fit-content", height: "32px" },
+            children: "Edit All"
           }
         ),
         /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -35864,6 +36306,8 @@ function LyricsAnalyzer({ data: initialData, onFileLoad, apiClient, isReadOnly, 
   const [interactionMode, setInteractionMode] = reactExports.useState("edit");
   const [isShiftPressed, setIsShiftPressed] = reactExports.useState(false);
   const [editModalSegment, setEditModalSegment] = reactExports.useState(null);
+  const [isEditAllModalOpen, setIsEditAllModalOpen] = reactExports.useState(false);
+  const [globalEditSegment, setGlobalEditSegment] = reactExports.useState(null);
   const [isReviewModalOpen, setIsReviewModalOpen] = reactExports.useState(false);
   const [currentAudioTime, setCurrentAudioTime] = reactExports.useState(0);
   const [isUpdatingHandlers, setIsUpdatingHandlers] = reactExports.useState(false);
@@ -35924,10 +36368,10 @@ function LyricsAnalyzer({ data: initialData, onFileLoad, apiClient, isReadOnly, 
   }, [setIsShiftPressed, isAnyModalOpen]);
   reactExports.useEffect(() => {
     const modalOpen = Boolean(
-      modalContent || editModalSegment || isReviewModalOpen || isAddLyricsModalOpen || isFindReplaceModalOpen
+      modalContent || editModalSegment || isReviewModalOpen || isAddLyricsModalOpen || isFindReplaceModalOpen || isEditAllModalOpen
     );
     setIsAnyModalOpen(modalOpen);
-  }, [modalContent, editModalSegment, isReviewModalOpen, isAddLyricsModalOpen, isFindReplaceModalOpen]);
+  }, [modalContent, editModalSegment, isReviewModalOpen, isAddLyricsModalOpen, isFindReplaceModalOpen, isEditAllModalOpen]);
   const effectiveMode = isShiftPressed ? "highlight" : interactionMode;
   const handleFlash = reactExports.useCallback((type, info) => {
     setFlashingType(null);
@@ -36168,6 +36612,86 @@ function LyricsAnalyzer({ data: initialData, onFileLoad, apiClient, isReadOnly, 
     const newData = findAndReplace(data, findText, replaceText, options);
     setData(newData);
   };
+  const handleEditAll = reactExports.useCallback(() => {
+    var _a, _b;
+    const allWords = data.corrected_segments.flatMap((segment) => segment.words);
+    const sortedWords = [...allWords].sort((a, b) => {
+      const aTime = a.start_time ?? 0;
+      const bTime = b.start_time ?? 0;
+      return aTime - bTime;
+    });
+    const globalSegment = {
+      id: "global-edit",
+      words: sortedWords,
+      text: sortedWords.map((w) => w.text).join(" "),
+      start_time: ((_a = sortedWords[0]) == null ? void 0 : _a.start_time) ?? null,
+      end_time: ((_b = sortedWords[sortedWords.length - 1]) == null ? void 0 : _b.end_time) ?? null
+    };
+    setGlobalEditSegment(globalSegment);
+    setIsEditAllModalOpen(true);
+  }, [data.corrected_segments]);
+  const handleSaveGlobalEdit = reactExports.useCallback((updatedSegment) => {
+    var _a;
+    console.log("Global Edit - Saving with new approach:", {
+      updatedSegmentId: updatedSegment.id,
+      wordCount: updatedSegment.words.length,
+      originalSegmentCount: data.corrected_segments.length,
+      originalTotalWordCount: data.corrected_segments.reduce((count, segment) => count + segment.words.length, 0)
+    });
+    const updatedWords = updatedSegment.words;
+    const updatedSegments = [];
+    let wordIndex = 0;
+    for (const segment of data.corrected_segments) {
+      const originalWordCount = segment.words.length;
+      const segmentWords = [];
+      const endIndex = Math.min(wordIndex + originalWordCount, updatedWords.length);
+      for (let i = wordIndex; i < endIndex; i++) {
+        segmentWords.push(updatedWords[i]);
+      }
+      wordIndex = endIndex;
+      if (segmentWords.length > 0) {
+        const validStartTimes = segmentWords.map((w) => w.start_time).filter((t) => t !== null);
+        const validEndTimes = segmentWords.map((w) => w.end_time).filter((t) => t !== null);
+        const segmentStartTime = validStartTimes.length > 0 ? Math.min(...validStartTimes) : null;
+        const segmentEndTime = validEndTimes.length > 0 ? Math.max(...validEndTimes) : null;
+        updatedSegments.push({
+          ...segment,
+          words: segmentWords,
+          text: segmentWords.map((w) => w.text).join(" "),
+          start_time: segmentStartTime,
+          end_time: segmentEndTime
+        });
+      }
+    }
+    if (wordIndex < updatedWords.length) {
+      const remainingWords = updatedWords.slice(wordIndex);
+      const lastSegment = updatedSegments[updatedSegments.length - 1];
+      const combinedWords = [...lastSegment.words, ...remainingWords];
+      const validStartTimes = combinedWords.map((w) => w.start_time).filter((t) => t !== null);
+      const validEndTimes = combinedWords.map((w) => w.end_time).filter((t) => t !== null);
+      const segmentStartTime = validStartTimes.length > 0 ? Math.min(...validStartTimes) : null;
+      const segmentEndTime = validEndTimes.length > 0 ? Math.max(...validEndTimes) : null;
+      updatedSegments[updatedSegments.length - 1] = {
+        ...lastSegment,
+        words: combinedWords,
+        text: combinedWords.map((w) => w.text).join(" "),
+        start_time: segmentStartTime,
+        end_time: segmentEndTime
+      };
+    }
+    console.log("Global Edit - Updated Segments with new approach:", {
+      segmentCount: updatedSegments.length,
+      firstSegmentWordCount: (_a = updatedSegments[0]) == null ? void 0 : _a.words.length,
+      totalWordCount: updatedSegments.reduce((count, segment) => count + segment.words.length, 0),
+      originalTotalWordCount: data.corrected_segments.reduce((count, segment) => count + segment.words.length, 0)
+    });
+    setData({
+      ...data,
+      corrected_segments: updatedSegments
+    });
+    setIsEditAllModalOpen(false);
+    setGlobalEditSegment(null);
+  }, [data]);
   return /* @__PURE__ */ jsxRuntimeExports.jsxs(Box, { sx: {
     p: 1,
     pb: 3,
@@ -36194,7 +36718,8 @@ function LyricsAnalyzer({ data: initialData, onFileLoad, apiClient, isReadOnly, 
         isUpdatingHandlers,
         onHandlerClick: handleHandlerClick,
         onAddLyrics: () => setIsAddLyricsModalOpen(true),
-        onFindReplace: () => setIsFindReplaceModalOpen(true)
+        onFindReplace: () => setIsFindReplaceModalOpen(true),
+        onEditAll: handleEditAll
       }
     ),
     /* @__PURE__ */ jsxRuntimeExports.jsxs(Grid, { container: true, direction: isMobile ? "column" : "row", children: [
@@ -36261,6 +36786,25 @@ function LyricsAnalyzer({ data: initialData, onFileLoad, apiClient, isReadOnly, 
         }
       ) })
     ] }),
+    /* @__PURE__ */ jsxRuntimeExports.jsx(
+      EditModal,
+      {
+        open: isEditAllModalOpen,
+        onClose: () => {
+          setIsEditAllModalOpen(false);
+          setGlobalEditSegment(null);
+          handleSetModalSpacebarHandler(void 0);
+        },
+        segment: globalEditSegment,
+        segmentIndex: null,
+        originalSegment: globalEditSegment,
+        onSave: handleSaveGlobalEdit,
+        onPlaySegment: handlePlaySegment,
+        currentTime: currentAudioTime,
+        setModalSpacebarHandler: handleSetModalSpacebarHandler,
+        isGlobal: true
+      }
+    ),
     /* @__PURE__ */ jsxRuntimeExports.jsx(
       EditModal,
       {
@@ -36670,4 +37214,4 @@ ReactDOM$1.createRoot(document.getElementById("root")).render(
     /* @__PURE__ */ jsxRuntimeExports.jsx(App, {})
   ] })
 );
-//# sourceMappingURL=index-CsZkPA7h.js.map
+//# sourceMappingURL=index-D7IgFdph.js.map

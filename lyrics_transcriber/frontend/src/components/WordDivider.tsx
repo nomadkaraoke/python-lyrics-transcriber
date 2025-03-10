@@ -2,6 +2,7 @@ import { Box, Button, Typography } from '@mui/material'
 import AddIcon from '@mui/icons-material/Add'
 import MergeIcon from '@mui/icons-material/CallMerge'
 import CallSplitIcon from '@mui/icons-material/CallSplit'
+import { SxProps, Theme } from '@mui/material/styles'
 
 interface WordDividerProps {
     onAddWord: () => void
@@ -13,7 +14,7 @@ interface WordDividerProps {
     canMerge?: boolean
     isFirst?: boolean
     isLast?: boolean
-    sx?: any
+    sx?: SxProps<Theme>
 }
 
 const buttonTextStyle = {
@@ -83,7 +84,7 @@ export default function WordDivider({
                         Add Word
                     </Typography>
                 </Button>
-                {isFirst && (
+                {isFirst && onAddSegmentBefore && onMergeSegment && (
                     <>
                         <Button
                             onClick={onAddSegmentBefore}
@@ -148,7 +149,7 @@ export default function WordDivider({
                         </Typography>
                     </Button>
                 )}
-                {isLast && (
+                {isLast && onAddSegmentAfter && onMergeSegment && (
                     <>
                         <Button
                             onClick={onAddSegmentAfter}

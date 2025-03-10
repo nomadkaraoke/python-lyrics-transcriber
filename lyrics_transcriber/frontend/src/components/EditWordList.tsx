@@ -86,6 +86,12 @@ export default function EditWordList({
                         sx={{ ml: 15 }}
                     />
                 )}
+                {isGlobal && (
+                    <WordDivider
+                        onAddWord={() => onAddWord(-1)}
+                        sx={{ ml: 15 }}
+                    />
+                )}
 
                 {words.map((word, index) => (
                     <Box key={word.id}>
@@ -157,6 +163,14 @@ export default function EditWordList({
                                 }
                                 canMerge={index < words.length - 1}
                                 isLast={index === words.length - 1}
+                                sx={{ ml: 15 }}
+                            />
+                        )}
+                        {isGlobal && (
+                            <WordDivider
+                                onAddWord={() => onAddWord(index)}
+                                onMergeWords={index < words.length - 1 ? () => onMergeWords(index) : undefined}
+                                canMerge={index < words.length - 1}
                                 sx={{ ml: 15 }}
                             />
                         )}

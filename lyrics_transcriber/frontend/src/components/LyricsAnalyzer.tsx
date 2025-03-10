@@ -84,6 +84,8 @@ export default function LyricsAnalyzer({ data: initialData, onFileLoad, apiClien
         index: number
         originalSegment: LyricsSegment
     } | null>(null)
+    const [isEditAllModalOpen, setIsEditAllModalOpen] = useState(false)
+    const [globalEditSegment, setGlobalEditSegment] = useState<LyricsSegment | null>(null)
     const [isReviewModalOpen, setIsReviewModalOpen] = useState(false)
     const [currentAudioTime, setCurrentAudioTime] = useState(0)
     const [isUpdatingHandlers, setIsUpdatingHandlers] = useState(false)
@@ -165,10 +167,11 @@ export default function LyricsAnalyzer({ data: initialData, onFileLoad, apiClien
             editModalSegment ||
             isReviewModalOpen ||
             isAddLyricsModalOpen ||
-            isFindReplaceModalOpen
+            isFindReplaceModalOpen ||
+            isEditAllModalOpen
         )
         setIsAnyModalOpen(modalOpen)
-    }, [modalContent, editModalSegment, isReviewModalOpen, isAddLyricsModalOpen, isFindReplaceModalOpen])
+    }, [modalContent, editModalSegment, isReviewModalOpen, isAddLyricsModalOpen, isFindReplaceModalOpen, isEditAllModalOpen])
 
     // Calculate effective mode based on modifier key states
     const effectiveMode = isShiftPressed ? 'highlight' : interactionMode
@@ -470,6 +473,125 @@ export default function LyricsAnalyzer({ data: initialData, onFileLoad, apiClien
         setData(newData)
     }
 
+    // Add handler for Edit All functionality
+    const handleEditAll = useCallback(() => {
+        // Create a combined segment with all words from all segments
+        const allWords = data.corrected_segments.flatMap(segment => segment.words)
+
+        // Sort words by start time to maintain chronological order
+        const sortedWords = [...allWords].sort((a, b) => {
+            const aTime = a.start_time ?? 0
+            const bTime = b.start_time ?? 0
+            return aTime - bTime
+        })
+
+        // Create a global segment containing all words
+        const globalSegment: LyricsSegment = {
+            id: 'global-edit',
+            words: sortedWords,
+            text: sortedWords.map(w => w.text).join(' '),
+            start_time: sortedWords[0]?.start_time ?? null,
+            end_time: sortedWords[sortedWords.length - 1]?.end_time ?? null
+        }
+
+        setGlobalEditSegment(globalSegment)
+        setIsEditAllModalOpen(true)
+    }, [data.corrected_segments])
+
+    // Handle saving the global edit
+    const handleSaveGlobalEdit = useCallback((updatedSegment: LyricsSegment) => {
+        console.log('Global Edit - Saving with new approach:', {
+            updatedSegmentId: updatedSegment.id,
+            wordCount: updatedSegment.words.length,
+            originalSegmentCount: data.corrected_segments.length,
+            originalTotalWordCount: data.corrected_segments.reduce((count, segment) => count + segment.words.length, 0)
+        })
+
+        // Get the updated words from the global segment
+        const updatedWords = updatedSegment.words
+
+        // Create a new array of segments with the same structure as the original
+        const updatedSegments = []
+        let wordIndex = 0
+
+        // Distribute words to segments based on the original segment sizes
+        for (const segment of data.corrected_segments) {
+            const originalWordCount = segment.words.length
+
+            // Get the words for this segment from the updated global segment
+            const segmentWords = []
+            const endIndex = Math.min(wordIndex + originalWordCount, updatedWords.length)
+
+            for (let i = wordIndex; i < endIndex; i++) {
+                segmentWords.push(updatedWords[i])
+            }
+
+            // Update the word index for the next segment
+            wordIndex = endIndex
+
+            // If we have words for this segment, create an updated segment
+            if (segmentWords.length > 0) {
+                // Recalculate segment start and end times
+                const validStartTimes = segmentWords.map(w => w.start_time).filter((t): t is number => t !== null)
+                const validEndTimes = segmentWords.map(w => w.end_time).filter((t): t is number => t !== null)
+
+                const segmentStartTime = validStartTimes.length > 0 ? Math.min(...validStartTimes) : null
+                const segmentEndTime = validEndTimes.length > 0 ? Math.max(...validEndTimes) : null
+
+                // Create the updated segment
+                updatedSegments.push({
+                    ...segment,
+                    words: segmentWords,
+                    text: segmentWords.map(w => w.text).join(' '),
+                    start_time: segmentStartTime,
+                    end_time: segmentEndTime
+                })
+            }
+        }
+
+        // If there are any remaining words, add them to the last segment
+        if (wordIndex < updatedWords.length) {
+            const remainingWords = updatedWords.slice(wordIndex)
+            const lastSegment = updatedSegments[updatedSegments.length - 1]
+
+            // Combine the remaining words with the last segment
+            const combinedWords = [...lastSegment.words, ...remainingWords]
+
+            // Recalculate segment start and end times
+            const validStartTimes = combinedWords.map(w => w.start_time).filter((t): t is number => t !== null)
+            const validEndTimes = combinedWords.map(w => w.end_time).filter((t): t is number => t !== null)
+
+            const segmentStartTime = validStartTimes.length > 0 ? Math.min(...validStartTimes) : null
+            const segmentEndTime = validEndTimes.length > 0 ? Math.max(...validEndTimes) : null
+
+            // Update the last segment
+            updatedSegments[updatedSegments.length - 1] = {
+                ...lastSegment,
+                words: combinedWords,
+                text: combinedWords.map(w => w.text).join(' '),
+                start_time: segmentStartTime,
+                end_time: segmentEndTime
+            }
+        }
+
+        console.log('Global Edit - Updated Segments with new approach:', {
+            segmentCount: updatedSegments.length,
+            firstSegmentWordCount: updatedSegments[0]?.words.length,
+            totalWordCount: updatedSegments.reduce((count, segment) => count + segment.words.length, 0),
+            originalTotalWordCount: data.corrected_segments.reduce((count, segment) => count + segment.words.length, 0)
+        })
+
+        // Update the data with the new segments
+        setData({
+            ...data,
+            corrected_segments: updatedSegments
+        })
+
+        // Close the modal
+        setIsEditAllModalOpen(false)
+        setGlobalEditSegment(null)
+    }, [data])
+
     return (
         <Box sx={{
             p: 1,
@@ -496,6 +618,7 @@ export default function LyricsAnalyzer({ data: initialData, onFileLoad, apiClien
                 onHandlerClick={handleHandlerClick}
                 onAddLyrics={() => setIsAddLyricsModalOpen(true)}
                 onFindReplace={() => setIsFindReplaceModalOpen(true)}
+                onEditAll={handleEditAll}
             />
 
             <Grid container direction={isMobile ? 'column' : 'row'}>
@@ -558,6 +681,23 @@ export default function LyricsAnalyzer({ data: initialData, onFileLoad, apiClien
             </Grid>
 
             <EditModal
+                open={isEditAllModalOpen}
+                onClose={() => {
+                    setIsEditAllModalOpen(false)
+                    setGlobalEditSegment(null)
+                    handleSetModalSpacebarHandler(undefined)
+                }}
+                segment={globalEditSegment}
+                segmentIndex={null}
+                originalSegment={globalEditSegment}
+                onSave={handleSaveGlobalEdit}
+                onPlaySegment={handlePlaySegment}
+                currentTime={currentAudioTime}
+                setModalSpacebarHandler={handleSetModalSpacebarHandler}
+                isGlobal={true}
+            />
+
+            <EditModal
                 open={Boolean(editModalSegment)}
                 onClose={() => {
                     setEditModalSegment(null)
@@ -578,7 +718,7 @@ export default function LyricsAnalyzer({ data: initialData, onFileLoad, apiClien
                     editModalSegment?.segment && editModalSegment?.index !== null
                         ? originalData.original_segments.find(
                             (s: LyricsSegment) => s.id === editModalSegment.segment.id
-                          ) || null
+                        ) || null
                         : null
                 }
             />

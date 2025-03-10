@@ -169,7 +169,8 @@ export default function EditModal({
     }
 
     // Early return after all hooks and function definitions
-    if (!segment || segmentIndex === null || !editedSegment || !originalSegment) return null
+    if (!segment || !editedSegment || !originalSegment) return null
+    if (!isGlobal && segmentIndex === null) return null
 
     // Get safe time values for TimelineEditor
     const timeRange = getSafeTimeRange(editedSegment)
@@ -295,10 +296,13 @@ export default function EditModal({
     const handleSave = () => {
         if (editedSegment) {
             console.log('EditModal - Saving segment:', {
+                isGlobal,
                 segmentIndex,
                 originalText: segment?.text,
                 editedText: editedSegment.text,
                 wordCount: editedSegment.words.length,
+                firstWord: editedSegment.words[0],
+                lastWord: editedSegment.words[editedSegment.words.length - 1],
                 timeRange: `${editedSegment.start_time?.toFixed(4) ?? 'N/A'} - ${editedSegment.end_time?.toFixed(4) ?? 'N/A'}`
             })
             onSave(editedSegment)
@@ -408,6 +412,7 @@ export default function EditModal({
                     onWordUpdate={handleWordChange}
                     onPlaySegment={onPlaySegment}
                     startManualSync={startManualSync}
+                    isGlobal={isGlobal}
                 />
 
                 <EditWordList
