@@ -80,6 +80,7 @@ interface MemoizedTranscriptionViewProps {
     currentTime: number
     anchors: AnchorSequence[]
     disableHighlighting: boolean
+    onDataChange?: (updatedData: CorrectionData) => void
 }
 
 // Create a memoized TranscriptionView component
@@ -94,7 +95,8 @@ const MemoizedTranscriptionView = memo(function MemoizedTranscriptionView({
     onPlaySegment,
     currentTime,
     anchors,
-    disableHighlighting
+    disableHighlighting,
+    onDataChange
 }: MemoizedTranscriptionViewProps) {
     return (
         <TranscriptionView
@@ -108,6 +110,7 @@ const MemoizedTranscriptionView = memo(function MemoizedTranscriptionView({
             onPlaySegment={onPlaySegment}
             currentTime={disableHighlighting ? undefined : currentTime}
             anchors={anchors}
+            onDataChange={onDataChange}
         />
     );
 });
@@ -923,6 +926,9 @@ export default function LyricsAnalyzer({ data: initialData, onFileLoad, apiClien
                         currentTime={currentAudioTime}
                         anchors={data.anchor_sequences}
                         disableHighlighting={isAnyModalOpenMemo}
+                        onDataChange={(updatedData) => {
+                            setData(updatedData)
+                        }}
                     />
                     {!isReadOnly && apiClient && (
                         <Box sx={{

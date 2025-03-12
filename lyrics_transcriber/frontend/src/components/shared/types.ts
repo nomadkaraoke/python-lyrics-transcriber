@@ -83,6 +83,7 @@ export interface TranscriptionViewProps {
     currentTime?: number
     anchors?: AnchorSequence[]
     flashingHandler?: string | null
+    onDataChange?: (updatedData: CorrectionData) => void
 }
 
 // Add LinePosition type here since it's used in multiple places

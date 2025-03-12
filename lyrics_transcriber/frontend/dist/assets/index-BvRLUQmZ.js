@@ -33650,6 +33650,243 @@ function SegmentDetailsModal({
 const PlayCircleOutlineIcon = createSvgIcon(/* @__PURE__ */ jsxRuntimeExports.jsx("path", {
   d: "m10 16.5 6-4.5-6-4.5zM12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2m0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8"
 }), "PlayCircleOutline");
+const DeleteOutlineIcon = createSvgIcon(/* @__PURE__ */ jsxRuntimeExports.jsx("path", {
+  d: "M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6zM8 9h8v10H8zm7.5-5-1-1h-5l-1 1H5v2h14V4z"
+}), "DeleteOutline");
+const urlAlphabet = "useandom-26T198340PX75pxJACKVERYMINDBUSHWOLF_GQZbfghjklqvwyzrict";
+let nanoid = (size = 21) => {
+  let id = "";
+  let bytes = crypto.getRandomValues(new Uint8Array(size |= 0));
+  while (size--) {
+    id += urlAlphabet[bytes[size] & 63];
+  }
+  return id;
+};
+const addSegmentBefore = (data, beforeIndex) => {
+  const newData = { ...data };
+  const beforeSegment = newData.corrected_segments[beforeIndex];
+  const newStartTime = Math.max(0, (beforeSegment.start_time ?? 1) - 1);
+  const newEndTime = newStartTime + 1;
+  const newSegment = {
+    id: nanoid(),
+    text: "REPLACE",
+    start_time: newStartTime,
+    end_time: newEndTime,
+    words: [{
+      id: nanoid(),
+      text: "REPLACE",
+      start_time: newStartTime,
+      end_time: newEndTime,
+      confidence: 1
+    }]
+  };
+  newData.corrected_segments.splice(beforeIndex, 0, newSegment);
+  return newData;
+};
+const splitSegment = (data, segmentIndex, afterWordIndex) => {
+  const newData = { ...data };
+  const segment = newData.corrected_segments[segmentIndex];
+  const firstHalfWords = segment.words.slice(0, afterWordIndex + 1);
+  const secondHalfWords = segment.words.slice(afterWordIndex + 1);
+  if (secondHalfWords.length === 0) return null;
+  const lastFirstWord = firstHalfWords[firstHalfWords.length - 1];
+  const firstSecondWord = secondHalfWords[0];
+  const lastSecondWord = secondHalfWords[secondHalfWords.length - 1];
+  const firstSegment = {
+    ...segment,
+    words: firstHalfWords,
+    text: firstHalfWords.map((w) => w.text).join(" "),
+    end_time: lastFirstWord.end_time ?? null
+  };
+  const secondSegment = {
+    id: nanoid(),
+    words: secondHalfWords,
+    text: secondHalfWords.map((w) => w.text).join(" "),
+    start_time: firstSecondWord.start_time ?? null,
+    end_time: lastSecondWord.end_time ?? null
+  };
+  newData.corrected_segments.splice(segmentIndex, 1, firstSegment, secondSegment);
+  return newData;
+};
+const deleteSegment = (data, segmentIndex) => {
+  const newData = { ...data };
+  const deletedSegment = newData.corrected_segments[segmentIndex];
+  newData.corrected_segments = newData.corrected_segments.filter((_, index) => index !== segmentIndex);
+  newData.anchor_sequences = newData.anchor_sequences.map((anchor) => ({
+    ...anchor,
+    transcribed_word_ids: anchor.transcribed_word_ids.filter(
+      (wordId) => !deletedSegment.words.some((deletedWord) => deletedWord.id === wordId)
+    )
+  }));
+  newData.gap_sequences = newData.gap_sequences.map((gap2) => ({
+    ...gap2,
+    transcribed_word_ids: gap2.transcribed_word_ids.filter(
+      (wordId) => !deletedSegment.words.some((deletedWord) => deletedWord.id === wordId)
+    )
+  }));
+  return newData;
+};
+const updateSegment = (data, segmentIndex, updatedSegment) => {
+  const newData = { ...data };
+  updatedSegment.words = updatedSegment.words.map((word) => ({
+    ...word,
+    id: word.id || nanoid()
+  }));
+  newData.corrected_segments[segmentIndex] = updatedSegment;
+  return newData;
+};
+function mergeSegment(data, segmentIndex, mergeWithNext) {
+  const segments = [...data.corrected_segments];
+  const targetIndex = mergeWithNext ? segmentIndex + 1 : segmentIndex - 1;
+  if (targetIndex < 0 || targetIndex >= segments.length) {
+    return data;
+  }
+  const baseSegment = segments[segmentIndex];
+  const targetSegment = segments[targetIndex];
+  const mergedSegment = {
+    id: nanoid(),
+    words: mergeWithNext ? [...baseSegment.words, ...targetSegment.words] : [...targetSegment.words, ...baseSegment.words],
+    text: mergeWithNext ? `${baseSegment.text} ${targetSegment.text}` : `${targetSegment.text} ${baseSegment.text}`,
+    start_time: Math.min(
+      baseSegment.start_time ?? Infinity,
+      targetSegment.start_time ?? Infinity
+    ),
+    end_time: Math.max(
+      baseSegment.end_time ?? -Infinity,
+      targetSegment.end_time ?? -Infinity
+    )
+  };
+  const minIndex = Math.min(segmentIndex, targetIndex);
+  segments.splice(minIndex, 2, mergedSegment);
+  return {
+    ...data,
+    corrected_segments: segments
+  };
+}
+function findAndReplace(data, findText, replaceText, options = {
+  caseSensitive: false,
+  useRegex: false,
+  fullTextMode: false
+}) {
+  const newData = { ...data };
+  if (options.fullTextMode) {
+    newData.corrected_segments = data.corrected_segments.map((segment) => {
+      let pattern;
+      if (options.useRegex) {
+        pattern = new RegExp(findText, options.caseSensitive ? "g" : "gi");
+      } else {
+        const escapedFindText = findText.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+        pattern = new RegExp(escapedFindText, options.caseSensitive ? "g" : "gi");
+      }
+      const segmentText = segment.text;
+      if (!pattern.test(segmentText)) {
+        return segment;
+      }
+      pattern.lastIndex = 0;
+      const newSegmentText = segmentText.replace(pattern, replaceText);
+      const newWordTexts = newSegmentText.trim().split(/\s+/).filter((text) => text.length > 0);
+      const newWords = [];
+      if (newWordTexts.length === segment.words.length) {
+        for (let i = 0; i < newWordTexts.length; i++) {
+          newWords.push({
+            ...segment.words[i],
+            text: newWordTexts[i]
+          });
+        }
+      } else if (newWordTexts.length < segment.words.length) {
+        let oldWordIndex = 0;
+        for (let i = 0; i < newWordTexts.length; i++) {
+          while (oldWordIndex < segment.words.length && segment.words[oldWordIndex].text.trim() === "") {
+            oldWordIndex++;
+          }
+          if (oldWordIndex < segment.words.length) {
+            newWords.push({
+              ...segment.words[oldWordIndex],
+              text: newWordTexts[i]
+            });
+            oldWordIndex++;
+          } else {
+            newWords.push({
+              id: nanoid(),
+              text: newWordTexts[i],
+              start_time: null,
+              end_time: null
+            });
+          }
+        }
+      } else {
+        for (let i = 0; i < newWordTexts.length; i++) {
+          if (i < segment.words.length) {
+            newWords.push({
+              ...segment.words[i],
+              text: newWordTexts[i]
+            });
+          } else {
+            newWords.push({
+              id: nanoid(),
+              text: newWordTexts[i],
+              start_time: null,
+              end_time: null
+            });
+          }
+        }
+      }
+      return {
+        ...segment,
+        words: newWords,
+        text: newSegmentText
+      };
+    });
+  } else {
+    newData.corrected_segments = data.corrected_segments.map((segment) => {
+      let newWords = segment.words.map((word) => {
+        let pattern;
+        if (options.useRegex) {
+          pattern = new RegExp(findText, options.caseSensitive ? "g" : "gi");
+        } else {
+          const escapedFindText = findText.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+          pattern = new RegExp(escapedFindText, options.caseSensitive ? "g" : "gi");
+        }
+        return {
+          ...word,
+          text: word.text.replace(pattern, replaceText)
+        };
+      });
+      newWords = newWords.filter((word) => word.text.trim() !== "");
+      return {
+        ...segment,
+        words: newWords,
+        text: newWords.map((w) => w.text).join(" ")
+      };
+    });
+  }
+  newData.corrected_segments = newData.corrected_segments.filter((segment) => segment.words.length > 0);
+  return newData;
+}
+function deleteWord(data, wordId) {
+  const segmentIndex = data.corrected_segments.findIndex(
+    (segment2) => segment2.words.some((word) => word.id === wordId)
+  );
+  if (segmentIndex === -1) {
+    return data;
+  }
+  const segment = data.corrected_segments[segmentIndex];
+  const wordIndex = segment.words.findIndex((word) => word.id === wordId);
+  if (wordIndex === -1) {
+    return data;
+  }
+  const updatedWords = segment.words.filter((_, index) => index !== wordIndex);
+  if (updatedWords.length > 0) {
+    const updatedSegment = {
+      ...segment,
+      words: updatedWords,
+      text: updatedWords.map((w) => w.text).join(" ")
+    };
+    return updateSegment(data, segmentIndex, updatedSegment);
+  } else {
+    return deleteSegment(data, segmentIndex);
+  }
+}
 const SegmentIndex = styled(Typography)(({ theme: theme2 }) => ({
   color: theme2.palette.text.secondary,
   width: "1.8em",
@@ -33688,9 +33925,16 @@ function TranscriptionView({
   mode,
   onPlaySegment,
   currentTime = 0,
-  anchors = []
+  anchors = [],
+  onDataChange
 }) {
   const [selectedSegmentIndex, setSelectedSegmentIndex] = reactExports.useState(null);
+  const handleDeleteSegment = (segmentIndex) => {
+    if (onDataChange) {
+      const updatedData = deleteSegment(data, segmentIndex);
+      onDataChange(updatedData);
+    }
+  };
   return /* @__PURE__ */ jsxRuntimeExports.jsxs(Paper, { sx: { p: 0.8 }, children: [
     /* @__PURE__ */ jsxRuntimeExports.jsx(Box, { sx: { display: "flex", justifyContent: "space-between", alignItems: "center", mb: 0.5 }, children: /* @__PURE__ */ jsxRuntimeExports.jsx(Typography, { variant: "h6", sx: { fontSize: "0.9rem", mb: 0 }, children: "Corrected Transcription" }) }),
     /* @__PURE__ */ jsxRuntimeExports.jsx(Box, { sx: { display: "flex", flexDirection: "column", gap: 0.2 }, children: data.corrected_segments.map((segment, segmentIndex) => {
@@ -33745,6 +33989,22 @@ function TranscriptionView({
               children: segmentIndex
             }
           ),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            IconButton,
+            {
+              size: "small",
+              onClick: () => handleDeleteSegment(segmentIndex),
+              sx: {
+                padding: "1px",
+                height: "18px",
+                width: "18px",
+                minHeight: "18px",
+                minWidth: "18px"
+              },
+              title: "Delete segment",
+              children: /* @__PURE__ */ jsxRuntimeExports.jsx(DeleteOutlineIcon, { sx: { fontSize: "0.9rem", color: "error.main" } })
+            }
+          ),
           segment.start_time !== null && /* @__PURE__ */ jsxRuntimeExports.jsx(
             IconButton,
             {
@@ -33757,6 +34017,7 @@ function TranscriptionView({
                 minHeight: "18px",
                 minWidth: "18px"
               },
+              title: "Play segment",
               children: /* @__PURE__ */ jsxRuntimeExports.jsx(PlayCircleOutlineIcon, { sx: { fontSize: "0.9rem" } })
             }
           )
@@ -33794,15 +34055,6 @@ function TranscriptionView({
 const StopIcon = createSvgIcon(/* @__PURE__ */ jsxRuntimeExports.jsx("path", {
   d: "M6 6h12v12H6z"
 }), "Stop");
-const urlAlphabet = "useandom-26T198340PX75pxJACKVERYMINDBUSHWOLF_GQZbfghjklqvwyzrict";
-let nanoid = (size = 21) => {
-  let id = "";
-  let bytes = crypto.getRandomValues(new Uint8Array(size |= 0));
-  while (size--) {
-    id += urlAlphabet[bytes[size] & 63];
-  }
-  return id;
-};
 const TAP_THRESHOLD_MS = 200;
 const DEFAULT_WORD_DURATION = 1;
 const OVERLAP_BUFFER = 0.01;
@@ -35967,231 +36219,6 @@ function ReviewChangesModal({
     }
   );
 }
-const addSegmentBefore = (data, beforeIndex) => {
-  const newData = { ...data };
-  const beforeSegment = newData.corrected_segments[beforeIndex];
-  const newStartTime = Math.max(0, (beforeSegment.start_time ?? 1) - 1);
-  const newEndTime = newStartTime + 1;
-  const newSegment = {
-    id: nanoid(),
-    text: "REPLACE",
-    start_time: newStartTime,
-    end_time: newEndTime,
-    words: [{
-      id: nanoid(),
-      text: "REPLACE",
-      start_time: newStartTime,
-      end_time: newEndTime,
-      confidence: 1
-    }]
-  };
-  newData.corrected_segments.splice(beforeIndex, 0, newSegment);
-  return newData;
-};
-const splitSegment = (data, segmentIndex, afterWordIndex) => {
-  const newData = { ...data };
-  const segment = newData.corrected_segments[segmentIndex];
-  const firstHalfWords = segment.words.slice(0, afterWordIndex + 1);
-  const secondHalfWords = segment.words.slice(afterWordIndex + 1);
-  if (secondHalfWords.length === 0) return null;
-  const lastFirstWord = firstHalfWords[firstHalfWords.length - 1];
-  const firstSecondWord = secondHalfWords[0];
-  const lastSecondWord = secondHalfWords[secondHalfWords.length - 1];
-  const firstSegment = {
-    ...segment,
-    words: firstHalfWords,
-    text: firstHalfWords.map((w) => w.text).join(" "),
-    end_time: lastFirstWord.end_time ?? null
-  };
-  const secondSegment = {
-    id: nanoid(),
-    words: secondHalfWords,
-    text: secondHalfWords.map((w) => w.text).join(" "),
-    start_time: firstSecondWord.start_time ?? null,
-    end_time: lastSecondWord.end_time ?? null
-  };
-  newData.corrected_segments.splice(segmentIndex, 1, firstSegment, secondSegment);
-  return newData;
-};
-const deleteSegment = (data, segmentIndex) => {
-  const newData = { ...data };
-  const deletedSegment = newData.corrected_segments[segmentIndex];
-  newData.corrected_segments = newData.corrected_segments.filter((_, index) => index !== segmentIndex);
-  newData.anchor_sequences = newData.anchor_sequences.map((anchor) => ({
-    ...anchor,
-    transcribed_word_ids: anchor.transcribed_word_ids.filter(
-      (wordId) => !deletedSegment.words.some((deletedWord) => deletedWord.id === wordId)
-    )
-  }));
-  newData.gap_sequences = newData.gap_sequences.map((gap2) => ({
-    ...gap2,
-    transcribed_word_ids: gap2.transcribed_word_ids.filter(
-      (wordId) => !deletedSegment.words.some((deletedWord) => deletedWord.id === wordId)
-    )
-  }));
-  return newData;
-};
-const updateSegment = (data, segmentIndex, updatedSegment) => {
-  const newData = { ...data };
-  updatedSegment.words = updatedSegment.words.map((word) => ({
-    ...word,
-    id: word.id || nanoid()
-  }));
-  newData.corrected_segments[segmentIndex] = updatedSegment;
-  return newData;
-};
-function mergeSegment(data, segmentIndex, mergeWithNext) {
-  const segments = [...data.corrected_segments];
-  const targetIndex = mergeWithNext ? segmentIndex + 1 : segmentIndex - 1;
-  if (targetIndex < 0 || targetIndex >= segments.length) {
-    return data;
-  }
-  const baseSegment = segments[segmentIndex];
-  const targetSegment = segments[targetIndex];
-  const mergedSegment = {
-    id: nanoid(),
-    words: mergeWithNext ? [...baseSegment.words, ...targetSegment.words] : [...targetSegment.words, ...baseSegment.words],
-    text: mergeWithNext ? `${baseSegment.text} ${targetSegment.text}` : `${targetSegment.text} ${baseSegment.text}`,
-    start_time: Math.min(
-      baseSegment.start_time ?? Infinity,
-      targetSegment.start_time ?? Infinity
-    ),
-    end_time: Math.max(
-      baseSegment.end_time ?? -Infinity,
-      targetSegment.end_time ?? -Infinity
-    )
-  };
-  const minIndex = Math.min(segmentIndex, targetIndex);
-  segments.splice(minIndex, 2, mergedSegment);
-  return {
-    ...data,
-    corrected_segments: segments
-  };
-}
-function findAndReplace(data, findText, replaceText, options = {
-  caseSensitive: false,
-  useRegex: false,
-  fullTextMode: false
-}) {
-  const newData = { ...data };
-  if (options.fullTextMode) {
-    newData.corrected_segments = data.corrected_segments.map((segment) => {
-      let pattern;
-      if (options.useRegex) {
-        pattern = new RegExp(findText, options.caseSensitive ? "g" : "gi");
-      } else {
-        const escapedFindText = findText.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-        pattern = new RegExp(escapedFindText, options.caseSensitive ? "g" : "gi");
-      }
-      const segmentText = segment.text;
-      if (!pattern.test(segmentText)) {
-        return segment;
-      }
-      pattern.lastIndex = 0;
-      const newSegmentText = segmentText.replace(pattern, replaceText);
-      const newWordTexts = newSegmentText.trim().split(/\s+/).filter((text) => text.length > 0);
-      const newWords = [];
-      if (newWordTexts.length === segment.words.length) {
-        for (let i = 0; i < newWordTexts.length; i++) {
-          newWords.push({
-            ...segment.words[i],
-            text: newWordTexts[i]
-          });
-        }
-      } else if (newWordTexts.length < segment.words.length) {
-        let oldWordIndex = 0;
-        for (let i = 0; i < newWordTexts.length; i++) {
-          while (oldWordIndex < segment.words.length && segment.words[oldWordIndex].text.trim() === "") {
-            oldWordIndex++;
-          }
-          if (oldWordIndex < segment.words.length) {
-            newWords.push({
-              ...segment.words[oldWordIndex],
-              text: newWordTexts[i]
-            });
-            oldWordIndex++;
-          } else {
-            newWords.push({
-              id: nanoid(),
-              text: newWordTexts[i],
-              start_time: null,
-              end_time: null
-            });
-          }
-        }
-      } else {
-        for (let i = 0; i < newWordTexts.length; i++) {
-          if (i < segment.words.length) {
-            newWords.push({
-              ...segment.words[i],
-              text: newWordTexts[i]
-            });
-          } else {
-            newWords.push({
-              id: nanoid(),
-              text: newWordTexts[i],
-              start_time: null,
-              end_time: null
-            });
-          }
-        }
-      }
-      return {
-        ...segment,
-        words: newWords,
-        text: newSegmentText
-      };
-    });
-  } else {
-    newData.corrected_segments = data.corrected_segments.map((segment) => {
-      let newWords = segment.words.map((word) => {
-        let pattern;
-        if (options.useRegex) {
-          pattern = new RegExp(findText, options.caseSensitive ? "g" : "gi");
-        } else {
-          const escapedFindText = findText.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-          pattern = new RegExp(escapedFindText, options.caseSensitive ? "g" : "gi");
-        }
-        return {
-          ...word,
-          text: word.text.replace(pattern, replaceText)
-        };
-      });
-      newWords = newWords.filter((word) => word.text.trim() !== "");
-      return {
-        ...segment,
-        words: newWords,
-        text: newWords.map((w) => w.text).join(" ")
-      };
-    });
-  }
-  newData.corrected_segments = newData.corrected_segments.filter((segment) => segment.words.length > 0);
-  return newData;
-}
-function deleteWord(data, wordId) {
-  const segmentIndex = data.corrected_segments.findIndex(
-    (segment2) => segment2.words.some((word) => word.id === wordId)
-  );
-  if (segmentIndex === -1) {
-    return data;
-  }
-  const segment = data.corrected_segments[segmentIndex];
-  const wordIndex = segment.words.findIndex((word) => word.id === wordId);
-  if (wordIndex === -1) {
-    return data;
-  }
-  const updatedWords = segment.words.filter((_, index) => index !== wordIndex);
-  if (updatedWords.length > 0) {
-    const updatedSegment = {
-      ...segment,
-      words: updatedWords,
-      text: updatedWords.map((w) => w.text).join(" ")
-    };
-    return updateSegment(data, segmentIndex, updatedSegment);
-  } else {
-    return deleteSegment(data, segmentIndex);
-  }
-}
 const generateStorageKey = (data) => {
   var _a;
   const text = ((_a = data.original_segments[0]) == null ? void 0 : _a.text) || "";
@@ -37158,7 +37185,8 @@ const MemoizedTranscriptionView = reactExports.memo(function MemoizedTranscripti
   onPlaySegment,
   currentTime,
   anchors,
-  disableHighlighting
+  disableHighlighting,
+  onDataChange
 }) {
   return /* @__PURE__ */ jsxRuntimeExports.jsx(
     TranscriptionView,
@@ -37172,7 +37200,8 @@ const MemoizedTranscriptionView = reactExports.memo(function MemoizedTranscripti
       highlightInfo,
       onPlaySegment,
       currentTime: disableHighlighting ? void 0 : currentTime,
-      anchors
+      anchors,
+      onDataChange
     }
   );
 });
@@ -37739,7 +37768,10 @@ function LyricsAnalyzer({ data: initialData, onFileLoad, apiClient, isReadOnly, 
             onPlaySegment: handlePlaySegment,
             currentTime: currentAudioTime,
             anchors: data.anchor_sequences,
-            disableHighlighting: isAnyModalOpenMemo
+            disableHighlighting: isAnyModalOpenMemo,
+            onDataChange: (updatedData) => {
+              setData(updatedData);
+            }
           }
         ),
         !isReadOnly && apiClient && /* @__PURE__ */ jsxRuntimeExports.jsxs(Box, { sx: {
@@ -38221,4 +38253,4 @@ ReactDOM$1.createRoot(document.getElementById("root")).render(
     /* @__PURE__ */ jsxRuntimeExports.jsx(App, {})
   ] })
 );
-//# sourceMappingURL=index-2vK-qVJS.js.map
+//# sourceMappingURL=index-BvRLUQmZ.js.map

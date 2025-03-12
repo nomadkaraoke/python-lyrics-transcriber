@@ -6,6 +6,8 @@ import { styled } from '@mui/material/styles'
 import SegmentDetailsModal from './SegmentDetailsModal'
 import { TranscriptionWordPosition } from './shared/types'
 import PlayCircleOutlineIcon from '@mui/icons-material/PlayCircleOutline'
+import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline'
+import { deleteSegment } from './shared/utils/segmentOperations'
 
 const SegmentIndex = styled(Typography)(({ theme }) => ({
     color: theme.palette.text.secondary,
@@ -48,9 +50,17 @@ export default function TranscriptionView({
     mode,
     onPlaySegment,
     currentTime = 0,
-    anchors = []
+    anchors = [],
+    onDataChange
 }: TranscriptionViewProps) {
     const [selectedSegmentIndex, setSelectedSegmentIndex] = useState<number | null>(null)
+
+    const handleDeleteSegment = (segmentIndex: number) => {
+        if (onDataChange) {
+            const updatedData = deleteSegment(data, segmentIndex)
+            onDataChange(updatedData)
+        }
+    }
 
     return (
         <Paper sx={{ p: 0.8 }}>
@@ -125,6 +135,20 @@ export default function TranscriptionView({
                                 >
                                     {segmentIndex}
                                 </SegmentIndex>
+                                <IconButton
+                                    size="small"
+                                    onClick={() => handleDeleteSegment(segmentIndex)}
+                                    sx={{
+                                        padding: '1px',
+                                        height: '18px',
+                                        width: '18px',
+                                        minHeight: '18px',
+                                        minWidth: '18px'
+                                    }}
+                                    title="Delete segment"
+                                >
+                                    <DeleteOutlineIcon sx={{ fontSize: '0.9rem', color: 'error.main' }} />
+                                </IconButton>
                                 {segment.start_time !== null && (
                                     <IconButton
                                         size="small"
@@ -136,6 +160,7 @@ export default function TranscriptionView({
                                             minHeight: '18px',
                                             minWidth: '18px'
                                         }}
+                                        title="Play segment"
                                     >
                                         <PlayCircleOutlineIcon sx={{ fontSize: '0.9rem' }} />
                                     </IconButton>
