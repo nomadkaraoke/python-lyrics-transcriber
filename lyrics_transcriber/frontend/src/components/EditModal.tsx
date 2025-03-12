@@ -185,15 +185,15 @@ export default function EditModal({
     isGlobal = false,
     isLoading = false
 }: EditModalProps) {
-    console.log('EditModal - Render', { 
-        open, 
-        isGlobal, 
-        isLoading, 
-        hasSegment: !!segment, 
-        segmentIndex,
-        hasOriginalSegment: !!originalSegment,
-        hasOriginalTranscribedSegment: !!originalTranscribedSegment
-    });
+    // console.log('EditModal - Render', { 
+    //     open, 
+    //     isGlobal, 
+    //     isLoading, 
+    //     hasSegment: !!segment, 
+    //     segmentIndex,
+    //     hasOriginalSegment: !!originalSegment,
+    //     hasOriginalTranscribedSegment: !!originalTranscribedSegment
+    // });
     
     const [editedSegment, setEditedSegment] = useState<LyricsSegment | null>(segment)
     const [isPlaying, setIsPlaying] = useState(false)
@@ -233,7 +233,7 @@ export default function EditModal({
     })
 
     const handleClose = useCallback(() => {
-        console.log('EditModal - handleClose called');
+        // console.log('EditModal - handleClose called');
         cleanupManualSync()
         onClose()
     }, [onClose, cleanupManualSync])
@@ -243,12 +243,12 @@ export default function EditModal({
         const spacebarHandler = handleSpacebar // Capture the current handler
 
         if (open) {
-            console.log('EditModal - Setting up modal spacebar handler', {
-                hasPlaySegment: !!onPlaySegment,
-                editedSegmentId: editedSegment?.id,
-                handlerFunction: spacebarHandler.toString().slice(0, 100),
-                isLoading
-            })
+            // console.log('EditModal - Setting up modal spacebar handler', {
+            //     hasPlaySegment: !!onPlaySegment,
+            //     editedSegmentId: editedSegment?.id,
+            //     handlerFunction: spacebarHandler.toString().slice(0, 100),
+            //     isLoading
+            // })
 
             // Create a function that will be called by the global event listeners
             const handleKeyEvent = (e: KeyboardEvent) => {
@@ -262,7 +262,7 @@ export default function EditModal({
             // Only cleanup when the effect is re-run or the modal is closed
             return () => {
                 if (!open) {
-                    console.log('EditModal - Cleanup: clearing modal spacebar handler')
+                    // console.log('EditModal - Cleanup: clearing modal spacebar handler')
                     setModalSpacebarHandler(undefined)
                 }
             }
@@ -289,11 +289,11 @@ export default function EditModal({
 
     // All useEffect hooks
     useEffect(() => {
-        console.log('EditModal - segment changed', { 
-            hasSegment: !!segment, 
-            segmentId: segment?.id,
-            wordCount: segment?.words.length
-        });
+        // console.log('EditModal - segment changed', { 
+        //     hasSegment: !!segment, 
+        //     segmentId: segment?.id,
+        //     wordCount: segment?.words.length
+        // });
         setEditedSegment(segment)
     }, [segment])
 
@@ -304,7 +304,7 @@ export default function EditModal({
         const endTime = editedSegment.end_time ?? 0
 
         if (window.isAudioPlaying && currentTime > endTime) {
-            console.log('Stopping playback: current time exceeded end time')
+            // console.log('Stopping playback: current time exceeded end time')
             window.toggleAudioPlayback?.()
             cleanupManualSync()
         }
@@ -519,7 +519,7 @@ export default function EditModal({
 
     // Memoize the dialog title to prevent re-renders
     const dialogTitle = useMemo(() => {
-        console.log('EditModal - Rendering dialog title', { isLoading, isGlobal });
+        // console.log('EditModal - Rendering dialog title', { isLoading, isGlobal });
         
         if (isLoading) {
             return (
@@ -563,24 +563,24 @@ export default function EditModal({
 
     // Early return after all hooks and function definitions
     if (!isLoading && (!segment || !editedSegment || !originalSegment)) {
-        console.log('EditModal - Early return: missing required data', {
-            hasSegment: !!segment,
-            hasEditedSegment: !!editedSegment,
-            hasOriginalSegment: !!originalSegment,
-            isLoading
-        });
+        // console.log('EditModal - Early return: missing required data', {
+        //     hasSegment: !!segment,
+        //     hasEditedSegment: !!editedSegment,
+        //     hasOriginalSegment: !!originalSegment,
+        //     isLoading
+        // });
         return null;
     }
     if (!isLoading && !isGlobal && segmentIndex === null) {
-        console.log('EditModal - Early return: non-global mode with null segmentIndex');
+        // console.log('EditModal - Early return: non-global mode with null segmentIndex');
         return null;
     }
 
-    console.log('EditModal - Rendering dialog content', { 
-        isLoading, 
-        hasEditedSegment: !!editedSegment, 
-        hasOriginalSegment: !!originalSegment 
-    });
+    // console.log('EditModal - Rendering dialog content', { 
+    //     isLoading, 
+    //     hasEditedSegment: !!editedSegment, 
+    //     hasOriginalSegment: !!originalSegment 
+    // });
 
     return (
         <Dialog

@@ -33,7 +33,8 @@ const WordRow = memo(function WordRow({
     onWordUpdate,
     onSplitWord,
     onRemoveWord,
-    wordsLength
+    wordsLength,
+    onTabNavigation
 }: {
     word: Word
     index: number
@@ -41,7 +42,17 @@ const WordRow = memo(function WordRow({
     onSplitWord: (index: number) => void
     onRemoveWord: (index: number) => void
     wordsLength: number
+    onTabNavigation: (currentIndex: number) => void
 }) {
+    const handleKeyDown = (e: React.KeyboardEvent) => {
+        // console.log('KeyDown event:', e.key, 'Shift:', e.shiftKey, 'Index:', index);
+        if (e.key === 'Tab' && !e.shiftKey) {
+            // console.log('Tab key detected, preventing default and navigating');
+            e.preventDefault();
+            onTabNavigation(index);
+        }
+    };
+
     return (
         <Box sx={{
             display: 'flex',
@@ -53,8 +64,10 @@ const WordRow = memo(function WordRow({
                 label={`Word ${index}`}
                 value={word.text}
                 onChange={(e) => onWordUpdate(index, { text: e.target.value })}
+                onKeyDown={handleKeyDown}
                 fullWidth
                 size="small"
+                id={`word-text-${index}`}
             />
             <TextField
                 label="Start Time"
@@ -108,7 +121,8 @@ const WordItem = memo(function WordItem({
     onAddSegment,
     onMergeSegment,
     wordsLength,
-    isGlobal
+    isGlobal,
+    onTabNavigation
 }: {
     word: Word
     index: number
@@ -122,6 +136,7 @@ const WordItem = memo(function WordItem({
     onMergeSegment?: (mergeWithNext: boolean) => void
     wordsLength: number
     isGlobal: boolean
+    onTabNavigation: (currentIndex: number) => void
 }) {
     return (
         <Box key={word.id}>
@@ -132,6 +147,7 @@ const WordItem = memo(function WordItem({
                 onSplitWord={onSplitWord}
                 onRemoveWord={onRemoveWord}
                 wordsLength={wordsLength}
+                onTabNavigation={onTabNavigation}
             />
 
             {/* Word divider with merge/split functionality */}
@@ -210,6 +226,60 @@ export default function EditWordList({
         setPage(value);
     };
 
+    // Handle tab navigation between word text fields
+    const handleTabNavigation = (currentIndex: number) => {
+        // console.log('handleTabNavigation called with index:', currentIndex);
+        const nextIndex = (currentIndex + 1) % words.length;
+        // console.log('Next index calculated:', nextIndex, 'Total words:', words.length);
+        
+        // If the next word is on a different page, change the page
+        if (isGlobal && (nextIndex < startIndex || nextIndex >= endIndex)) {
+            // console.log('Next word is on different page. Current page:', page, 'startIndex:', startIndex, 'endIndex:', endIndex);
+            const nextPage = Math.floor(nextIndex / pageSize) + 1;
+            // console.log('Changing to page:', nextPage);
+            setPage(nextPage);
+            
+            // Use setTimeout to allow the page change to render before focusing
+            setTimeout(() => {
+                // console.log('Timeout callback executing, trying to focus element with ID:', `word-text-${nextIndex}`);
+                focusWordTextField(nextIndex);
+            }, 50);
+        } else {
+            // console.log('Next word is on same page, trying to focus element with ID:', `word-text-${nextIndex}`);
+            focusWordTextField(nextIndex);
+        }
+    };
+
+    // Helper function to focus a word text field by index
+    const focusWordTextField = (index: number) => {
+        // Material-UI TextField uses a more complex structure
+        // The actual input is inside the TextField component
+        const element = document.getElementById(`word-text-${index}`);
+        // console.log('Element found:', !!element);
+        
+        if (element) {
+            // Try different selectors to find the input element
+            // First try the standard input selector
+            let input = element.querySelector('input');
+            
+            // If that doesn't work, try the MUI-specific selector
+            if (!input) {
+                input = element.querySelector('.MuiInputBase-input');
+            }
+            
+            // console.log('Input element found:', !!input);
+            if (input) {
+                input.focus();
+                input.select();
+                // console.log('Focus and select called on input');
+            } else {
+                // As a fallback, try to focus the TextField itself
+                // console.log('Trying to focus the TextField itself');
+                element.focus();
+            }
+        }
+    };
+
     return (
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, flexGrow: 1, minHeight: 0 }}>
             {/* Initial divider with Add Segment Before button */}
@@ -265,6 +335,7 @@ export default function EditWordList({
                             onMergeSegment={onMergeSegment}
                             wordsLength={words.length}
                             isGlobal={isGlobal}
+                            onTabNavigation={handleTabNavigation}
                         />
                     );
                 })}

@@ -310,4 +310,51 @@ export function findAndReplace(
     newData.corrected_segments = newData.corrected_segments.filter(segment => segment.words.length > 0);
 
     return newData
+}
+
+/**
+ * Deletes a word from a segment in the correction data
+ * @param data The correction data
+ * @param wordId The ID of the word to delete
+ * @returns Updated correction data with the word removed
+ */
+export function deleteWord(
+    data: CorrectionData,
+    wordId: string
+): CorrectionData {
+    // Find the segment containing this word
+    const segmentIndex = data.corrected_segments.findIndex(segment =>
+        segment.words.some(word => word.id === wordId)
+    );
+
+    if (segmentIndex === -1) {
+        // Word not found, return data unchanged
+        return data;
+    }
+
+    const segment = data.corrected_segments[segmentIndex];
+    const wordIndex = segment.words.findIndex(word => word.id === wordId);
+    
+    if (wordIndex === -1) {
+        // Word not found in segment (shouldn't happen), return data unchanged
+        return data;
+    }
+    
+    // Create a new segment with the word removed
+    const updatedWords = segment.words.filter((_, index) => index !== wordIndex);
+    
+    if (updatedWords.length > 0) {
+        // Update the segment with the word removed
+        const updatedSegment = {
+            ...segment,
+            words: updatedWords,
+            text: updatedWords.map(w => w.text).join(' ')
+        };
+        
+        // Update the data
+        return updateSegment(data, segmentIndex, updatedSegment);
+    } else {
+        // If the segment would be empty, delete the entire segment
+        return deleteSegment(data, segmentIndex);
+    }
 } 

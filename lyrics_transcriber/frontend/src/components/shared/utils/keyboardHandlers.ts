@@ -35,6 +35,16 @@ export const setupKeyboardHandlers = (state: KeyboardState) => {
         console.log(`Setting up keyboard handlers [${handlerId}]`)
     }
 
+    // Function to reset modifier key states
+    const resetModifierStates = () => {
+        if (debugLog) {
+            console.log(`Resetting modifier states [${handlerId}]`)
+        }
+        state.setIsShiftPressed(false)
+        state.setIsCtrlPressed?.(false)
+        document.body.style.userSelect = ''
+    }
+
     const handleKeyDown = (e: KeyboardEvent) => {
         if (debugLog) {
             console.log(`Keyboard event captured [${handlerId}]`, {
@@ -59,7 +69,7 @@ export const setupKeyboardHandlers = (state: KeyboardState) => {
         if (e.key === 'Shift') {
             state.setIsShiftPressed(true)
             document.body.style.userSelect = 'none'
-        } else if (e.key === 'Meta') {
+        } else if (e.key === 'Control' || e.key === 'Ctrl' || e.key === 'Meta') {
             state.setIsCtrlPressed?.(true)
         } else if (e.key === ' ' || e.code === 'Space') {
             if (debugLog) {
@@ -102,12 +112,11 @@ export const setupKeyboardHandlers = (state: KeyboardState) => {
             })
         }
 
-        if (e.key === 'Shift') {
-            state.setIsShiftPressed(false)
-            document.body.style.userSelect = ''
-        } else if (e.key === 'Meta') {
-            state.setIsCtrlPressed?.(false)
-        } else if (e.key === ' ' || e.code === 'Space') {
+        // Always reset the modifier states regardless of the key which was released
+        // to help prevent accidentally getting stuck in a mode or accidentally deleting words
+        resetModifierStates()
+        
+        if (e.key === ' ' || e.code === 'Space') {
             if (debugLog) {
                 console.log('Keyboard handler - Spacebar released', {
                     modalOpen: isModalOpen,
@@ -128,7 +137,35 @@ export const setupKeyboardHandlers = (state: KeyboardState) => {
         }
     }
 
-    return { handleKeyDown, handleKeyUp }
+    // Handle window blur event (user switches tabs or apps)
+    const handleWindowBlur = () => {
+        if (debugLog) {
+            console.log(`Window blur detected [${handlerId}], resetting modifier states`)
+        }
+        resetModifierStates()
+    }
+
+    // Handle window focus event (user returns to the app)
+    const handleWindowFocus = () => {
+        if (debugLog) {
+            console.log(`Window focus detected [${handlerId}], ensuring modifier states are reset`)
+        }
+        resetModifierStates()
+    }
+
+    // Add window event listeners
+    window.addEventListener('blur', handleWindowBlur)
+    window.addEventListener('focus', handleWindowFocus)
+
+    // Return a cleanup function that includes removing the window event listeners
+    return { 
+        handleKeyDown, 
+        handleKeyUp,
+        cleanup: () => {
+            window.removeEventListener('blur', handleWindowBlur)
+            window.removeEventListener('focus', handleWindowFocus)
+        }
+    }
 }
 
 // Export these for external use

@@ -1,6 +1,7 @@
-import { ToggleButton, ToggleButtonGroup, Box, Typography } from '@mui/material';
+import { ToggleButton, ToggleButtonGroup, Box, Typography, Tooltip } from '@mui/material';
 import HighlightIcon from '@mui/icons-material/Highlight';
 import EditIcon from '@mui/icons-material/Edit';
+import DeleteIcon from '@mui/icons-material/Delete';
 import { InteractionMode } from '../types';
 
 interface ModeSelectorProps {
@@ -17,7 +18,7 @@ export default function ModeSelector({ effectiveMode, onChange }: ModeSelectorPr
             <ToggleButtonGroup
                 value={effectiveMode}
                 exclusive
-                onChange={(_, newMode) => newMode && onChange(newMode)}
+                onChange={(_, newMode) => newMode === 'edit' && onChange(newMode)}
                 size="small"
                 sx={{ 
                     height: '32px',
@@ -28,20 +29,38 @@ export default function ModeSelector({ effectiveMode, onChange }: ModeSelectorPr
                     }
                 }}
             >
-                <ToggleButton 
-                    value="edit"
-                    title="Click to edit segments and make corrections in the transcription view"
-                >
-                    <EditIcon sx={{ mr: 0.5, fontSize: '1rem' }} />
-                    Edit
-                </ToggleButton>
-                <ToggleButton 
-                    value="highlight"
-                    title="Click words in the transcription view to highlight the matching anchor sequence in the reference lyrics. You can also hold SHIFT to temporarily activate this mode."
-                >
-                    <HighlightIcon sx={{ mr: 0.5, fontSize: '1rem' }} />
-                    Highlight
-                </ToggleButton>
+                <Tooltip title="Default mode; click words to edit that lyrics segment">
+                    <ToggleButton 
+                        value="edit"
+                    >
+                        <EditIcon sx={{ mr: 0.5, fontSize: '1rem' }} />
+                        Edit
+                    </ToggleButton>
+                </Tooltip>
+                
+                <Tooltip title="Hold SHIFT and click words to highlight the matching anchor sequence in the reference lyrics">
+                    <span>
+                        <ToggleButton 
+                            value="highlight"
+                            disabled
+                        >
+                            <HighlightIcon sx={{ mr: 0.5, fontSize: '1rem' }} />
+                            Highlight
+                        </ToggleButton>
+                    </span>
+                </Tooltip>
+                
+                <Tooltip title="Hold CTRL and click words to delete them">
+                    <span>
+                        <ToggleButton 
+                            value="delete_word"
+                            disabled
+                        >
+                            <DeleteIcon sx={{ mr: 0.5, fontSize: '1rem' }} />
+                            Delete
+                        </ToggleButton>
+                    </span>
+                </Tooltip>
             </ToggleButtonGroup>
         </Box>
     );

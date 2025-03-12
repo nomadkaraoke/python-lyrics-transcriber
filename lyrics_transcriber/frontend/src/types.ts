@@ -136,4 +136,4 @@ export interface HighlightInfo {
     correction?: WordCorrection
 }
 
-export type InteractionMode = 'highlight' | 'edit'
+export type InteractionMode = 'highlight' | 'edit' | 'delete_word'

@@ -33018,7 +33018,7 @@ function useWordClick({
         gap2 = matchingGap2;
       }
     }
-    if (mode === "highlight" || mode === "edit") {
+    if (mode === "highlight" || mode === "edit" || mode === "delete_word") {
       if (belongsToAnchor && anchor) {
         onWordClick == null ? void 0 : onWordClick({
           word_id: wordId,
@@ -33050,7 +33050,7 @@ function useWordClick({
           gap: void 0
         });
       }
-    } else if (mode === "details") {
+    } else {
       if (belongsToAnchor && anchor) {
         onElementClick({
           type: "anchor",
@@ -34766,9 +34766,16 @@ const WordRow = reactExports.memo(function WordRow2({
   onWordUpdate,
   onSplitWord,
   onRemoveWord,
-  wordsLength
+  wordsLength,
+  onTabNavigation
 }) {
   var _a, _b;
+  const handleKeyDown = (e) => {
+    if (e.key === "Tab" && !e.shiftKey) {
+      e.preventDefault();
+      onTabNavigation(index);
+    }
+  };
   return /* @__PURE__ */ jsxRuntimeExports.jsxs(Box, { sx: {
     display: "flex",
     gap: 2,
@@ -34781,8 +34788,10 @@ const WordRow = reactExports.memo(function WordRow2({
         label: `Word ${index}`,
         value: word.text,
         onChange: (e) => onWordUpdate(index, { text: e.target.value }),
+        onKeyDown: handleKeyDown,
         fullWidth: true,
-        size: "small"
+        size: "small",
+        id: `word-text-${index}`
       }
     ),
     /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -34844,7 +34853,8 @@ const WordItem = reactExports.memo(function WordItem2({
   onAddSegment,
   onMergeSegment,
   wordsLength,
-  isGlobal
+  isGlobal,
+  onTabNavigation
 }) {
   return /* @__PURE__ */ jsxRuntimeExports.jsxs(Box, { children: [
     /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -34855,7 +34865,8 @@ const WordItem = reactExports.memo(function WordItem2({
         onWordUpdate,
         onSplitWord,
         onRemoveWord,
-        wordsLength
+        wordsLength,
+        onTabNavigation
       }
     ),
     !isGlobal && /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -34915,6 +34926,33 @@ function EditWordList({
   const handlePageChange = (_event, value) => {
     setPage(value);
   };
+  const handleTabNavigation = (currentIndex) => {
+    const nextIndex = (currentIndex + 1) % words.length;
+    if (isGlobal && (nextIndex < startIndex || nextIndex >= endIndex)) {
+      const nextPage = Math.floor(nextIndex / pageSize) + 1;
+      setPage(nextPage);
+      setTimeout(() => {
+        focusWordTextField(nextIndex);
+      }, 50);
+    } else {
+      focusWordTextField(nextIndex);
+    }
+  };
+  const focusWordTextField = (index) => {
+    const element = document.getElementById(`word-text-${index}`);
+    if (element) {
+      let input = element.querySelector("input");
+      if (!input) {
+        input = element.querySelector(".MuiInputBase-input");
+      }
+      if (input) {
+        input.focus();
+        input.select();
+      } else {
+        element.focus();
+      }
+    }
+  };
   return /* @__PURE__ */ jsxRuntimeExports.jsxs(Box, { sx: { display: "flex", flexDirection: "column", gap: 1, flexGrow: 1, minHeight: 0 }, children: [
     !isGlobal && /* @__PURE__ */ jsxRuntimeExports.jsx(
       WordDivider,
@@ -34966,7 +35004,8 @@ function EditWordList({
           onAddSegment,
           onMergeSegment,
           wordsLength: words.length,
-          isGlobal
+          isGlobal,
+          onTabNavigation: handleTabNavigation
         },
         word.id
       );
@@ -35179,15 +35218,6 @@ function EditModal({
   isGlobal = false,
   isLoading = false
 }) {
-  console.log("EditModal - Render", {
-    open,
-    isGlobal,
-    isLoading,
-    hasSegment: !!segment,
-    segmentIndex,
-    hasOriginalSegment: !!originalSegment,
-    hasOriginalTranscribedSegment: !!originalTranscribedSegment
-  });
   const [editedSegment, setEditedSegment] = reactExports.useState(segment);
   const [isPlaying, setIsPlaying] = reactExports.useState(false);
   const updateSegment2 = reactExports.useCallback((newWords) => {
@@ -35218,19 +35248,12 @@ function EditModal({
     updateSegment: updateSegment2
   });
   const handleClose = reactExports.useCallback(() => {
-    console.log("EditModal - handleClose called");
     cleanupManualSync();
     onClose();
   }, [onClose, cleanupManualSync]);
   reactExports.useEffect(() => {
     const spacebarHandler = handleSpacebar;
     if (open) {
-      console.log("EditModal - Setting up modal spacebar handler", {
-        hasPlaySegment: !!onPlaySegment,
-        editedSegmentId: editedSegment == null ? void 0 : editedSegment.id,
-        handlerFunction: spacebarHandler.toString().slice(0, 100),
-        isLoading
-      });
       const handleKeyEvent = (e) => {
         if (e.code === "Space") {
           spacebarHandler(e);
@@ -35239,7 +35262,6 @@ function EditModal({
       setModalSpacebarHandler(() => handleKeyEvent);
       return () => {
         if (!open) {
-          console.log("EditModal - Cleanup: clearing modal spacebar handler");
           setModalSpacebarHandler(void 0);
         }
       };
@@ -35261,11 +35283,6 @@ function EditModal({
     }
   }, [currentTime, editedSegment]);
   reactExports.useEffect(() => {
-    console.log("EditModal - segment changed", {
-      hasSegment: !!segment,
-      segmentId: segment == null ? void 0 : segment.id,
-      wordCount: segment == null ? void 0 : segment.words.length
-    });
     setEditedSegment(segment);
   }, [segment]);
   reactExports.useEffect(() => {
@@ -35273,7 +35290,6 @@ function EditModal({
     if (!editedSegment) return;
     const endTime = editedSegment.end_time ?? 0;
     if (window.isAudioPlaying && currentTime > endTime) {
-      console.log("Stopping playback: current time exceeded end time");
       (_a = window.toggleAudioPlayback) == null ? void 0 : _a.call(window);
       cleanupManualSync();
     }
@@ -35436,7 +35452,6 @@ function EditModal({
     return getSafeTimeRange(editedSegment);
   }, [getSafeTimeRange, editedSegment]);
   const dialogTitle = reactExports.useMemo(() => {
-    console.log("EditModal - Rendering dialog title", { isLoading, isGlobal });
     if (isLoading) {
       return /* @__PURE__ */ jsxRuntimeExports.jsxs(DialogTitle, { sx: { display: "flex", alignItems: "center", gap: 1 }, children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs(Box, { sx: { flex: 1, display: "flex", alignItems: "center", gap: 1 }, children: [
@@ -35466,23 +35481,11 @@ function EditModal({
     ] });
   }, [isGlobal, segmentIndex, segment, onPlaySegment, handlePlayButtonClick, isPlaying, onClose, isLoading]);
   if (!isLoading && (!segment || !editedSegment || !originalSegment)) {
-    console.log("EditModal - Early return: missing required data", {
-      hasSegment: !!segment,
-      hasEditedSegment: !!editedSegment,
-      hasOriginalSegment: !!originalSegment,
-      isLoading
-    });
     return null;
   }
   if (!isLoading && !isGlobal && segmentIndex === null) {
-    console.log("EditModal - Early return: non-global mode with null segmentIndex");
     return null;
   }
-  console.log("EditModal - Rendering dialog content", {
-    isLoading,
-    hasEditedSegment: !!editedSegment,
-    hasOriginalSegment: !!originalSegment
-  });
   return /* @__PURE__ */ jsxRuntimeExports.jsxs(
     Dialog,
     {
@@ -36165,6 +36168,30 @@ function findAndReplace(data, findText, replaceText, options = {
   newData.corrected_segments = newData.corrected_segments.filter((segment) => segment.words.length > 0);
   return newData;
 }
+function deleteWord(data, wordId) {
+  const segmentIndex = data.corrected_segments.findIndex(
+    (segment2) => segment2.words.some((word) => word.id === wordId)
+  );
+  if (segmentIndex === -1) {
+    return data;
+  }
+  const segment = data.corrected_segments[segmentIndex];
+  const wordIndex = segment.words.findIndex((word) => word.id === wordId);
+  if (wordIndex === -1) {
+    return data;
+  }
+  const updatedWords = segment.words.filter((_, index) => index !== wordIndex);
+  if (updatedWords.length > 0) {
+    const updatedSegment = {
+      ...segment,
+      words: updatedWords,
+      text: updatedWords.map((w) => w.text).join(" ")
+    };
+    return updateSegment(data, segmentIndex, updatedSegment);
+  } else {
+    return deleteSegment(data, segmentIndex);
+  }
+}
 const generateStorageKey = (data) => {
   var _a;
   const text = ((_a = data.original_segments[0]) == null ? void 0 : _a.text) || "";
@@ -36238,6 +36265,12 @@ const setModalHandler = (handler, open) => {
 };
 const setupKeyboardHandlers = (state) => {
   Math.random().toString(36).substr(2, 9);
+  const resetModifierStates = () => {
+    var _a;
+    state.setIsShiftPressed(false);
+    (_a = state.setIsCtrlPressed) == null ? void 0 : _a.call(state, false);
+    document.body.style.userSelect = "";
+  };
   const handleKeyDown = (e) => {
     var _a;
     if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
@@ -36246,7 +36279,7 @@ const setupKeyboardHandlers = (state) => {
     if (e.key === "Shift") {
       state.setIsShiftPressed(true);
       document.body.style.userSelect = "none";
-    } else if (e.key === "Meta") {
+    } else if (e.key === "Control" || e.key === "Ctrl" || e.key === "Meta") {
       (_a = state.setIsCtrlPressed) == null ? void 0 : _a.call(state, true);
     } else if (e.key === " " || e.code === "Space") {
       e.preventDefault();
@@ -36258,20 +36291,30 @@ const setupKeyboardHandlers = (state) => {
     }
   };
   const handleKeyUp = (e) => {
-    var _a;
-    if (e.key === "Shift") {
-      state.setIsShiftPressed(false);
-      document.body.style.userSelect = "";
-    } else if (e.key === "Meta") {
-      (_a = state.setIsCtrlPressed) == null ? void 0 : _a.call(state, false);
-    } else if (e.key === " " || e.code === "Space") {
+    resetModifierStates();
+    if (e.key === " " || e.code === "Space") {
       e.preventDefault();
       if (isModalOpen && currentModalHandler) {
         currentModalHandler(e);
       }
     }
   };
-  return { handleKeyDown, handleKeyUp };
+  const handleWindowBlur = () => {
+    resetModifierStates();
+  };
+  const handleWindowFocus = () => {
+    resetModifierStates();
+  };
+  window.addEventListener("blur", handleWindowBlur);
+  window.addEventListener("focus", handleWindowFocus);
+  return {
+    handleKeyDown,
+    handleKeyUp,
+    cleanup: () => {
+      window.removeEventListener("blur", handleWindowBlur);
+      window.removeEventListener("focus", handleWindowFocus);
+    }
+  };
 };
 function ModeSelector({ effectiveMode, onChange }) {
   return /* @__PURE__ */ jsxRuntimeExports.jsxs(Box, { sx: { display: "flex", alignItems: "center", gap: 1.2, height: "32px" }, children: [
@@ -36281,7 +36324,7 @@ function ModeSelector({ effectiveMode, onChange }) {
       {
         value: effectiveMode,
         exclusive: true,
-        onChange: (_, newMode) => newMode && onChange(newMode),
+        onChange: (_, newMode) => newMode === "edit" && onChange(newMode),
         size: "small",
         sx: {
           height: "32px",
@@ -36292,28 +36335,38 @@ function ModeSelector({ effectiveMode, onChange }) {
           }
         },
         children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsxs(
+          /* @__PURE__ */ jsxRuntimeExports.jsx(Tooltip, { title: "Default mode; click words to edit that lyrics segment", children: /* @__PURE__ */ jsxRuntimeExports.jsxs(
             ToggleButton,
             {
               value: "edit",
-              title: "Click to edit segments and make corrections in the transcription view",
               children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx(EditIcon, { sx: { mr: 0.5, fontSize: "1rem" } }),
                 "Edit"
               ]
             }
-          ),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs(
+          ) }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(Tooltip, { title: "Hold SHIFT and click words to highlight the matching anchor sequence in the reference lyrics", children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: /* @__PURE__ */ jsxRuntimeExports.jsxs(
             ToggleButton,
             {
               value: "highlight",
-              title: "Click words in the transcription view to highlight the matching anchor sequence in the reference lyrics. You can also hold SHIFT to temporarily activate this mode.",
+              disabled: true,
               children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx(HighlightIcon, { sx: { mr: 0.5, fontSize: "1rem" } }),
                 "Highlight"
               ]
             }
-          )
+          ) }) }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(Tooltip, { title: "Hold CTRL and click words to delete them", children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: /* @__PURE__ */ jsxRuntimeExports.jsxs(
+            ToggleButton,
+            {
+              value: "delete_word",
+              disabled: true,
+              children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx(DeleteIcon, { sx: { mr: 0.5, fontSize: "1rem" } }),
+                "Delete"
+              ]
+            }
+          ) }) })
         ]
       }
     )
@@ -37209,6 +37262,7 @@ function LyricsAnalyzer({ data: initialData, onFileLoad, apiClient, isReadOnly, 
   const [originalData] = reactExports.useState(() => JSON.parse(JSON.stringify(initialData)));
   const [interactionMode, setInteractionMode] = reactExports.useState("edit");
   const [isShiftPressed, setIsShiftPressed] = reactExports.useState(false);
+  const [isCtrlPressed, setIsCtrlPressed] = reactExports.useState(false);
   const [editModalSegment, setEditModalSegment] = reactExports.useState(null);
   const [isEditAllModalOpen, setIsEditAllModalOpen] = reactExports.useState(false);
   const [globalEditSegment, setGlobalEditSegment] = reactExports.useState(null);
@@ -37239,27 +37293,30 @@ function LyricsAnalyzer({ data: initialData, onFileLoad, apiClient, isReadOnly, 
     }
   }, [data, isReadOnly, initialData]);
   reactExports.useEffect(() => {
-    const { handleKeyDown, handleKeyUp } = setupKeyboardHandlers({
-      setIsShiftPressed
+    const { handleKeyDown, handleKeyUp, cleanup } = setupKeyboardHandlers({
+      setIsShiftPressed,
+      setIsCtrlPressed
     });
     window.addEventListener("keydown", handleKeyDown);
     window.addEventListener("keyup", handleKeyUp);
     if (isAnyModalOpen) {
       setIsShiftPressed(false);
+      setIsCtrlPressed(false);
     }
     return () => {
       window.removeEventListener("keydown", handleKeyDown);
       window.removeEventListener("keyup", handleKeyUp);
       document.body.style.userSelect = "";
+      cleanup();
     };
-  }, [setIsShiftPressed, isAnyModalOpen]);
+  }, [setIsShiftPressed, setIsCtrlPressed, isAnyModalOpen]);
   reactExports.useEffect(() => {
     const modalOpen = Boolean(
       modalContent || editModalSegment || isReviewModalOpen || isAddLyricsModalOpen || isFindReplaceModalOpen || isEditAllModalOpen
     );
     setIsAnyModalOpen(modalOpen);
   }, [modalContent, editModalSegment, isReviewModalOpen, isAddLyricsModalOpen, isFindReplaceModalOpen, isEditAllModalOpen]);
-  const effectiveMode = isShiftPressed ? "highlight" : interactionMode;
+  const effectiveMode = isCtrlPressed ? "delete_word" : isShiftPressed ? "highlight" : interactionMode;
   const handleFlash = reactExports.useCallback((type, info) => {
     setFlashingType(null);
     setHighlightInfo(null);
@@ -37278,6 +37335,12 @@ function LyricsAnalyzer({ data: initialData, onFileLoad, apiClient, isReadOnly, 
   }, []);
   const handleWordClick = reactExports.useCallback((info) => {
     var _a, _b, _c, _d, _e, _f, _g;
+    if (effectiveMode === "delete_word") {
+      const newData = deleteWord(data, info.word_id);
+      setData(newData);
+      handleFlash("word");
+      return;
+    }
     if (effectiveMode === "highlight") {
       const correction = (_a = data.corrections) == null ? void 0 : _a.find(
         (c) => c.corrected_word_id === info.word_id || c.word_id === info.word_id
@@ -37385,7 +37448,7 @@ function LyricsAnalyzer({ data: initialData, onFileLoad, apiClient, isReadOnly, 
         });
       }
     }
-  }, [data, effectiveMode, setModalContent]);
+  }, [data, effectiveMode, setModalContent, handleFlash, deleteWord]);
   const handleUpdateSegment = reactExports.useCallback((updatedSegment) => {
     if (!editModalSegment) return;
     const newData = updateSegment(data, editModalSegment.index, updatedSegment);
@@ -38158,4 +38221,4 @@ ReactDOM$1.createRoot(document.getElementById("root")).render(
     /* @__PURE__ */ jsxRuntimeExports.jsx(App, {})
   ] })
 );
-//# sourceMappingURL=index-BXOpmKq-.js.map
+//# sourceMappingURL=index-2vK-qVJS.js.map

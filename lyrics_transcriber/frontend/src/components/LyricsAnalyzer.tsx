@@ -22,7 +22,8 @@ import {
     deleteSegment,
     updateSegment,
     mergeSegment,
-    findAndReplace
+    findAndReplace,
+    deleteWord
 } from './shared/utils/segmentOperations'
 import { loadSavedData, saveData, clearSavedData } from './shared/utils/localStorage'
 import { setupKeyboardHandlers, setModalHandler, getModalState } from './shared/utils/keyboardHandlers'
@@ -237,6 +238,7 @@ export default function LyricsAnalyzer({ data: initialData, onFileLoad, apiClien
     const [originalData] = useState(() => JSON.parse(JSON.stringify(initialData)))
     const [interactionMode, setInteractionMode] = useState<InteractionMode>('edit')
     const [isShiftPressed, setIsShiftPressed] = useState(false)
+    const [isCtrlPressed, setIsCtrlPressed] = useState(false)
     const [editModalSegment, setEditModalSegment] = useState<{
         segment: LyricsSegment
         index: number
@@ -302,8 +304,9 @@ export default function LyricsAnalyzer({ data: initialData, onFileLoad, apiClien
             })
         }
 
-        const { handleKeyDown, handleKeyUp } = setupKeyboardHandlers({
+        const { handleKeyDown, handleKeyUp, cleanup } = setupKeyboardHandlers({
             setIsShiftPressed,
+            setIsCtrlPressed
         })
 
         // Always add keyboard listeners
@@ -316,6 +319,7 @@ export default function LyricsAnalyzer({ data: initialData, onFileLoad, apiClien
         // Reset modifier states when a modal opens
         if (isAnyModalOpen) {
             setIsShiftPressed(false)
+            setIsCtrlPressed(false)
         }
 
         // Cleanup function
@@ -326,8 +330,10 @@ export default function LyricsAnalyzer({ data: initialData, onFileLoad, apiClien
             window.removeEventListener('keydown', handleKeyDown)
             window.removeEventListener('keyup', handleKeyUp)
             document.body.style.userSelect = ''
+            // Call the cleanup function to remove window blur/focus listeners
+            cleanup()
         }
-    }, [setIsShiftPressed, isAnyModalOpen])
+    }, [setIsShiftPressed, setIsCtrlPressed, isAnyModalOpen])
 
     // Update modal state tracking
     useEffect(() => {
@@ -343,7 +349,7 @@ export default function LyricsAnalyzer({ data: initialData, onFileLoad, apiClien
     }, [modalContent, editModalSegment, isReviewModalOpen, isAddLyricsModalOpen, isFindReplaceModalOpen, isEditAllModalOpen])
 
     // Calculate effective mode based on modifier key states
-    const effectiveMode = isShiftPressed ? 'highlight' : interactionMode
+    const effectiveMode = isCtrlPressed ? 'delete_word' : (isShiftPressed ? 'highlight' : interactionMode)
 
     const handleFlash = useCallback((type: FlashType, info?: HighlightInfo) => {
         setFlashingType(null)
@@ -366,6 +372,16 @@ export default function LyricsAnalyzer({ data: initialData, onFileLoad, apiClien
     const handleWordClick = useCallback((info: WordClickInfo) => {
         if (debugLog) {
             console.log('LyricsAnalyzer handleWordClick:', { info });
+        }
+
+        if (effectiveMode === 'delete_word') {
+            // Use the shared deleteWord utility function
+            const newData = deleteWord(data, info.word_id);
+            setData(newData);
+            
+            // Flash to indicate the word was deleted
+            handleFlash('word');
+            return;
         }
 
         if (effectiveMode === 'highlight') {
@@ -492,7 +508,7 @@ export default function LyricsAnalyzer({ data: initialData, onFileLoad, apiClien
                 });
             }
         }
-    }, [data, effectiveMode, setModalContent]);
+    }, [data, effectiveMode, setModalContent, handleFlash, deleteWord]);
 
     const handleUpdateSegment = useCallback((updatedSegment: LyricsSegment) => {
         if (!editModalSegment) return

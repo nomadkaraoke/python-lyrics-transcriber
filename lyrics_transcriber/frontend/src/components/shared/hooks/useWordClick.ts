@@ -97,7 +97,7 @@ export function useWordClick({
             }
         }
 
-        if (mode === 'highlight' || mode === 'edit') {
+        if (mode === 'highlight' || mode === 'edit' || mode === 'delete_word') {
             if (belongsToAnchor && anchor) {
                 onWordClick?.({
                     word_id: wordId,
@@ -131,7 +131,8 @@ export function useWordClick({
                     gap: undefined
                 })
             }
-        } else if (mode === 'details') {
+        } else {
+            // This is a fallback for any future modes
             if (belongsToAnchor && anchor) {
                 onElementClick({
                     type: 'anchor',
