@@ -124,6 +124,7 @@ interface MemoizedReferenceViewProps {
     onSourceChange: (source: string) => void
     corrected_segments: LyricsSegment[]
     corrections: WordCorrection[]
+    onAddLyrics?: () => void
 }
 
 // Create a memoized ReferenceView component
@@ -139,7 +140,8 @@ const MemoizedReferenceView = memo(function MemoizedReferenceView({
     currentSource,
     onSourceChange,
     corrected_segments,
-    corrections
+    corrections,
+    onAddLyrics
 }: MemoizedReferenceViewProps) {
     return (
         <ReferenceView
@@ -155,6 +157,7 @@ const MemoizedReferenceView = memo(function MemoizedReferenceView({
             onSourceChange={onSourceChange}
             corrected_segments={corrected_segments}
             corrections={corrections}
+            onAddLyrics={onAddLyrics}
         />
     );
 });
@@ -195,7 +198,6 @@ const MemoizedHeader = memo(function MemoizedHeader({
     onHandlerToggle,
     isUpdatingHandlers,
     onHandlerClick,
-    onAddLyrics,
     onFindReplace,
     onEditAll
 }: MemoizedHeaderProps) {
@@ -213,7 +215,6 @@ const MemoizedHeader = memo(function MemoizedHeader({
             onHandlerToggle={onHandlerToggle}
             isUpdatingHandlers={isUpdatingHandlers}
             onHandlerClick={onHandlerClick}
-            onAddLyrics={onAddLyrics}
             onFindReplace={onFindReplace}
             onEditAll={onEditAll}
         />
@@ -948,6 +949,7 @@ export default function LyricsAnalyzer({ data: initialData, onFileLoad, apiClien
                         onSourceChange={setCurrentSource}
                         corrected_segments={data.corrected_segments}
                         corrections={data.corrections}
+                        onAddLyrics={() => setIsAddLyricsModalOpen(true)}
                     />
                 </Grid>
             </Grid>

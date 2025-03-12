@@ -1,14 +1,12 @@
 import { Box, Button, Typography, useMediaQuery, useTheme, Switch, FormControlLabel, Tooltip, Paper } from '@mui/material'
 import LockIcon from '@mui/icons-material/Lock'
 import UploadFileIcon from '@mui/icons-material/UploadFile'
-import TextSnippetIcon from '@mui/icons-material/TextSnippet'
 import FindReplaceIcon from '@mui/icons-material/FindReplace'
 import EditIcon from '@mui/icons-material/Edit'
-import { CorrectionData } from '../types'
+import { CorrectionData, InteractionMode } from '../types'
 import CorrectionMetrics from './CorrectionMetrics'
 import ModeSelector from './ModeSelector'
 import AudioPlayer from './AudioPlayer'
-import { InteractionMode } from '../types'
 import { ApiClient } from '../api'
 import { findWordById } from './shared/utils/wordUtils'
 
@@ -29,7 +27,6 @@ interface HeaderProps {
     onHandlerToggle: (handler: string, enabled: boolean) => void
     isUpdatingHandlers: boolean
     onHandlerClick?: (handler: string) => void
-    onAddLyrics?: () => void
     onFindReplace?: () => void
     onEditAll?: () => void
 }
@@ -47,7 +44,6 @@ export default function Header({
     onHandlerToggle,
     isUpdatingHandlers,
     onHandlerClick,
-    onAddLyrics,
     onFindReplace,
     onEditAll,
 }: HeaderProps) {
@@ -271,17 +267,6 @@ export default function Header({
                             audioHash={audioHash}
                         />
                     </Box>
-                    {!isReadOnly && apiClient && onAddLyrics && (
-                        <Button
-                            variant="outlined"
-                            size="small"
-                            onClick={onAddLyrics}
-                            startIcon={<TextSnippetIcon />}
-                            sx={{ minWidth: 'fit-content', height: '32px' }}
-                        >
-                            Add Reference Lyrics
-                        </Button>
-                    )}
                 </Box>
             </Paper>
         </>

@@ -62,6 +62,7 @@ export interface WordProps {
         originalWord: string
         handler: string
         confidence: number
+        source: string
     } | null
 }
 
@@ -100,6 +101,7 @@ export interface ReferenceViewProps extends BaseViewProps {
     onSourceChange: (source: string) => void
     corrected_segments: LyricsSegment[]
     corrections: WordCorrection[]
+    onAddLyrics?: () => void
 }
 
 // Update HighlightedTextProps to include linePositions

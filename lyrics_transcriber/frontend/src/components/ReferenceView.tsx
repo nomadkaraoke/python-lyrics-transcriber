@@ -34,7 +34,8 @@ export default function ReferenceView({
     highlightInfo,
     mode,
     gaps,
-    corrections
+    corrections,
+    onAddLyrics
 }: ReferenceViewProps) {
     // Get available sources from referenceSources object
     const availableSources = useMemo(() =>
@@ -183,6 +184,7 @@ export default function ReferenceView({
                     availableSources={availableSources}
                     currentSource={effectiveCurrentSource}
                     onSourceChange={onSourceChange}
+                    onAddLyrics={onAddLyrics}
                 />
             </Box>
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.2 }}>

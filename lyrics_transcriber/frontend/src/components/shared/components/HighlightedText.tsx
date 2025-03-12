@@ -181,7 +181,8 @@ export function HighlightedText({
                             return correction ? {
                                 originalWord: correction.original_word,
                                 handler: correction.handler,
-                                confidence: correction.confidence
+                                confidence: correction.confidence,
+                                source: correction.source
                             } : null;
                         })()}
                     />
@@ -219,7 +220,8 @@ export function HighlightedText({
                             const correctionInfo = correction ? {
                                 originalWord: correction.original_word,
                                 handler: correction.handler,
-                                confidence: correction.confidence
+                                confidence: correction.confidence,
+                                source: correction.source
                             } : null;
 
                             return (

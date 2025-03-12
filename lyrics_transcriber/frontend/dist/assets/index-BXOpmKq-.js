@@ -32843,25 +32843,53 @@ function calculateReferenceLinePositions(corrected_segments, anchors, currentSou
   }
   return { linePositions };
 }
-function SourceSelector({ currentSource, onSourceChange, availableSources }) {
-  return /* @__PURE__ */ jsxRuntimeExports.jsx(Box, { sx: { display: "flex", flexWrap: "wrap", gap: 0.3 }, children: availableSources.map((source) => /* @__PURE__ */ jsxRuntimeExports.jsx(
-    Button,
-    {
-      size: "small",
-      variant: currentSource === source ? "contained" : "outlined",
-      onClick: () => onSourceChange(source),
-      sx: {
-        mr: 0,
-        py: 0.2,
-        px: 0.8,
-        minWidth: "auto",
-        fontSize: "0.7rem",
-        lineHeight: 1.2
+const AddIcon = createSvgIcon(/* @__PURE__ */ jsxRuntimeExports.jsx("path", {
+  d: "M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6z"
+}), "Add");
+function SourceSelector({ currentSource, onSourceChange, availableSources, onAddLyrics }) {
+  return /* @__PURE__ */ jsxRuntimeExports.jsxs(Box, { sx: { display: "flex", flexWrap: "wrap", gap: 0.3, alignItems: "center" }, children: [
+    availableSources.map((source) => /* @__PURE__ */ jsxRuntimeExports.jsx(
+      Button,
+      {
+        size: "small",
+        variant: currentSource === source ? "contained" : "outlined",
+        onClick: () => onSourceChange(source),
+        sx: {
+          mr: 0,
+          py: 0.2,
+          px: 0.8,
+          minWidth: "auto",
+          fontSize: "0.7rem",
+          lineHeight: 1.2
+        },
+        children: source.charAt(0).toUpperCase() + source.slice(1)
       },
-      children: source.charAt(0).toUpperCase() + source.slice(1)
-    },
-    source
-  )) });
+      source
+    )),
+    onAddLyrics && /* @__PURE__ */ jsxRuntimeExports.jsx(
+      Button,
+      {
+        size: "small",
+        variant: "outlined",
+        onClick: onAddLyrics,
+        startIcon: /* @__PURE__ */ jsxRuntimeExports.jsx(AddIcon, { sx: { fontSize: "0.9rem" } }),
+        sx: {
+          mr: 0,
+          py: 0.2,
+          px: 0.8,
+          minWidth: "auto",
+          fontSize: "0.7rem",
+          lineHeight: 1.2,
+          "& .MuiButton-startIcon": {
+            marginLeft: "-5px",
+            marginRight: "1px",
+            marginTop: "-1px"
+          }
+        },
+        children: "New"
+      }
+    )
+  ] });
 }
 const HighlightedWord = styled$1("span")(
   ({ shouldFlash }) => ({
@@ -32922,7 +32950,11 @@ const WordComponent = React.memo(function Word({
       /* @__PURE__ */ jsxRuntimeExports.jsx("br", {}),
       /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: "Corrected by:" }),
       " ",
-      correction.handler
+      correction.handler,
+      /* @__PURE__ */ jsxRuntimeExports.jsx("br", {}),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: "Source:" }),
+      " ",
+      correction.source
     ] });
     return /* @__PURE__ */ jsxRuntimeExports.jsx(Tooltip, { title: tooltipContent, arrow: true, placement: "top", children: wordElement });
   }
@@ -33186,7 +33218,8 @@ function HighlightedText({
               return correction ? {
                 originalWord: correction.original_word,
                 handler: correction.handler,
-                confidence: correction.confidence
+                confidence: correction.confidence,
+                source: correction.source
               } : null;
             })()
           },
@@ -33215,7 +33248,8 @@ function HighlightedText({
         const correctionInfo = correction ? {
           originalWord: correction.original_word,
           handler: correction.handler,
-          confidence: correction.confidence
+          confidence: correction.confidence,
+          source: correction.source
         } : null;
         return /* @__PURE__ */ jsxRuntimeExports.jsxs(React.Fragment, { children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -33386,7 +33420,8 @@ function ReferenceView({
   highlightInfo,
   mode,
   gaps,
-  corrections
+  corrections,
+  onAddLyrics
 }) {
   var _a;
   const availableSources = reactExports.useMemo(
@@ -33496,7 +33531,8 @@ function ReferenceView({
         {
           availableSources,
           currentSource: effectiveCurrentSource,
-          onSourceChange
+          onSourceChange,
+          onAddLyrics
         }
       )
     ] }),
@@ -34563,9 +34599,6 @@ const SplitIcon = createSvgIcon(/* @__PURE__ */ jsxRuntimeExports.jsx("path", {
 const AutoFixHighIcon = createSvgIcon(/* @__PURE__ */ jsxRuntimeExports.jsx("path", {
   d: "M7.5 5.6 10 7 8.6 4.5 10 2 7.5 3.4 5 2l1.4 2.5L5 7zm12 9.8L17 14l1.4 2.5L17 19l2.5-1.4L22 19l-1.4-2.5L22 14zM22 2l-2.5 1.4L17 2l1.4 2.5L17 7l2.5-1.4L22 7l-1.4-2.5zm-7.63 5.29a.996.996 0 0 0-1.41 0L1.29 18.96c-.39.39-.39 1.02 0 1.41l2.34 2.34c.39.39 1.02.39 1.41 0L16.7 11.05c.39-.39.39-1.02 0-1.41zm-1.03 5.49-2.12-2.12 2.44-2.44 2.12 2.12z"
 }), "AutoFixHigh");
-const AddIcon = createSvgIcon(/* @__PURE__ */ jsxRuntimeExports.jsx("path", {
-  d: "M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6z"
-}), "Add");
 const MergeIcon = createSvgIcon(/* @__PURE__ */ jsxRuntimeExports.jsx("path", {
   d: "M17 20.41 18.41 19 15 15.59 13.59 17zM7.5 8H11v5.59L5.59 19 7 20.41l6-6V8h3.5L12 3.5z"
 }), "CallMerge");
@@ -35674,9 +35707,6 @@ const PauseIcon = createSvgIcon(/* @__PURE__ */ jsxRuntimeExports.jsx("path", {
 const PlayArrowIcon = createSvgIcon(/* @__PURE__ */ jsxRuntimeExports.jsx("path", {
   d: "M8 5v14l11-7z"
 }), "PlayArrow");
-const TextSnippetIcon = createSvgIcon(/* @__PURE__ */ jsxRuntimeExports.jsx("path", {
-  d: "m20.41 8.41-4.83-4.83c-.37-.37-.88-.58-1.41-.58H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V9.83c0-.53-.21-1.04-.59-1.42M7 7h7v2H7zm10 10H7v-2h10zm0-4H7v-2h10z"
-}), "TextSnippet");
 const normalizeWordForComparison = (word) => ({
   text: word.text,
   start_time: word.start_time ?? 0,
@@ -36435,7 +36465,6 @@ function Header({
   onHandlerToggle,
   isUpdatingHandlers,
   onHandlerClick,
-  onAddLyrics,
   onFindReplace,
   onEditAll
 }) {
@@ -36581,71 +36610,58 @@ function Header({
         }
       ) })
     ] }),
-    /* @__PURE__ */ jsxRuntimeExports.jsx(Paper, { sx: { p: 0.8, mb: 1 }, children: /* @__PURE__ */ jsxRuntimeExports.jsxs(Box, { sx: {
+    /* @__PURE__ */ jsxRuntimeExports.jsx(Paper, { sx: { p: 0.8, mb: 1 }, children: /* @__PURE__ */ jsxRuntimeExports.jsx(Box, { sx: {
       display: "flex",
       flexDirection: isMobile ? "column" : "row",
       gap: 1,
       alignItems: isMobile ? "flex-start" : "center",
       justifyContent: "space-between",
       width: "100%"
+    }, children: /* @__PURE__ */ jsxRuntimeExports.jsxs(Box, { sx: {
+      display: "flex",
+      gap: 1,
+      flexDirection: isMobile ? "column" : "row",
+      alignItems: isMobile ? "flex-start" : "center",
+      height: "32px"
     }, children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsxs(Box, { sx: {
-        display: "flex",
-        gap: 1,
-        flexDirection: isMobile ? "column" : "row",
-        alignItems: isMobile ? "flex-start" : "center",
-        height: "32px"
-      }, children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx(
-          ModeSelector,
-          {
-            effectiveMode,
-            onChange: onModeChange
-          }
-        ),
-        !isReadOnly && /* @__PURE__ */ jsxRuntimeExports.jsx(
-          Button,
-          {
-            variant: "outlined",
-            size: "small",
-            onClick: onFindReplace,
-            startIcon: /* @__PURE__ */ jsxRuntimeExports.jsx(FindReplaceIcon, {}),
-            sx: { minWidth: "fit-content", height: "32px" },
-            children: "Find/Replace"
-          }
-        ),
-        !isReadOnly && onEditAll && /* @__PURE__ */ jsxRuntimeExports.jsx(
-          Button,
-          {
-            variant: "outlined",
-            size: "small",
-            onClick: onEditAll,
-            startIcon: /* @__PURE__ */ jsxRuntimeExports.jsx(EditIcon, {}),
-            sx: { minWidth: "fit-content", height: "32px" },
-            children: "Edit All"
-          }
-        ),
-        /* @__PURE__ */ jsxRuntimeExports.jsx(
-          AudioPlayer,
-          {
-            apiClient,
-            onTimeUpdate,
-            audioHash
-          }
-        )
-      ] }),
-      !isReadOnly && apiClient && onAddLyrics && /* @__PURE__ */ jsxRuntimeExports.jsx(
+      /* @__PURE__ */ jsxRuntimeExports.jsx(
+        ModeSelector,
+        {
+          effectiveMode,
+          onChange: onModeChange
+        }
+      ),
+      !isReadOnly && /* @__PURE__ */ jsxRuntimeExports.jsx(
         Button,
         {
           variant: "outlined",
           size: "small",
-          onClick: onAddLyrics,
-          startIcon: /* @__PURE__ */ jsxRuntimeExports.jsx(TextSnippetIcon, {}),
+          onClick: onFindReplace,
+          startIcon: /* @__PURE__ */ jsxRuntimeExports.jsx(FindReplaceIcon, {}),
           sx: { minWidth: "fit-content", height: "32px" },
-          children: "Add Reference Lyrics"
+          children: "Find/Replace"
+        }
+      ),
+      !isReadOnly && onEditAll && /* @__PURE__ */ jsxRuntimeExports.jsx(
+        Button,
+        {
+          variant: "outlined",
+          size: "small",
+          onClick: onEditAll,
+          startIcon: /* @__PURE__ */ jsxRuntimeExports.jsx(EditIcon, {}),
+          sx: { minWidth: "fit-content", height: "32px" },
+          children: "Edit All"
+        }
+      ),
+      /* @__PURE__ */ jsxRuntimeExports.jsx(
+        AudioPlayer,
+        {
+          apiClient,
+          onTimeUpdate,
+          audioHash
         }
       )
-    ] }) })
+    ] }) }) })
   ] });
 }
 function AddLyricsModal({
@@ -37119,7 +37135,8 @@ const MemoizedReferenceView = reactExports.memo(function MemoizedReferenceView2(
   currentSource,
   onSourceChange,
   corrected_segments,
-  corrections
+  corrections,
+  onAddLyrics
 }) {
   return /* @__PURE__ */ jsxRuntimeExports.jsx(
     ReferenceView,
@@ -37135,7 +37152,8 @@ const MemoizedReferenceView = reactExports.memo(function MemoizedReferenceView2(
       currentSource,
       onSourceChange,
       corrected_segments,
-      corrections
+      corrections,
+      onAddLyrics
     }
   );
 });
@@ -37152,7 +37170,6 @@ const MemoizedHeader = reactExports.memo(function MemoizedHeader2({
   onHandlerToggle,
   isUpdatingHandlers,
   onHandlerClick,
-  onAddLyrics,
   onFindReplace,
   onEditAll
 }) {
@@ -37171,7 +37188,6 @@ const MemoizedHeader = reactExports.memo(function MemoizedHeader2({
       onHandlerToggle,
       isUpdatingHandlers,
       onHandlerClick,
-      onAddLyrics,
       onFindReplace,
       onEditAll
     }
@@ -37706,7 +37722,8 @@ function LyricsAnalyzer({ data: initialData, onFileLoad, apiClient, isReadOnly, 
           currentSource,
           onSourceChange: setCurrentSource,
           corrected_segments: data.corrected_segments,
-          corrections: data.corrections
+          corrections: data.corrections,
+          onAddLyrics: () => setIsAddLyricsModalOpen(true)
         }
       ) })
     ] }),
@@ -38141,4 +38158,4 @@ ReactDOM$1.createRoot(document.getElementById("root")).render(
     /* @__PURE__ */ jsxRuntimeExports.jsx(App, {})
   ] })
 );
-//# sourceMappingURL=index-ZCT0s9MG.js.map
+//# sourceMappingURL=index-BXOpmKq-.js.map
