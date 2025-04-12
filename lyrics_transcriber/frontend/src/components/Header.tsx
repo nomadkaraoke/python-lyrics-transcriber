@@ -1,8 +1,10 @@
-import { Box, Button, Typography, useMediaQuery, useTheme, Switch, FormControlLabel, Tooltip, Paper } from '@mui/material'
+import { Box, Button, Typography, useMediaQuery, useTheme, Switch, FormControlLabel, Tooltip, Paper, IconButton } from '@mui/material'
 import LockIcon from '@mui/icons-material/Lock'
 import UploadFileIcon from '@mui/icons-material/UploadFile'
 import FindReplaceIcon from '@mui/icons-material/FindReplace'
 import EditIcon from '@mui/icons-material/Edit'
+import UndoIcon from '@mui/icons-material/Undo'
+import RedoIcon from '@mui/icons-material/Redo'
 import { CorrectionData, InteractionMode } from '../types'
 import CorrectionMetrics from './CorrectionMetrics'
 import ModeSelector from './ModeSelector'
@@ -29,6 +31,10 @@ interface HeaderProps {
     onHandlerClick?: (handler: string) => void
     onFindReplace?: () => void
     onEditAll?: () => void
+    onUndo: () => void
+    onRedo: () => void
+    canUndo: boolean
+    canRedo: boolean
 }
 
 export default function Header({
@@ -46,6 +52,10 @@ export default function Header({
     onHandlerClick,
     onFindReplace,
     onEditAll,
+    onUndo,
+    onRedo,
+    canUndo,
+    canRedo,
 }: HeaderProps) {
     const theme = useTheme()
     const isMobile = useMediaQuery(theme.breakpoints.down('md'))
@@ -102,8 +112,8 @@ export default function Header({
                 </Box>
             )}
 
-            <Box sx={{ 
-                display: 'flex', 
+            <Box sx={{
+                display: 'flex',
                 flexDirection: isMobile ? 'column' : 'row',
                 gap: 1,
                 justifyContent: 'space-between',
@@ -220,8 +230,8 @@ export default function Header({
             </Box>
 
             <Paper sx={{ p: 0.8, mb: 1 }}>
-                <Box sx={{ 
-                    display: 'flex', 
+                <Box sx={{
+                    display: 'flex',
                     flexDirection: isMobile ? 'column' : 'row',
                     gap: 1,
                     alignItems: isMobile ? 'flex-start' : 'center',
@@ -239,6 +249,46 @@ export default function Header({
                             effectiveMode={effectiveMode}
                             onChange={onModeChange}
                         />
+                        {!isReadOnly && (
+                            <Box sx={{ display: 'flex', height: '32px' }}>
+                                <Tooltip title="Undo (Cmd/Ctrl+Z)">
+                                    <span>
+                                        <IconButton
+                                            size="small"
+                                            onClick={onUndo}
+                                            disabled={!canUndo}
+                                            sx={{
+                                                border: `1px solid ${theme.palette.divider}`,
+                                                borderRadius: '4px',
+                                                mx: 0.25,
+                                                height: '32px',
+                                                width: '32px'
+                                            }}
+                                        >
+                                            <UndoIcon fontSize="small" />
+                                        </IconButton>
+                                    </span>
+                                </Tooltip>
+                                <Tooltip title="Redo (Cmd/Ctrl+Shift+Z)">
+                                    <span>
+                                        <IconButton
+                                            size="small"
+                                            onClick={onRedo}
+                                            disabled={!canRedo}
+                                            sx={{
+                                                border: `1px solid ${theme.palette.divider}`,
+                                                borderRadius: '4px',
+                                                mx: 0.25,
+                                                height: '32px',
+                                                width: '32px'
+                                            }}
+                                        >
+                                            <RedoIcon fontSize="small" />
+                                        </IconButton>
+                                    </span>
+                                </Tooltip>
+                            </Box>
+                        )}
                         {!isReadOnly && (
                             <Button
                                 variant="outlined"

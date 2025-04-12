@@ -20,7 +20,6 @@ import {
     addSegmentBefore,
     splitSegment,
     deleteSegment,
-    updateSegment,
     mergeSegment,
     findAndReplace,
     deleteWord
@@ -186,6 +185,10 @@ interface MemoizedHeaderProps {
     onAddLyrics?: () => void
     onFindReplace?: () => void
     onEditAll?: () => void
+    onUndo: () => void
+    onRedo: () => void
+    canUndo: boolean
+    canRedo: boolean
 }
 
 // Create a memoized Header component
@@ -203,7 +206,11 @@ const MemoizedHeader = memo(function MemoizedHeader({
     isUpdatingHandlers,
     onHandlerClick,
     onFindReplace,
-    onEditAll
+    onEditAll,
+    onUndo,
+    onRedo,
+    canUndo,
+    canRedo
 }: MemoizedHeaderProps) {
     return (
         <Header
@@ -221,6 +228,10 @@ const MemoizedHeader = memo(function MemoizedHeader({
             onHandlerClick={onHandlerClick}
             onFindReplace={onFindReplace}
             onEditAll={onEditAll}
+            onUndo={onUndo}
+            onRedo={onRedo}
+            canUndo={canUndo}
+            canRedo={canRedo}
         />
     );
 });
@@ -237,7 +248,6 @@ export default function LyricsAnalyzer({ data: initialData, onFileLoad, apiClien
         return availableSources.length > 0 ? availableSources[0] : ''
     })
     const [isReviewComplete, setIsReviewComplete] = useState(false)
-    const [data, setData] = useState(initialData)
     const [originalData] = useState(() => JSON.parse(JSON.stringify(initialData)))
     const [interactionMode, setInteractionMode] = useState<InteractionMode>('edit')
     const [isShiftPressed, setIsShiftPressed] = useState(false)
@@ -263,6 +273,35 @@ export default function LyricsAnalyzer({ data: initialData, onFileLoad, apiClien
     const theme = useTheme()
     const isMobile = useMediaQuery(theme.breakpoints.down('md'))
 
+    // State history for Undo/Redo
+    const [history, setHistory] = useState<CorrectionData[]>([initialData])
+    const [historyIndex, setHistoryIndex] = useState(0)
+
+    // Derived state: the current data based on history index
+    const data = history[historyIndex];
+
+    // Function to update data and manage history
+    const updateDataWithHistory = useCallback((newData: CorrectionData, actionDescription?: string) => {
+        if (debugLog) {
+            console.log(`[DEBUG] updateDataWithHistory: Action - ${actionDescription || 'Unknown'}. Current index: ${historyIndex}, History length: ${history.length}`);
+        }
+        const newHistory = history.slice(0, historyIndex + 1)
+        const deepCopiedNewData = JSON.parse(JSON.stringify(newData));
+
+        newHistory.push(deepCopiedNewData)
+        setHistory(newHistory)
+        setHistoryIndex(newHistory.length - 1)
+        if (debugLog) {
+            console.log(`[DEBUG] updateDataWithHistory: History updated. New index: ${newHistory.length - 1}, New length: ${newHistory.length}`);
+        }
+    }, [history, historyIndex])
+
+    // Reset history when initial data changes (e.g., new file loaded)
+    useEffect(() => {
+        setHistory([initialData])
+        setHistoryIndex(0)
+    }, [initialData])
+
     // Update debug logging to use new ID-based structure
     useEffect(() => {
         if (debugLog) {
@@ -285,16 +324,18 @@ export default function LyricsAnalyzer({ data: initialData, onFileLoad, apiClien
     useEffect(() => {
         const savedData = loadSavedData(initialData)
         if (savedData && window.confirm('Found saved progress for this song. Would you like to restore it?')) {
-            setData(savedData)
+            // Replace history with saved data as the initial state
+            setHistory([savedData])
+            setHistoryIndex(0)
         }
-    }, [initialData])
+    }, [initialData]) // Keep dependency only on initialData
 
-    // Save data
+    // Save data - This should save the *current* state, not affect history
     useEffect(() => {
         if (!isReadOnly) {
-            saveData(data, initialData)
+            saveData(data, initialData) // Use 'data' derived from history and the initialData prop
         }
-    }, [data, isReadOnly, initialData])
+    }, [data, isReadOnly, initialData]) // Correct dependencies
 
     // Keyboard handlers
     useEffect(() => {
@@ -380,8 +421,8 @@ export default function LyricsAnalyzer({ data: initialData, onFileLoad, apiClien
         if (effectiveMode === 'delete_word') {
             // Use the shared deleteWord utility function
             const newData = deleteWord(data, info.word_id);
-            setData(newData);
-            
+            updateDataWithHistory(newData, 'delete word'); // Update history
+
             // Flash to indicate the word was deleted
             handleFlash('word');
             return;
@@ -511,19 +552,47 @@ export default function LyricsAnalyzer({ data: initialData, onFileLoad, apiClien
                 });
             }
         }
-    }, [data, effectiveMode, setModalContent, handleFlash, deleteWord]);
+    }, [data, effectiveMode, setModalContent, handleFlash, deleteWord, updateDataWithHistory]);
 
     const handleUpdateSegment = useCallback((updatedSegment: LyricsSegment) => {
         if (!editModalSegment) return
-        const newData = updateSegment(data, editModalSegment.index, updatedSegment)
-        setData(newData)
+
+        if (debugLog) {
+            console.log('[DEBUG] handleUpdateSegment: Updating history from modal save', {
+                segmentIndex: editModalSegment.index,
+                currentHistoryIndex: historyIndex,
+                currentHistoryLength: history.length,
+                currentSegmentText: history[historyIndex]?.corrected_segments[editModalSegment.index]?.text,
+                updatedSegmentText: updatedSegment.text
+            });
+        }
+
+        // --- Ensure Immutability Here ---
+        const currentData = history[historyIndex];
+        const newSegments = currentData.corrected_segments.map((segment, i) =>
+            i === editModalSegment.index ? updatedSegment : segment
+        );
+        const newDataImmutable: CorrectionData = {
+            ...currentData,
+            corrected_segments: newSegments,
+        };
+        // --- End Immutability Ensure ---
+
+        updateDataWithHistory(newDataImmutable, 'update segment');
+
+        if (debugLog) {
+            console.log('[DEBUG] handleUpdateSegment: History updated (async)', {
+                newHistoryIndex: historyIndex + 1,
+                newHistoryLength: history.length - historyIndex === 1 ? history.length + 1 : historyIndex + 2
+            });
+        }
         setEditModalSegment(null)
-    }, [data, editModalSegment])
+    }, [history, historyIndex, editModalSegment, updateDataWithHistory])
 
     const handleDeleteSegment = useCallback((segmentIndex: number) => {
         const newData = deleteSegment(data, segmentIndex)
-        setData(newData)
-    }, [data])
+        updateDataWithHistory(newData, 'delete segment')
+    }, [data, updateDataWithHistory])
 
     const handleFinishReview = useCallback(() => {
         setIsReviewModalOpen(true)
@@ -559,7 +628,9 @@ export default function LyricsAnalyzer({ data: initialData, onFileLoad, apiClien
     const handleResetCorrections = useCallback(() => {
         if (window.confirm('Are you sure you want to reset all corrections? This cannot be undone.')) {
             clearSavedData(initialData)
-            setData(JSON.parse(JSON.stringify(initialData)))
+            // Reset history to the original initial data
+            setHistory([JSON.parse(JSON.stringify(initialData))])
+            setHistoryIndex(0)
             setModalContent(null)
             setFlashingType(null)
             setHighlightInfo(null)
@@ -569,22 +640,22 @@ export default function LyricsAnalyzer({ data: initialData, onFileLoad, apiClien
 
     const handleAddSegment = useCallback((beforeIndex: number) => {
         const newData = addSegmentBefore(data, beforeIndex)
-        setData(newData)
-    }, [data])
+        updateDataWithHistory(newData, 'add segment')
+    }, [data, updateDataWithHistory])
 
     const handleSplitSegment = useCallback((segmentIndex: number, afterWordIndex: number) => {
         const newData = splitSegment(data, segmentIndex, afterWordIndex)
         if (newData) {
-            setData(newData)
+            updateDataWithHistory(newData, 'split segment')
             setEditModalSegment(null)
         }
-    }, [data])
+    }, [data, updateDataWithHistory])
 
     const handleMergeSegment = useCallback((segmentIndex: number, mergeWithNext: boolean) => {
         const newData = mergeSegment(data, segmentIndex, mergeWithNext)
-        setData(newData)
+        updateDataWithHistory(newData, 'merge segment')
         setEditModalSegment(null)
-    }, [data])
+    }, [data, updateDataWithHistory])
 
     const handleHandlerToggle = useCallback(async (handler: string, enabled: boolean) => {
         if (!apiClient) return
@@ -606,7 +677,8 @@ export default function LyricsAnalyzer({ data: initialData, onFileLoad, apiClien
             const newData = await apiClient.updateHandlers(Array.from(currentEnabled))
 
             // Update local state with new correction data
-            setData(newData)
+            // This API call returns the *entire* new state, so treat it as a single history step
+            updateDataWithHistory(newData, `toggle handler ${handler}`); // Update history
 
             // Clear any existing modals or highlights
             setModalContent(null)
@@ -621,7 +693,7 @@ export default function LyricsAnalyzer({ data: initialData, onFileLoad, apiClien
         } finally {
             setIsUpdatingHandlers(false);
         }
-    }, [apiClient, data.metadata.enabled_handlers, handleFlash])
+    }, [apiClient, data.metadata.enabled_handlers, handleFlash, updateDataWithHistory])
 
     const handleHandlerClick = useCallback((handler: string) => {
         if (debugLog) {
@@ -661,21 +733,22 @@ export default function LyricsAnalyzer({ data: initialData, onFileLoad, apiClien
         try {
             setIsAddingLyrics(true)
             const newData = await apiClient.addLyrics(source, lyrics)
-            setData(newData)
+            // This API call returns the *entire* new state
+            updateDataWithHistory(newData, 'add lyrics'); // Update history
         } finally {
             setIsAddingLyrics(false)
         }
-    }, [apiClient])
+    }, [apiClient, updateDataWithHistory])
 
     const handleFindReplace = (findText: string, replaceText: string, options: { caseSensitive: boolean, useRegex: boolean, fullTextMode: boolean }) => {
         const newData = findAndReplace(data, findText, replaceText, options)
-        setData(newData)
+        updateDataWithHistory(newData, 'find/replace'); // Update history
     }
 
     // Add handler for Edit All functionality
     const handleEditAll = useCallback(() => {
         console.log('EditAll - Starting process');
-        
+
         // Create empty placeholder segments to prevent the modal from closing
         const placeholderSegment: LyricsSegment = {
             id: 'loading-placeholder',
@@ -684,31 +757,31 @@ export default function LyricsAnalyzer({ data: initialData, onFileLoad, apiClien
             start_time: 0,
             end_time: 1
         };
-        
+
         // Set placeholder segments first
         setGlobalEditSegment(placeholderSegment);
         setOriginalGlobalSegment(placeholderSegment);
-        
+
         // Show loading state
         setIsLoadingGlobalEdit(true);
         console.log('EditAll - Set loading state to true');
-        
+
         // Open the modal with placeholder data
         setIsEditAllModalOpen(true);
         console.log('EditAll - Set modal open to true');
-        
+
         // Use requestAnimationFrame to ensure the modal with loading state is rendered
         // before doing the expensive operation
         requestAnimationFrame(() => {
             console.log('EditAll - Inside requestAnimationFrame');
-            
+
             // Use setTimeout to allow the modal to render before doing the expensive operation
             setTimeout(() => {
                 console.log('EditAll - Inside setTimeout, starting data processing');
-                
+
                 try {
                     console.time('EditAll - Data processing');
-                    
+
                     // Create a combined segment with all words from all segments
                     const allWords = data.corrected_segments.flatMap(segment => segment.words)
                     console.log(`EditAll - Collected ${allWords.length} words from all segments`);
@@ -734,18 +807,18 @@ export default function LyricsAnalyzer({ data: initialData, onFileLoad, apiClien
                     // Store the original global segment for reset functionality
                     setGlobalEditSegment(globalSegment)
                     console.log('EditAll - Set global edit segment');
-                    
+
                     setOriginalGlobalSegment(JSON.parse(JSON.stringify(globalSegment)))
                     console.log('EditAll - Set original global segment');
-                    
+
                     // Create the original transcribed global segment for Un-Correct functionality
                     if (originalData.original_segments) {
                         console.log('EditAll - Processing original segments for Un-Correct functionality');
-                        
+
                         // Get all words from original segments
                         const originalWords = originalData.original_segments.flatMap((segment: LyricsSegment) => segment.words)
                         console.log(`EditAll - Collected ${originalWords.length} words from original segments`);
-                        
+
                         // Sort words by start time
                         const sortedOriginalWords = [...originalWords].sort((a, b) => {
                             const aTime = a.start_time ?? 0
@@ -753,7 +826,7 @@ export default function LyricsAnalyzer({ data: initialData, onFileLoad, apiClien
                             return aTime - bTime
                         })
                         console.log('EditAll - Sorted original words by start time');
-                        
+
                         // Create the original transcribed global segment
                         const originalTranscribedGlobal: LyricsSegment = {
                             id: 'original-transcribed-global',
@@ -763,14 +836,14 @@ export default function LyricsAnalyzer({ data: initialData, onFileLoad, apiClien
                             end_time: sortedOriginalWords[sortedOriginalWords.length - 1]?.end_time ?? null
                         }
                         console.log('EditAll - Created original transcribed global segment');
-                        
+
                         setOriginalTranscribedGlobalSegment(originalTranscribedGlobal)
                         console.log('EditAll - Set original transcribed global segment');
                     } else {
                         setOriginalTranscribedGlobalSegment(null)
                         console.log('EditAll - No original segments found, set original transcribed global segment to null');
                     }
-                    
+
                     console.timeEnd('EditAll - Data processing');
                 } catch (error) {
                     console.error('Error preparing global edit data:', error);
@@ -867,15 +940,49 @@ export default function LyricsAnalyzer({ data: initialData, onFileLoad, apiClien
         })
 
         // Update the data with the new segments
-        setData({
+        const newData = {
             ...data,
             corrected_segments: updatedSegments
-        })
+        };
+        updateDataWithHistory(newData, 'edit all'); // Update history
 
         // Close the modal
         setIsEditAllModalOpen(false)
         setGlobalEditSegment(null)
-    }, [data])
+    }, [data, updateDataWithHistory])
+
+    // Undo/Redo handlers
+    const handleUndo = useCallback(() => {
+        if (historyIndex > 0) {
+            const newIndex = historyIndex - 1;
+            if (debugLog) {
+                console.log(`[DEBUG] Undo: moving from index ${historyIndex} to ${newIndex}. History length: ${history.length}`);
+            }
+            setHistoryIndex(newIndex);
+        } else {
+            if (debugLog) {
+                console.log(`[DEBUG] Undo: already at the beginning (index ${historyIndex})`);
+            }
+        }
+    }, [historyIndex, history])
+
+    const handleRedo = useCallback(() => {
+        if (historyIndex < history.length - 1) {
+            const newIndex = historyIndex + 1;
+            if (debugLog) {
+                console.log(`[DEBUG] Redo: moving from index ${historyIndex} to ${newIndex}. History length: ${history.length}`);
+            }
+            setHistoryIndex(newIndex);
+        } else {
+            if (debugLog) {
+                console.log(`[DEBUG] Redo: already at the end (index ${historyIndex}, history length ${history.length})`);
+            }
+        }
+    }, [historyIndex, history])
+
+    // Determine if Undo/Redo is possible
+    const canUndo = historyIndex > 0
+    const canRedo = historyIndex < history.length - 1
 
     // Memoize the metric click handlers
     const metricClickHandlers = useMemo(() => ({
@@ -886,6 +993,72 @@ export default function LyricsAnalyzer({ data: initialData, onFileLoad, apiClien
 
     // Determine if any modal is open to disable highlighting
     const isAnyModalOpenMemo = useMemo(() => isAnyModalOpen, [isAnyModalOpen]);
+
+    // Update keyboard handlers to include Undo/Redo shortcuts (Cmd/Ctrl + Z, Cmd/Ctrl + Shift + Z)
+    useEffect(() => {
+        const { currentModalHandler } = getModalState()
+
+        if (debugLog) {
+            console.log('LyricsAnalyzer - Setting up keyboard effect (incl. Undo/Redo)', {
+                isAnyModalOpen,
+                hasSpacebarHandler: !!currentModalHandler
+            })
+        }
+
+        const { handleKeyDown: baseHandleKeyDown, handleKeyUp, cleanup } = setupKeyboardHandlers({
+            setIsShiftPressed,
+            setIsCtrlPressed
+        })
+
+        const handleKeyDown = (e: KeyboardEvent) => {
+            // Prevent Undo/Redo if a modal is open or input/textarea has focus
+            const targetElement = e.target as HTMLElement;
+            const isInputFocused = targetElement.tagName === 'INPUT' || targetElement.tagName === 'TEXTAREA';
+
+            if (!isAnyModalOpen && !isInputFocused) {
+                const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
+                const modifierKey = isMac ? e.metaKey : e.ctrlKey;
+
+                if (modifierKey && e.key.toLowerCase() === 'z') {
+                    e.preventDefault();
+                    if (e.shiftKey) {
+                        if (canRedo) handleRedo();
+                    } else {
+                        if (canUndo) handleUndo();
+                    }
+                    return; // Prevent base handler if we handled undo/redo
+                }
+            }
+
+            // Call original handler for other keys or when conditions not met
+            baseHandleKeyDown(e);
+        };
+
+        // Always add keyboard listeners
+        if (debugLog) {
+            console.log('LyricsAnalyzer - Adding keyboard event listeners (incl. Undo/Redo)')
+        }
+        window.addEventListener('keydown', handleKeyDown)
+        window.addEventListener('keyup', handleKeyUp)
+
+        // Reset modifier states when a modal opens
+        if (isAnyModalOpen) {
+            setIsShiftPressed(false)
+            setIsCtrlPressed(false)
+        }
+
+        // Cleanup function
+        return () => {
+            if (debugLog) {
+                console.log('LyricsAnalyzer - Cleanup effect running (incl. Undo/Redo)')
+            }
+            window.removeEventListener('keydown', handleKeyDown)
+            window.removeEventListener('keyup', handleKeyUp)
+            document.body.style.userSelect = ''
+            // Call the cleanup function to remove window blur/focus listeners
+            cleanup()
+        }
+    }, [setIsShiftPressed, setIsCtrlPressed, isAnyModalOpen, handleUndo, handleRedo, canUndo, canRedo]);
 
     return (
         <Box sx={{
@@ -910,6 +1083,10 @@ export default function LyricsAnalyzer({ data: initialData, onFileLoad, apiClien
                 onAddLyrics={() => setIsAddLyricsModalOpen(true)}
                 onFindReplace={() => setIsFindReplaceModalOpen(true)}
                 onEditAll={handleEditAll}
+                onUndo={handleUndo}
+                onRedo={handleRedo}
+                canUndo={canUndo}
+                canRedo={canRedo}
             />
 
             <Grid container direction={isMobile ? 'column' : 'row'}>
@@ -927,7 +1104,9 @@ export default function LyricsAnalyzer({ data: initialData, onFileLoad, apiClien
                         anchors={data.anchor_sequences}
                         disableHighlighting={isAnyModalOpenMemo}
                         onDataChange={(updatedData) => {
-                            setData(updatedData)
+                            // Direct data change from TranscriptionView (e.g., drag-and-drop)
+                            // needs to update history
+                            updateDataWithHistory(updatedData, 'direct data change');
                         }}
                     />
                     {!isReadOnly && apiClient && (

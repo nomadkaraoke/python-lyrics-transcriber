@@ -35962,6 +35962,12 @@ const PauseIcon = createSvgIcon(/* @__PURE__ */ jsxRuntimeExports.jsx("path", {
 const PlayArrowIcon = createSvgIcon(/* @__PURE__ */ jsxRuntimeExports.jsx("path", {
   d: "M8 5v14l11-7z"
 }), "PlayArrow");
+const RedoIcon = createSvgIcon(/* @__PURE__ */ jsxRuntimeExports.jsx("path", {
+  d: "M18.4 10.6C16.55 8.99 14.15 8 11.5 8c-4.65 0-8.58 3.03-9.96 7.22L3.9 16c1.05-3.19 4.05-5.5 7.6-5.5 1.95 0 3.73.72 5.12 1.88L13 16h9V7z"
+}), "Redo");
+const UndoIcon = createSvgIcon(/* @__PURE__ */ jsxRuntimeExports.jsx("path", {
+  d: "M12.5 8c-2.65 0-5.05.99-6.9 2.6L2 7v9h9l-3.62-3.62c1.39-1.16 3.16-1.88 5.12-1.88 3.54 0 6.55 2.31 7.6 5.5l2.37-.78C21.08 11.03 17.15 8 12.5 8"
+}), "Undo");
 const normalizeWordForComparison = (word) => ({
   text: word.text,
   start_time: word.start_time ?? 0,
@@ -36546,7 +36552,11 @@ function Header({
   isUpdatingHandlers,
   onHandlerClick,
   onFindReplace,
-  onEditAll
+  onEditAll,
+  onUndo,
+  onRedo,
+  canUndo,
+  canRedo
 }) {
   var _a, _b, _c;
   const theme2 = useTheme();
@@ -36711,6 +36721,40 @@ function Header({
           onChange: onModeChange
         }
       ),
+      !isReadOnly && /* @__PURE__ */ jsxRuntimeExports.jsxs(Box, { sx: { display: "flex", height: "32px" }, children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx(Tooltip, { title: "Undo (Cmd/Ctrl+Z)", children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+          IconButton,
+          {
+            size: "small",
+            onClick: onUndo,
+            disabled: !canUndo,
+            sx: {
+              border: `1px solid ${theme2.palette.divider}`,
+              borderRadius: "4px",
+              mx: 0.25,
+              height: "32px",
+              width: "32px"
+            },
+            children: /* @__PURE__ */ jsxRuntimeExports.jsx(UndoIcon, { fontSize: "small" })
+          }
+        ) }) }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx(Tooltip, { title: "Redo (Cmd/Ctrl+Shift+Z)", children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+          IconButton,
+          {
+            size: "small",
+            onClick: onRedo,
+            disabled: !canRedo,
+            sx: {
+              border: `1px solid ${theme2.palette.divider}`,
+              borderRadius: "4px",
+              mx: 0.25,
+              height: "32px",
+              width: "32px"
+            },
+            children: /* @__PURE__ */ jsxRuntimeExports.jsx(RedoIcon, { fontSize: "small" })
+          }
+        ) }) })
+      ] }),
       !isReadOnly && /* @__PURE__ */ jsxRuntimeExports.jsx(
         Button,
         {
@@ -37253,7 +37297,11 @@ const MemoizedHeader = reactExports.memo(function MemoizedHeader2({
   isUpdatingHandlers,
   onHandlerClick,
   onFindReplace,
-  onEditAll
+  onEditAll,
+  onUndo,
+  onRedo,
+  canUndo,
+  canRedo
 }) {
   return /* @__PURE__ */ jsxRuntimeExports.jsx(
     Header,
@@ -37271,7 +37319,11 @@ const MemoizedHeader = reactExports.memo(function MemoizedHeader2({
       isUpdatingHandlers,
       onHandlerClick,
       onFindReplace,
-      onEditAll
+      onEditAll,
+      onUndo,
+      onRedo,
+      canUndo,
+      canRedo
     }
   );
 });
@@ -37287,7 +37339,6 @@ function LyricsAnalyzer({ data: initialData, onFileLoad, apiClient, isReadOnly, 
     return availableSources.length > 0 ? availableSources[0] : "";
   });
   const [isReviewComplete, setIsReviewComplete] = reactExports.useState(false);
-  const [data, setData] = reactExports.useState(initialData);
   const [originalData] = reactExports.useState(() => JSON.parse(JSON.stringify(initialData)));
   const [interactionMode, setInteractionMode] = reactExports.useState("edit");
   const [isShiftPressed, setIsShiftPressed] = reactExports.useState(false);
@@ -37308,12 +37359,27 @@ function LyricsAnalyzer({ data: initialData, onFileLoad, apiClient, isReadOnly, 
   const [isFindReplaceModalOpen, setIsFindReplaceModalOpen] = reactExports.useState(false);
   const theme2 = useTheme();
   const isMobile = useMediaQuery(theme2.breakpoints.down("md"));
+  const [history, setHistory] = reactExports.useState([initialData]);
+  const [historyIndex, setHistoryIndex] = reactExports.useState(0);
+  const data = history[historyIndex];
+  const updateDataWithHistory = reactExports.useCallback((newData, actionDescription) => {
+    const newHistory = history.slice(0, historyIndex + 1);
+    const deepCopiedNewData = JSON.parse(JSON.stringify(newData));
+    newHistory.push(deepCopiedNewData);
+    setHistory(newHistory);
+    setHistoryIndex(newHistory.length - 1);
+  }, [history, historyIndex]);
+  reactExports.useEffect(() => {
+    setHistory([initialData]);
+    setHistoryIndex(0);
+  }, [initialData]);
   reactExports.useEffect(() => {
   }, [initialData]);
   reactExports.useEffect(() => {
     const savedData = loadSavedData(initialData);
     if (savedData && window.confirm("Found saved progress for this song. Would you like to restore it?")) {
-      setData(savedData);
+      setHistory([savedData]);
+      setHistoryIndex(0);
     }
   }, [initialData]);
   reactExports.useEffect(() => {
@@ -37366,7 +37432,7 @@ function LyricsAnalyzer({ data: initialData, onFileLoad, apiClient, isReadOnly, 
     var _a, _b, _c, _d, _e, _f, _g;
     if (effectiveMode === "delete_word") {
       const newData = deleteWord(data, info.word_id);
-      setData(newData);
+      updateDataWithHistory(newData, "delete word");
       handleFlash("word");
       return;
     }
@@ -37477,17 +37543,24 @@ function LyricsAnalyzer({ data: initialData, onFileLoad, apiClient, isReadOnly, 
         });
       }
     }
-  }, [data, effectiveMode, setModalContent, handleFlash, deleteWord]);
+  }, [data, effectiveMode, setModalContent, handleFlash, deleteWord, updateDataWithHistory]);
   const handleUpdateSegment = reactExports.useCallback((updatedSegment) => {
     if (!editModalSegment) return;
-    const newData = updateSegment(data, editModalSegment.index, updatedSegment);
-    setData(newData);
+    const currentData = history[historyIndex];
+    const newSegments = currentData.corrected_segments.map(
+      (segment, i) => i === editModalSegment.index ? updatedSegment : segment
+    );
+    const newDataImmutable = {
+      ...currentData,
+      corrected_segments: newSegments
+    };
+    updateDataWithHistory(newDataImmutable, "update segment");
     setEditModalSegment(null);
-  }, [data, editModalSegment]);
+  }, [history, historyIndex, editModalSegment, updateDataWithHistory]);
   const handleDeleteSegment = reactExports.useCallback((segmentIndex) => {
     const newData = deleteSegment(data, segmentIndex);
-    setData(newData);
-  }, [data]);
+    updateDataWithHistory(newData, "delete segment");
+  }, [data, updateDataWithHistory]);
   const handleFinishReview = reactExports.useCallback(() => {
     setIsReviewModalOpen(true);
   }, []);
@@ -37512,7 +37585,8 @@ function LyricsAnalyzer({ data: initialData, onFileLoad, apiClient, isReadOnly, 
   const handleResetCorrections = reactExports.useCallback(() => {
     if (window.confirm("Are you sure you want to reset all corrections? This cannot be undone.")) {
       clearSavedData(initialData);
-      setData(JSON.parse(JSON.stringify(initialData)));
+      setHistory([JSON.parse(JSON.stringify(initialData))]);
+      setHistoryIndex(0);
       setModalContent(null);
       setFlashingType(null);
       setHighlightInfo(null);
@@ -37521,20 +37595,20 @@ function LyricsAnalyzer({ data: initialData, onFileLoad, apiClient, isReadOnly, 
   }, [initialData]);
   const handleAddSegment = reactExports.useCallback((beforeIndex) => {
     const newData = addSegmentBefore(data, beforeIndex);
-    setData(newData);
-  }, [data]);
+    updateDataWithHistory(newData, "add segment");
+  }, [data, updateDataWithHistory]);
   const handleSplitSegment = reactExports.useCallback((segmentIndex, afterWordIndex) => {
     const newData = splitSegment(data, segmentIndex, afterWordIndex);
     if (newData) {
-      setData(newData);
+      updateDataWithHistory(newData, "split segment");
       setEditModalSegment(null);
     }
-  }, [data]);
+  }, [data, updateDataWithHistory]);
   const handleMergeSegment = reactExports.useCallback((segmentIndex, mergeWithNext) => {
     const newData = mergeSegment(data, segmentIndex, mergeWithNext);
-    setData(newData);
+    updateDataWithHistory(newData, "merge segment");
     setEditModalSegment(null);
-  }, [data]);
+  }, [data, updateDataWithHistory]);
   const handleHandlerToggle = reactExports.useCallback(async (handler, enabled) => {
     if (!apiClient) return;
     try {
@@ -37546,7 +37620,7 @@ function LyricsAnalyzer({ data: initialData, onFileLoad, apiClient, isReadOnly, 
         currentEnabled.delete(handler);
       }
       const newData = await apiClient.updateHandlers(Array.from(currentEnabled));
-      setData(newData);
+      updateDataWithHistory(newData, `toggle handler ${handler}`);
       setModalContent(null);
       setFlashingType(null);
       setHighlightInfo(null);
@@ -37557,7 +37631,7 @@ function LyricsAnalyzer({ data: initialData, onFileLoad, apiClient, isReadOnly, 
     } finally {
       setIsUpdatingHandlers(false);
     }
-  }, [apiClient, data.metadata.enabled_handlers, handleFlash]);
+  }, [apiClient, data.metadata.enabled_handlers, handleFlash, updateDataWithHistory]);
   const handleHandlerClick = reactExports.useCallback((handler) => {
     setFlashingHandler(handler);
     setFlashingType("handler");
@@ -37574,14 +37648,14 @@ function LyricsAnalyzer({ data: initialData, onFileLoad, apiClient, isReadOnly, 
     try {
       setIsAddingLyrics(true);
       const newData = await apiClient.addLyrics(source, lyrics);
-      setData(newData);
+      updateDataWithHistory(newData, "add lyrics");
     } finally {
       setIsAddingLyrics(false);
     }
-  }, [apiClient]);
+  }, [apiClient, updateDataWithHistory]);
   const handleFindReplace = (findText, replaceText, options) => {
     const newData = findAndReplace(data, findText, replaceText, options);
-    setData(newData);
+    updateDataWithHistory(newData, "find/replace");
   };
   const handleEditAll = reactExports.useCallback(() => {
     console.log("EditAll - Starting process");
@@ -37714,19 +37788,70 @@ function LyricsAnalyzer({ data: initialData, onFileLoad, apiClient, isReadOnly, 
       totalWordCount: updatedSegments.reduce((count, segment) => count + segment.words.length, 0),
       originalTotalWordCount: data.corrected_segments.reduce((count, segment) => count + segment.words.length, 0)
     });
-    setData({
+    const newData = {
       ...data,
       corrected_segments: updatedSegments
-    });
+    };
+    updateDataWithHistory(newData, "edit all");
     setIsEditAllModalOpen(false);
     setGlobalEditSegment(null);
-  }, [data]);
+  }, [data, updateDataWithHistory]);
+  const handleUndo = reactExports.useCallback(() => {
+    if (historyIndex > 0) {
+      const newIndex = historyIndex - 1;
+      setHistoryIndex(newIndex);
+    }
+  }, [historyIndex, history]);
+  const handleRedo = reactExports.useCallback(() => {
+    if (historyIndex < history.length - 1) {
+      const newIndex = historyIndex + 1;
+      setHistoryIndex(newIndex);
+    }
+  }, [historyIndex, history]);
+  const canUndo = historyIndex > 0;
+  const canRedo = historyIndex < history.length - 1;
   const metricClickHandlers = reactExports.useMemo(() => ({
     anchor: () => handleFlash("anchor"),
     corrected: () => handleFlash("corrected"),
     uncorrected: () => handleFlash("uncorrected")
   }), [handleFlash]);
   const isAnyModalOpenMemo = reactExports.useMemo(() => isAnyModalOpen, [isAnyModalOpen]);
+  reactExports.useEffect(() => {
+    const { handleKeyDown: baseHandleKeyDown, handleKeyUp, cleanup } = setupKeyboardHandlers({
+      setIsShiftPressed,
+      setIsCtrlPressed
+    });
+    const handleKeyDown = (e) => {
+      const targetElement = e.target;
+      const isInputFocused = targetElement.tagName === "INPUT" || targetElement.tagName === "TEXTAREA";
+      if (!isAnyModalOpen && !isInputFocused) {
+        const isMac = navigator.platform.toUpperCase().indexOf("MAC") >= 0;
+        const modifierKey = isMac ? e.metaKey : e.ctrlKey;
+        if (modifierKey && e.key.toLowerCase() === "z") {
+          e.preventDefault();
+          if (e.shiftKey) {
+            if (canRedo) handleRedo();
+          } else {
+            if (canUndo) handleUndo();
+          }
+          return;
+        }
+      }
+      baseHandleKeyDown(e);
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    window.addEventListener("keyup", handleKeyUp);
+    if (isAnyModalOpen) {
+      setIsShiftPressed(false);
+      setIsCtrlPressed(false);
+    }
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+      window.removeEventListener("keyup", handleKeyUp);
+      document.body.style.userSelect = "";
+      cleanup();
+    };
+  }, [setIsShiftPressed, setIsCtrlPressed, isAnyModalOpen, handleUndo, handleRedo, canUndo, canRedo]);
   return /* @__PURE__ */ jsxRuntimeExports.jsxs(Box, { sx: {
     p: 1,
     pb: 3,
@@ -37750,7 +37875,11 @@ function LyricsAnalyzer({ data: initialData, onFileLoad, apiClient, isReadOnly, 
         onHandlerClick: handleHandlerClick,
         onAddLyrics: () => setIsAddLyricsModalOpen(true),
         onFindReplace: () => setIsFindReplaceModalOpen(true),
-        onEditAll: handleEditAll
+        onEditAll: handleEditAll,
+        onUndo: handleUndo,
+        onRedo: handleRedo,
+        canUndo,
+        canRedo
       }
     ),
     /* @__PURE__ */ jsxRuntimeExports.jsxs(Grid, { container: true, direction: isMobile ? "column" : "row", children: [
@@ -37770,7 +37899,7 @@ function LyricsAnalyzer({ data: initialData, onFileLoad, apiClient, isReadOnly, 
             anchors: data.anchor_sequences,
             disableHighlighting: isAnyModalOpenMemo,
             onDataChange: (updatedData) => {
-              setData(updatedData);
+              updateDataWithHistory(updatedData, "direct data change");
             }
           }
         ),
@@ -38253,4 +38382,4 @@ ReactDOM$1.createRoot(document.getElementById("root")).render(
     /* @__PURE__ */ jsxRuntimeExports.jsx(App, {})
   ] })
 );
-//# sourceMappingURL=index-BvRLUQmZ.js.map
+//# sourceMappingURL=index-BpvPgWoc.js.map
