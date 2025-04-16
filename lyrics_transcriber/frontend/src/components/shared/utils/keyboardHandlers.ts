@@ -86,9 +86,6 @@ export const setupKeyboardHandlers = (state: KeyboardState) => {
             e.preventDefault()
 
             if (isModalOpen && currentModalHandler) {
-                if (debugLog) {
-                    console.log('Keyboard handler - Delegating to modal handler')
-                }
                 currentModalHandler(e)
             } else if (window.toggleAudioPlayback && !isModalOpen) {
                 if (debugLog) {
@@ -129,9 +126,6 @@ export const setupKeyboardHandlers = (state: KeyboardState) => {
             e.preventDefault()
 
             if (isModalOpen && currentModalHandler) {
-                if (debugLog) {
-                    console.log('Keyboard handler - Delegating keyup to modal handler')
-                }
                 currentModalHandler(e)
             }
         }

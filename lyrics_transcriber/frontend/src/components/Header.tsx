@@ -251,7 +251,7 @@ export default function Header({
                         />
                         {!isReadOnly && (
                             <Box sx={{ display: 'flex', height: '32px' }}>
-                                <Tooltip title="Undo (Cmd/Ctrl+Z)">
+                                <Tooltip title="Undo">
                                     <span>
                                         <IconButton
                                             size="small"
@@ -269,7 +269,7 @@ export default function Header({
                                         </IconButton>
                                     </span>
                                 </Tooltip>
-                                <Tooltip title="Redo (Cmd/Ctrl+Shift+Z)">
+                                <Tooltip title="Redo">
                                     <span>
                                         <IconButton
                                             size="small"

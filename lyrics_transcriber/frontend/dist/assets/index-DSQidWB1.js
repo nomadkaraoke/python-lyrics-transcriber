@@ -36001,13 +36001,15 @@ function ReviewChangesModal({
   reactExports.useEffect(() => {
     if (open) {
       setModalSpacebarHandler(() => (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        if (videoRef.current) {
-          if (videoRef.current.paused) {
-            videoRef.current.play();
-          } else {
-            videoRef.current.pause();
+        if (e.type === "keydown") {
+          e.preventDefault();
+          e.stopPropagation();
+          if (videoRef.current) {
+            if (videoRef.current.paused) {
+              videoRef.current.play();
+            } else {
+              videoRef.current.pause();
+            }
           }
         }
       });
@@ -36722,7 +36724,7 @@ function Header({
         }
       ),
       !isReadOnly && /* @__PURE__ */ jsxRuntimeExports.jsxs(Box, { sx: { display: "flex", height: "32px" }, children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx(Tooltip, { title: "Undo (Cmd/Ctrl+Z)", children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+        /* @__PURE__ */ jsxRuntimeExports.jsx(Tooltip, { title: "Undo", children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: /* @__PURE__ */ jsxRuntimeExports.jsx(
           IconButton,
           {
             size: "small",
@@ -36738,7 +36740,7 @@ function Header({
             children: /* @__PURE__ */ jsxRuntimeExports.jsx(UndoIcon, { fontSize: "small" })
           }
         ) }) }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx(Tooltip, { title: "Redo (Cmd/Ctrl+Shift+Z)", children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+        /* @__PURE__ */ jsxRuntimeExports.jsx(Tooltip, { title: "Redo", children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: /* @__PURE__ */ jsxRuntimeExports.jsx(
           IconButton,
           {
             size: "small",
@@ -37816,42 +37818,6 @@ function LyricsAnalyzer({ data: initialData, onFileLoad, apiClient, isReadOnly, 
     uncorrected: () => handleFlash("uncorrected")
   }), [handleFlash]);
   const isAnyModalOpenMemo = reactExports.useMemo(() => isAnyModalOpen, [isAnyModalOpen]);
-  reactExports.useEffect(() => {
-    const { handleKeyDown: baseHandleKeyDown, handleKeyUp, cleanup } = setupKeyboardHandlers({
-      setIsShiftPressed,
-      setIsCtrlPressed
-    });
-    const handleKeyDown = (e) => {
-      const targetElement = e.target;
-      const isInputFocused = targetElement.tagName === "INPUT" || targetElement.tagName === "TEXTAREA";
-      if (!isAnyModalOpen && !isInputFocused) {
-        const isMac = navigator.platform.toUpperCase().indexOf("MAC") >= 0;
-        const modifierKey = isMac ? e.metaKey : e.ctrlKey;
-        if (modifierKey && e.key.toLowerCase() === "z") {
-          e.preventDefault();
-          if (e.shiftKey) {
-            if (canRedo) handleRedo();
-          } else {
-            if (canUndo) handleUndo();
-          }
-          return;
-        }
-      }
-      baseHandleKeyDown(e);
-    };
-    window.addEventListener("keydown", handleKeyDown);
-    window.addEventListener("keyup", handleKeyUp);
-    if (isAnyModalOpen) {
-      setIsShiftPressed(false);
-      setIsCtrlPressed(false);
-    }
-    return () => {
-      window.removeEventListener("keydown", handleKeyDown);
-      window.removeEventListener("keyup", handleKeyUp);
-      document.body.style.userSelect = "";
-      cleanup();
-    };
-  }, [setIsShiftPressed, setIsCtrlPressed, isAnyModalOpen, handleUndo, handleRedo, canUndo, canRedo]);
   return /* @__PURE__ */ jsxRuntimeExports.jsxs(Box, { sx: {
     p: 1,
     pb: 3,
@@ -38382,4 +38348,4 @@ ReactDOM$1.createRoot(document.getElementById("root")).render(
     /* @__PURE__ */ jsxRuntimeExports.jsx(App, {})
   ] })
 );
-//# sourceMappingURL=index-BpvPgWoc.js.map
+//# sourceMappingURL=index-DSQidWB1.js.map

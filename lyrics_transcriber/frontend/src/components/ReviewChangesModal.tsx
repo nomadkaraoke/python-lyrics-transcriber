@@ -85,14 +85,16 @@ export default function ReviewChangesModal({
     useEffect(() => {
         if (open) {
             setModalSpacebarHandler(() => (e: KeyboardEvent) => {
-                e.preventDefault()
-                e.stopPropagation()
+                if (e.type === 'keydown') {
+                    e.preventDefault()
+                    e.stopPropagation()
 
-                if (videoRef.current) {
-                    if (videoRef.current.paused) {
-                        videoRef.current.play()
-                    } else {
-                        videoRef.current.pause()
+                    if (videoRef.current) {
+                        if (videoRef.current.paused) {
+                            videoRef.current.play()
+                        } else {
+                            videoRef.current.pause()
+                        }
                     }
                 }
             })
