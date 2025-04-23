@@ -7,7 +7,6 @@ from .config import *
 
 
 import logging
-logger = logging.getLogger(__name__)
 
 
 RENDERED_BLANK = 0
@@ -169,6 +168,7 @@ def render_lines_and_masks(
         stroke_width: int = 0,
         stroke_type: StrokeType = StrokeType.OCTAGON,
         render_masks: bool = True,
+        logger: logging.Logger = logging.getLogger(__name__),
 ) -> tuple[list[Image.Image], list[list[Image.Image]]]:
     """
     Render set of karaoke lines as `PIL.Image.Image`s, and masks for

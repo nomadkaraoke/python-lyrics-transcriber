@@ -126,7 +126,7 @@ class Settings:
     artist_color: RGBColor = field(converter=to_rgbcolor, default="#ffffff")
     title_screen_transition: str = "centertexttoplogobottomtext"
     title_artist_gap: int = 30
-
+    title_top_padding: int = 0
     intro_duration_seconds: float = 5.0
     first_syllable_buffer_seconds: float = 3.0
 

@@ -27,8 +27,6 @@ from .utils import *
 
 import logging
 
-logger = logging.getLogger(__name__)
-
 ASS_REQUIREMENTS = True
 try:
     import ass
@@ -204,13 +202,16 @@ class KaraokeComposer:
         self,
         config: Settings,
         relative_dir: "StrOrBytesPath | Path" = "",
+        logger=None,
     ):
         self.config = config
         self.relative_dir = Path(relative_dir)
-        logger.debug("loading config settings")
+        self.logger = logger or logging.getLogger(__name__)
+        
+        self.logger.debug("loading config settings")
 
         font_path = self.config.font
-        logger.debug(f"font_path: {font_path}")
+        self.logger.debug(f"font_path: {font_path}")
         try:
             # First, use the font path directly from the config
             if not Path(font_path).is_file():
@@ -223,7 +224,7 @@ class KaraokeComposer:
                     raise FileNotFoundError(f"Font file not found: {self.config.font}")
             self.font = ImageFont.truetype(str(font_path), self.config.font_size)
         except Exception as e:
-            logger.error(f"Error loading font: {e}")
+            self.logger.error(f"Error loading font: {e}")
             raise
 
         # Set color table for lyrics sections
@@ -254,13 +255,13 @@ class KaraokeComposer:
                 padvalue=self.UNUSED_COLOR,
             )
         )
-        logger.debug(f"Color table: {self.color_table}")
+        self.logger.debug(f"Color table: {self.color_table}")
 
         self.max_tile_height = 0
         self.lyrics: list[LyricInfo] = []
         # Process lyric sets
         for ci, lyric in enumerate(self.config.lyrics):
-            logger.debug(f"processing config lyric {ci}")
+            self.logger.debug(f"processing config lyric {ci}")
             lines: list[list[str]] = []
             line_singers: list[int] = []
             for textline in re.split(r"\n+", lyric.text):
@@ -290,21 +291,22 @@ class KaraokeComposer:
                         )
                     ]
 
-                logger.debug(f"singer {singer}: {syllables}")
+                self.logger.debug(f"singer {singer}: {syllables}")
                 lines.append(syllables)
                 line_singers.append(singer)
 
-            logger.debug(f"rendering line images and masks for lyric {ci}")
+            self.logger.debug(f"rendering line images and masks for lyric {ci}")
             line_images, line_masks = render_lines_and_masks(
                 lines,
                 font=self.font,
                 stroke_width=self.config.stroke_width,
                 stroke_type=self.config.stroke_type,
+                logger=self.logger,
             )
             max_height = 0
             for li, image in enumerate(line_images):
                 if image.width > CDG_VISIBLE_WIDTH:
-                    logger.warning(
+                    self.logger.warning(
                         f"line {li} too wide\n"
                         f"max width is {CDG_VISIBLE_WIDTH} pixel(s); "
                         f"actual width is {image.width} pixel(s)\n"
@@ -317,7 +319,7 @@ class KaraokeComposer:
 
             lyric_lines: list[LineInfo] = []
             sync_i = 0
-            logger.debug(f"setting sync points for lyric {ci}")
+            self.logger.debug(f"setting sync points for lyric {ci}")
             for li, (line, singer, line_image, line_mask) in enumerate(
                 zip(
                     lines,
@@ -402,7 +404,7 @@ class KaraokeComposer:
         # Add vertical offset to lines to vertically center them
         max_height = max(line.image.height for lyric in self.lyrics for line in lyric.lines)
         line_offset = (self.max_tile_height * CDG_TILE_HEIGHT - max_height) // 2
-        logger.debug(f"lines will be vertically offset by {line_offset} pixel(s)")
+        self.logger.debug(f"lines will be vertically offset by {line_offset} pixel(s)")
         if line_offset:
             for lyric in self.lyrics:
                 for line in lyric.lines:
@@ -411,7 +413,7 @@ class KaraokeComposer:
         self.sync_offset = sync_to_cdg(self.config.sync_offset)
 
         self.writer = CDGWriter()
-        logger.info("config settings loaded")
+        self.logger.info("config settings loaded")
 
         self._set_draw_times()
 
@@ -419,6 +421,7 @@ class KaraokeComposer:
     def from_file(
         cls,
         file: "FileDescriptorOrPath",
+        logger=None,
     ) -> Self:
         converter = Converter(prefer_attrib_converters=True)
         relative_dir = Path(file).parent
@@ -426,6 +429,7 @@ class KaraokeComposer:
             return cls(
                 converter.structure(tomllib.load(stream), Settings),
                 relative_dir=relative_dir,
+                logger=logger,
             )
 
     @classmethod
@@ -454,7 +458,7 @@ class KaraokeComposer:
     def _set_draw_times(self):
         self.lyric_times: list[LyricTimes] = []
         for lyric in self.lyrics:
-            logger.debug(f"setting draw times for lyric {lyric.lyric_index}")
+            self.logger.debug(f"setting draw times for lyric {lyric.lyric_index}")
             line_count = len(lyric.lines)
             line_draw: list[int] = [0] * line_count
             line_erase: list[int] = [0] * line_count
@@ -513,15 +517,15 @@ class KaraokeComposer:
                 line_erase[end_line] = erase_time
                 erase_time += self.LINE_DRAW_ERASE_GAP
 
-            logger.debug(f"lyric {lyric.lyric_index} draw times: {line_draw!r}")
-            logger.debug(f"lyric {lyric.lyric_index} erase times: {line_erase!r}")
+            self.logger.debug(f"lyric {lyric.lyric_index} draw times: {line_draw!r}")
+            self.logger.debug(f"lyric {lyric.lyric_index} erase times: {line_erase!r}")
             self.lyric_times.append(
                 LyricTimes(
                     line_draw=line_draw,
                     line_erase=line_erase,
                 )
             )
-        logger.info("draw times set")
+        self.logger.info("draw times set")
 
     def _set_draw_times_page(
         self,
@@ -557,7 +561,7 @@ class KaraokeComposer:
 
         # Warn the user if there's not likely to be enough time
         if minimum_time < 32:
-            logger.warning("not enough bandwidth to clear screen on lyric " f"{wipe.lyric_index} line {wipe.line_index}")
+            self.logger.warning("not enough bandwidth to clear screen on lyric " f"{wipe.lyric_index} line {wipe.line_index}")
 
         # If there's not enough time between the end of the last line
         # and the start of this line, but there is enough time between
@@ -771,9 +775,9 @@ class KaraokeComposer:
             if self.config.clear_mode == LyricClearMode.PAGE and len(self.lyrics) > 1:
                 raise RuntimeError("page mode doesn't support more than one lyric set")
 
-            logger.debug("loading song file")
+            self.logger.debug("loading song file")
             song: AudioSegment = AudioSegment.from_file(file_relative_to(self.config.file, self.relative_dir))
-            logger.info("song file loaded")
+            self.logger.info("song file loaded")
 
             self.lyric_packet_indices: set[int] = set()
             self.instrumental_times: list[int] = []
@@ -819,7 +823,7 @@ class KaraokeComposer:
                 should_instrumental = current_time >= instrumental_time
             # If there should not be an instrumental section now
             if not should_instrumental:
-                logger.debug("instrumental intro is not present; clearing")
+                self.logger.debug("instrumental intro is not present; clearing")
                 # Clear the screen
                 self.writer.queue_packets(
                     [
@@ -830,7 +834,7 @@ class KaraokeComposer:
                 if self.config.border is not None:
                     self.writer.queue_packet(border_preset(self.BORDER))
             else:
-                logger.debug("instrumental intro is present; not clearing")
+                self.logger.debug("instrumental intro is present; not clearing")
 
             # While there are lines to draw/erase, or syllables to
             # highlight, or events in the highlight/draw queues, or
@@ -861,7 +865,7 @@ class KaraokeComposer:
                     )
 
             # Add audio padding to intro
-            logger.debug("padding intro of audio file")
+            self.logger.debug("padding intro of audio file")
             intro_silence: AudioSegment = AudioSegment.silent(
                 self.intro_delay * 1000 // CDG_FPS,
                 frame_rate=song.frame_rate,
@@ -872,7 +876,7 @@ class KaraokeComposer:
             # outro (or next instrumental section) begins immediately after
             # the end of the last syllable, which would be abrupt.
             if self.config.clear_mode == LyricClearMode.PAGE:
-                logger.debug("clear mode is page; adding padding before outro")
+                self.logger.debug("clear mode is page; adding padding before outro")
                 self.writer.queue_packets([no_instruction()] * 3 * CDG_FPS)
 
             # Calculate video padding before outro
@@ -884,17 +888,17 @@ class KaraokeComposer:
                 int(self.audio.duration_seconds * CDG_FPS),
                 self.writer.packets_queued + OUTRO_DURATION,
             )
-            logger.debug(f"song should be {end} frame(s) long")
+            self.logger.debug(f"song should be {end} frame(s) long")
             padding_before_outro = (end - OUTRO_DURATION) - self.writer.packets_queued
-            logger.debug(f"queueing {padding_before_outro} packets before outro")
+            self.logger.debug(f"queueing {padding_before_outro} packets before outro")
             self.writer.queue_packets([no_instruction()] * padding_before_outro)
 
             # Compose the outro (and thus, finish the video)
             self._compose_outro(end)
-            logger.info("karaoke file composed")
+            self.logger.info("karaoke file composed")
 
             # Add audio padding to outro (and thus, finish the audio)
-            logger.debug("padding outro of audio file")
+            self.logger.debug("padding outro of audio file")
             outro_silence: AudioSegment = AudioSegment.silent(
                 ((self.writer.packets_queued * 1000 // CDG_FPS) - int(self.audio.duration_seconds * 1000)),
                 frame_rate=song.frame_rate,
@@ -904,24 +908,24 @@ class KaraokeComposer:
             # Write CDG and MP3 data to ZIP file
             outname = self.config.outname
             zipfile_name = self.relative_dir / Path(f"{outname}.zip")
-            logger.debug(f"creating {zipfile_name}")
+            self.logger.debug(f"creating {zipfile_name}")
             with ZipFile(zipfile_name, "w") as zipfile:
                 cdg_bytes = BytesIO()
-                logger.debug("writing cdg packets to stream")
+                self.logger.debug("writing cdg packets to stream")
                 self.writer.write_packets(cdg_bytes)
-                logger.debug(f"writing stream to zipfile as {outname}.cdg")
+                self.logger.debug(f"writing stream to zipfile as {outname}.cdg")
                 cdg_bytes.seek(0)
                 zipfile.writestr(f"{outname}.cdg", cdg_bytes.read())
 
                 mp3_bytes = BytesIO()
-                logger.debug("writing mp3 data to stream")
+                self.logger.debug("writing mp3 data to stream")
                 self.audio.export(mp3_bytes, format="mp3")
-                logger.debug(f"writing stream to zipfile as {outname}.mp3")
+                self.logger.debug(f"writing stream to zipfile as {outname}.mp3")
                 mp3_bytes.seek(0)
                 zipfile.writestr(f"{outname}.mp3", mp3_bytes.read())
-            logger.info(f"karaoke files written to {zipfile_name}")
+            self.logger.info(f"karaoke files written to {zipfile_name}")
         except Exception as e:
-            logger.error(f"Error in compose: {str(e)}", exc_info=True)
+            self.logger.error(f"Error in compose: {str(e)}", exc_info=True)
             raise
 
     def _compose_lyric(
@@ -954,10 +958,10 @@ class KaraokeComposer:
             composer_state.this_page = line_draw_info.line_index // lyric.lines_per_page
             # If this line is the start of a new page
             if composer_state.this_page > composer_state.last_page:
-                logger.debug(f"going from page {composer_state.last_page} to " f"page {composer_state.this_page} in page mode")
+                self.logger.debug(f"going from page {composer_state.last_page} to " f"page {composer_state.this_page} in page mode")
                 # If we have not just cleared the screen
                 if not composer_state.just_cleared:
-                    logger.debug("clearing screen on page transition")
+                    self.logger.debug("clearing screen on page transition")
                     # Clear the last page
                     page_clear_packets = [
                         *memory_preset_repeat(self.BACKGROUND),
@@ -975,12 +979,12 @@ class KaraokeComposer:
                     # Update the current frame time
                     current_time += len(page_clear_packets)
                 else:
-                    logger.debug("not clearing screen on page transition")
+                    self.logger.debug("not clearing screen on page transition")
 
         # Queue the erasing of this line if necessary
         if should_erase_this_line:
             assert line_erase_info is not None
-            logger.debug(
+            self.logger.debug(
                 f"t={self.writer.packets_queued}: erasing lyric " f"{line_erase_info.lyric_index} line " f"{line_erase_info.line_index}"
             )
             if line_erase_info.text.strip():
@@ -993,12 +997,12 @@ class KaraokeComposer:
                     )
                 )
             else:
-                logger.debug("line is blank; not erased")
+                self.logger.debug("line is blank; not erased")
             state.line_erase += 1
         # Queue the drawing of this line if necessary
         if should_draw_this_line:
             assert line_draw_info is not None
-            logger.debug(
+            self.logger.debug(
                 f"t={self.writer.packets_queued}: drawing lyric " f"{line_draw_info.lyric_index} line " f"{line_draw_info.line_index}"
             )
             if line_draw_info.text.strip():
@@ -1012,7 +1016,7 @@ class KaraokeComposer:
                     )
                 )
             else:
-                logger.debug("line is blank; not drawn")
+                self.logger.debug("line is blank; not drawn")
             state.line_draw += 1
 
         # NOTE If this line has no syllables, we must advance the
@@ -1085,28 +1089,28 @@ class KaraokeComposer:
                                 # XXX This is hardcoded.
                                 instrumental_time = last_syllable.end_offset + 450
                         else:
-                            logger.debug("forcing next instrumental not to " "wait; it does not occur at or before " "the end of this line")
+                            self.logger.debug("forcing next instrumental not to " "wait; it does not occur at or before " "the end of this line")
                             instrumental.wait = False
             should_instrumental = current_time >= instrumental_time
         # If there should be an instrumental section now
         if should_instrumental:
             assert instrumental is not None
-            logger.debug("time for an instrumental section")
+            self.logger.debug("time for an instrumental section")
             if instrumental.wait:
-                logger.debug("this instrumental section waited for the previous " "line to finish")
+                self.logger.debug("this instrumental section waited for the previous " "line to finish")
             else:
-                logger.debug("this instrumental did not wait for the previous " "line to finish")
+                self.logger.debug("this instrumental did not wait for the previous " "line to finish")
 
-            logger.debug("_compose_lyric: Purging all highlight/draw queues")
+            self.logger.debug("_compose_lyric: Purging all highlight/draw queues")
             for st in lyric_states:
                 if instrumental.wait:
                     if st.highlight_queue:
-                        logger.warning("_compose_lyric: Unexpected items in highlight queue when instrumental waited")
+                        self.logger.warning("_compose_lyric: Unexpected items in highlight queue when instrumental waited")
                     if st.draw_queue:
                         if st == state:
-                            logger.debug("_compose_lyric: Queueing remaining draw packets for current state")
+                            self.logger.debug("_compose_lyric: Queueing remaining draw packets for current state")
                         else:
-                            logger.warning("_compose_lyric: Unexpected items in draw queue for non-current state")
+                            self.logger.warning("_compose_lyric: Unexpected items in draw queue for non-current state")
                         self.writer.queue_packets(st.draw_queue)
 
                 # Purge highlight/draw queues
@@ -1142,27 +1146,27 @@ class KaraokeComposer:
                 if line_draw_time is None:
                     should_clear = False
 
-            logger.info(f"_compose_lyric: Composing instrumental. End time: {instrumental_end}, Should clear: {should_clear}")
+            self.logger.info(f"_compose_lyric: Composing instrumental. End time: {instrumental_end}, Should clear: {should_clear}")
             try:
                 self._compose_instrumental(instrumental, instrumental_end)
             except Exception as e:
-                logger.error(f"Error in _compose_instrumental: {str(e)}", exc_info=True)
+                self.logger.error(f"Error in _compose_instrumental: {str(e)}", exc_info=True)
                 raise
 
             if should_clear:
-                logger.debug("_compose_lyric: Clearing screen after instrumental")
+                self.logger.debug("_compose_lyric: Clearing screen after instrumental")
                 self.writer.queue_packets(
                     [
                         *memory_preset_repeat(self.BACKGROUND),
                         *load_color_table(self.color_table),
                     ]
                 )
-                logger.debug(f"_compose_lyric: Loaded color table: {self.color_table}")
+                self.logger.debug(f"_compose_lyric: Loaded color table: {self.color_table}")
                 if self.config.border is not None:
                     self.writer.queue_packet(border_preset(self.BORDER))
                 composer_state.just_cleared = True
             else:
-                logger.debug("not clearing screen after instrumental")
+                self.logger.debug("not clearing screen after instrumental")
             # Advance to the next instrumental section
             instrumental = next_instrumental
             return
@@ -1266,7 +1270,7 @@ class KaraokeComposer:
             )
 
             # Warn the user
-            logger.warning(
+            self.logger.warning(
                 "Not enough time to highlight lyric %d line %d syllable %d. "
                 "Ideal duration is %d column(s); actual duration is %d column(s). "
                 "Syllable text: %s",
@@ -1293,9 +1297,9 @@ class KaraokeComposer:
         instrumental: SettingsInstrumental,
         end: int | None,
     ):
-        logger.info(f"Composing instrumental section. End time: {end}")
+        self.logger.info(f"Composing instrumental section. End time: {end}")
         try:
-            logger.info("composing instrumental section")
+            self.logger.info("composing instrumental section")
             self.instrumental_times.append(self.writer.packets_queued)
             self.writer.queue_packets(
                 [
@@ -1305,7 +1309,7 @@ class KaraokeComposer:
                 ]
             )
 
-            logger.debug("rendering instrumental text")
+            self.logger.debug("rendering instrumental text")
             text = instrumental.text.split("\n")
             instrumental_font = ImageFont.truetype(self.config.font, 20)
             text_images = render_lines(
@@ -1377,7 +1381,7 @@ class KaraokeComposer:
                 y += instrumental.line_tile_height * CDG_TILE_HEIGHT
 
             if instrumental.image is not None:
-                logger.debug("creating instrumental background image")
+                self.logger.debug("creating instrumental background image")
                 try:
                     # Load background image
                     background_image = self._load_image(
@@ -1390,13 +1394,13 @@ class KaraokeComposer:
                         ],
                     )
                 except FileNotFoundError as e:
-                    logger.error(f"Failed to load instrumental image: {e}")
+                    self.logger.error(f"Failed to load instrumental image: {e}")
                     # Fallback to simple screen if image can't be loaded
                     instrumental.image = None
-                    logger.warning("Falling back to simple screen for instrumental")
+                    self.logger.warning("Falling back to simple screen for instrumental")
 
             if instrumental.image is None:
-                logger.debug("no instrumental image; drawing simple screen")
+                self.logger.debug("no instrumental image; drawing simple screen")
                 color_table = list(
                     pad(
                         [
@@ -1416,13 +1420,13 @@ class KaraokeComposer:
                         *text_image_packets,
                     ]
                 )
-                logger.debug(f"loaded color table in compose_instrumental: {color_table}")
+                self.logger.debug(f"loaded color table in compose_instrumental: {color_table}")
             else:
                 # Queue palette packets
                 palette = list(batched(background_image.getpalette(), 3))
                 if len(palette) < 8:
                     color_table = list(pad(palette, 8, padvalue=self.UNUSED_COLOR))
-                    logger.debug(f"loaded color table in compose_instrumental: {color_table}")
+                    self.logger.debug(f"loaded color table in compose_instrumental: {color_table}")
                     self.writer.queue_packet(
                         load_color_table_lo(
                             color_table,
@@ -1430,18 +1434,18 @@ class KaraokeComposer:
                     )
                 else:
                     color_table = list(pad(palette, 16, padvalue=self.UNUSED_COLOR))
-                    logger.debug(f"loaded color table in compose_instrumental: {color_table}")
+                    self.logger.debug(f"loaded color table in compose_instrumental: {color_table}")
                     self.writer.queue_packets(
                         load_color_table(
                             color_table,
                         )
                     )
 
-                logger.debug("drawing instrumental text")
+                self.logger.debug("drawing instrumental text")
                 # Queue text packets
                 self.writer.queue_packets(text_image_packets)
 
-                logger.debug("rendering instrumental text over background image")
+                self.logger.debug("rendering instrumental text over background image")
                 # HACK To properly draw and layer everything, I need to
                 # create a version of the background image that has the text
                 # overlaid onto it, and is tile-aligned. This requires some
@@ -1450,7 +1454,7 @@ class KaraokeComposer:
                 padright = -(instrumental.x + background_image.width) % CDG_TILE_WIDTH
                 padtop = instrumental.y % CDG_TILE_HEIGHT
                 padbottom = -(instrumental.y + background_image.height) % CDG_TILE_HEIGHT
-                logger.debug(f"padding L={padleft} R={padright} T={padtop} B={padbottom}")
+                self.logger.debug(f"padding L={padleft} R={padright} T={padtop} B={padbottom}")
                 # Create axis-aligned background image with proper size and
                 # palette
                 aligned_background_image = Image.new(
@@ -1485,9 +1489,9 @@ class KaraokeComposer:
                         )
                     ),
                 )
-                logger.debug("instrumental background image packed in " f"{len(list(it.chain(*packets.values())))} packet(s)")
+                self.logger.debug("instrumental background image packed in " f"{len(list(it.chain(*packets.values())))} packet(s)")
 
-                logger.debug("applying instrumental transition")
+                self.logger.debug("applying instrumental transition")
                 # Queue background image packets (and apply transition)
                 if instrumental.transition is None:
                     for coord_packets in packets.values():
@@ -1498,7 +1502,7 @@ class KaraokeComposer:
                         self.writer.queue_packets(packets.get(coord, []))
 
             if end is None:
-                logger.debug('this instrumental will last "forever"')
+                self.logger.debug('this instrumental will last "forever"')
                 return
 
             # Wait until 3 seconds before the next line should be drawn
@@ -1507,7 +1511,7 @@ class KaraokeComposer:
             end_time = max(current_time, end - preparation_time)
             wait_time = end_time - current_time
 
-            logger.debug(f"waiting for {wait_time} frame(s) before showing next lyrics")
+            self.logger.debug(f"waiting for {wait_time} frame(s) before showing next lyrics")
             self.writer.queue_packets([no_instruction()] * wait_time)
 
             # Clear the screen for the next lyrics
@@ -1517,25 +1521,25 @@ class KaraokeComposer:
                     *load_color_table(self.color_table),
                 ]
             )
-            logger.debug(f"loaded color table in compose_instrumental: {self.color_table}")
+            self.logger.debug(f"loaded color table in compose_instrumental: {self.color_table}")
             if self.config.border is not None:
                 self.writer.queue_packet(border_preset(self.BORDER))
 
-            logger.debug("instrumental section ended")
+            self.logger.debug("instrumental section ended")
         except Exception as e:
-            logger.error(f"Error in _compose_instrumental: {str(e)}", exc_info=True)
+            self.logger.error(f"Error in _compose_instrumental: {str(e)}", exc_info=True)
             raise
 
     def _compose_intro(self):
         # TODO Make it so the intro screen is not hardcoded
-        logger.debug("composing intro")
+        self.logger.debug("composing intro")
         self.writer.queue_packets(
             [
                 *memory_preset_repeat(0),
             ]
         )
 
-        logger.debug("loading intro background image")
+        self.logger.debug("loading intro background image")
         # Load background image
         background_image = self._load_image(
             self.config.title_screen_background,
@@ -1552,12 +1556,23 @@ class KaraokeComposer:
         MAX_HEIGHT = 200
         # Try rendering the title and artist to an image
         while True:
-            logger.debug(f"trying song title at size {bigfont_size}")
+            self.logger.debug(f"trying song title at size {bigfont_size}")
             text_image = Image.new("P", (CDG_VISIBLE_WIDTH, MAX_HEIGHT * 2), 0)
             y = 0
+
+            if self.config.title_top_padding:
+                self.logger.info(f"title top padding set to {self.config.title_top_padding} in config, setting as initial y position")
+                y = self.config.title_top_padding
+                self.logger.info(f"Initial y position with padding: {y}")
+            else:
+                self.logger.info("no title top padding configured; starting with y = 0")
+                self.logger.info(f"Initial y position without padding: {y}")
+
             bigfont = ImageFont.truetype(self.config.font, bigfont_size)
 
             # Draw song title
+            title_start_y = y
+            self.logger.info(f"Starting to draw title at y={y}")
             for image in render_lines(
                 get_wrapped_text(
                     self.config.title,
@@ -1573,11 +1588,16 @@ class KaraokeComposer:
                     mask=image.point(lambda v: v and 255, "1"),
                 )
                 y += int(bigfont.size)
+            title_end_y = y
+            self.logger.info(f"Finished drawing title at y={y}, title height={title_end_y - title_start_y}")
 
             # Add vertical gap between title and artist using configured value
             y += self.config.title_artist_gap
+            self.logger.info(f"After adding title_artist_gap of {self.config.title_artist_gap}, y is now {y}")
 
             # Draw song artist
+            artist_start_y = y
+            self.logger.info(f"Starting to draw artist at y={y}")
             for image in render_lines(
                 get_wrapped_text(
                     self.config.artist,
@@ -1593,22 +1613,49 @@ class KaraokeComposer:
                     mask=image.point(lambda v: v and 255, "1"),
                 )
                 y += int(smallfont.size)
+            artist_end_y = y
+            self.logger.info(f"Finished drawing artist at y={y}, artist height={artist_end_y - artist_start_y}")
+            self.logger.info(f"Total content height before cropping: {artist_end_y - title_start_y}")
 
             # Break out of loop only if text box ends up small enough
-            text_image = text_image.crop(text_image.getbbox())
+            bbox = text_image.getbbox()
+            self.logger.info(f"Original bounding box from getbbox(): {bbox}")
+            if bbox is None:
+                # If there's no content, still create a minimal bbox
+                bbox = (0, 0, text_image.width, 1)
+                self.logger.info("No content found, created minimal bbox")
+            
+            # We'll crop to just the content area, without padding
+            original_height = text_image.height
+            text_image = text_image.crop(bbox)
+            self.logger.info(f"After cropping: text_image dimensions={text_image.width}x{text_image.height}, height difference={original_height - text_image.height}")
+            
             if text_image.height <= MAX_HEIGHT:
-                logger.debug("height just right")
+                self.logger.debug("height just right")
                 break
             # If text box is not small enough, reduce font size of title
-            logger.debug("height too big; reducing font size")
+            self.logger.debug("height too big; reducing font size")
             bigfont_size -= 2
 
-        # Draw text onto image
+        # Calculate position - center horizontally, but add padding to vertical position
+        center_x = (CDG_SCREEN_WIDTH - text_image.width) // 2
+        
+        # Standard centered position
+        standard_center_y = (CDG_SCREEN_HEIGHT - text_image.height) // 2
+        
+        # Add the title_top_padding to shift the entire content downward
+        padding_offset = self.config.title_top_padding if self.config.title_top_padding else 0
+        final_y = standard_center_y + padding_offset
+        
+        self.logger.info(f"Pasting text image ({text_image.width}x{text_image.height}) onto background")
+        self.logger.info(f"Standard centered position would be y={standard_center_y}")
+        self.logger.info(f"With padding offset of {padding_offset}, final position is y={final_y}")
+        
         background_image.paste(
             text_image,
             (
-                (CDG_SCREEN_WIDTH - text_image.width) // 2,
-                (CDG_SCREEN_HEIGHT - text_image.height) // 2,
+                center_x,
+                final_y,
             ),
             mask=text_image.point(lambda v: v and 255, "1"),
         )
@@ -1617,7 +1664,7 @@ class KaraokeComposer:
         palette = list(batched(background_image.getpalette(), 3))
         if len(palette) < 8:
             color_table = list(pad(palette, 8, padvalue=self.UNUSED_COLOR))
-            logger.debug(f"loaded color table in compose_intro: {color_table}")
+            self.logger.debug(f"loaded color table in compose_intro: {color_table}")
             self.writer.queue_packet(
                 load_color_table_lo(
                     color_table,
@@ -1625,7 +1672,7 @@ class KaraokeComposer:
             )
         else:
             color_table = list(pad(palette, 16, padvalue=self.UNUSED_COLOR))
-            logger.debug(f"loaded color table in compose_intro: {color_table}")
+            self.logger.debug(f"loaded color table in compose_intro: {color_table}")
             self.writer.queue_packets(
                 load_color_table(
                     color_table,
@@ -1634,7 +1681,7 @@ class KaraokeComposer:
 
         # Render background image to packets
         packets = image_to_packets(background_image, (0, 0))
-        logger.debug("intro background image packed in " f"{len(list(it.chain(*packets.values())))} packet(s)")
+        self.logger.debug("intro background image packed in " f"{len(list(it.chain(*packets.values())))} packet(s)")
 
         # Queue background image packets (and apply transition)
         transition = Image.open(package_dir / "transitions" / f"{self.config.title_screen_transition}.png")
@@ -1652,30 +1699,30 @@ class KaraokeComposer:
         first_syllable_start_offset = min(
             syllable.start_offset for lyric in self.lyrics for line in lyric.lines for syllable in line.syllables
         )
-        logger.debug(f"first syllable starts at {first_syllable_start_offset}")
+        self.logger.debug(f"first syllable starts at {first_syllable_start_offset}")
 
         MINIMUM_FIRST_SYLLABLE_TIME_FOR_NO_SILENCE = INTRO_DURATION + FIRST_SYLLABLE_BUFFER
         # If the first syllable is within buffer+intro time, add silence
         # Otherwise, don't add any silence
         if first_syllable_start_offset < MINIMUM_FIRST_SYLLABLE_TIME_FOR_NO_SILENCE:
             self.intro_delay = MINIMUM_FIRST_SYLLABLE_TIME_FOR_NO_SILENCE
-            logger.info(
+            self.logger.info(
                 f"First syllable within {self.config.intro_duration_seconds + self.config.first_syllable_buffer_seconds} seconds. Adding {self.intro_delay} frames of silence."
             )
         else:
             self.intro_delay = 0
-            logger.info("First syllable after buffer period. No additional silence needed.")
+            self.logger.info("First syllable after buffer period. No additional silence needed.")
 
     def _compose_outro(self, end: int):
         # TODO Make it so the outro screen is not hardcoded
-        logger.debug("composing outro")
+        self.logger.debug("composing outro")
         self.writer.queue_packets(
             [
                 *memory_preset_repeat(0),
             ]
         )
 
-        logger.debug("loading outro background image")
+        self.logger.debug("loading outro background image")
         # Load background image
         background_image = self._load_image(
             self.config.outro_background,
@@ -1691,7 +1738,7 @@ class KaraokeComposer:
         MAX_HEIGHT = 200
 
         # Render text to an image
-        logger.debug(f"rendering outro text")
+        self.logger.debug(f"rendering outro text")
         text_image = Image.new("P", (CDG_VISIBLE_WIDTH, MAX_HEIGHT * 2), 0)
         y = 0
 
@@ -1759,7 +1806,7 @@ class KaraokeComposer:
 
         # Render background image to packets
         packets = image_to_packets(background_image, (0, 0))
-        logger.debug("intro background image packed in " f"{len(list(it.chain(*packets.values())))} packet(s)")
+        self.logger.debug("intro background image packed in " f"{len(list(it.chain(*packets.values())))} packet(s)")
 
         # Queue background image packets (and apply transition)
         transition = Image.open(package_dir / "transitions" / f"{self.config.outro_transition}.png")
@@ -1776,14 +1823,14 @@ class KaraokeComposer:
         if partial_palette is None:
             partial_palette = []
 
-        logger.debug("loading image")
+        self.logger.debug("loading image")
         image_rgba = Image.open(file_relative_to(image_path, self.relative_dir)).convert("RGBA")
         image = image_rgba.convert("RGB")
 
         # REVIEW How many colors should I allow? Should I make this
         # configurable?
         COLORS = 16 - len(partial_palette)
-        logger.debug(f"quantizing to {COLORS} color(s)")
+        self.logger.debug(f"quantizing to {COLORS} color(s)")
         # Reduce colors with quantization and dithering
         image = image.quantize(
             colors=COLORS,
@@ -1805,18 +1852,18 @@ class KaraokeComposer:
             ]
         )
         image = image.quantize()
-        logger.debug(f"image uses {max(image.getdata()) + 1} color(s)")
+        self.logger.debug(f"image uses {max(image.getdata()) + 1} color(s)")
 
         if partial_palette:
-            logger.debug(f"prepending {len(partial_palette)} color(s) to palette")
+            self.logger.debug(f"prepending {len(partial_palette)} color(s) to palette")
             # Add offset to color indices
             image.putdata(image.getdata(), offset=len(partial_palette))
             # Place other colors in palette
             image.putpalette(list(it.chain(*partial_palette)) + image.getpalette())
 
-        logger.debug(f"palette: {list(batched(image.getpalette(), 3))!r}")
+        self.logger.debug(f"palette: {list(batched(image.getpalette(), 3))!r}")
 
-        logger.debug("masking out non-transparent parts of image")
+        self.logger.debug("masking out non-transparent parts of image")
         # Create mask for non-transparent parts of image
         # NOTE We allow alpha values from 128 to 255 (half-transparent
         # to opaque).
@@ -1882,7 +1929,7 @@ class KaraokeComposer:
 
         # Create ASS subtitle object
         # (ASS = Advanced Sub Station. Get your mind out of the gutter.)
-        logger.debug("creating ASS subtitle object")
+        self.logger.debug("creating ASS subtitle object")
         assdoc = ass.Document()
         assdoc.fields.update(
             Title="",
@@ -1895,7 +1942,7 @@ class KaraokeComposer:
 
         # Load lyric font using fontTools
         # NOTE We do this because we need some of the font's metadata.
-        logger.debug("loading metadata from font")
+        self.logger.debug("loading metadata from font")
         font = ttLib.TTFont(self.font.path)
 
         # NOTE The ASS Style lines need the "fontname as used by
@@ -1922,7 +1969,7 @@ class KaraokeComposer:
 
         # Create a style for each singer
         for i, singer in enumerate(self.config.singers, 1):
-            logger.debug(f"creating ASS style for singer {i}")
+            self.logger.debug(f"creating ASS style for singer {i}")
             assdoc.styles.append(
                 ass.Style(
                     name=f"Singer{i}",
@@ -1955,7 +2002,7 @@ class KaraokeComposer:
                 # Skip line if it has no syllables
                 if not line.syllables:
                     continue
-                logger.debug(f"creating event for lyric {ci} line {li}")
+                self.logger.debug(f"creating event for lyric {ci} line {li}")
 
                 # Get intended draw time of line
                 line_draw_time = cdg_to_sync(times.line_draw[li]) + offset
@@ -2040,13 +2087,13 @@ class KaraokeComposer:
 
         outname = self.config.outname
         assfile_name = self.relative_dir / Path(f"{outname}.ass")
-        logger.debug(f"dumping ASS object to {assfile_name}")
+        self.logger.debug(f"dumping ASS object to {assfile_name}")
         # HACK If I don't specify "utf-8-sig" as the encoding, the
         # python-ass module gives me a warning telling me to. This adds
         # a "byte order mark" to the ASS file (seemingly unnecessarily).
         with open(assfile_name, "w", encoding="utf-8-sig") as assfile:
             assdoc.dump_file(assfile)
-        logger.info(f"ASS object dumped to {assfile_name}")
+        self.logger.info(f"ASS object dumped to {assfile_name}")
 
     def create_mp4(self, height: int = 720, fps: int = 30):
         if not MP4_REQUIREMENTS:
@@ -2059,27 +2106,27 @@ class KaraokeComposer:
         # composed, but without the lyrics. We create this by replacing
         # all lyric-drawing packets with no-instruction packets.
         platecdg_name = self.relative_dir / Path(f"{outname}.plate.cdg")
-        logger.debug(f"writing plate CDG to {platecdg_name}")
+        self.logger.debug(f"writing plate CDG to {platecdg_name}")
         with open(platecdg_name, "wb") as platecdg:
-            logger.debug("writing plate")
+            self.logger.debug("writing plate")
             for i, packet in enumerate(self.writer.packets):
                 packet_to_write = packet
                 if i in self.lyric_packet_indices:
                     packet_to_write = no_instruction()
                 self.writer.write_packet(platecdg, packet_to_write)
-        logger.info(f"plate CDG written to {platecdg_name}")
+        self.logger.info(f"plate CDG written to {platecdg_name}")
 
         # Create an MP3 file for the audio
         platemp3_name = self.relative_dir / Path(f"{outname}.plate.mp3")
-        logger.debug(f"writing plate MP3 to {platemp3_name}")
+        self.logger.debug(f"writing plate MP3 to {platemp3_name}")
         self.audio.export(platemp3_name, format="mp3")
-        logger.info(f"plate MP3 written to {platemp3_name}")
+        self.logger.info(f"plate MP3 written to {platemp3_name}")
 
         # Create a subtitle file for the HQ lyrics
         self.create_ass()
         assfile_name = self.relative_dir / Path(f"{outname}.ass")
 
-        logger.debug("building ffmpeg command for encoding MP4")
+        self.logger.debug("building ffmpeg command for encoding MP4")
         video = (
             ffmpeg.input(platecdg_name).video
             # Pad the end of the video by a few seconds
@@ -2124,16 +2171,16 @@ class KaraokeComposer:
             # padded video.
             shortest=None,
         ).overwrite_output()
-        logger.debug(f"ffmpeg command: {mp4.compile()}")
+        self.logger.debug(f"ffmpeg command: {mp4.compile()}")
         mp4.run()
 
-        logger.debug("deleting plate CDG")
+        self.logger.debug("deleting plate CDG")
         platecdg_name.unlink()
-        logger.info("plate CDG deleted")
+        self.logger.info("plate CDG deleted")
 
-        logger.debug("deleting plate MP3")
+        self.logger.debug("deleting plate MP3")
         platemp3_name.unlink()
-        logger.info("plate MP3 deleted")
+        self.logger.info("plate MP3 deleted")
 
     # !SECTION
     # endregion

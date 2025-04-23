@@ -188,7 +188,7 @@ class CDGGenerator:
 
     def _compose_cdg(self, toml_file: str) -> None:
         """Compose CDG using KaraokeComposer."""
-        kc = KaraokeComposer.from_file(toml_file)
+        kc = KaraokeComposer.from_file(toml_file, logger=self.logger)
         kc.compose()
         # kc.create_mp4(height=1080, fps=30)
 
@@ -302,6 +302,7 @@ class CDGGenerator:
             "lead_in_duration",
             "lead_in_total",
             "title_artist_gap",
+            "title_top_padding",
             "intro_duration_seconds",
             "first_syllable_buffer_seconds",
             "outro_background",
@@ -414,6 +415,8 @@ class CDGGenerator:
             "title_screen_transition": cdg_styles["title_screen_transition"],
             "instrumentals": instrumentals,
             "intro_duration_seconds": cdg_styles["intro_duration_seconds"],
+            "title_top_padding": cdg_styles["title_top_padding"],
+            "title_artist_gap": cdg_styles["title_artist_gap"],
             "first_syllable_buffer_seconds": cdg_styles["first_syllable_buffer_seconds"],
             "outro_background": cdg_styles["outro_background"],
             "outro_transition": cdg_styles["outro_transition"],
