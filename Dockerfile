@@ -14,8 +14,10 @@ RUN apt-get update && apt-get install -y \
 # Install Poetry
 RUN pip install poetry
 
-# Copy only the dependency files first
+# Copy only the dependency files and application code
 COPY pyproject.toml poetry.lock ./
+COPY README.md ./
+COPY lyrics_transcriber ./lyrics_transcriber
 
 # Install project dependencies
 RUN poetry config virtualenvs.create false \
@@ -23,10 +25,6 @@ RUN poetry config virtualenvs.create false \
 
 # Download the spacy model for english
 RUN python -m spacy download en_core_web_sm
-
-# Copy the rest of the application code
-COPY README.md ./
-COPY lyrics_transcriber ./lyrics_transcriber
 
 # Install the lyrics-transcriber package
 RUN poetry build && pip install dist/*.whl
