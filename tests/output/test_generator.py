@@ -4,22 +4,38 @@ import json
 from unittest.mock import Mock, patch
 import os
 
-from lyrics_transcriber.output.generator import OutputGenerator, OutputGeneratorConfig, OutputPaths
+from lyrics_transcriber.output.generator import OutputGenerator, OutputPaths
+from lyrics_transcriber.core.config import OutputConfig
 from lyrics_transcriber.types import LyricsSegment, Word, CorrectionResult, LyricsData, LyricsMetadata
 
 
 @pytest.fixture
 def test_config(tmp_path):
     """Create a test configuration with temporary directories."""
-    return OutputGeneratorConfig(
-        output_dir=str(tmp_path / "output"), cache_dir=str(tmp_path / "cache"), video_resolution="360p", max_line_length=36
+    return OutputConfig(
+        output_dir=str(tmp_path / "output"), 
+        cache_dir=str(tmp_path / "cache"), 
+        video_resolution="360p", 
+        max_line_length=36,
+        output_styles_json=str(tmp_path / "styles.json")
     )
 
 
 @pytest.fixture
-def output_generator(test_config):
+def output_generator(test_config, tmp_path):
     """Create an OutputGenerator instance with test configuration."""
-    return OutputGenerator(config=test_config)
+    # Create a styles.json file for testing
+    styles_path = tmp_path / "styles.json"
+    with open(styles_path, 'w') as f:
+        json.dump({"karaoke": {}, "cdg": {}}, f)
+    
+    test_config.output_styles_json = str(styles_path)
+    test_config.styles = {"karaoke": {}, "cdg": {}}
+    test_config.render_video = True
+    
+    # Initialize the generator with the updated config
+    generator = OutputGenerator(config=test_config)
+    return generator
 
 
 @pytest.fixture
@@ -85,9 +101,11 @@ def test_invalid_video_resolution(test_config):
         ("360p", ((640, 360), 40, 50)),
     ],
 )
-def test_video_params(resolution, expected):
+def test_video_params(resolution, expected, tmp_path):
     """Test _get_video_params with different resolutions."""
-    config = OutputGeneratorConfig(output_dir="test", cache_dir="test", video_resolution=resolution)
+    styles_path = str(tmp_path / "styles.json")
+    Path(styles_path).touch()
+    config = OutputConfig(output_dir="test", cache_dir="test", video_resolution=resolution, output_styles_json=styles_path)
     generator = OutputGenerator(config=config)
     assert (generator.video_resolution_num, generator.font_size, generator.line_height) == expected
 
@@ -96,28 +114,41 @@ def test_generate_outputs(output_generator, sample_correction_result, sample_lyr
     """Test generate_outputs creates expected files."""
     # Create output directory
     os.makedirs(output_generator.config.output_dir, exist_ok=True)
+    
+    # Create mock styles file
+    styles_path = os.path.join(tmp_path, "styles.json")
+    with open(styles_path, 'w') as f:
+        json.dump({"karaoke": {}}, f)
+    output_generator.config.output_styles_json = styles_path
+    output_generator.config.styles = {"karaoke": {}}
+    
+    # Enable video rendering for test
+    output_generator.config.render_video = True
 
+    # Set up required patched methods including any needed for the test
     with patch.object(output_generator.plain_text, "write_lyrics"), patch.object(
         output_generator.plain_text, "write_original_transcription"
     ), patch.object(output_generator.plain_text, "write_corrected_lyrics"), patch.object(
         output_generator.lyrics_file, "generate_lrc"
     ), patch.object(
-        output_generator.subtitle, "generate_ass"
+        output_generator, "write_corrections_data", return_value="test_corrections.json"
     ), patch.object(
-        output_generator.video, "generate_video"
+        output_generator.subtitle, "generate_ass", return_value="test.ass"
+    ), patch.object(
+        output_generator.video, "generate_video", return_value="test.mp4"
     ):
 
         outputs = output_generator.generate_outputs(
             transcription_corrected=sample_correction_result,
-            lyrics_results=[sample_lyrics_data],
+            lyrics_results={"test": sample_lyrics_data},
             output_prefix="test",
-            audio_filepath="test.mp3",
-            render_video=True,
+            audio_filepath="test.mp3"
         )
 
         assert isinstance(outputs, OutputPaths)
-        # Verify corrections JSON was written
-        assert outputs.corrections_json is not None
+        assert outputs.corrections_json == "test_corrections.json"
+        assert outputs.ass == "test.ass"
+        assert outputs.video == "test.mp4"
 
 
 def test_write_corrections_data(output_generator, sample_correction_result):
@@ -143,9 +174,16 @@ def test_output_generator_with_background_image(tmp_path):
     # Create a dummy background image
     bg_image = tmp_path / "background.jpg"
     bg_image.touch()
+    
+    # Create a dummy styles file
+    styles_path = tmp_path / "styles.json"
+    styles_path.touch()
 
-    config = OutputGeneratorConfig(
-        output_dir=str(tmp_path / "output"), cache_dir=str(tmp_path / "cache"), video_background_image=str(bg_image)
+    config = OutputConfig(
+        output_dir=str(tmp_path / "output"), 
+        cache_dir=str(tmp_path / "cache"), 
+        video_background_image=str(bg_image),
+        output_styles_json=str(styles_path)
     )
 
     generator = OutputGenerator(config=config)
@@ -154,7 +192,14 @@ def test_output_generator_with_background_image(tmp_path):
 
 def test_output_generator_invalid_background_image(tmp_path):
     """Test OutputGenerator with non-existent background image."""
+    # Create a dummy styles file
+    styles_path = tmp_path / "styles.json"
+    styles_path.touch()
+    
     with pytest.raises(FileNotFoundError):
-        OutputGeneratorConfig(
-            output_dir=str(tmp_path / "output"), cache_dir=str(tmp_path / "cache"), video_background_image="nonexistent.jpg"
+        OutputConfig(
+            output_dir=str(tmp_path / "output"), 
+            cache_dir=str(tmp_path / "cache"), 
+            video_background_image="nonexistent.jpg",
+            output_styles_json=str(styles_path)
         )

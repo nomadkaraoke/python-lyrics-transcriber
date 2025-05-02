@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "lyrics-transcriber"
-version = "0.49.2"
+version = "0.49.3"
 description = "Automatically create synchronised lyrics files in ASS and MidiCo LRC formats with word-level timestamps, using Whisper and lyrics from Genius and Spotify"
 authors = ["Andrew Beveridge <andrew@beveridge.uk>"]
 license = "MIT"
@@ -10,7 +10,8 @@ homepage = "https://github.com/karaokenerds/python-lyrics-transcriber"
 repository = "https://github.com/karaokenerds/python-lyrics-transcriber"
 documentation = "https://github.com/karaokenerds/python-lyrics-transcriber/blob/main/README.md"
 
-
+# Dependencies section - to find missing dependencies, install the package and run it
+# If ModuleNotFoundError occurs, add the missing module to the dependencies
 [tool.poetry.dependencies]
 python = ">=3.9,<3.13"
 python-slugify = ">=8"
@@ -35,6 +36,11 @@ fonttools = ">=4.55"
 ollama = "^0.4.7"
 shortuuid = "^1.0.13"
 openai = "^1.63.2"
+pillow = ">=10.0.0"
+toml = ">=0.10.0"
+ffmpeg-python = ">=0.2.0"
+attrs = ">=23.0.0"
+cattrs = ">=23.0.0"
 
 [tool.poetry.group.dev.dependencies]
 black = ">=23"
