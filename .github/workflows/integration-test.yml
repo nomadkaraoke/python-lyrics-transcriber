@@ -23,6 +23,11 @@ jobs:
           virtualenvs-create: true
           virtualenvs-in-project: true
       
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg
+      
       - name: Build package
         run: |
           poetry build
@@ -35,6 +40,6 @@ jobs:
         run: |
           python -m lyrics_transcriber.cli.cli_main --help
       
-      - name: Verify import works
+      - name: Verify package version
         run: |
           python -c "from lyrics_transcriber import __version__; print(f'Package version: {__version__}')" 

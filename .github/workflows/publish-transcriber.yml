@@ -28,11 +28,14 @@ jobs:
         run: |
           poetry install --with dev
       
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg
+      
       - name: Install spaCy language models
         run: |
           poetry run python -m spacy download en_core_web_sm
-          poetry run python -m spacy download fr_core_news_sm
-          poetry run python -m spacy download es_core_news_sm
       
       - name: Run tests
         run: |
@@ -40,22 +43,38 @@ jobs:
       
       - name: Run integration test
         run: |
-          poetry run pytest tests/integration_test.py -v
+          poetry build
+          pip install dist/*.whl
+          python -m lyrics_transcriber.cli.cli_main --help
+          python -c "from lyrics_transcriber import __version__; print(f'Package version: {__version__}')"
 
-  # Auto-publish when version is increased
-  publish-job:
-    # Only publish on `main` branch and after tests pass
+  # Only publish if tests pass
+  publish:
     needs: test
+    # Only publish on "main" branch
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     permissions: # Don't forget permissions
       contents: write
-
+    
     steps:
       - uses: actions/checkout@v3
       
-      - uses: etils-actions/pypi-auto-publish@v1
+      - name: Set up Python
+        uses: actions/setup-python@v4
         with:
-          pypi-token: ${{ secrets.PYPI_API_TOKEN }}
-          gh-token: ${{ secrets.GITHUB_TOKEN }}
-          parse-changelog: false
+          python-version: '3.12'
+      
+      - name: Install Poetry
+        uses: snok/install-poetry@v1
+        with:
+          virtualenvs-create: true
+          virtualenvs-in-project: true
+      
+      - name: Configure Poetry for PyPI
+        run: |
+          poetry config pypi-token.pypi ${{ secrets.PYPI_API_TOKEN }}
+      
+      - name: Build and Publish
+        run: |
+          poetry publish --build

@@ -181,6 +181,13 @@ def validate_args(args: argparse.Namespace, parser: argparse.ArgumentParser, log
 def main() -> None:
     """Main entry point for the CLI."""
     parser = create_arg_parser()
+    
+    # Check if --help or -h is in sys.argv to handle direct module execution
+    import sys
+    if '--help' in sys.argv or '-h' in sys.argv:
+        parser.print_help()
+        return
+        
     args = parse_args(parser)
 
     # Set up logging first
@@ -244,3 +251,6 @@ def main() -> None:
         # Log both the error message and the full traceback
         logger.error(f"Processing failed: {str(e)}\n\nFull traceback:\n{error_details}")
         exit(1)
+
+if __name__ == "__main__":
+    main()
