@@ -5,6 +5,7 @@ import FindReplaceIcon from '@mui/icons-material/FindReplace'
 import EditIcon from '@mui/icons-material/Edit'
 import UndoIcon from '@mui/icons-material/Undo'
 import RedoIcon from '@mui/icons-material/Redo'
+import TimerIcon from '@mui/icons-material/Timer'
 import { CorrectionData, InteractionMode } from '../types'
 import CorrectionMetrics from './CorrectionMetrics'
 import ModeSelector from './ModeSelector'
@@ -31,6 +32,8 @@ interface HeaderProps {
     onHandlerClick?: (handler: string) => void
     onFindReplace?: () => void
     onEditAll?: () => void
+    onTimingOffset?: () => void
+    timingOffsetMs?: number
     onUndo: () => void
     onRedo: () => void
     canUndo: boolean
@@ -52,6 +55,8 @@ export default function Header({
     onHandlerClick,
     onFindReplace,
     onEditAll,
+    onTimingOffset,
+    timingOffsetMs = 0,
     onUndo,
     onRedo,
     canUndo,
@@ -310,6 +315,32 @@ export default function Header({
                             >
                                 Edit All
                             </Button>
+                        )}
+                        {!isReadOnly && onTimingOffset && (
+                            <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                                <Button
+                                    variant="outlined"
+                                    size="small"
+                                    onClick={onTimingOffset}
+                                    startIcon={<TimerIcon />}
+                                    color={timingOffsetMs !== 0 ? "secondary" : "primary"}
+                                    sx={{ minWidth: 'fit-content', height: '32px' }}
+                                >
+                                    Timing Offset
+                                </Button>
+                                {timingOffsetMs !== 0 && (
+                                    <Typography 
+                                        variant="body2" 
+                                        sx={{ 
+                                            ml: 1, 
+                                            fontWeight: 'bold',
+                                            color: theme.palette.secondary.main
+                                        }}
+                                    >
+                                        {timingOffsetMs > 0 ? '+' : ''}{timingOffsetMs}ms
+                                    </Typography>
+                                )}
+                            </Box>
                         )}
                         <AudioPlayer
                             apiClient={apiClient}

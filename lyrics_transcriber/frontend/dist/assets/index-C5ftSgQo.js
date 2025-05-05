@@ -13646,7 +13646,7 @@ function getSvgIconUtilityClass(slot) {
   return generateUtilityClass("MuiSvgIcon", slot);
 }
 generateUtilityClasses("MuiSvgIcon", ["root", "colorPrimary", "colorSecondary", "colorAction", "colorError", "colorDisabled", "fontSizeInherit", "fontSizeSmall", "fontSizeMedium", "fontSizeLarge"]);
-const useUtilityClasses$H = (ownerState) => {
+const useUtilityClasses$I = (ownerState) => {
   const {
     color: color2,
     fontSize,
@@ -13791,7 +13791,7 @@ const SvgIcon = /* @__PURE__ */ reactExports.forwardRef(function SvgIcon2(inProp
   if (!inheritViewBox) {
     more.viewBox = viewBox;
   }
-  const classes = useUtilityClasses$H(ownerState);
+  const classes = useUtilityClasses$I(ownerState);
   return /* @__PURE__ */ jsxRuntimeExports.jsxs(SvgIconRoot, {
     as: component,
     className: clsx(classes.root, className),
@@ -14298,7 +14298,7 @@ function getPaperUtilityClass(slot) {
   return generateUtilityClass("MuiPaper", slot);
 }
 generateUtilityClasses("MuiPaper", ["root", "rounded", "outlined", "elevation", "elevation0", "elevation1", "elevation2", "elevation3", "elevation4", "elevation5", "elevation6", "elevation7", "elevation8", "elevation9", "elevation10", "elevation11", "elevation12", "elevation13", "elevation14", "elevation15", "elevation16", "elevation17", "elevation18", "elevation19", "elevation20", "elevation21", "elevation22", "elevation23", "elevation24"]);
-const useUtilityClasses$G = (ownerState) => {
+const useUtilityClasses$H = (ownerState) => {
   const {
     square,
     elevation,
@@ -14371,7 +14371,7 @@ const Paper = /* @__PURE__ */ reactExports.forwardRef(function Paper2(inProps, r
     square,
     variant
   };
-  const classes = useUtilityClasses$G(ownerState);
+  const classes = useUtilityClasses$H(ownerState);
   return /* @__PURE__ */ jsxRuntimeExports.jsx(PaperRoot, {
     as: component,
     ownerState,
@@ -14832,7 +14832,7 @@ function getButtonBaseUtilityClass(slot) {
   return generateUtilityClass("MuiButtonBase", slot);
 }
 const buttonBaseClasses = generateUtilityClasses("MuiButtonBase", ["root", "disabled", "focusVisible"]);
-const useUtilityClasses$F = (ownerState) => {
+const useUtilityClasses$G = (ownerState) => {
   const {
     disabled,
     focusVisible,
@@ -15049,7 +15049,7 @@ const ButtonBase = /* @__PURE__ */ reactExports.forwardRef(function ButtonBase2(
     tabIndex,
     focusVisible
   };
-  const classes = useUtilityClasses$F(ownerState);
+  const classes = useUtilityClasses$G(ownerState);
   return /* @__PURE__ */ jsxRuntimeExports.jsxs(ButtonBaseRoot, {
     as: ComponentProp,
     className: clsx(classes.root, className),
@@ -15147,7 +15147,7 @@ const rotateAnimation = typeof circularRotateKeyframe !== "string" ? css`
 const dashAnimation = typeof circularDashKeyframe !== "string" ? css`
         animation: ${circularDashKeyframe} 1.4s ease-in-out infinite;
       ` : null;
-const useUtilityClasses$E = (ownerState) => {
+const useUtilityClasses$F = (ownerState) => {
   const {
     classes,
     variant,
@@ -15270,7 +15270,7 @@ const CircularProgress = /* @__PURE__ */ reactExports.forwardRef(function Circul
     value,
     variant
   };
-  const classes = useUtilityClasses$E(ownerState);
+  const classes = useUtilityClasses$F(ownerState);
   const circleStyle = {};
   const rootStyle = {};
   const rootProps = {};
@@ -15315,7 +15315,7 @@ function getIconButtonUtilityClass(slot) {
   return generateUtilityClass("MuiIconButton", slot);
 }
 const iconButtonClasses = generateUtilityClasses("MuiIconButton", ["root", "disabled", "colorInherit", "colorPrimary", "colorSecondary", "colorError", "colorInfo", "colorSuccess", "colorWarning", "edgeStart", "edgeEnd", "sizeSmall", "sizeMedium", "sizeLarge", "loading", "loadingIndicator", "loadingWrapper"]);
-const useUtilityClasses$D = (ownerState) => {
+const useUtilityClasses$E = (ownerState) => {
   const {
     classes,
     disabled,
@@ -15501,7 +15501,7 @@ const IconButton = /* @__PURE__ */ reactExports.forwardRef(function IconButton2(
     loadingIndicator,
     size
   };
-  const classes = useUtilityClasses$D(ownerState);
+  const classes = useUtilityClasses$E(ownerState);
   return /* @__PURE__ */ jsxRuntimeExports.jsxs(IconButtonRoot, {
     id,
     className: clsx(classes.root, className),
@@ -15540,7 +15540,7 @@ const InfoOutlinedIcon = createSvgIcon(/* @__PURE__ */ jsxRuntimeExports.jsx("pa
 const ClearIcon = createSvgIcon(/* @__PURE__ */ jsxRuntimeExports.jsx("path", {
   d: "M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"
 }), "Close");
-const useUtilityClasses$C = (ownerState) => {
+const useUtilityClasses$D = (ownerState) => {
   const {
     variant,
     color: color2,
@@ -15695,7 +15695,7 @@ const Alert = /* @__PURE__ */ reactExports.forwardRef(function Alert2(inProps, r
     variant,
     colorSeverity: color2 || severity
   };
-  const classes = useUtilityClasses$C(ownerState);
+  const classes = useUtilityClasses$D(ownerState);
   const externalForwardedProps = {
     slots: {
       closeButton: components.CloseButton,
@@ -15794,7 +15794,7 @@ const v6Colors = {
   textDisabled: true
 };
 const extendSxProp = internal_createExtendSxProp();
-const useUtilityClasses$B = (ownerState) => {
+const useUtilityClasses$C = (ownerState) => {
   const {
     align,
     gutterBottom,
@@ -15937,7 +15937,7 @@ const Typography = /* @__PURE__ */ reactExports.forwardRef(function Typography2(
     variantMapping
   };
   const Component = component || (paragraph ? "p" : variantMapping[variant] || defaultVariantMapping[variant]) || "span";
-  const classes = useUtilityClasses$B(ownerState);
+  const classes = useUtilityClasses$C(ownerState);
   return /* @__PURE__ */ jsxRuntimeExports.jsx(TypographyRoot, {
     as: Component,
     ref,
@@ -17361,7 +17361,7 @@ function resolveAnchorEl$1(anchorEl) {
 function isHTMLElement(element) {
   return element.nodeType !== void 0;
 }
-const useUtilityClasses$A = (ownerState) => {
+const useUtilityClasses$B = (ownerState) => {
   const {
     classes
   } = ownerState;
@@ -17462,7 +17462,7 @@ const PopperTooltip = /* @__PURE__ */ reactExports.forwardRef(function PopperToo
   if (TransitionProps !== null) {
     childProps.TransitionProps = TransitionProps;
   }
-  const classes = useUtilityClasses$A(props);
+  const classes = useUtilityClasses$B(props);
   const Root = slots.root ?? "div";
   const rootProps = useSlotProps({
     elementType: Root,
@@ -17814,7 +17814,7 @@ const inputOverridesResolver = (props, styles2) => {
   } = props;
   return [styles2.input, ownerState.size === "small" && styles2.inputSizeSmall, ownerState.multiline && styles2.inputMultiline, ownerState.type === "search" && styles2.inputTypeSearch, ownerState.startAdornment && styles2.inputAdornedStart, ownerState.endAdornment && styles2.inputAdornedEnd, ownerState.hiddenLabel && styles2.inputHiddenLabel];
 };
-const useUtilityClasses$z = (ownerState) => {
+const useUtilityClasses$A = (ownerState) => {
   const {
     classes,
     color: color2,
@@ -18200,7 +18200,7 @@ const InputBase = /* @__PURE__ */ reactExports.forwardRef(function InputBase2(in
     startAdornment,
     type
   };
-  const classes = useUtilityClasses$z(ownerState);
+  const classes = useUtilityClasses$A(ownerState);
   const Root = slots.root || components.Root || InputBaseRoot;
   const rootProps = slotProps.root || componentsProps.root || {};
   const Input3 = slots.input || components.Input || InputBaseInput;
@@ -18405,7 +18405,7 @@ function getBackdropUtilityClass(slot) {
   return generateUtilityClass("MuiBackdrop", slot);
 }
 generateUtilityClasses("MuiBackdrop", ["root", "invisible"]);
-const useUtilityClasses$y = (ownerState) => {
+const useUtilityClasses$z = (ownerState) => {
   const {
     classes,
     invisible
@@ -18468,7 +18468,7 @@ const Backdrop = /* @__PURE__ */ reactExports.forwardRef(function Backdrop2(inPr
     component,
     invisible
   };
-  const classes = useUtilityClasses$y(ownerState);
+  const classes = useUtilityClasses$z(ownerState);
   const backwardCompatibleSlots = {
     transition: TransitionComponentProp,
     root: components.Root,
@@ -18521,7 +18521,7 @@ function getButtonUtilityClass(slot) {
 const buttonClasses = generateUtilityClasses("MuiButton", ["root", "text", "textInherit", "textPrimary", "textSecondary", "textSuccess", "textError", "textInfo", "textWarning", "outlined", "outlinedInherit", "outlinedPrimary", "outlinedSecondary", "outlinedSuccess", "outlinedError", "outlinedInfo", "outlinedWarning", "contained", "containedInherit", "containedPrimary", "containedSecondary", "containedSuccess", "containedError", "containedInfo", "containedWarning", "disableElevation", "focusVisible", "disabled", "colorInherit", "colorPrimary", "colorSecondary", "colorSuccess", "colorError", "colorInfo", "colorWarning", "textSizeSmall", "textSizeMedium", "textSizeLarge", "outlinedSizeSmall", "outlinedSizeMedium", "outlinedSizeLarge", "containedSizeSmall", "containedSizeMedium", "containedSizeLarge", "sizeMedium", "sizeSmall", "sizeLarge", "fullWidth", "startIcon", "endIcon", "icon", "iconSizeSmall", "iconSizeMedium", "iconSizeLarge", "loading", "loadingWrapper", "loadingIconPlaceholder", "loadingIndicator", "loadingPositionCenter", "loadingPositionStart", "loadingPositionEnd"]);
 const ButtonGroupContext = /* @__PURE__ */ reactExports.createContext({});
 const ButtonGroupButtonContext = /* @__PURE__ */ reactExports.createContext(void 0);
-const useUtilityClasses$x = (ownerState) => {
+const useUtilityClasses$y = (ownerState) => {
   const {
     color: color2,
     disableElevation,
@@ -19023,7 +19023,7 @@ const Button = /* @__PURE__ */ reactExports.forwardRef(function Button2(inProps,
     type,
     variant
   };
-  const classes = useUtilityClasses$x(ownerState);
+  const classes = useUtilityClasses$y(ownerState);
   const startIcon = (startIconProp || loading && loadingPosition === "start") && /* @__PURE__ */ jsxRuntimeExports.jsx(ButtonStartIcon, {
     className: classes.startIcon,
     ownerState,
@@ -19068,6 +19068,307 @@ const Button = /* @__PURE__ */ reactExports.forwardRef(function Button2(inProps,
     ...other,
     classes,
     children: [startIcon, loadingPosition !== "end" && loader, children, loadingPosition === "end" && loader, endIcon]
+  });
+});
+function getButtonGroupUtilityClass(slot) {
+  return generateUtilityClass("MuiButtonGroup", slot);
+}
+const buttonGroupClasses = generateUtilityClasses("MuiButtonGroup", ["root", "contained", "outlined", "text", "disableElevation", "disabled", "firstButton", "fullWidth", "horizontal", "vertical", "colorPrimary", "colorSecondary", "grouped", "groupedHorizontal", "groupedVertical", "groupedText", "groupedTextHorizontal", "groupedTextVertical", "groupedTextPrimary", "groupedTextSecondary", "groupedOutlined", "groupedOutlinedHorizontal", "groupedOutlinedVertical", "groupedOutlinedPrimary", "groupedOutlinedSecondary", "groupedContained", "groupedContainedHorizontal", "groupedContainedVertical", "groupedContainedPrimary", "groupedContainedSecondary", "lastButton", "middleButton"]);
+const overridesResolver$2 = (props, styles2) => {
+  const {
+    ownerState
+  } = props;
+  return [{
+    [`& .${buttonGroupClasses.grouped}`]: styles2.grouped
+  }, {
+    [`& .${buttonGroupClasses.grouped}`]: styles2[`grouped${capitalize(ownerState.orientation)}`]
+  }, {
+    [`& .${buttonGroupClasses.grouped}`]: styles2[`grouped${capitalize(ownerState.variant)}`]
+  }, {
+    [`& .${buttonGroupClasses.grouped}`]: styles2[`grouped${capitalize(ownerState.variant)}${capitalize(ownerState.orientation)}`]
+  }, {
+    [`& .${buttonGroupClasses.grouped}`]: styles2[`grouped${capitalize(ownerState.variant)}${capitalize(ownerState.color)}`]
+  }, {
+    [`& .${buttonGroupClasses.firstButton}`]: styles2.firstButton
+  }, {
+    [`& .${buttonGroupClasses.lastButton}`]: styles2.lastButton
+  }, {
+    [`& .${buttonGroupClasses.middleButton}`]: styles2.middleButton
+  }, styles2.root, styles2[ownerState.variant], ownerState.disableElevation === true && styles2.disableElevation, ownerState.fullWidth && styles2.fullWidth, ownerState.orientation === "vertical" && styles2.vertical];
+};
+const useUtilityClasses$x = (ownerState) => {
+  const {
+    classes,
+    color: color2,
+    disabled,
+    disableElevation,
+    fullWidth,
+    orientation,
+    variant
+  } = ownerState;
+  const slots = {
+    root: ["root", variant, orientation, fullWidth && "fullWidth", disableElevation && "disableElevation", `color${capitalize(color2)}`],
+    grouped: ["grouped", `grouped${capitalize(orientation)}`, `grouped${capitalize(variant)}`, `grouped${capitalize(variant)}${capitalize(orientation)}`, `grouped${capitalize(variant)}${capitalize(color2)}`, disabled && "disabled"],
+    firstButton: ["firstButton"],
+    lastButton: ["lastButton"],
+    middleButton: ["middleButton"]
+  };
+  return composeClasses(slots, getButtonGroupUtilityClass, classes);
+};
+const ButtonGroupRoot = styled("div", {
+  name: "MuiButtonGroup",
+  slot: "Root",
+  overridesResolver: overridesResolver$2
+})(memoTheme(({
+  theme: theme2
+}) => ({
+  display: "inline-flex",
+  borderRadius: (theme2.vars || theme2).shape.borderRadius,
+  variants: [{
+    props: {
+      variant: "contained"
+    },
+    style: {
+      boxShadow: (theme2.vars || theme2).shadows[2]
+    }
+  }, {
+    props: {
+      disableElevation: true
+    },
+    style: {
+      boxShadow: "none"
+    }
+  }, {
+    props: {
+      fullWidth: true
+    },
+    style: {
+      width: "100%"
+    }
+  }, {
+    props: {
+      orientation: "vertical"
+    },
+    style: {
+      flexDirection: "column",
+      [`& .${buttonGroupClasses.lastButton},& .${buttonGroupClasses.middleButton}`]: {
+        borderTopRightRadius: 0,
+        borderTopLeftRadius: 0
+      },
+      [`& .${buttonGroupClasses.firstButton},& .${buttonGroupClasses.middleButton}`]: {
+        borderBottomRightRadius: 0,
+        borderBottomLeftRadius: 0
+      }
+    }
+  }, {
+    props: {
+      orientation: "horizontal"
+    },
+    style: {
+      [`& .${buttonGroupClasses.firstButton},& .${buttonGroupClasses.middleButton}`]: {
+        borderTopRightRadius: 0,
+        borderBottomRightRadius: 0
+      },
+      [`& .${buttonGroupClasses.lastButton},& .${buttonGroupClasses.middleButton}`]: {
+        borderTopLeftRadius: 0,
+        borderBottomLeftRadius: 0
+      }
+    }
+  }, {
+    props: {
+      variant: "text",
+      orientation: "horizontal"
+    },
+    style: {
+      [`& .${buttonGroupClasses.firstButton},& .${buttonGroupClasses.middleButton}`]: {
+        borderRight: theme2.vars ? `1px solid rgba(${theme2.vars.palette.common.onBackgroundChannel} / 0.23)` : `1px solid ${theme2.palette.mode === "light" ? "rgba(0, 0, 0, 0.23)" : "rgba(255, 255, 255, 0.23)"}`,
+        [`&.${buttonGroupClasses.disabled}`]: {
+          borderRight: `1px solid ${(theme2.vars || theme2).palette.action.disabled}`
+        }
+      }
+    }
+  }, {
+    props: {
+      variant: "text",
+      orientation: "vertical"
+    },
+    style: {
+      [`& .${buttonGroupClasses.firstButton},& .${buttonGroupClasses.middleButton}`]: {
+        borderBottom: theme2.vars ? `1px solid rgba(${theme2.vars.palette.common.onBackgroundChannel} / 0.23)` : `1px solid ${theme2.palette.mode === "light" ? "rgba(0, 0, 0, 0.23)" : "rgba(255, 255, 255, 0.23)"}`,
+        [`&.${buttonGroupClasses.disabled}`]: {
+          borderBottom: `1px solid ${(theme2.vars || theme2).palette.action.disabled}`
+        }
+      }
+    }
+  }, ...Object.entries(theme2.palette).filter(createSimplePaletteValueFilter()).flatMap(([color2]) => [{
+    props: {
+      variant: "text",
+      color: color2
+    },
+    style: {
+      [`& .${buttonGroupClasses.firstButton},& .${buttonGroupClasses.middleButton}`]: {
+        borderColor: theme2.vars ? `rgba(${theme2.vars.palette[color2].mainChannel} / 0.5)` : alpha(theme2.palette[color2].main, 0.5)
+      }
+    }
+  }]), {
+    props: {
+      variant: "outlined",
+      orientation: "horizontal"
+    },
+    style: {
+      [`& .${buttonGroupClasses.firstButton},& .${buttonGroupClasses.middleButton}`]: {
+        borderRightColor: "transparent",
+        "&:hover": {
+          borderRightColor: "currentColor"
+        }
+      },
+      [`& .${buttonGroupClasses.lastButton},& .${buttonGroupClasses.middleButton}`]: {
+        marginLeft: -1
+      }
+    }
+  }, {
+    props: {
+      variant: "outlined",
+      orientation: "vertical"
+    },
+    style: {
+      [`& .${buttonGroupClasses.firstButton},& .${buttonGroupClasses.middleButton}`]: {
+        borderBottomColor: "transparent",
+        "&:hover": {
+          borderBottomColor: "currentColor"
+        }
+      },
+      [`& .${buttonGroupClasses.lastButton},& .${buttonGroupClasses.middleButton}`]: {
+        marginTop: -1
+      }
+    }
+  }, {
+    props: {
+      variant: "contained",
+      orientation: "horizontal"
+    },
+    style: {
+      [`& .${buttonGroupClasses.firstButton},& .${buttonGroupClasses.middleButton}`]: {
+        borderRight: `1px solid ${(theme2.vars || theme2).palette.grey[400]}`,
+        [`&.${buttonGroupClasses.disabled}`]: {
+          borderRight: `1px solid ${(theme2.vars || theme2).palette.action.disabled}`
+        }
+      }
+    }
+  }, {
+    props: {
+      variant: "contained",
+      orientation: "vertical"
+    },
+    style: {
+      [`& .${buttonGroupClasses.firstButton},& .${buttonGroupClasses.middleButton}`]: {
+        borderBottom: `1px solid ${(theme2.vars || theme2).palette.grey[400]}`,
+        [`&.${buttonGroupClasses.disabled}`]: {
+          borderBottom: `1px solid ${(theme2.vars || theme2).palette.action.disabled}`
+        }
+      }
+    }
+  }, ...Object.entries(theme2.palette).filter(createSimplePaletteValueFilter(["dark"])).map(([color2]) => ({
+    props: {
+      variant: "contained",
+      color: color2
+    },
+    style: {
+      [`& .${buttonGroupClasses.firstButton},& .${buttonGroupClasses.middleButton}`]: {
+        borderColor: (theme2.vars || theme2).palette[color2].dark
+      }
+    }
+  }))],
+  [`& .${buttonGroupClasses.grouped}`]: {
+    minWidth: 40,
+    boxShadow: "none",
+    props: {
+      variant: "contained"
+    },
+    style: {
+      "&:hover": {
+        boxShadow: "none"
+      }
+    }
+  }
+})));
+const ButtonGroup = /* @__PURE__ */ reactExports.forwardRef(function ButtonGroup2(inProps, ref) {
+  const props = useDefaultProps({
+    props: inProps,
+    name: "MuiButtonGroup"
+  });
+  const {
+    children,
+    className,
+    color: color2 = "primary",
+    component = "div",
+    disabled = false,
+    disableElevation = false,
+    disableFocusRipple = false,
+    disableRipple = false,
+    fullWidth = false,
+    orientation = "horizontal",
+    size = "medium",
+    variant = "outlined",
+    ...other
+  } = props;
+  const ownerState = {
+    ...props,
+    color: color2,
+    component,
+    disabled,
+    disableElevation,
+    disableFocusRipple,
+    disableRipple,
+    fullWidth,
+    orientation,
+    size,
+    variant
+  };
+  const classes = useUtilityClasses$x(ownerState);
+  const context = reactExports.useMemo(() => ({
+    className: classes.grouped,
+    color: color2,
+    disabled,
+    disableElevation,
+    disableFocusRipple,
+    disableRipple,
+    fullWidth,
+    size,
+    variant
+  }), [color2, disabled, disableElevation, disableFocusRipple, disableRipple, fullWidth, size, variant, classes.grouped]);
+  const validChildren = getValidReactChildren(children);
+  const childrenCount = validChildren.length;
+  const getButtonPositionClassName = (index) => {
+    const isFirstButton = index === 0;
+    const isLastButton = index === childrenCount - 1;
+    if (isFirstButton && isLastButton) {
+      return "";
+    }
+    if (isFirstButton) {
+      return classes.firstButton;
+    }
+    if (isLastButton) {
+      return classes.lastButton;
+    }
+    return classes.middleButton;
+  };
+  return /* @__PURE__ */ jsxRuntimeExports.jsx(ButtonGroupRoot, {
+    as: component,
+    role: "group",
+    className: clsx(classes.root, className),
+    ref,
+    ownerState,
+    ...other,
+    children: /* @__PURE__ */ jsxRuntimeExports.jsx(ButtonGroupContext.Provider, {
+      value: context,
+      children: validChildren.map((child, index) => {
+        return /* @__PURE__ */ jsxRuntimeExports.jsx(ButtonGroupButtonContext.Provider, {
+          value: getButtonPositionClassName(index),
+          children: child
+        }, index);
+      })
+    })
   });
 });
 function getSwitchBaseUtilityClass(slot) {
@@ -35852,11 +36153,75 @@ function EditModal({
     }
   );
 }
+const applyOffsetToTime = (time, offsetMs) => {
+  if (time === null) return null;
+  return time + offsetMs / 1e3;
+};
+const applyOffsetToWord = (word, offsetMs) => {
+  if (offsetMs === 0) return word;
+  return {
+    ...word,
+    start_time: applyOffsetToTime(word.start_time, offsetMs),
+    end_time: applyOffsetToTime(word.end_time, offsetMs)
+  };
+};
+const applyOffsetToSegment = (segment, offsetMs) => {
+  if (offsetMs === 0) return segment;
+  const adjustedWords = segment.words.map((word) => applyOffsetToWord(word, offsetMs));
+  const validStartTimes = adjustedWords.map((w) => w.start_time).filter((t) => t !== null);
+  const validEndTimes = adjustedWords.map((w) => w.end_time).filter((t) => t !== null);
+  const segmentStartTime = validStartTimes.length > 0 ? Math.min(...validStartTimes) : null;
+  const segmentEndTime = validEndTimes.length > 0 ? Math.max(...validEndTimes) : null;
+  return {
+    ...segment,
+    words: adjustedWords,
+    start_time: segmentStartTime,
+    end_time: segmentEndTime
+  };
+};
+const applyOffsetToCorrectionData = (data, offsetMs) => {
+  console.log(`[TIMING] applyOffsetToCorrectionData called with offset: ${offsetMs}ms`);
+  if (offsetMs === 0) {
+    console.log("[TIMING] Offset is 0, returning original data");
+    return data;
+  }
+  if (data.corrected_segments.length > 0) {
+    const firstSegment = data.corrected_segments[0];
+    console.log(`[TIMING] First segment before offset - id: ${firstSegment.id}`);
+    console.log(`[TIMING] - start_time: ${firstSegment.start_time}, end_time: ${firstSegment.end_time}`);
+    if (firstSegment.words.length > 0) {
+      const firstWord = firstSegment.words[0];
+      const lastWord = firstSegment.words[firstSegment.words.length - 1];
+      console.log(`[TIMING] - first word "${firstWord.text}" time: ${firstWord.start_time} -> ${firstWord.end_time}`);
+      console.log(`[TIMING] - last word "${lastWord.text}" time: ${lastWord.start_time} -> ${lastWord.end_time}`);
+    }
+  }
+  const result = {
+    ...data,
+    corrected_segments: data.corrected_segments.map(
+      (segment) => applyOffsetToSegment(segment, offsetMs)
+    )
+  };
+  if (result.corrected_segments.length > 0) {
+    const firstSegment = result.corrected_segments[0];
+    console.log(`[TIMING] First segment AFTER offset - id: ${firstSegment.id}`);
+    console.log(`[TIMING] - start_time: ${firstSegment.start_time}, end_time: ${firstSegment.end_time}`);
+    if (firstSegment.words.length > 0) {
+      const firstWord = firstSegment.words[0];
+      const lastWord = firstSegment.words[firstSegment.words.length - 1];
+      console.log(`[TIMING] - first word "${firstWord.text}" time: ${firstWord.start_time} -> ${firstWord.end_time}`);
+      console.log(`[TIMING] - last word "${lastWord.text}" time: ${lastWord.start_time} -> ${lastWord.end_time}`);
+    }
+  }
+  console.log(`[TIMING] Finished applying offset of ${offsetMs}ms to data`);
+  return result;
+};
 function PreviewVideoSection({
   apiClient,
   isModalOpen: isModalOpen2,
   updatedData,
-  videoRef
+  videoRef,
+  timingOffsetMs = 0
 }) {
   const [previewState, setPreviewState] = reactExports.useState({ status: "loading" });
   reactExports.useEffect(() => {
@@ -35864,7 +36229,18 @@ function PreviewVideoSection({
       const generatePreview = async () => {
         setPreviewState({ status: "loading" });
         try {
-          const response = await apiClient.generatePreviewVideo(updatedData);
+          console.log(`[TIMING] PreviewVideoSection - Current timing offset: ${timingOffsetMs}ms`);
+          const dataToPreview = timingOffsetMs !== 0 ? applyOffsetToCorrectionData(updatedData, timingOffsetMs) : updatedData;
+          if (dataToPreview.corrected_segments.length > 0) {
+            const firstSegment = dataToPreview.corrected_segments[0];
+            console.log(`[TIMING] Preview - First segment id: ${firstSegment.id}`);
+            console.log(`[TIMING] - start_time: ${firstSegment.start_time}, end_time: ${firstSegment.end_time}`);
+            if (firstSegment.words.length > 0) {
+              const firstWord = firstSegment.words[0];
+              console.log(`[TIMING] - first word "${firstWord.text}" time: ${firstWord.start_time} -> ${firstWord.end_time}`);
+            }
+          }
+          const response = await apiClient.generatePreviewVideo(dataToPreview);
           if (response.status === "error") {
             setPreviewState({
               status: "error",
@@ -35893,7 +36269,7 @@ function PreviewVideoSection({
       };
       generatePreview();
     }
-  }, [isModalOpen2, apiClient, updatedData]);
+  }, [isModalOpen2, apiClient, updatedData, timingOffsetMs]);
   if (!apiClient) return null;
   return /* @__PURE__ */ jsxRuntimeExports.jsxs(Box, { sx: { mb: 2 }, children: [
     previewState.status === "loading" && /* @__PURE__ */ jsxRuntimeExports.jsxs(Box, { sx: { display: "flex", alignItems: "center", gap: 2, p: 2 }, children: [
@@ -35965,6 +36341,9 @@ const PlayArrowIcon = createSvgIcon(/* @__PURE__ */ jsxRuntimeExports.jsx("path"
 const RedoIcon = createSvgIcon(/* @__PURE__ */ jsxRuntimeExports.jsx("path", {
   d: "M18.4 10.6C16.55 8.99 14.15 8 11.5 8c-4.65 0-8.58 3.03-9.96 7.22L3.9 16c1.05-3.19 4.05-5.5 7.6-5.5 1.95 0 3.73.72 5.12 1.88L13 16h9V7z"
 }), "Redo");
+const TimerIcon = createSvgIcon(/* @__PURE__ */ jsxRuntimeExports.jsx("path", {
+  d: "M9 1h6v2H9zm10.03 6.39 1.42-1.42c-.43-.51-.9-.99-1.41-1.41l-1.42 1.42C16.07 4.74 14.12 4 12 4c-4.97 0-9 4.03-9 9s4.02 9 9 9 9-4.03 9-9c0-2.12-.74-4.07-1.97-5.61M13 14h-2V8h2z"
+}), "Timer");
 const UndoIcon = createSvgIcon(/* @__PURE__ */ jsxRuntimeExports.jsx("path", {
   d: "M12.5 8c-2.65 0-5.05.99-6.9 2.6L2 7v9h9l-3.62-3.62c1.39-1.16 3.16-1.88 5.12-1.88 3.54 0 6.55 2.31 7.6 5.5l2.37-.78C21.08 11.03 17.15 8 12.5 8"
 }), "Undo");
@@ -35990,7 +36369,8 @@ function ReviewChangesModal({
   updatedData,
   onSubmit,
   apiClient,
-  setModalSpacebarHandler
+  setModalSpacebarHandler,
+  timingOffsetMs = 0
 }) {
   const videoRef = reactExports.useRef(null);
   reactExports.useEffect(() => {
@@ -36020,6 +36400,11 @@ function ReviewChangesModal({
       setModalSpacebarHandler(void 0);
     };
   }, [open, setModalSpacebarHandler]);
+  reactExports.useEffect(() => {
+    if (open) {
+      console.log(`[TIMING] ReviewChangesModal opened - timingOffsetMs: ${timingOffsetMs}ms`);
+    }
+  }, [open, timingOffsetMs]);
   const differences = reactExports.useMemo(() => {
     var _a, _b;
     const diffs = [];
@@ -36180,24 +36565,33 @@ function ReviewChangesModal({
                   apiClient,
                   isModalOpen: open,
                   updatedData,
-                  videoRef
+                  videoRef,
+                  timingOffsetMs
                 }
               ),
-              /* @__PURE__ */ jsxRuntimeExports.jsx(Box, { sx: { p: 2, mt: 0 }, children: differences.length === 0 ? /* @__PURE__ */ jsxRuntimeExports.jsxs(Box, { children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx(Typography, { color: "text.secondary", children: "No manual corrections detected. If everything looks good in the preview, click submit and the server will generate the final karaoke video." }),
-                /* @__PURE__ */ jsxRuntimeExports.jsxs(Typography, { variant: "body2", color: "text.secondary", children: [
-                  "Total segments: ",
-                  updatedData.corrected_segments.length
-                ] })
-              ] }) : /* @__PURE__ */ jsxRuntimeExports.jsxs(Box, { children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsxs(Typography, { variant: "body2", color: "text.secondary", sx: { mb: 1 }, children: [
-                  differences.length,
-                  " segment",
-                  differences.length !== 1 ? "s" : "",
-                  " modified:"
+              /* @__PURE__ */ jsxRuntimeExports.jsxs(Box, { sx: { p: 2, mt: 0 }, children: [
+                timingOffsetMs !== 0 && /* @__PURE__ */ jsxRuntimeExports.jsxs(Typography, { variant: "body2", fontWeight: "bold", sx: { mt: 1 }, children: [
+                  "Global Timing Offset applied to all words: ",
+                  timingOffsetMs > 0 ? "+" : "",
+                  timingOffsetMs,
+                  "ms"
                 ] }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx(Paper, { sx: { p: 2 }, children: differences.map(renderCompactDiff) })
-              ] }) })
+                differences.length === 0 ? /* @__PURE__ */ jsxRuntimeExports.jsxs(Box, { children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx(Typography, { color: "text.secondary", children: "No manual corrections detected. If everything looks good in the preview, click submit and the server will generate the final karaoke video." }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs(Typography, { variant: "body2", color: "text.secondary", children: [
+                    "Total segments: ",
+                    updatedData.corrected_segments.length
+                  ] })
+                ] }) : /* @__PURE__ */ jsxRuntimeExports.jsxs(Box, { children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs(Typography, { variant: "body2", color: "text.secondary", sx: { mb: 1 }, children: [
+                    differences.length,
+                    " segment",
+                    differences.length !== 1 ? "s" : "",
+                    " modified:"
+                  ] }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx(Paper, { sx: { p: 2 }, children: differences.map(renderCompactDiff) })
+                ] })
+              ] })
             ]
           }
         ),
@@ -36326,6 +36720,9 @@ const setupKeyboardHandlers = (state) => {
     }
   };
   const handleKeyUp = (e) => {
+    if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
+      return;
+    }
     resetModifierStates();
     if (e.key === " " || e.code === "Space") {
       e.preventDefault();
@@ -36555,6 +36952,8 @@ function Header({
   onHandlerClick,
   onFindReplace,
   onEditAll,
+  onTimingOffset,
+  timingOffsetMs = 0,
   onUndo,
   onRedo,
   canUndo,
@@ -36779,6 +37178,36 @@ function Header({
           children: "Edit All"
         }
       ),
+      !isReadOnly && onTimingOffset && /* @__PURE__ */ jsxRuntimeExports.jsxs(Box, { sx: { display: "flex", alignItems: "center" }, children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx(
+          Button,
+          {
+            variant: "outlined",
+            size: "small",
+            onClick: onTimingOffset,
+            startIcon: /* @__PURE__ */ jsxRuntimeExports.jsx(TimerIcon, {}),
+            color: timingOffsetMs !== 0 ? "secondary" : "primary",
+            sx: { minWidth: "fit-content", height: "32px" },
+            children: "Timing Offset"
+          }
+        ),
+        timingOffsetMs !== 0 && /* @__PURE__ */ jsxRuntimeExports.jsxs(
+          Typography,
+          {
+            variant: "body2",
+            sx: {
+              ml: 1,
+              fontWeight: "bold",
+              color: theme2.palette.secondary.main
+            },
+            children: [
+              timingOffsetMs > 0 ? "+" : "",
+              timingOffsetMs,
+              "ms"
+            ]
+          }
+        )
+      ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsx(
         AudioPlayer,
         {
@@ -37219,6 +37648,100 @@ function FindReplaceModal({
     }
   );
 }
+function TimingOffsetModal({
+  open,
+  onClose,
+  currentOffset,
+  onApply
+}) {
+  const [offsetMs, setOffsetMs] = reactExports.useState(currentOffset);
+  reactExports.useEffect(() => {
+    if (open) {
+      setOffsetMs(currentOffset);
+    }
+  }, [open, currentOffset]);
+  const handlePresetClick = (value) => {
+    setOffsetMs((prev2) => prev2 + value);
+  };
+  const handleInputChange = (e) => {
+    const value = e.target.value === "" ? 0 : parseInt(e.target.value, 10);
+    if (!isNaN(value)) {
+      setOffsetMs(value);
+    }
+  };
+  const handleApply = () => {
+    onApply(offsetMs);
+    onClose();
+  };
+  return /* @__PURE__ */ jsxRuntimeExports.jsxs(
+    Dialog,
+    {
+      open,
+      onClose,
+      maxWidth: "sm",
+      fullWidth: true,
+      PaperProps: {
+        sx: {
+          overflowY: "visible"
+        }
+      },
+      children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs(DialogTitle, { sx: { display: "flex", alignItems: "center", justifyContent: "space-between" }, children: [
+          "Adjust Global Timing Offset",
+          /* @__PURE__ */ jsxRuntimeExports.jsx(IconButton, { onClick: onClose, size: "small", children: /* @__PURE__ */ jsxRuntimeExports.jsx(CloseIcon, {}) })
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx(DialogContent, { children: /* @__PURE__ */ jsxRuntimeExports.jsxs(Box, { sx: { mb: 3, mt: 1 }, children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx(Typography, { variant: "body2", sx: { mb: 1 }, children: "Adjust the timing of all words in the transcription. Positive values delay the timing, negative values advance it." }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(Typography, { variant: "body2", sx: { fontStyle: "italic", mb: 2 }, children: "Note: This offset is applied globally but doesn't modify the original timestamps." }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs(Box, { sx: { display: "flex", alignItems: "center", mb: 2 }, children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx(Typography, { variant: "body1", sx: { mr: 2 }, children: "Offset:" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              TextField,
+              {
+                value: offsetMs,
+                onChange: handleInputChange,
+                type: "number",
+                variant: "outlined",
+                size: "small",
+                InputProps: {
+                  endAdornment: /* @__PURE__ */ jsxRuntimeExports.jsx(Typography, { variant: "body2", sx: { ml: 1 }, children: "ms" })
+                },
+                sx: { width: 120 }
+              }
+            )
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs(Box, { sx: { display: "flex", flexDirection: "column", gap: 1 }, children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx(Typography, { variant: "body2", children: "Quick adjust:" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs(Box, { sx: { display: "flex", justifyContent: "center", gap: 1 }, children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsxs(ButtonGroup, { size: "small", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx(Button, { onClick: () => handlePresetClick(-100), children: "-100ms" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx(Button, { onClick: () => handlePresetClick(-50), children: "-50ms" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx(Button, { onClick: () => handlePresetClick(-10), children: "-10ms" })
+              ] }),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs(ButtonGroup, { size: "small", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx(Button, { onClick: () => handlePresetClick(10), children: "+10ms" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx(Button, { onClick: () => handlePresetClick(50), children: "+50ms" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx(Button, { onClick: () => handlePresetClick(100), children: "+100ms" })
+              ] })
+            ] })
+          ] })
+        ] }) }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs(DialogActions, { children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx(Button, { onClick: onClose, children: "Cancel" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            Button,
+            {
+              onClick: handleApply,
+              variant: "contained",
+              color: offsetMs === 0 ? "warning" : "primary",
+              children: offsetMs === 0 ? "Remove Offset" : "Apply Offset"
+            }
+          )
+        ] })
+      ]
+    }
+  );
+}
 const debugLog = false;
 const MemoizedTranscriptionView = reactExports.memo(function MemoizedTranscriptionView2({
   data,
@@ -37300,6 +37823,8 @@ const MemoizedHeader = reactExports.memo(function MemoizedHeader2({
   onHandlerClick,
   onFindReplace,
   onEditAll,
+  onTimingOffset,
+  timingOffsetMs,
   onUndo,
   onRedo,
   canUndo,
@@ -37322,6 +37847,8 @@ const MemoizedHeader = reactExports.memo(function MemoizedHeader2({
       onHandlerClick,
       onFindReplace,
       onEditAll,
+      onTimingOffset,
+      timingOffsetMs,
       onUndo,
       onRedo,
       canUndo,
@@ -37359,6 +37886,8 @@ function LyricsAnalyzer({ data: initialData, onFileLoad, apiClient, isReadOnly, 
   const [isAddLyricsModalOpen, setIsAddLyricsModalOpen] = reactExports.useState(false);
   const [isAnyModalOpen, setIsAnyModalOpen] = reactExports.useState(false);
   const [isFindReplaceModalOpen, setIsFindReplaceModalOpen] = reactExports.useState(false);
+  const [isTimingOffsetModalOpen, setIsTimingOffsetModalOpen] = reactExports.useState(false);
+  const [timingOffsetMs, setTimingOffsetMs] = reactExports.useState(0);
   const theme2 = useTheme();
   const isMobile = useMediaQuery(theme2.breakpoints.down("md"));
   const [history, setHistory] = reactExports.useState([initialData]);
@@ -37409,10 +37938,10 @@ function LyricsAnalyzer({ data: initialData, onFileLoad, apiClient, isReadOnly, 
   }, [setIsShiftPressed, setIsCtrlPressed, isAnyModalOpen]);
   reactExports.useEffect(() => {
     const modalOpen = Boolean(
-      modalContent || editModalSegment || isReviewModalOpen || isAddLyricsModalOpen || isFindReplaceModalOpen || isEditAllModalOpen
+      modalContent || editModalSegment || isReviewModalOpen || isAddLyricsModalOpen || isFindReplaceModalOpen || isEditAllModalOpen || isTimingOffsetModalOpen
     );
     setIsAnyModalOpen(modalOpen);
-  }, [modalContent, editModalSegment, isReviewModalOpen, isAddLyricsModalOpen, isFindReplaceModalOpen, isEditAllModalOpen]);
+  }, [modalContent, editModalSegment, isReviewModalOpen, isAddLyricsModalOpen, isFindReplaceModalOpen, isEditAllModalOpen, isTimingOffsetModalOpen]);
   const effectiveMode = isCtrlPressed ? "delete_word" : isShiftPressed ? "highlight" : interactionMode;
   const handleFlash = reactExports.useCallback((type, info) => {
     setFlashingType(null);
@@ -37564,13 +38093,25 @@ function LyricsAnalyzer({ data: initialData, onFileLoad, apiClient, isReadOnly, 
     updateDataWithHistory(newData, "delete segment");
   }, [data, updateDataWithHistory]);
   const handleFinishReview = reactExports.useCallback(() => {
+    console.log(`[TIMING] handleFinishReview - Current timing offset: ${timingOffsetMs}ms`);
     setIsReviewModalOpen(true);
-  }, []);
+  }, [timingOffsetMs]);
   const handleSubmitToServer = reactExports.useCallback(async () => {
     if (!apiClient) return;
     try {
       if (debugLog) ;
-      await apiClient.submitCorrections(data);
+      console.log(`[TIMING] handleSubmitToServer - Current timing offset: ${timingOffsetMs}ms`);
+      const dataToSubmit = timingOffsetMs !== 0 ? applyOffsetToCorrectionData(data, timingOffsetMs) : data;
+      if (dataToSubmit.corrected_segments.length > 0) {
+        const firstSegment = dataToSubmit.corrected_segments[0];
+        console.log(`[TIMING] Submitting data - First segment id: ${firstSegment.id}`);
+        console.log(`[TIMING] - start_time: ${firstSegment.start_time}, end_time: ${firstSegment.end_time}`);
+        if (firstSegment.words.length > 0) {
+          const firstWord = firstSegment.words[0];
+          console.log(`[TIMING] - first word "${firstWord.text}" time: ${firstWord.start_time} -> ${firstWord.end_time}`);
+        }
+      }
+      await apiClient.submitCorrections(dataToSubmit);
       setIsReviewComplete(true);
       setIsReviewModalOpen(false);
       window.close();
@@ -37578,12 +38119,13 @@ function LyricsAnalyzer({ data: initialData, onFileLoad, apiClient, isReadOnly, 
       console.error("Failed to submit corrections:", error);
       alert("Failed to submit corrections. Please try again.");
     }
-  }, [apiClient, data]);
+  }, [apiClient, data, timingOffsetMs]);
   const handlePlaySegment = reactExports.useCallback((startTime) => {
     if (window.seekAndPlayAudio) {
-      window.seekAndPlayAudio(startTime);
+      const adjustedStartTime = timingOffsetMs !== 0 ? startTime + timingOffsetMs / 1e3 : startTime;
+      window.seekAndPlayAudio(adjustedStartTime);
     }
-  }, []);
+  }, [timingOffsetMs]);
   const handleResetCorrections = reactExports.useCallback(() => {
     if (window.confirm("Are you sure you want to reset all corrections? This cannot be undone.")) {
       clearSavedData(initialData);
@@ -37818,6 +38360,23 @@ function LyricsAnalyzer({ data: initialData, onFileLoad, apiClient, isReadOnly, 
     uncorrected: () => handleFlash("uncorrected")
   }), [handleFlash]);
   const isAnyModalOpenMemo = reactExports.useMemo(() => isAnyModalOpen, [isAnyModalOpen]);
+  const displayData = reactExports.useMemo(() => {
+    return timingOffsetMs !== 0 ? applyOffsetToCorrectionData(data, timingOffsetMs) : data;
+  }, [data, timingOffsetMs]);
+  const handleOpenTimingOffsetModal = reactExports.useCallback(() => {
+    setIsTimingOffsetModalOpen(true);
+  }, []);
+  const handleApplyTimingOffset = reactExports.useCallback((offsetMs) => {
+    if (offsetMs !== timingOffsetMs) {
+      console.log(`[TIMING] handleApplyTimingOffset: Changing offset from ${timingOffsetMs}ms to ${offsetMs}ms`);
+      setTimingOffsetMs(offsetMs);
+    } else {
+      console.log(`[TIMING] handleApplyTimingOffset: Offset unchanged at ${offsetMs}ms`);
+    }
+  }, [timingOffsetMs]);
+  reactExports.useEffect(() => {
+    console.log(`[TIMING] timingOffsetMs changed to: ${timingOffsetMs}ms`);
+  }, [timingOffsetMs]);
   return /* @__PURE__ */ jsxRuntimeExports.jsxs(Box, { sx: {
     p: 1,
     pb: 3,
@@ -37839,9 +38398,10 @@ function LyricsAnalyzer({ data: initialData, onFileLoad, apiClient, isReadOnly, 
         onHandlerToggle: handleHandlerToggle,
         isUpdatingHandlers,
         onHandlerClick: handleHandlerClick,
-        onAddLyrics: () => setIsAddLyricsModalOpen(true),
         onFindReplace: () => setIsFindReplaceModalOpen(true),
         onEditAll: handleEditAll,
+        onTimingOffset: handleOpenTimingOffsetModal,
+        timingOffsetMs,
         onUndo: handleUndo,
         onRedo: handleRedo,
         canUndo,
@@ -37853,7 +38413,7 @@ function LyricsAnalyzer({ data: initialData, onFileLoad, apiClient, isReadOnly, 
         /* @__PURE__ */ jsxRuntimeExports.jsx(
           MemoizedTranscriptionView,
           {
-            data,
+            data: displayData,
             mode: effectiveMode,
             onElementClick: setModalContent,
             onWordClick: handleWordClick,
@@ -37928,14 +38488,14 @@ function LyricsAnalyzer({ data: initialData, onFileLoad, apiClient, isReadOnly, 
           setOriginalTranscribedGlobalSegment(null);
           handleSetModalSpacebarHandler(void 0);
         },
-        segment: globalEditSegment,
+        segment: globalEditSegment ? timingOffsetMs !== 0 ? applyOffsetToSegment(globalEditSegment, timingOffsetMs) : globalEditSegment : null,
         segmentIndex: null,
-        originalSegment: originalGlobalSegment,
+        originalSegment: originalGlobalSegment ? timingOffsetMs !== 0 ? applyOffsetToSegment(originalGlobalSegment, timingOffsetMs) : originalGlobalSegment : null,
         onSave: handleSaveGlobalEdit,
         onPlaySegment: handlePlaySegment,
         currentTime: currentAudioTime,
         setModalSpacebarHandler: handleSetModalSpacebarHandler,
-        originalTranscribedSegment: originalTranscribedGlobalSegment,
+        originalTranscribedSegment: originalTranscribedGlobalSegment ? timingOffsetMs !== 0 ? applyOffsetToSegment(originalTranscribedGlobalSegment, timingOffsetMs) : originalTranscribedGlobalSegment : null,
         isGlobal: true,
         isLoading: isLoadingGlobalEdit
       }
@@ -37948,9 +38508,9 @@ function LyricsAnalyzer({ data: initialData, onFileLoad, apiClient, isReadOnly, 
           setEditModalSegment(null);
           handleSetModalSpacebarHandler(void 0);
         },
-        segment: (editModalSegment == null ? void 0 : editModalSegment.segment) ?? null,
+        segment: (editModalSegment == null ? void 0 : editModalSegment.segment) ? timingOffsetMs !== 0 ? applyOffsetToSegment(editModalSegment.segment, timingOffsetMs) : editModalSegment.segment : null,
         segmentIndex: (editModalSegment == null ? void 0 : editModalSegment.index) ?? null,
-        originalSegment: (editModalSegment == null ? void 0 : editModalSegment.originalSegment) ?? null,
+        originalSegment: (editModalSegment == null ? void 0 : editModalSegment.originalSegment) ? timingOffsetMs !== 0 ? applyOffsetToSegment(editModalSegment.originalSegment, timingOffsetMs) : editModalSegment.originalSegment : null,
         onSave: handleUpdateSegment,
         onDelete: handleDeleteSegment,
         onAddSegment: handleAddSegment,
@@ -37959,9 +38519,12 @@ function LyricsAnalyzer({ data: initialData, onFileLoad, apiClient, isReadOnly, 
         onPlaySegment: handlePlaySegment,
         currentTime: currentAudioTime,
         setModalSpacebarHandler: handleSetModalSpacebarHandler,
-        originalTranscribedSegment: (editModalSegment == null ? void 0 : editModalSegment.segment) && (editModalSegment == null ? void 0 : editModalSegment.index) !== null ? originalData.original_segments.find(
-          (s) => s.id === editModalSegment.segment.id
-        ) || null : null
+        originalTranscribedSegment: (editModalSegment == null ? void 0 : editModalSegment.segment) && (editModalSegment == null ? void 0 : editModalSegment.index) !== null && originalData.original_segments ? (() => {
+          const origSegment = originalData.original_segments.find(
+            (s) => s.id === editModalSegment.segment.id
+          ) || null;
+          return origSegment && timingOffsetMs !== 0 ? applyOffsetToSegment(origSegment, timingOffsetMs) : origSegment;
+        })() : null
       }
     ),
     /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -37973,7 +38536,8 @@ function LyricsAnalyzer({ data: initialData, onFileLoad, apiClient, isReadOnly, 
         updatedData: data,
         onSubmit: handleSubmitToServer,
         apiClient,
-        setModalSpacebarHandler: handleSetModalSpacebarHandler
+        setModalSpacebarHandler: handleSetModalSpacebarHandler,
+        timingOffsetMs
       }
     ),
     /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -37992,6 +38556,15 @@ function LyricsAnalyzer({ data: initialData, onFileLoad, apiClient, isReadOnly, 
         onClose: () => setIsFindReplaceModalOpen(false),
         onReplace: handleFindReplace,
         data
+      }
+    ),
+    /* @__PURE__ */ jsxRuntimeExports.jsx(
+      TimingOffsetModal,
+      {
+        open: isTimingOffsetModalOpen,
+        onClose: () => setIsTimingOffsetModalOpen(false),
+        currentOffset: timingOffsetMs,
+        onApply: handleApplyTimingOffset
       }
     )
   ] });
@@ -38348,4 +38921,4 @@ ReactDOM$1.createRoot(document.getElementById("root")).render(
     /* @__PURE__ */ jsxRuntimeExports.jsx(App, {})
   ] })
 );
-//# sourceMappingURL=index-DSQidWB1.js.map
+//# sourceMappingURL=index-C5ftSgQo.js.map

@@ -2,19 +2,22 @@ import { Box, Typography, CircularProgress, Alert, Button } from '@mui/material'
 import { useState, useEffect } from 'react'
 import { ApiClient } from '../api'
 import { CorrectionData } from '../types'
+import { applyOffsetToCorrectionData } from './shared/utils/timingUtils'
 
 interface PreviewVideoSectionProps {
     apiClient: ApiClient | null
     isModalOpen: boolean
     updatedData: CorrectionData
     videoRef?: React.RefObject<HTMLVideoElement>
+    timingOffsetMs?: number
 }
 
 export default function PreviewVideoSection({
     apiClient,
     isModalOpen,
     updatedData,
-    videoRef
+    videoRef,
+    timingOffsetMs = 0
 }: PreviewVideoSectionProps) {
     const [previewState, setPreviewState] = useState<{
         status: 'loading' | 'ready' | 'error';
@@ -28,7 +31,27 @@ export default function PreviewVideoSection({
             const generatePreview = async () => {
                 setPreviewState({ status: 'loading' });
                 try {
-                    const response = await apiClient.generatePreviewVideo(updatedData);
+                    // Debug logging for timing offset
+                    console.log(`[TIMING] PreviewVideoSection - Current timing offset: ${timingOffsetMs}ms`);
+                    
+                    // Apply timing offset if needed
+                    const dataToPreview = timingOffsetMs !== 0 
+                        ? applyOffsetToCorrectionData(updatedData, timingOffsetMs) 
+                        : updatedData;
+                    
+                    // Log some example timestamps after potential offset application
+                    if (dataToPreview.corrected_segments.length > 0) {
+                        const firstSegment = dataToPreview.corrected_segments[0];
+                        console.log(`[TIMING] Preview - First segment id: ${firstSegment.id}`);
+                        console.log(`[TIMING] - start_time: ${firstSegment.start_time}, end_time: ${firstSegment.end_time}`);
+                        
+                        if (firstSegment.words.length > 0) {
+                            const firstWord = firstSegment.words[0];
+                            console.log(`[TIMING] - first word "${firstWord.text}" time: ${firstWord.start_time} -> ${firstWord.end_time}`);
+                        }
+                    }
+                    
+                    const response = await apiClient.generatePreviewVideo(dataToPreview);
 
                     if (response.status === 'error') {
                         setPreviewState({
@@ -61,7 +84,7 @@ export default function PreviewVideoSection({
 
             generatePreview();
         }
-    }, [isModalOpen, apiClient, updatedData]);
+    }, [isModalOpen, apiClient, updatedData, timingOffsetMs]);
 
     if (!apiClient) return null;
 

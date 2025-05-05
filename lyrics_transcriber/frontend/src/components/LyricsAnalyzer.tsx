@@ -31,6 +31,8 @@ import { getWordsFromIds } from './shared/utils/wordUtils'
 import AddLyricsModal from './AddLyricsModal'
 import { RestoreFromTrash, OndemandVideo } from '@mui/icons-material'
 import FindReplaceModal from './FindReplaceModal'
+import TimingOffsetModal from './TimingOffsetModal'
+import { applyOffsetToCorrectionData, applyOffsetToSegment } from './shared/utils/timingUtils'
 
 // Add type for window augmentation at the top of the file
 declare global {
@@ -185,6 +187,8 @@ interface MemoizedHeaderProps {
     onAddLyrics?: () => void
     onFindReplace?: () => void
     onEditAll?: () => void
+    onTimingOffset: () => void
+    timingOffsetMs: number
     onUndo: () => void
     onRedo: () => void
     canUndo: boolean
@@ -207,6 +211,8 @@ const MemoizedHeader = memo(function MemoizedHeader({
     onHandlerClick,
     onFindReplace,
     onEditAll,
+    onTimingOffset,
+    timingOffsetMs,
     onUndo,
     onRedo,
     canUndo,
@@ -228,6 +234,8 @@ const MemoizedHeader = memo(function MemoizedHeader({
             onHandlerClick={onHandlerClick}
             onFindReplace={onFindReplace}
             onEditAll={onEditAll}
+            onTimingOffset={onTimingOffset}
+            timingOffsetMs={timingOffsetMs}
             onUndo={onUndo}
             onRedo={onRedo}
             canUndo={canUndo}
@@ -270,6 +278,8 @@ export default function LyricsAnalyzer({ data: initialData, onFileLoad, apiClien
     const [isAddLyricsModalOpen, setIsAddLyricsModalOpen] = useState(false)
     const [isAnyModalOpen, setIsAnyModalOpen] = useState(false)
     const [isFindReplaceModalOpen, setIsFindReplaceModalOpen] = useState(false)
+    const [isTimingOffsetModalOpen, setIsTimingOffsetModalOpen] = useState(false)
+    const [timingOffsetMs, setTimingOffsetMs] = useState(0)
     const theme = useTheme()
     const isMobile = useMediaQuery(theme.breakpoints.down('md'))
 
@@ -387,10 +397,11 @@ export default function LyricsAnalyzer({ data: initialData, onFileLoad, apiClien
             isReviewModalOpen ||
             isAddLyricsModalOpen ||
             isFindReplaceModalOpen ||
-            isEditAllModalOpen
+            isEditAllModalOpen ||
+            isTimingOffsetModalOpen
         )
         setIsAnyModalOpen(modalOpen)
-    }, [modalContent, editModalSegment, isReviewModalOpen, isAddLyricsModalOpen, isFindReplaceModalOpen, isEditAllModalOpen])
+    }, [modalContent, editModalSegment, isReviewModalOpen, isAddLyricsModalOpen, isFindReplaceModalOpen, isEditAllModalOpen, isTimingOffsetModalOpen])
 
     // Calculate effective mode based on modifier key states
     const effectiveMode = isCtrlPressed ? 'delete_word' : (isShiftPressed ? 'highlight' : interactionMode)
@@ -595,8 +606,9 @@ export default function LyricsAnalyzer({ data: initialData, onFileLoad, apiClien
     }, [data, updateDataWithHistory])
 
     const handleFinishReview = useCallback(() => {
+        console.log(`[TIMING] handleFinishReview - Current timing offset: ${timingOffsetMs}ms`);
         setIsReviewModalOpen(true)
-    }, [])
+    }, [timingOffsetMs])
 
     const handleSubmitToServer = useCallback(async () => {
         if (!apiClient) return
@@ -605,7 +617,28 @@ export default function LyricsAnalyzer({ data: initialData, onFileLoad, apiClien
             if (debugLog) {
                 console.log('Submitting changes to server')
             }
-            await apiClient.submitCorrections(data)
+            
+            // Debug logging for timing offset
+            console.log(`[TIMING] handleSubmitToServer - Current timing offset: ${timingOffsetMs}ms`);
+            
+            // Apply timing offset to the data before submission if needed
+            const dataToSubmit = timingOffsetMs !== 0 
+                ? applyOffsetToCorrectionData(data, timingOffsetMs) 
+                : data
+                
+            // Log some example timestamps after potential offset application
+            if (dataToSubmit.corrected_segments.length > 0) {
+                const firstSegment = dataToSubmit.corrected_segments[0];
+                console.log(`[TIMING] Submitting data - First segment id: ${firstSegment.id}`);
+                console.log(`[TIMING] - start_time: ${firstSegment.start_time}, end_time: ${firstSegment.end_time}`);
+                
+                if (firstSegment.words.length > 0) {
+                    const firstWord = firstSegment.words[0];
+                    console.log(`[TIMING] - first word "${firstWord.text}" time: ${firstWord.start_time} -> ${firstWord.end_time}`);
+                }
+            }
+                
+            await apiClient.submitCorrections(dataToSubmit)
 
             setIsReviewComplete(true)
             setIsReviewModalOpen(false)
@@ -616,14 +649,19 @@ export default function LyricsAnalyzer({ data: initialData, onFileLoad, apiClien
             console.error('Failed to submit corrections:', error)
             alert('Failed to submit corrections. Please try again.')
         }
-    }, [apiClient, data])
+    }, [apiClient, data, timingOffsetMs])
 
     // Update play segment handler
     const handlePlaySegment = useCallback((startTime: number) => {
         if (window.seekAndPlayAudio) {
-            window.seekAndPlayAudio(startTime)
+            // Apply the timing offset to the start time
+            const adjustedStartTime = timingOffsetMs !== 0 
+                ? startTime + (timingOffsetMs / 1000) 
+                : startTime;
+                
+            window.seekAndPlayAudio(adjustedStartTime)
         }
-    }, [])
+    }, [timingOffsetMs])
 
     const handleResetCorrections = useCallback(() => {
         if (window.confirm('Are you sure you want to reset all corrections? This cannot be undone.')) {
@@ -993,7 +1031,41 @@ export default function LyricsAnalyzer({ data: initialData, onFileLoad, apiClien
 
     // Determine if any modal is open to disable highlighting
     const isAnyModalOpenMemo = useMemo(() => isAnyModalOpen, [isAnyModalOpen]);
+    
+    // For the TranscriptionView, we need to apply the timing offset when displaying
+    const displayData = useMemo(() => {
+        return timingOffsetMs !== 0 
+            ? applyOffsetToCorrectionData(data, timingOffsetMs)
+            : data;
+    }, [data, timingOffsetMs]);
 
+    // Handler for opening the timing offset modal
+    const handleOpenTimingOffsetModal = useCallback(() => {
+        setIsTimingOffsetModalOpen(true)
+    }, [])
+
+    // Handler for applying the timing offset
+    const handleApplyTimingOffset = useCallback((offsetMs: number) => {
+        // Only update if the offset has changed
+        if (offsetMs !== timingOffsetMs) {
+            console.log(`[TIMING] handleApplyTimingOffset: Changing offset from ${timingOffsetMs}ms to ${offsetMs}ms`);
+            setTimingOffsetMs(offsetMs)
+            
+            // If we're applying an offset, we don't need to update history
+            // since we're not modifying the original data
+            if (debugLog) {
+                console.log(`[DEBUG] handleApplyTimingOffset: Setting offset to ${offsetMs}ms`);
+            }
+        } else {
+            console.log(`[TIMING] handleApplyTimingOffset: Offset unchanged at ${offsetMs}ms`);
+        }
+    }, [timingOffsetMs])
+
+    // Add logging for timing offset changes
+    useEffect(() => {
+        console.log(`[TIMING] timingOffsetMs changed to: ${timingOffsetMs}ms`);
+    }, [timingOffsetMs]);
+    
     return (
         <Box sx={{
             p: 1,
@@ -1014,9 +1086,10 @@ export default function LyricsAnalyzer({ data: initialData, onFileLoad, apiClien
                 onHandlerToggle={handleHandlerToggle}
                 isUpdatingHandlers={isUpdatingHandlers}
                 onHandlerClick={handleHandlerClick}
-                onAddLyrics={() => setIsAddLyricsModalOpen(true)}
                 onFindReplace={() => setIsFindReplaceModalOpen(true)}
                 onEditAll={handleEditAll}
+                onTimingOffset={handleOpenTimingOffsetModal}
+                timingOffsetMs={timingOffsetMs}
                 onUndo={handleUndo}
                 onRedo={handleRedo}
                 canUndo={canUndo}
@@ -1026,7 +1099,7 @@ export default function LyricsAnalyzer({ data: initialData, onFileLoad, apiClien
             <Grid container direction={isMobile ? 'column' : 'row'}>
                 <Grid item xs={12} md={6}>
                     <MemoizedTranscriptionView
-                        data={data}
+                        data={displayData}
                         mode={effectiveMode}
                         onElementClick={setModalContent}
                         onWordClick={handleWordClick}
@@ -1098,14 +1171,26 @@ export default function LyricsAnalyzer({ data: initialData, onFileLoad, apiClien
                     setOriginalTranscribedGlobalSegment(null)
                     handleSetModalSpacebarHandler(undefined)
                 }}
-                segment={globalEditSegment}
+                segment={globalEditSegment ? 
+                    timingOffsetMs !== 0 ? 
+                        applyOffsetToSegment(globalEditSegment, timingOffsetMs) : 
+                        globalEditSegment : 
+                    null}
                 segmentIndex={null}
-                originalSegment={originalGlobalSegment}
+                originalSegment={originalGlobalSegment ? 
+                    timingOffsetMs !== 0 ? 
+                        applyOffsetToSegment(originalGlobalSegment, timingOffsetMs) : 
+                        originalGlobalSegment : 
+                    null}
                 onSave={handleSaveGlobalEdit}
                 onPlaySegment={handlePlaySegment}
                 currentTime={currentAudioTime}
                 setModalSpacebarHandler={handleSetModalSpacebarHandler}
-                originalTranscribedSegment={originalTranscribedGlobalSegment}
+                originalTranscribedSegment={originalTranscribedGlobalSegment ? 
+                    timingOffsetMs !== 0 ? 
+                        applyOffsetToSegment(originalTranscribedGlobalSegment, timingOffsetMs) : 
+                        originalTranscribedGlobalSegment : 
+                    null}
                 isGlobal={true}
                 isLoading={isLoadingGlobalEdit}
             />
@@ -1116,9 +1201,17 @@ export default function LyricsAnalyzer({ data: initialData, onFileLoad, apiClien
                     setEditModalSegment(null)
                     handleSetModalSpacebarHandler(undefined)
                 }}
-                segment={editModalSegment?.segment ?? null}
+                segment={editModalSegment?.segment ? 
+                    timingOffsetMs !== 0 ? 
+                        applyOffsetToSegment(editModalSegment.segment, timingOffsetMs) : 
+                        editModalSegment.segment : 
+                    null}
                 segmentIndex={editModalSegment?.index ?? null}
-                originalSegment={editModalSegment?.originalSegment ?? null}
+                originalSegment={editModalSegment?.originalSegment ? 
+                    timingOffsetMs !== 0 ? 
+                        applyOffsetToSegment(editModalSegment.originalSegment, timingOffsetMs) : 
+                        editModalSegment.originalSegment : 
+                    null}
                 onSave={handleUpdateSegment}
                 onDelete={handleDeleteSegment}
                 onAddSegment={handleAddSegment}
@@ -1128,10 +1221,16 @@ export default function LyricsAnalyzer({ data: initialData, onFileLoad, apiClien
                 currentTime={currentAudioTime}
                 setModalSpacebarHandler={handleSetModalSpacebarHandler}
                 originalTranscribedSegment={
-                    editModalSegment?.segment && editModalSegment?.index !== null
-                        ? originalData.original_segments.find(
-                            (s: LyricsSegment) => s.id === editModalSegment.segment.id
-                        ) || null
+                    editModalSegment?.segment && editModalSegment?.index !== null && originalData.original_segments
+                        ? (() => {
+                            const origSegment = originalData.original_segments.find(
+                                (s: LyricsSegment) => s.id === editModalSegment.segment.id
+                            ) || null;
+                            
+                            return origSegment && timingOffsetMs !== 0 
+                                ? applyOffsetToSegment(origSegment, timingOffsetMs) 
+                                : origSegment;
+                        })()
                         : null
                 }
             />
@@ -1144,6 +1243,7 @@ export default function LyricsAnalyzer({ data: initialData, onFileLoad, apiClien
                 onSubmit={handleSubmitToServer}
                 apiClient={apiClient}
                 setModalSpacebarHandler={handleSetModalSpacebarHandler}
+                timingOffsetMs={timingOffsetMs}
             />
 
             <AddLyricsModal
@@ -1158,6 +1258,13 @@ export default function LyricsAnalyzer({ data: initialData, onFileLoad, apiClien
                 onClose={() => setIsFindReplaceModalOpen(false)}
                 onReplace={handleFindReplace}
                 data={data}
+            />
+
+            <TimingOffsetModal
+                open={isTimingOffsetModalOpen}
+                onClose={() => setIsTimingOffsetModalOpen(false)}
+                currentOffset={timingOffsetMs}
+                onApply={handleApplyTimingOffset}
             />
         </Box>
     )

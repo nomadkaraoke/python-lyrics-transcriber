@@ -109,6 +109,14 @@ export const setupKeyboardHandlers = (state: KeyboardState) => {
             })
         }
 
+        // Ignore keyup events in input and textarea elements
+        if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
+            if (debugLog) {
+                console.log(`[${handlerId}] Ignoring keyup in input/textarea`)
+            }
+            return
+        }
+
         // Always reset the modifier states regardless of the key which was released
         // to help prevent accidentally getting stuck in a mode or accidentally deleting words
         resetModifierStates()

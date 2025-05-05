@@ -22,6 +22,7 @@ interface ReviewChangesModalProps {
     onSubmit: () => void
     apiClient: ApiClient | null
     setModalSpacebarHandler: (handler: (() => (e: KeyboardEvent) => void) | undefined) => void
+    timingOffsetMs?: number
 }
 
 interface DiffResult {
@@ -69,7 +70,8 @@ export default function ReviewChangesModal({
     updatedData,
     onSubmit,
     apiClient,
-    setModalSpacebarHandler
+    setModalSpacebarHandler,
+    timingOffsetMs = 0
 }: ReviewChangesModalProps) {
     // Add ref to video element
     const videoRef = useRef<HTMLVideoElement>(null)
@@ -106,6 +108,13 @@ export default function ReviewChangesModal({
             setModalSpacebarHandler(undefined)
         }
     }, [open, setModalSpacebarHandler])
+
+    // Debug logging for timing offset
+    useEffect(() => {
+        if (open) {
+            console.log(`[TIMING] ReviewChangesModal opened - timingOffsetMs: ${timingOffsetMs}ms`);
+        }
+    }, [open, timingOffsetMs]);
 
     const differences = useMemo(() => {
         const diffs: DiffResult[] = []
@@ -292,9 +301,15 @@ export default function ReviewChangesModal({
                     isModalOpen={open}
                     updatedData={updatedData}
                     videoRef={videoRef}  // Pass the ref to PreviewVideoSection
+                    timingOffsetMs={timingOffsetMs}
                 />
 
                 <Box sx={{ p: 2, mt: 0 }}>
+                    {timingOffsetMs !== 0 && (
+                        <Typography variant="body2" fontWeight="bold" sx={{ mt: 1 }}>
+                            Global Timing Offset applied to all words: {timingOffsetMs > 0 ? '+' : ''}{timingOffsetMs}ms
+                        </Typography>
+                    )}
                     {differences.length === 0 ? (
                         <Box>
                             <Typography color="text.secondary">
