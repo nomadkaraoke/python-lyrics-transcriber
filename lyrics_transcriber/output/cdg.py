@@ -314,6 +314,16 @@ class CDGGenerator:
             "outro_line1_line2_gap",
         }
 
+        optional_styles_with_defaults = {
+            "title_top_padding": 0,
+            # Any other optional parameters with their default values
+        }
+        
+        # Add any missing optional parameters with their default values
+        for key, default_value in optional_styles_with_defaults.items():
+            if key not in cdg_styles:
+                cdg_styles[key] = default_value
+        
         missing_styles = required_styles - set(cdg_styles.keys())
         if missing_styles:
             raise ValueError(f"Missing required style parameters: {', '.join(missing_styles)}")
