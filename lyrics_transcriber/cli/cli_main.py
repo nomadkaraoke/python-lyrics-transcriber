@@ -1,4 +1,8 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
+import warnings
+# Suppress SyntaxWarnings from third-party packages that haven't updated for Python 3.13
+warnings.filterwarnings("ignore", category=SyntaxWarning)
+
 import argparse
 import logging
 import os

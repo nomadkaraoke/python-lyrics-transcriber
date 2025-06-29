@@ -1,31 +1,32 @@
 [tool.poetry]
 name = "lyrics-transcriber"
-version = "0.50.0"
+version = "0.52.0"
 description = "Automatically create synchronised lyrics files in ASS and MidiCo LRC formats with word-level timestamps, using Whisper and lyrics from Genius and Spotify"
 authors = ["Andrew Beveridge <andrew@beveridge.uk>"]
 license = "MIT"
 readme = "README.md"
 packages = [{ include = "lyrics_transcriber" }]
-homepage = "https://github.com/karaokenerds/python-lyrics-transcriber"
-repository = "https://github.com/karaokenerds/python-lyrics-transcriber"
-documentation = "https://github.com/karaokenerds/python-lyrics-transcriber/blob/main/README.md"
+homepage = "https://github.com/nomadkaraoke/python-lyrics-transcriber"
+repository = "https://github.com/nomadkaraoke/python-lyrics-transcriber"
+documentation = "https://github.com/nomadkaraoke/python-lyrics-transcriber/blob/main/README.md"
 
 # Dependencies section - to find missing dependencies, install the package and run it
 # If ModuleNotFoundError occurs, add the missing module to the dependencies
 [tool.poetry.dependencies]
-python = ">=3.9,<3.13"
+python = ">=3.10,<3.14"
 python-slugify = ">=8"
 lyricsgenius = ">=0.1.0"
 syrics = ">=0"
-karaoke-lyrics-processor = ">=0.4"
+karaoke-lyrics-processor = ">=0.6"
 dropbox = ">=12"
 python-dotenv = ">=1"
 pydub = ">=0.25"
-spacy = ">=3.8"
+spacy = ">=3.8.7"
+srsly = ">=2.5.1"
 tqdm = ">=4.67"
 python-levenshtein = ">=0.26"
 transformers = ">=4.47"
-torch = "<2.5"
+torch = ">=2.7,<3.0"
 metaphone = ">=0.6"
 nltk = ">=3.9"
 spacy-syllables = ">=3"

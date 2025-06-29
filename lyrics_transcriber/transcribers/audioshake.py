@@ -41,7 +41,7 @@ class AudioShakeAPI:
         self.logger.info(f"Uploading {filepath} to AudioShake")
         self._validate_config()  # Validate before making API call
 
-        url = f"{self.config.base_url}/upload"
+        url = f"{self.config.base_url}/upload/"
         with open(filepath, "rb") as file:
             files = {"file": (os.path.basename(filepath), file)}
             response = requests.post(url, headers={"Authorization": self._get_headers()["Authorization"]}, files=files)
