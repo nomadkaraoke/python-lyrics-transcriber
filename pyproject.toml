@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "lyrics-transcriber"
-version = "0.52.0"
+version = "0.52.1"
 description = "Automatically create synchronised lyrics files in ASS and MidiCo LRC formats with word-level timestamps, using Whisper and lyrics from Genius and Spotify"
 authors = ["Andrew Beveridge <andrew@beveridge.uk>"]
 license = "MIT"
@@ -48,6 +48,7 @@ black = ">=23"
 pytest = ">=7.0"
 pytest-cov = ">=4.0"
 pytest-mock = ">=3.10"
+pytest-asyncio = ">=0.21.0"
 
 [tool.black]
 line-length = 140
@@ -65,15 +66,15 @@ build-backend = "poetry.core.masonry.api"
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 python_files = ["test_*.py"]
-filterwarnings = [
-    "ignore::DeprecationWarning",
-    "ignore:'audioop' is deprecated:DeprecationWarning"
-]
-# Coverage configuration
 addopts = [
     "--cov=lyrics_transcriber",
     "--cov-report=term-missing", 
-    "--cov-report=html:htmlcov"
+    "--cov-report=html:htmlcov",
+    "--asyncio-mode=auto"
+]
+filterwarnings = [
+    "ignore::DeprecationWarning",
+    "ignore:'audioop' is deprecated:DeprecationWarning"
 ]
 
 [tool.poetry-build]

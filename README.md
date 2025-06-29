@@ -1,6 +1,10 @@
 # Lyrics Transcriber 🎶
 
-[![PyPI version](https://badge.fury.io/py/lyrics-transcriber.svg)](https://badge.fury.io/py/lyrics-transcriber)
+![PyPI - Version](https://img.shields.io/pypi/v/lyrics-transcriber)
+![Python Version](https://img.shields.io/badge/python-3.10+-blue)
+![Tests](https://github.com/nomadkaraoke/lyrics-transcriber/workflows/Test%20and%20Publish/badge.svg)
+![Test Coverage](https://codecov.io/gh/nomadkaraoke/lyrics-transcriber/branch/main/graph/badge.svg)
+
 
 Automatically create synchronised lyrics files in ASS and MidiCo LRC formats with word-level timestamps, using OpenAI Whisper and lyrics from Genius and Spotify, for convenience in use cases such as karaoke video production.
 

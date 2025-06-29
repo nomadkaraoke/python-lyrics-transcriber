@@ -20,7 +20,7 @@ class FileProvider(BaseLyricsProvider):
         """Get lyrics for the specified artist and title."""
         self.title = title  # Store title for use in other methods
         self.artist = artist  # Store artist for use in other methods
-        return super().get_lyrics(artist, title)
+        return super().fetch_lyrics(artist, title)
 
     def _fetch_data_from_source(self, artist: str, title: str) -> Optional[Dict[str, Any]]:
         """Load lyrics from the specified file."""
@@ -41,9 +41,14 @@ class FileProvider(BaseLyricsProvider):
         self.logger.debug(f"File size: {lyrics_file.stat().st_size} bytes")
 
         try:
+            # Get formatter safely
+            formatter = None
+            if self.logger.handlers and len(self.logger.handlers) > 0 and hasattr(self.logger.handlers[0], 'formatter'):
+                formatter = self.logger.handlers[0].formatter
+            
             processor = KaraokeLyricsProcessor(
                 log_level=self.logger.getEffectiveLevel(),
-                log_formatter=self.logger.handlers[0].formatter if self.logger.handlers else None,
+                log_formatter=formatter,
                 input_filename=str(lyrics_file),
                 max_line_length=self.max_line_length,
             )
