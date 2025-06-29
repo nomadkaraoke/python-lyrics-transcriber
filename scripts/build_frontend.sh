@@ -5,8 +5,8 @@ set -e
 
 echo "🔄 Syncing version from pyproject.toml to package.json..."
 
-# Extract version from pyproject.toml
-PYTHON_VERSION=$(python -c "
+# Extract version from pyproject.toml using poetry run to ensure dependencies are available
+PYTHON_VERSION=$(poetry run python -c "
 import toml
 with open('pyproject.toml', 'r') as f:
     config = toml.load(f)
