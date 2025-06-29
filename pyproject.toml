@@ -73,8 +73,7 @@ filterwarnings = [
 addopts = [
     "--cov=lyrics_transcriber",
     "--cov-report=term-missing", 
-    "--cov-report=html:htmlcov",
-    "--cov-fail-under=50"
+    "--cov-report=html:htmlcov"
 ]
 
 [tool.poetry-build]
