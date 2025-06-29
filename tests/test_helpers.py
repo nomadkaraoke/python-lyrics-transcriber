@@ -94,16 +94,24 @@ def create_test_gap_sequence(
         )
         transcribed_words.append(word)
     
-    # Create reference words for each source
-    reference_word_ids = {}
+    # Create a text-to-word mapping to ensure same text gets same word ID
+    text_to_word = {}
     all_words = transcribed_words.copy()
     
+    # First pass: collect all unique text values
+    for ref_texts in reference_words.values():
+        for text in ref_texts:
+            if text not in text_to_word:
+                ref_word = create_test_word(text=text)
+                text_to_word[text] = ref_word
+                all_words.append(ref_word)
+    
+    # Create reference words for each source using shared word objects
+    reference_word_ids = {}
     for source, ref_texts in reference_words.items():
         ref_word_ids = []
         for text in ref_texts:
-            ref_word = create_test_word(text=text)
-            ref_word_ids.append(ref_word.id)
-            all_words.append(ref_word)
+            ref_word_ids.append(text_to_word[text].id)
         reference_word_ids[source] = ref_word_ids
     
     # Create word map

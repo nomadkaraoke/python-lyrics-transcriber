@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Dict, Any, Tuple, Optional
 import pytest
 from unittest.mock import Mock
 from lyrics_transcriber.types import (
@@ -17,6 +17,9 @@ import os
 import tempfile
 import shutil
 
+# Import test helpers for new API
+from tests.test_helpers import create_handler_test_data, create_test_word, create_word_map
+
 
 class MockHandler(GapCorrectionHandler):
     """Mock handler for testing."""
@@ -27,11 +30,11 @@ class MockHandler(GapCorrectionHandler):
         self.can_handle_called = False
         self.handle_called = False
 
-    def can_handle(self, gap: GapSequence) -> bool:
+    def can_handle(self, gap: GapSequence, data: Optional[Dict[str, Any]] = None) -> Tuple[bool, Dict[str, Any]]:
         self.can_handle_called = True
-        return self.should_handle
+        return self.should_handle, data or {}
 
-    def handle(self, gap: GapSequence) -> List[WordCorrection]:
+    def handle(self, gap: GapSequence, data: Optional[Dict[str, Any]] = None) -> List[WordCorrection]:
         self.handle_called = True
         return self.corrections
 
@@ -44,15 +47,16 @@ def mock_logger():
 @pytest.fixture
 def sample_transcription_result():
     words = [
-        {"text": "hello", "start": 0.0, "end": 0.5},
-        {"text": "wurld", "start": 0.6, "end": 1.0},  # Intentionally misspelled
-        {"text": "test", "start": 1.1, "end": 1.5},
-        {"text": "lyrics", "start": 1.6, "end": 2.0},
+        create_test_word(text="hello", start_time=0.0, end_time=0.5),
+        create_test_word(text="wurld", start_time=0.6, end_time=1.0),  # Intentionally misspelled
+        create_test_word(text="test", start_time=1.1, end_time=1.5),
+        create_test_word(text="lyrics", start_time=1.6, end_time=2.0),
     ]
 
     segment = LyricsSegment(
+        id="segment_1",
         text="hello wurld test lyrics",
-        words=[Word(text=w["text"], start_time=w["start"], end_time=w["end"]) for w in words],
+        words=words,
         start_time=0.0,
         end_time=2.0,
     )
@@ -64,7 +68,7 @@ def sample_transcription_result():
             segments=[segment],
             text="hello wurld test lyrics",
             source="test",
-            words=[w for w in segment.words],
+            words=words,
             metadata={"language": "en"},
         ),
     )
@@ -72,40 +76,55 @@ def sample_transcription_result():
 
 @pytest.fixture
 def sample_lyrics():
+    words = [
+        create_test_word(text="hello", start_time=0.0, end_time=0.5),
+        create_test_word(text="world", start_time=0.6, end_time=1.0),  # Correct spelling
+        create_test_word(text="test", start_time=1.1, end_time=1.5),
+        create_test_word(text="lyrics", start_time=1.6, end_time=2.0),
+    ]
+
     segment = LyricsSegment(
+        id="segment_1",
         text="hello world test lyrics",  # Correct spelling
-        words=[
-            Word(text="hello", start_time=0.0, end_time=0.5),
-            Word(text="world", start_time=0.6, end_time=1.0),
-            Word(text="test", start_time=1.1, end_time=1.5),
-            Word(text="lyrics", start_time=1.6, end_time=2.0),
-        ],
+        words=words,
         start_time=0.0,
         end_time=2.0,
     )
 
-    return [
-        LyricsData(
-            source="test",
-            segments=[segment],
-            metadata=LyricsMetadata(source="genius", track_name="test track", artist_names="test artist"),
-        )
-    ]
+    lyrics_data = LyricsData(
+        source="test",
+        segments=[segment],
+        metadata=LyricsMetadata(source="genius", track_name="test track", artist_names="test artist"),
+    )
+    
+    # Return as dictionary with source as key
+    return {"test": lyrics_data}
 
 
 @pytest.fixture
 def mock_anchor_finder():
     finder = Mock()
-    # Create a gap sequence that covers just the "wurld" word
+    
+    # Create test words for the gap
+    transcribed_word = create_test_word(text="wurld", start_time=0.6, end_time=1.0)
+    reference_word = create_test_word(text="world", start_time=0.6, end_time=1.0)
+    
+    # Create gap sequence that covers just the "wurld" word
     gap = GapSequence(
-        words=("wurld",),
+        id="gap_1",
+        transcribed_word_ids=[transcribed_word.id],
         transcription_position=1,
-        preceding_anchor=None,
-        following_anchor=None,
-        reference_words={"test": ["world"]},
+        preceding_anchor_id=None,
+        following_anchor_id=None,
+        reference_word_ids={"test": [reference_word.id]},
     )
+    
+    # Create word map for the gap
+    word_map = create_word_map([transcribed_word, reference_word])
+    
     finder.find_anchors.return_value = []
     finder.find_gaps.return_value = [gap]
+    finder.word_map = word_map  # Store word map for access by tests
     return finder
 
 
@@ -141,14 +160,23 @@ class TestLyricsCorrector:
             corrector.run(transcription_results=[], lyrics_results=[])
 
     def test_run_full_flow(self, mock_logger, sample_transcription_result, sample_lyrics, setup_teardown):
+        # Create test words for the gap
+        transcribed_word = create_test_word(text="wurld", start_time=0.6, end_time=1.0)
+        reference_word = create_test_word(text="world", start_time=0.6, end_time=1.0)
+        
         # Create a gap sequence that covers just the "wurld" word
         gap = GapSequence(
-            words=("wurld",),
+            id="gap_1",
+            transcribed_word_ids=[transcribed_word.id],
             transcription_position=1,
-            preceding_anchor=None,
-            following_anchor=None,
-            reference_words={"test": ["world"]},
+            preceding_anchor_id=None,
+            following_anchor_id=None,
+            reference_word_ids={"test": [reference_word.id]},
         )
+        
+        # Create word map
+        word_map = create_word_map([transcribed_word, reference_word])
+        
         mock_finder = Mock()
         mock_finder.find_anchors.return_value = []
         mock_finder.find_gaps.return_value = [gap]

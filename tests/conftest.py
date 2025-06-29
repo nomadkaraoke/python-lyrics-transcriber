@@ -11,14 +11,14 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')
 # Dictionary of test file patterns to skip
 SKIP_PATTERNS = [
     # Completely skip these test modules
-    "tests/correction/handlers/test_extra_words.py",
-    "tests/correction/handlers/test_levenshtein.py",
-    "tests/correction/handlers/test_repeat.py",
-    "tests/correction/handlers/test_sound_alike.py",
-    "tests/correction/handlers/test_word_count_match.py",
+    # "tests/correction/handlers/test_extra_words.py",  # COMPLETED - Phase 2 ✓
+    # "tests/correction/handlers/test_levenshtein.py",  # COMPLETED - Phase 2 ✓
+    # "tests/correction/handlers/test_repeat.py",  # COMPLETED - Phase 2 ✓
+    # "tests/correction/handlers/test_sound_alike.py",  # COMPLETED - Phase 2 ✓
+    # "tests/correction/handlers/test_word_count_match.py",  # COMPLETED - Phase 2 ✓
     "tests/correction/test_anchor_sequence_1.py",
     "tests/correction/test_anchor_sequence_2.py",
-    "tests/correction/test_corrector.py",
+    "tests/correction/test_corrector.py",  # TODO - Complex integration test - Phase 2
     # "tests/core/test_controller.py",  # COMPLETED - Phase 1 ✓
     "tests/output/ass/test_lyrics_line.py",
     "tests/output/ass/test_lyrics_screen.py",
@@ -33,12 +33,12 @@ SKIP_PATTERNS = [
     # Specific test functions to skip
     "tests/cli/test_cli_main.py::test_create_arg_parser",
     "tests/cli/test_cli_main.py::test_create_configs",
-    "tests/correction/test_phrase_analyzer.py::test_error_handling",
-    "tests/correction/test_text_utils.py::test_punctuation_removal",
-    "tests/correction/test_text_utils.py::test_hyphenated_words",
-    "tests/correction/test_text_utils.py::test_whitespace_normalization",
-    "tests/correction/test_text_utils.py::test_mixed_cases",
-    "tests/correction/test_text_utils.py::test_empty_and_special_cases",
+    # "tests/correction/test_phrase_analyzer.py::test_error_handling",  # COMPLETED - Phase 2 ✓
+    # "tests/correction/test_text_utils.py::test_punctuation_removal",  # COMPLETED - Phase 2 ✓
+    # "tests/correction/test_text_utils.py::test_hyphenated_words",  # COMPLETED - Phase 2 ✓
+    # "tests/correction/test_text_utils.py::test_whitespace_normalization",  # COMPLETED - Phase 2 ✓
+    # "tests/correction/test_text_utils.py::test_mixed_cases",  # COMPLETED - Phase 2 ✓
+    # "tests/correction/test_text_utils.py::test_empty_and_special_cases",  # COMPLETED - Phase 2 ✓
     "tests/lyrics/test_base_lyrics_provider.py::test_word_to_dict",
     "tests/lyrics/test_base_lyrics_provider.py::test_lyrics_segment_to_dict",
     "tests/lyrics/test_base_lyrics_provider.py::test_fetch_lyrics_with_cache",

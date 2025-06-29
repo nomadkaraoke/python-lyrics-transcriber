@@ -3,6 +3,9 @@ import logging
 from lyrics_transcriber.correction.handlers.repeat import RepeatCorrectionHandler
 from lyrics_transcriber.types import GapSequence, WordCorrection
 
+# Import test helpers for new API
+from tests.test_helpers import create_handler_test_data
+
 
 @pytest.fixture
 def logger():
@@ -13,15 +16,13 @@ def logger():
 
 def test_cannot_handle_without_previous_corrections(logger):
     handler = RepeatCorrectionHandler(logger)
-    gap = GapSequence(
-        words=("test", "words"),
-        transcription_position=0,
-        preceding_anchor=None,
-        following_anchor=None,
-        reference_words={"genius": ["some", "words"], "spotify": ["some", "words"]},
+    gap, word_map, handler_data = create_handler_test_data(
+        gap_word_texts=["test", "words"],
+        reference_words={"genius": ["some", "words"], "spotify": ["some", "words"]}
     )
 
-    assert not handler.can_handle(gap)
+    can_handle, _ = handler.can_handle(gap, handler_data)
+    assert can_handle is False
 
 
 def test_handle_repeat_correction(logger):
@@ -44,15 +45,13 @@ def test_handle_repeat_correction(logger):
     handler.set_previous_corrections(previous_corrections)
 
     # Create gap with same word
-    gap = GapSequence(
-        words=("war", "again"),
-        transcription_position=5,
-        preceding_anchor=None,
-        following_anchor=None,
-        reference_words={"genius": ["some", "words"], "spotify": ["some", "words"]},
+    gap, word_map, handler_data = create_handler_test_data(
+        gap_word_texts=["war", "again"],
+        reference_words={"genius": ["some", "words"], "spotify": ["some", "words"]}
     )
+    gap.transcription_position = 5
 
-    corrections = handler.handle(gap)
+    corrections = handler.handle(gap, handler_data)
 
     assert len(corrections) == 1
     assert corrections[0].original_word == "war"
@@ -103,15 +102,13 @@ def test_handle_multiple_previous_corrections(logger):
     ]
     handler.set_previous_corrections(previous_corrections)
 
-    gap = GapSequence(
-        words=("word",),
-        transcription_position=10,
-        preceding_anchor=None,
-        following_anchor=None,
-        reference_words={"genius": ["some"], "spotify": ["some"]},
+    gap, word_map, handler_data = create_handler_test_data(
+        gap_word_texts=["word"],
+        reference_words={"genius": ["some"], "spotify": ["some"]}
     )
+    gap.transcription_position = 10
 
-    corrections = handler.handle(gap)
+    corrections = handler.handle(gap, handler_data)
 
     assert len(corrections) == 1
     assert corrections[0].original_word == "word"
@@ -138,15 +135,12 @@ def test_ignore_low_confidence_corrections(logger):
     ]
     handler.set_previous_corrections(previous_corrections)
 
-    gap = GapSequence(
-        words=("test",),
-        transcription_position=0,
-        preceding_anchor=None,
-        following_anchor=None,
-        reference_words={"genius": ["some"], "spotify": ["some"]},
+    gap, word_map, handler_data = create_handler_test_data(
+        gap_word_texts=["test"],
+        reference_words={"genius": ["some"], "spotify": ["some"]}
     )
 
-    corrections = handler.handle(gap)
+    corrections = handler.handle(gap, handler_data)
     assert len(corrections) == 0  # Should not apply low confidence corrections
 
 
@@ -168,14 +162,11 @@ def test_case_insensitive_matching(logger):
     ]
     handler.set_previous_corrections(previous_corrections)
 
-    gap = GapSequence(
-        words=("word", "WORD", "Word"),  # Different cases
-        transcription_position=0,
-        preceding_anchor=None,
-        following_anchor=None,
-        reference_words={"genius": ["some", "words"], "spotify": ["some", "words"]},
+    gap, word_map, handler_data = create_handler_test_data(
+        gap_word_texts=["word", "WORD", "Word"],
+        reference_words={"genius": ["some", "words"], "spotify": ["some", "words"]}
     )
 
-    corrections = handler.handle(gap)
+    corrections = handler.handle(gap, handler_data)
     assert len(corrections) == 3  # Should correct all variations
     assert all(c.corrected_word == "Correction" for c in corrections)

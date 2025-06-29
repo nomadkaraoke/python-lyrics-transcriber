@@ -12,13 +12,17 @@ def clean_text(text: str) -> str:
         - All text converted to lowercase
         - Multiple spaces/whitespace collapsed to single space
         - Leading/trailing whitespace removed
-        - Punctuation removed (except for internal hyphens/slashes in words)
+        - Hyphens and forward slashes replaced with spaces
+        - Apostrophes and other punctuation removed
     """
     # Convert to lowercase
     text = text.lower()
 
-    # Remove punctuation except hyphens and slashes that are between word characters
-    text = re.sub(r"(?<!\w)[^\w\s]|[^\w\s](?!\w)", "", text)
+    # Replace hyphens and forward slashes with spaces
+    text = re.sub(r"[-/]", " ", text)
+    
+    # Remove apostrophes and other punctuation
+    text = re.sub(r"[^\w\s]", "", text)
 
     # Normalize whitespace (collapse multiple spaces, remove leading/trailing)
     text = " ".join(text.split())

@@ -3,6 +3,9 @@ import logging
 from lyrics_transcriber.correction.handlers.levenshtein import LevenshteinHandler
 from lyrics_transcriber.types import GapSequence
 
+# Import test helpers for new API
+from tests.test_helpers import create_handler_test_data
+
 
 @pytest.fixture
 def logger():
@@ -13,15 +16,12 @@ def logger():
 
 def test_handle_basic_example(logger):
     handler = LevenshteinHandler(logger=logger)
-    gap = GapSequence(
-        words=("wold", "worde"),
-        transcription_position=0,
-        preceding_anchor=None,
-        following_anchor=None,
-        reference_words={"genius": ["world", "words"], "spotify": ["world", "words"]},
+    gap, word_map, handler_data = create_handler_test_data(
+        gap_word_texts=["wold", "worde"],
+        reference_words={"genius": ["world", "words"], "spotify": ["world", "words"]}
     )
 
-    corrections = handler.handle(gap)
+    corrections = handler.handle(gap, handler_data)
 
     assert len(corrections) == 2
 
@@ -37,19 +37,16 @@ def test_handle_basic_example(logger):
 
 def test_handle_sound_alike_example(logger):
     handler = LevenshteinHandler(logger=logger)
-    gap = GapSequence(
-        words=("shush", "look", "deep"),
-        transcription_position=0,
-        preceding_anchor=None,
-        following_anchor=None,
-        reference_words={"genius": ["search", "look", "deep"], "spotify": ["search", "look", "deep"]},
+    gap, word_map, handler_data = create_handler_test_data(
+        gap_word_texts=["shush", "look", "deep"],
+        reference_words={"genius": ["search", "look", "deep"], "spotify": ["search", "look", "deep"]}
     )
 
     # First check if handler thinks it can handle this
-    can_handle = handler.can_handle(gap)
+    can_handle, _ = handler.can_handle(gap, handler_data)
     logger.debug(f"Can handle 'shush' -> 'search': {can_handle}")
 
-    corrections = handler.handle(gap)
+    corrections = handler.handle(gap, handler_data)
     logger.debug(f"Corrections for sound-alike example: {corrections}")
 
     # We expect this to fail or have very low confidence
@@ -59,15 +56,12 @@ def test_handle_sound_alike_example(logger):
 
 def test_handle_disagreeing_references(logger):
     handler = LevenshteinHandler(logger=logger)
-    gap = GapSequence(
-        words=("worde",),
-        transcription_position=0,
-        preceding_anchor=None,
-        following_anchor=None,
-        reference_words={"genius": ["world"], "spotify": ["words"]},
+    gap, word_map, handler_data = create_handler_test_data(
+        gap_word_texts=["worde"],
+        reference_words={"genius": ["world"], "spotify": ["words"]}
     )
 
-    corrections = handler.handle(gap)
+    corrections = handler.handle(gap, handler_data)
 
     assert len(corrections) == 1
     assert corrections[0].confidence < 0.8  # Lower confidence due to disagreeing sources
@@ -75,15 +69,12 @@ def test_handle_disagreeing_references(logger):
 
 def test_preserves_exact_matches(logger):
     handler = LevenshteinHandler(logger=logger)
-    gap = GapSequence(
-        words=("wold", "words", "test"),
-        transcription_position=0,
-        preceding_anchor=None,
-        following_anchor=None,
-        reference_words={"genius": ["world", "words", "test"], "spotify": ["world", "words", "test"]},
+    gap, word_map, handler_data = create_handler_test_data(
+        gap_word_texts=["wold", "words", "test"],
+        reference_words={"genius": ["world", "words", "test"], "spotify": ["world", "words", "test"]}
     )
 
-    corrections = handler.handle(gap)
+    corrections = handler.handle(gap, handler_data)
 
     # Should only correct "wold", leaving exact matches alone
     assert len(corrections) == 1
@@ -93,27 +84,24 @@ def test_preserves_exact_matches(logger):
 
 def test_similarity_thresholds(logger):
     handler = LevenshteinHandler(similarity_threshold=0.8, logger=logger)
-    gap = GapSequence(
-        words=("completely",),  # More different from reference
-        transcription_position=0,
-        preceding_anchor=None,
-        following_anchor=None,
-        reference_words={"genius": ["different"], "spotify": ["different"]},
+    gap, word_map, handler_data = create_handler_test_data(
+        gap_word_texts=["completely"],
+        reference_words={"genius": ["different"], "spotify": ["different"]}
     )
 
     # With high threshold, should not find matches
-    assert handler.can_handle(gap) is False
+    can_handle, _ = handler.can_handle(gap, handler_data)
+    assert can_handle is False
 
     # Lower threshold should still not match these very different words
     handler.similarity_threshold = 0.6
-    assert handler.can_handle(gap) is False
+    can_handle, _ = handler.can_handle(gap, handler_data)
+    assert can_handle is False
 
     # But should match similar words
-    gap = GapSequence(
-        words=("worde",),
-        transcription_position=0,
-        preceding_anchor=None,
-        following_anchor=None,
-        reference_words={"genius": ["words"], "spotify": ["words"]},
+    gap, word_map, handler_data = create_handler_test_data(
+        gap_word_texts=["worde"],
+        reference_words={"genius": ["words"], "spotify": ["words"]}
     )
-    assert handler.can_handle(gap) is True
+    can_handle, _ = handler.can_handle(gap, handler_data)
+    assert can_handle is True

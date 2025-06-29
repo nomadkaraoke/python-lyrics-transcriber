@@ -3,6 +3,9 @@ import logging
 from lyrics_transcriber.correction.handlers.sound_alike import SoundAlikeHandler
 from lyrics_transcriber.types import GapSequence
 
+# Import test helpers for new API
+from tests.test_helpers import create_handler_test_data
+
 
 @pytest.fixture
 def logger():
@@ -13,15 +16,12 @@ def logger():
 
 def test_handle_phonetic_example(logger):
     handler = SoundAlikeHandler(logger, similarity_threshold=0.7)
-    gap = GapSequence(
-        words=("fone", "lite", "nite"),  # Common phonetic misspellings
-        transcription_position=0,
-        preceding_anchor=None,
-        following_anchor=None,
-        reference_words={"genius": ["phone", "light", "night"], "spotify": ["phone", "light", "night"]},
+    gap, word_map, handler_data = create_handler_test_data(
+        gap_word_texts=["fone", "lite", "nite"],
+        reference_words={"genius": ["phone", "light", "night"], "spotify": ["phone", "light", "night"]}
     )
 
-    corrections = handler.handle(gap)
+    corrections = handler.handle(gap, handler_data)
 
     assert len(corrections) == 3  # All words need correction
 
@@ -41,15 +41,12 @@ def test_handle_phonetic_example(logger):
 
 def test_handle_disagreeing_references(logger):
     handler = SoundAlikeHandler(logger, similarity_threshold=0.7)
-    gap = GapSequence(
-        words=("fone",),
-        transcription_position=0,
-        preceding_anchor=None,
-        following_anchor=None,
-        reference_words={"genius": ["phone"], "spotify": ["foam"]},
+    gap, word_map, handler_data = create_handler_test_data(
+        gap_word_texts=["fone"],
+        reference_words={"genius": ["phone"], "spotify": ["foam"]}
     )
 
-    corrections = handler.handle(gap)
+    corrections = handler.handle(gap, handler_data)
 
     assert len(corrections) == 1
     assert corrections[0].confidence < 0.7  # Lower confidence due to disagreeing sources
@@ -57,29 +54,23 @@ def test_handle_disagreeing_references(logger):
 
 def test_cannot_handle_no_sound_alike_matches(logger):
     handler = SoundAlikeHandler(logger, similarity_threshold=0.9)
-    gap = GapSequence(
-        words=("xyz", "abc", "def"),  # Use words with completely different phonetic codes
-        transcription_position=0,
-        preceding_anchor=None,
-        following_anchor=None,
-        reference_words={"genius": ["one", "two", "three"], "spotify": ["one", "two", "three"]},
+    gap, word_map, handler_data = create_handler_test_data(
+        gap_word_texts=["xyz", "abc", "def"],
+        reference_words={"genius": ["one", "two", "three"], "spotify": ["one", "two", "three"]}
     )
 
-    corrections = handler.handle(gap)
+    corrections = handler.handle(gap, handler_data)
     assert len(corrections) == 0  # Should find no matches above threshold
 
 
 def test_handle_preserves_exact_matches(logger):
     handler = SoundAlikeHandler(logger, similarity_threshold=0.7)
-    gap = GapSequence(
-        words=("fone", "light", "night"),  # middle and last words exact matches
-        transcription_position=0,
-        preceding_anchor=None,
-        following_anchor=None,
-        reference_words={"genius": ["phone", "light", "night"], "spotify": ["phone", "light", "night"]},
+    gap, word_map, handler_data = create_handler_test_data(
+        gap_word_texts=["fone", "light", "night"],
+        reference_words={"genius": ["phone", "light", "night"], "spotify": ["phone", "light", "night"]}
     )
 
-    corrections = handler.handle(gap)
+    corrections = handler.handle(gap, handler_data)
 
     # Should only correct "fone", leaving exact matches alone
     assert len(corrections) == 1
@@ -89,18 +80,12 @@ def test_handle_preserves_exact_matches(logger):
 
 def test_handle_complex_sound_alike_example(logger):
     handler = SoundAlikeHandler(logger, similarity_threshold=0.7)
-    gap = GapSequence(
-        words=("relax", "your", "conscience"),
-        transcription_position=0,
-        preceding_anchor=None,
-        following_anchor=None,
-        reference_words={
-            "genius": ["you", "relapse", "unconscious"],
-            "spotify": ["you", "relapse", "unconscious"],
-        },
+    gap, word_map, handler_data = create_handler_test_data(
+        gap_word_texts=["relax", "your", "conscience"],
+        reference_words={"genius": ["you", "relapse", "unconscious"], "spotify": ["you", "relapse", "unconscious"]}
     )
 
-    corrections = handler.handle(gap)
+    corrections = handler.handle(gap, handler_data)
     assert len(corrections) == 3  # Should find all three matches
     
     # Check specific corrections
@@ -120,15 +105,12 @@ def test_handle_complex_sound_alike_example(logger):
 def test_handle_substring_code_match(logger):
     """Test the substring code matching."""
     handler = SoundAlikeHandler(logger, similarity_threshold=0.65)
-    gap = GapSequence(
-        words=("conscience",),
-        transcription_position=0,
-        preceding_anchor=None,
-        following_anchor=None,
-        reference_words={"genius": ["unconscious"], "spotify": ["unconscious"]},
+    gap, word_map, handler_data = create_handler_test_data(
+        gap_word_texts=["conscience"],
+        reference_words={"genius": ["unconscious"], "spotify": ["unconscious"]}
     )
 
-    corrections = handler.handle(gap)
+    corrections = handler.handle(gap, handler_data)
 
     assert len(corrections) == 1
     assert corrections[0].original_word == "conscience"

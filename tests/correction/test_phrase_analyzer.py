@@ -167,7 +167,7 @@ def test_error_handling():
     logger = logging.getLogger("test_error")
     with pytest.raises(OSError) as exc_info:
         PhraseAnalyzer(logger, "nonexistent_model")
-    assert "not found" in str(exc_info.value)
+    assert "could not be downloaded" in str(exc_info.value)
 
 
 def test_french_phrases():
