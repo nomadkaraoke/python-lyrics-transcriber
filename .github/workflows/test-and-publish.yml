@@ -40,6 +40,20 @@ jobs:
         run: |
           poetry run python -c "import nltk; nltk.download('cmudict')"
       
+      # Add Node.js and Yarn setup for frontend build
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          
+      - name: Enable Yarn
+        run: corepack enable
+      
+      - name: Build frontend with version sync
+        run: |
+          chmod +x scripts/build_frontend.sh
+          ./scripts/build_frontend.sh
+      
       - name: Run unit tests
         run: |
           poetry run pytest tests/unit/ -v --cov=lyrics_transcriber --cov-report=xml --cov-report=term-missing --cov-fail-under=60
