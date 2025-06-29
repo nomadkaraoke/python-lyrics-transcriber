@@ -84,7 +84,16 @@ jobs:
       - name: Run integration tests  
         run: |
           poetry run pytest tests/integration/ -v
-      
+
+      - name: Free up disk space before publish
+        run: |
+          rm -rf lyrics_transcriber/frontend/node_modules
+          rm -rf lyrics_transcriber/frontend/.yarn
+          rm -rf lyrics_transcriber/frontend/.yarn-cache
+          rm -rf lyrics_transcriber/frontend/.pnp.*
+          rm -rf .pytest_cache
+          df -h
+
       - name: Build package
         run: |
           poetry build
