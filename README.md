@@ -2,7 +2,7 @@
 
 ![PyPI - Version](https://img.shields.io/pypi/v/lyrics-transcriber)
 ![Python Version](https://img.shields.io/badge/python-3.10+-blue)
-![Tests](https://github.com/nomadkaraoke/lyrics-transcriber/workflows/Test%20and%20Publish/badge.svg)
+[![Tests](https://github.com/nomadkaraoke/python-lyrics-transcriber/actions/workflows/test-and-publish.yml/badge.svg)](https://github.com/nomadkaraoke/python-lyrics-transcriber/actions/workflows/test-and-publish.yml)
 ![Test Coverage](https://codecov.io/gh/nomadkaraoke/lyrics-transcriber/branch/main/graph/badge.svg)
 
 
