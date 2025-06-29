@@ -8,53 +8,8 @@ import sys
 # Add the project root to the path so we can import from the package
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-# Dictionary of test file patterns to skip
-SKIP_PATTERNS = [
-    # Completely skip these test modules
-    # "tests/correction/handlers/test_extra_words.py",  # COMPLETED - Phase 2 ✓
-    # "tests/correction/handlers/test_levenshtein.py",  # COMPLETED - Phase 2 ✓
-    # "tests/correction/handlers/test_repeat.py",  # COMPLETED - Phase 2 ✓
-    # "tests/correction/handlers/test_sound_alike.py",  # COMPLETED - Phase 2 ✓
-    # "tests/correction/handlers/test_word_count_match.py",  # COMPLETED - Phase 2 ✓
-    # "tests/correction/test_anchor_sequence_1.py",  # COMPLETED - Phase 2 ✓
-    # "tests/correction/test_anchor_sequence_2.py",  # COMPLETED - Phase 2 ✓
-    "tests/correction/test_corrector.py",  # TODO - Complex integration test - Phase 2
-    # "tests/core/test_controller.py",  # COMPLETED - Phase 1 ✓
-    # "tests/output/ass/test_lyrics_line.py",  # COMPLETED - Phase 3 ✓
-    # "tests/output/ass/test_lyrics_screen.py",  # MOSTLY COMPLETED - Phase 3 (17/18 tests) ✓
-    # "tests/output/ass/test_section_detector.py",  # COMPLETED - Phase 3 ✓
-    "tests/output/test_generator.py",  # TODO - Complex API changes needed
-    # "tests/output/test_lyrics_file.py",  # COMPLETED - Phase 3 ✓
-    # "tests/output/test_plain_text.py",  # COMPLETED - Phase 3 ✓
-    # "tests/output/test_segment_resizer.py",  # COMPLETED - Phase 3 ✓
-    # "tests/output/test_subtitles.py",  # COMPLETED - Phase 3 ✓
-    # "tests/output/test_video.py",  # COMPLETED - Phase 3 ✓
-    
-    # Specific test functions to skip
-    # "tests/cli/test_cli_main.py::test_create_arg_parser",  # ✅ COMPLETED - Phase 4
-    # "tests/cli/test_cli_main.py::test_create_configs",  # ✅ COMPLETED - Phase 4
-    # "tests/correction/test_phrase_analyzer.py::test_error_handling",  # COMPLETED - Phase 2 ✓
-    # "tests/correction/test_text_utils.py::test_punctuation_removal",  # COMPLETED - Phase 2 ✓
-    # "tests/correction/test_text_utils.py::test_hyphenated_words",  # COMPLETED - Phase 2 ✓
-    # "tests/correction/test_text_utils.py::test_whitespace_normalization",  # COMPLETED - Phase 2 ✓
-    # "tests/correction/test_text_utils.py::test_mixed_cases",  # COMPLETED - Phase 2 ✓
-    # "tests/correction/test_text_utils.py::test_empty_and_special_cases",  # COMPLETED - Phase 2 ✓
-    # "tests/lyrics/test_base_lyrics_provider.py::test_word_to_dict",  # ✅ COMPLETED - Phase 4
-    # "tests/lyrics/test_base_lyrics_provider.py::test_lyrics_segment_to_dict",  # ✅ COMPLETED - Phase 4
-    # "tests/lyrics/test_base_lyrics_provider.py::test_fetch_lyrics_with_cache",  # ✅ COMPLETED - Phase 4
-    # "tests/lyrics/test_genius_provider.py::TestGeniusProvider::test_init_with_token",  # ✅ COMPLETED - Phase 4
-    # "tests/lyrics/test_genius_provider.py::TestGeniusProvider::test_convert_result_format",  # ✅ COMPLETED - Phase 4
-    # "tests/lyrics/test_genius_provider.py::TestGeniusProvider::test_convert_result_format_missing_fields",  # ✅ COMPLETED - Phase 4
-    # "tests/lyrics/test_spotify_provider.py::TestSpotifyProvider::test_convert_result_format",  # ✅ COMPLETED - Phase 4
-    # "tests/lyrics/test_spotify_provider.py::TestSpotifyProvider::test_convert_result_format_minimal",  # ✅ COMPLETED - Phase 4
-    # "tests/output/ass/test_config.py::test_screen_config_defaults",  # COMPLETED - Phase 3 ✓
-    # "tests/transcribers/test_base_transcriber.py::TestTranscriptionData::test_data_creation",  # ✅ COMPLETED - Phase 4
-    # "tests/transcribers/test_base_transcriber.py::TestBaseTranscriber::test_transcribe_implementation",  # ✅ COMPLETED - Phase 4
-    # "tests/transcribers/test_base_transcriber.py::TestBaseTranscriber::test_caching_mechanism",  # ✅ COMPLETED - Phase 4
-    # "tests/transcribers/test_base_transcriber.py::TestBaseTranscriber::test_cache_file_structure",  # ✅ COMPLETED - Phase 4
-    # "tests/transcribers/test_base_transcriber.py::TestBaseTranscriber::test_invalid_cache_handling",  # ✅ COMPLETED - Phase 4
-    # "tests/transcribers/test_whisper.py::TestWhisperTranscriber::test_perform_transcription_success"  # ✅ COMPLETED - Phase 4
-]
+# All tests are now working! No more skip patterns needed.
+SKIP_PATTERNS = []
 
 def pytest_collection_modifyitems(config, items):
     for item in items:
