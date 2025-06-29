@@ -3,8 +3,7 @@
 ![PyPI - Version](https://img.shields.io/pypi/v/lyrics-transcriber)
 ![Python Version](https://img.shields.io/badge/python-3.10+-blue)
 [![Tests](https://github.com/nomadkaraoke/python-lyrics-transcriber/actions/workflows/test-and-publish.yml/badge.svg)](https://github.com/nomadkaraoke/python-lyrics-transcriber/actions/workflows/test-and-publish.yml)
-![Test Coverage](https://codecov.io/gh/nomadkaraoke/lyrics-transcriber/branch/main/graph/badge.svg)
-
+[![Coverage](https://codecov.io/gh/nomadkaraoke/python-lyrics-transcriber/graph/badge.svg?token=SMW2TVPVNT)](https://codecov.io/gh/nomadkaraoke/python-lyrics-transcriber)
 
 Automatically create synchronised lyrics files in ASS and MidiCo LRC formats with word-level timestamps, using OpenAI Whisper and lyrics from Genius and Spotify, for convenience in use cases such as karaoke video production.
 
@@ -20,7 +19,7 @@ Automatically create synchronised lyrics files in ASS and MidiCo LRC formats wit
 
 ### Prerequisites
 
-- Python 3.9 or higher
+- Python 3.10 or higher
 - [Optional] Genius API token if you want to fetch lyrics from Genius
 - [Optional] Spotify cookie value if you want to fetch lyrics from Spotify
 - [Optional] OpenAI API token if you want to use LLM correction of the transcribed lyrics
