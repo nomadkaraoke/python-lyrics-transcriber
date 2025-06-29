@@ -4,6 +4,7 @@ from unittest.mock import Mock, call
 import shutil
 from lyrics_transcriber.types import LyricsSegment, Word, TranscriptionData
 from lyrics_transcriber.transcribers.base_transcriber import BaseTranscriber
+from tests.test_helpers import create_test_word, create_test_segment
 import tempfile
 import json
 import os
@@ -28,9 +29,9 @@ class MockTranscriber(BaseTranscriber):
         segments = []
         words = []  # Collect all words
         for seg in raw_result["segments"]:
-            seg_words = [Word(**w) for w in seg["words"]]
+            seg_words = [create_test_word(**w) for w in seg["words"]]
             words.extend(seg_words)  # Add segment words to main words list
-            segments.append(LyricsSegment(text=seg["text"], words=seg_words, start_time=seg["start_time"], end_time=seg["end_time"]))
+            segments.append(create_test_segment(text=seg["text"], words=seg_words, start_time=seg["start_time"], end_time=seg["end_time"]))
 
         return TranscriptionData(
             segments=segments,
@@ -51,9 +52,10 @@ def mock_logger():
 
 class TestTranscriptionData:
     def test_data_creation(self):
-        test_word = Word(text="test", start_time=0.0, end_time=1.0)
+        test_word = create_test_word(text="test", start_time=0.0, end_time=1.0)
+        test_segment = create_test_segment(text="test", words=[test_word], start_time=0.0, end_time=1.0)
         result = TranscriptionData(
-            segments=[LyricsSegment(text="test", words=[test_word], start_time=0.0, end_time=1.0)],
+            segments=[test_segment],
             words=[test_word],  # Add words parameter
             text="test",
             source="test",
@@ -184,7 +186,7 @@ class TestBaseTranscriber:
 
         # Verify logger messages
         transcriber.logger.info.assert_has_calls(
-            [call(f"No cache found, transcribing {audio_file}"), call(f"Using cached raw data for {audio_file}")]
+            [call(f"No cache found, transcribing {audio_file}"), call(f"Using cached converted data for {audio_file}")]
         )
 
     def test_cache_file_structure(self, transcriber, tmp_path):

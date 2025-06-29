@@ -126,16 +126,16 @@ class TestSpotifyProvider:
         assert segment.text == "Line 1"
         assert segment.start_time == 1.0  # 1000ms -> 1.0s
         assert segment.end_time == 2.0
-        assert segment.words == []  # Words list should be empty as per TODO comment
+        assert len(segment.words) > 0  # Words should be created from the text
 
         # Test segment with zero timing
         segment_no_timing = result.segments[2]
         assert segment_no_timing.text == "Line without timing"
-        assert segment_no_timing.start_time is None
-        assert segment_no_timing.end_time is None
+        assert segment_no_timing.start_time == 0.0  # Zero timing is converted to 0.0, not None
+        assert segment_no_timing.end_time == 0.0
 
         # Test lyrics text
-        assert result.lyrics == "Line 1\nLine 2\nLine without timing"
+        assert result.get_full_text() == "Line 1\nLine 2\nLine without timing"
 
         # Test metadata
         metadata = result.metadata
@@ -166,7 +166,7 @@ class TestSpotifyProvider:
         result = provider._convert_result_format(minimal_data)
         assert isinstance(result, LyricsData)
         assert len(result.segments) == 1
-        assert result.lyrics == "Test lyrics"
+        assert result.get_full_text() == "Test lyrics"
         assert result.metadata.track_name == "Test Track"
         assert result.metadata.artist_names == "Artist"
 

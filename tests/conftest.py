@@ -31,29 +31,29 @@ SKIP_PATTERNS = [
     # "tests/output/test_video.py",  # COMPLETED - Phase 3 ✓
     
     # Specific test functions to skip
-    "tests/cli/test_cli_main.py::test_create_arg_parser",
-    "tests/cli/test_cli_main.py::test_create_configs",
+    # "tests/cli/test_cli_main.py::test_create_arg_parser",  # ✅ COMPLETED - Phase 4
+    # "tests/cli/test_cli_main.py::test_create_configs",  # ✅ COMPLETED - Phase 4
     # "tests/correction/test_phrase_analyzer.py::test_error_handling",  # COMPLETED - Phase 2 ✓
     # "tests/correction/test_text_utils.py::test_punctuation_removal",  # COMPLETED - Phase 2 ✓
     # "tests/correction/test_text_utils.py::test_hyphenated_words",  # COMPLETED - Phase 2 ✓
     # "tests/correction/test_text_utils.py::test_whitespace_normalization",  # COMPLETED - Phase 2 ✓
     # "tests/correction/test_text_utils.py::test_mixed_cases",  # COMPLETED - Phase 2 ✓
     # "tests/correction/test_text_utils.py::test_empty_and_special_cases",  # COMPLETED - Phase 2 ✓
-    "tests/lyrics/test_base_lyrics_provider.py::test_word_to_dict",
-    "tests/lyrics/test_base_lyrics_provider.py::test_lyrics_segment_to_dict",
-    "tests/lyrics/test_base_lyrics_provider.py::test_fetch_lyrics_with_cache",
-    "tests/lyrics/test_genius_provider.py::TestGeniusProvider::test_init_with_token",
-    "tests/lyrics/test_genius_provider.py::TestGeniusProvider::test_convert_result_format",
-    "tests/lyrics/test_genius_provider.py::TestGeniusProvider::test_convert_result_format_missing_fields",
-    "tests/lyrics/test_spotify_provider.py::TestSpotifyProvider::test_convert_result_format",
-    "tests/lyrics/test_spotify_provider.py::TestSpotifyProvider::test_convert_result_format_minimal",
+    # "tests/lyrics/test_base_lyrics_provider.py::test_word_to_dict",  # ✅ COMPLETED - Phase 4
+    # "tests/lyrics/test_base_lyrics_provider.py::test_lyrics_segment_to_dict",  # ✅ COMPLETED - Phase 4
+    # "tests/lyrics/test_base_lyrics_provider.py::test_fetch_lyrics_with_cache",  # ✅ COMPLETED - Phase 4
+    # "tests/lyrics/test_genius_provider.py::TestGeniusProvider::test_init_with_token",  # ✅ COMPLETED - Phase 4
+    # "tests/lyrics/test_genius_provider.py::TestGeniusProvider::test_convert_result_format",  # ✅ COMPLETED - Phase 4
+    # "tests/lyrics/test_genius_provider.py::TestGeniusProvider::test_convert_result_format_missing_fields",  # ✅ COMPLETED - Phase 4
+    # "tests/lyrics/test_spotify_provider.py::TestSpotifyProvider::test_convert_result_format",  # ✅ COMPLETED - Phase 4
+    # "tests/lyrics/test_spotify_provider.py::TestSpotifyProvider::test_convert_result_format_minimal",  # ✅ COMPLETED - Phase 4
     # "tests/output/ass/test_config.py::test_screen_config_defaults",  # COMPLETED - Phase 3 ✓
-    "tests/transcribers/test_base_transcriber.py::TestTranscriptionData::test_data_creation",
-    "tests/transcribers/test_base_transcriber.py::TestBaseTranscriber::test_transcribe_implementation",
-    "tests/transcribers/test_base_transcriber.py::TestBaseTranscriber::test_caching_mechanism",
-    "tests/transcribers/test_base_transcriber.py::TestBaseTranscriber::test_cache_file_structure",
-    "tests/transcribers/test_base_transcriber.py::TestBaseTranscriber::test_invalid_cache_handling",
-    "tests/transcribers/test_whisper.py::TestWhisperTranscriber::test_perform_transcription_success"
+    # "tests/transcribers/test_base_transcriber.py::TestTranscriptionData::test_data_creation",  # ✅ COMPLETED - Phase 4
+    # "tests/transcribers/test_base_transcriber.py::TestBaseTranscriber::test_transcribe_implementation",  # ✅ COMPLETED - Phase 4
+    # "tests/transcribers/test_base_transcriber.py::TestBaseTranscriber::test_caching_mechanism",  # ✅ COMPLETED - Phase 4
+    # "tests/transcribers/test_base_transcriber.py::TestBaseTranscriber::test_cache_file_structure",  # ✅ COMPLETED - Phase 4
+    # "tests/transcribers/test_base_transcriber.py::TestBaseTranscriber::test_invalid_cache_handling",  # ✅ COMPLETED - Phase 4
+    # "tests/transcribers/test_whisper.py::TestWhisperTranscriber::test_perform_transcription_success"  # ✅ COMPLETED - Phase 4
 ]
 
 def pytest_collection_modifyitems(config, items):

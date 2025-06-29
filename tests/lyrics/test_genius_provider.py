@@ -43,8 +43,13 @@ class TestGeniusProvider:
     @pytest.fixture
     def provider(self, mock_logger, config_with_token):
         with patch("lyricsgenius.Genius") as mock_genius:
+            # Configure the mock client attributes
+            mock_client = mock_genius.return_value
+            mock_client.verbose = False
+            mock_client.remove_section_headers = True
+            
             provider = GeniusProvider(config=config_with_token, logger=mock_logger)
-            provider.client = mock_genius.return_value
+            provider.client = mock_client
             return provider
 
     def test_init_with_token(self, provider):
@@ -94,8 +99,8 @@ class TestGeniusProvider:
         result = provider._convert_result_format(mock_song_data)
 
         assert isinstance(result, LyricsData)
-        assert result.lyrics == "Test lyrics"
-        assert result.segments == []
+        assert result.get_full_text() == "Test lyrics"
+        assert len(result.segments) > 0  # Should have segments created from lyrics
 
         # Verify metadata
         metadata = result.metadata
@@ -120,6 +125,6 @@ class TestGeniusProvider:
 
         result = provider._convert_result_format(minimal_data)
         assert isinstance(result, LyricsData)
-        assert result.lyrics == "Test lyrics"
+        assert result.get_full_text() == "Test lyrics"
         assert result.metadata.album_name is None
         assert result.metadata.provider_metadata["release_date"] is None

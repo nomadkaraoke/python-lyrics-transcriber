@@ -14,6 +14,7 @@ from lyrics_transcriber.transcribers.whisper import (
     LyricsSegment,
     Word,
 )
+from tests.test_helpers import create_test_word, create_test_segment
 
 
 @pytest.fixture
@@ -345,18 +346,12 @@ class TestWhisperTranscriber:
         transcriber.storage.create_or_get_shared_link.assert_called_once()
 
     def test_perform_transcription_success(self, transcriber):
-        test_word = Word(text="test", start_time=0.0, end_time=1.0, confidence=0.9)
+        test_word = create_test_word(text="test", start_time=0.0, end_time=1.0, confidence=0.9)
+        test_segment = create_test_segment(text="test", words=[test_word], start_time=0.0, end_time=1.0)
         transcriber.start_transcription = Mock(return_value="job123")
         transcriber.get_transcription_result = Mock(
             return_value=TranscriptionData(
-                segments=[
-                    LyricsSegment(
-                        text="test",
-                        words=[test_word],
-                        start_time=0.0,
-                        end_time=1.0,
-                    )
-                ],
+                segments=[test_segment],
                 words=[test_word],
                 text="test",
                 source="Whisper",

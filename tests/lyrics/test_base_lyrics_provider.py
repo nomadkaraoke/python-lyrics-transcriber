@@ -10,6 +10,7 @@ from lyrics_transcriber.types import (
 )
 
 from lyrics_transcriber.lyrics.base_lyrics_provider import BaseLyricsProvider, LyricsProviderConfig
+from tests.test_helpers import create_test_word, create_test_segment
 
 
 class MockLyricsProvider(BaseLyricsProvider):
@@ -51,26 +52,35 @@ def failing_provider(tmp_path):
 def test_word_to_dict():
     """Test Word.to_dict() method"""
     # Test with confidence
-    word = Word(text="test", start_time=1.0, end_time=2.0, confidence=0.9)
-    assert word.to_dict() == {"text": "test", "start_time": 1.0, "end_time": 2.0, "confidence": 0.9}
+    word = create_test_word(text="test", start_time=1.0, end_time=2.0, confidence=0.9)
+    expected = {"id": word.id, "text": "test", "start_time": 1.0, "end_time": 2.0, "confidence": 0.9, "created_during_correction": False}
+    assert word.to_dict() == expected
 
     # Test without confidence
-    word = Word(text="test", start_time=1.0, end_time=2.0)
-    assert word.to_dict() == {"text": "test", "start_time": 1.0, "end_time": 2.0}
+    word = create_test_word(text="test", start_time=1.0, end_time=2.0)
+    expected = {"id": word.id, "text": "test", "start_time": 1.0, "end_time": 2.0, "created_during_correction": False}
+    assert word.to_dict() == expected
 
 
 def test_lyrics_segment_to_dict():
     """Test LyricsSegment.to_dict() method"""
     # Create test words
-    words = [Word(text="hello", start_time=1.0, end_time=1.5), Word(text="world", start_time=1.5, end_time=2.0)]
+    words = [
+        create_test_word(text="hello", start_time=1.0, end_time=1.5), 
+        create_test_word(text="world", start_time=1.5, end_time=2.0)
+    ]
 
     # Create a lyrics segment
-    segment = LyricsSegment(text="hello world", words=words, start_time=1.0, end_time=2.0)
+    segment = create_test_segment(text="hello world", words=words, start_time=1.0, end_time=2.0)
 
     # Test the to_dict method
     expected = {
+        "id": segment.id,
         "text": "hello world",
-        "words": [{"text": "hello", "start_time": 1.0, "end_time": 1.5}, {"text": "world", "start_time": 1.5, "end_time": 2.0}],
+        "words": [
+            {"id": words[0].id, "text": "hello", "start_time": 1.0, "end_time": 1.5, "created_during_correction": False}, 
+            {"id": words[1].id, "text": "world", "start_time": 1.5, "end_time": 2.0, "created_during_correction": False}
+        ],
         "start_time": 1.0,
         "end_time": 2.0,
     }
@@ -80,17 +90,13 @@ def test_lyrics_segment_to_dict():
 
 def test_fetch_lyrics_with_cache(test_provider, tmp_path):
     """Test fetch_lyrics with caching enabled"""
-    # Create test audio file
-    with open("test.mp3", "wb") as f:
-        f.write(b"test audio data")
-
     result = test_provider.fetch_lyrics("Test Artist", "Test Song")
     assert result is not None
 
-    # Verify cache files were created
-    file_hash = test_provider._get_file_hash("test.mp3")
-    raw_cache_path = test_provider._get_cache_path(file_hash, "raw")
-    converted_cache_path = test_provider._get_cache_path(file_hash, "converted")
+    # Verify cache files were created (now uses artist/title hash instead of file hash)
+    cache_key = test_provider._get_artist_title_hash("Test Artist", "Test Song")
+    raw_cache_path = test_provider._get_cache_path(cache_key, "raw")
+    converted_cache_path = test_provider._get_cache_path(cache_key, "converted")
 
     assert os.path.exists(raw_cache_path)
     assert os.path.exists(converted_cache_path)
@@ -98,9 +104,6 @@ def test_fetch_lyrics_with_cache(test_provider, tmp_path):
     # Test loading from cache
     result2 = test_provider.fetch_lyrics("Test Artist", "Test Song")
     assert result2 is not None
-
-    # Cleanup
-    os.remove("test.mp3")
 
 
 def test_fetch_lyrics_without_cache():

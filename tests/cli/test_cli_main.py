@@ -39,9 +39,8 @@ def test_create_arg_parser():
     args = parse_args(parser, ["test.mp3"])
     assert args.log_level == "INFO"
     assert args.video_resolution == "360p"
-    assert args.video_background_color == "black"
-    assert args.cache_dir == Path("/tmp/lyrics-transcriber-cache/")
-    assert not args.render_video
+    assert args.cache_dir == Path(os.path.expanduser("~/lyrics-transcriber-cache"))
+    assert not args.skip_video  # skip_video is False by default, meaning video rendering is enabled
 
 
 def test_validate_args_no_audio_file(capsys, test_logger):
@@ -126,11 +125,9 @@ def test_create_configs():
             "cli_spotify",
             "--output_dir",
             "test_output",
-            "--render_video",
             "--video_resolution",
             "1080p",
-            "--video_background_color",
-            "blue",
+            # Note: Using absence of --skip_video to enable video rendering (default behavior)
         ]
     )
 
@@ -155,9 +152,9 @@ def test_create_configs():
 
     # Output config should reflect CLI args
     assert output_config.output_dir == "test_output"
-    assert output_config.render_video is True
+    assert output_config.render_video is True  # Should be True since --skip_video was not provided
     assert output_config.video_resolution == "1080p"
-    assert output_config.video_background_color == "blue"
+    # Note: video_background_color is not a CLI argument in current implementation
 
 
 @patch("lyrics_transcriber.cli.cli_main.LyricsTranscriber")
