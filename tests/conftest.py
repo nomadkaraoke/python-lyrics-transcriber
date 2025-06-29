@@ -16,18 +16,18 @@ SKIP_PATTERNS = [
     # "tests/correction/handlers/test_repeat.py",  # COMPLETED - Phase 2 ✓
     # "tests/correction/handlers/test_sound_alike.py",  # COMPLETED - Phase 2 ✓
     # "tests/correction/handlers/test_word_count_match.py",  # COMPLETED - Phase 2 ✓
-    "tests/correction/test_anchor_sequence_1.py",
-    "tests/correction/test_anchor_sequence_2.py",
+    # "tests/correction/test_anchor_sequence_1.py",  # COMPLETED - Phase 2 ✓
+    # "tests/correction/test_anchor_sequence_2.py",  # COMPLETED - Phase 2 ✓
     "tests/correction/test_corrector.py",  # TODO - Complex integration test - Phase 2
     # "tests/core/test_controller.py",  # COMPLETED - Phase 1 ✓
-    "tests/output/ass/test_lyrics_line.py",
+    # "tests/output/ass/test_lyrics_line.py",  # COMPLETED - Phase 3 ✓
     "tests/output/ass/test_lyrics_screen.py",
     "tests/output/ass/test_section_detector.py",
-    "tests/output/test_generator.py",
-    "tests/output/test_lyrics_file.py",
-    "tests/output/test_plain_text.py",
+    "tests/output/test_generator.py",  # TODO - Complex API changes needed
+    # "tests/output/test_lyrics_file.py",  # COMPLETED - Phase 3 ✓
+    # "tests/output/test_plain_text.py",  # COMPLETED - Phase 3 ✓
     "tests/output/test_segment_resizer.py",
-    "tests/output/test_subtitles.py",
+    # "tests/output/test_subtitles.py",  # COMPLETED - Phase 3 ✓
     "tests/output/test_video.py",
     
     # Specific test functions to skip

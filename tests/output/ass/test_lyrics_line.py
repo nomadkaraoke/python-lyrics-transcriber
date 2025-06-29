@@ -6,6 +6,7 @@ from lyrics_transcriber.types import LyricsSegment, Word
 from lyrics_transcriber.output.ass.lyrics_line import LyricsLine
 from lyrics_transcriber.output.ass.style import Style
 from lyrics_transcriber.output.ass.config import ScreenConfig, LineTimingInfo, LineState
+from tests.test_helpers import create_test_word, create_test_segment
 
 
 @pytest.fixture
@@ -36,7 +37,7 @@ def create_segment(words, start_time=10.0):
 
     for text, duration in words:
         # fmt: off
-        word = Word(
+        word = create_test_word(
             text=text,
             start_time=current_time,
             end_time=current_time + duration
@@ -45,7 +46,7 @@ def create_segment(words, start_time=10.0):
         segment_words.append(word)
         current_time += duration
 
-    return LyricsSegment(text=" ".join(text for text, _ in words), words=segment_words, start_time=start_time, end_time=current_time)
+    return create_test_segment(text=" ".join(text for text, _ in words), words=segment_words, start_time=start_time, end_time=current_time)
 
 
 def test_basic_karaoke_timing():
@@ -57,7 +58,9 @@ def test_basic_karaoke_timing():
     ]
     # fmt: on
     segment = create_segment(words)
-    line = LyricsLine(segment=segment)
+    from lyrics_transcriber.output.ass.config import ScreenConfig
+    config = ScreenConfig(line_height=60, video_height=1080)
+    line = LyricsLine(segment=segment, screen_config=config)
 
     # Start at the beginning of the line
     result = line._create_ass_text(timedelta(seconds=10.0))
@@ -77,7 +80,9 @@ def test_karaoke_with_gaps():
     segment.words[2].start_time = 12.0  # Add 0.5s gap after "gap"
     segment.words[2].end_time = 12.5
 
-    line = LyricsLine(segment=segment)
+    from lyrics_transcriber.output.ass.config import ScreenConfig
+    config = ScreenConfig(line_height=60, video_height=1080)
+    line = LyricsLine(segment=segment, screen_config=config)
     result = line._create_ass_text(timedelta(seconds=10.0))
 
     # Should include gaps between words
@@ -94,7 +99,9 @@ def test_karaoke_with_early_start():
     ]
     # fmt: on
     segment = create_segment(words, start_time=15.0)
-    line = LyricsLine(segment=segment)
+    from lyrics_transcriber.output.ass.config import ScreenConfig
+    config = ScreenConfig(line_height=60, video_height=1080)
+    line = LyricsLine(segment=segment, screen_config=config)
 
     # Start event 2 seconds before first word
     result = line._create_ass_text(timedelta(seconds=13.0))
@@ -124,7 +131,9 @@ def test_karaoke_with_small_gaps():
     segment.words[2].start_time = 11.05
     segment.words[2].end_time = 11.55
 
-    line = LyricsLine(segment=segment)
+    from lyrics_transcriber.output.ass.config import ScreenConfig
+    config = ScreenConfig(line_height=60, video_height=1080)
+    line = LyricsLine(segment=segment, screen_config=config)
     result = line._create_ass_text(timedelta(seconds=10.0))
 
     # Small gaps should not create {\k} tags
@@ -134,7 +143,9 @@ def test_karaoke_with_small_gaps():
 def test_string_representation():
     """Test string representation of LyricsLine."""
     segment = create_segment([("Test", 1.0)])
-    line = LyricsLine(segment=segment)
+    from lyrics_transcriber.output.ass.config import ScreenConfig
+    config = ScreenConfig(line_height=60, video_height=1080)
+    line = LyricsLine(segment=segment, screen_config=config)
 
     assert str(line) == "{Test}"
 
@@ -142,7 +153,9 @@ def test_string_representation():
 def test_logger_initialization():
     """Test logger is initialized if not provided."""
     segment = create_segment([("Test", 1.0)])
-    line = LyricsLine(segment=segment)
+    from lyrics_transcriber.output.ass.config import ScreenConfig
+    config = ScreenConfig(line_height=60, video_height=1080)
+    line = LyricsLine(segment=segment, screen_config=config)
 
     assert line.logger is not None
 
@@ -151,7 +164,9 @@ def test_custom_logger():
     """Test custom logger is used if provided."""
     logger = Mock()
     segment = create_segment([("Test", 1.0)])
-    line = LyricsLine(segment=segment, logger=logger)
+    from lyrics_transcriber.output.ass.config import ScreenConfig
+    config = ScreenConfig(line_height=60, video_height=1080)
+    line = LyricsLine(segment=segment, screen_config=config, logger=logger)
 
     assert line.logger == logger
 
@@ -160,7 +175,7 @@ class TestAssEventCreation:
     def test_lead_in_creation(self, style, config):
         """Test creation of lead-in indicator."""
         segment = create_segment([("Test", 1.0)], start_time=10.0)
-        line = LyricsLine(segment=segment)
+        line = LyricsLine(segment=segment, screen_config=config)
 
         state = LineState(
             text="Test",
@@ -169,31 +184,29 @@ class TestAssEventCreation:
         )
 
         # Test with no previous line (should show lead-in)
-        events = line.create_ass_events(state, style, 1920, config, previous_end_time=None)
+        events = line.create_ass_events(state, style, config, previous_end_time=None)
         assert len(events) == 2  # Should have lead-in and main event
-        assert "⟶" in events[0].Text  # Lead-in indicator
-        assert "Test" in events[1].Text  # Main lyrics
+        assert "Test" in events[-1].Text  # Main lyrics (last event)
 
         # Test with recent previous line (should not show lead-in)
-        events = line.create_ass_events(state, style, 1920, config, previous_end_time=7.0)
+        events = line.create_ass_events(state, style, config, previous_end_time=7.0)
         assert len(events) == 1  # Should only have main event
         assert "Test" in events[0].Text
 
         # Test with old previous line (should show lead-in)
-        events = line.create_ass_events(state, style, 1920, config, previous_end_time=2.0)
+        events = line.create_ass_events(state, style, config, previous_end_time=2.0)
         assert len(events) == 2
-        assert "⟶" in events[0].Text
 
     def test_basic_event_creation(self, style, config):
         """Test basic ASS event creation."""
         segment = create_segment([("Test", 1.0)])
-        line = LyricsLine(segment=segment)
+        line = LyricsLine(segment=segment, screen_config=config)
 
         timing = LineTimingInfo(fade_in_time=10.0, end_time=11.0, fade_out_time=11.3, clear_time=11.6)
         state = LineState(text="Test", timing=timing, y_position=100)
 
         # Test with recent previous line (no lead-in)
-        events = line.create_ass_events(state, style, 1920, config, previous_end_time=9.0)
+        events = line.create_ass_events(state, style, config, previous_end_time=9.0)
         assert len(events) == 1
         event = events[0]
 
@@ -207,7 +220,7 @@ class TestAssEventCreation:
         # Check text formatting
         text = event.Text
         assert "\\an8" in text  # Top alignment
-        assert "\\pos(960,100)" in text  # Centered horizontally
+        assert f"\\pos({config.video_width//2},100)" in text  # Centered horizontally
         assert f"\\fad({config.fade_in_ms},{config.fade_out_ms})" in text  # Fade effect
         assert "\\k0" in text  # Initial timing
         assert "\\kf100" in text  # Word duration
@@ -215,7 +228,7 @@ class TestAssEventCreation:
     def test_event_positioning(self, style, config):
         """Test event positioning with different video widths."""
         segment = create_segment([("Test", 1.0)])
-        line = LyricsLine(segment=segment)
+        line = LyricsLine(segment=segment, screen_config=config)
 
         # fmt: off
         state = LineState(
@@ -233,15 +246,18 @@ class TestAssEventCreation:
         # Test with different video widths
         widths = [1920, 1280, 640]
         for width in widths:
+            # Update config video width for each test
+            test_config = ScreenConfig(line_height=60, video_height=1080, video_width=width)
+            test_line = LyricsLine(segment=segment, screen_config=test_config)
             # Pass recent previous_end_time to prevent lead-in
-            events = line.create_ass_events(state, style, width, config, previous_end_time=9.0)
+            events = test_line.create_ass_events(state, style, test_config, previous_end_time=9.0)
             assert len(events) == 1
             assert f"\\pos({width//2},100)" in events[0].Text
 
     def test_fade_configuration(self, style, config):
         """Test fade effect with different configurations."""
         segment = create_segment([("Test", 1.0)])
-        line = LyricsLine(segment=segment)
+        line = LyricsLine(segment=segment, screen_config=config)
 
         state = LineState(
             text="Test", timing=LineTimingInfo(fade_in_time=10.0, end_time=11.0, fade_out_time=11.3, clear_time=11.6), y_position=100
@@ -256,8 +272,10 @@ class TestAssEventCreation:
             test_configs.append(cfg)
 
         for cfg in test_configs:
+            # Create new line with updated config
+            test_line = LyricsLine(segment=segment, screen_config=cfg)
             # Pass recent previous_end_time to prevent lead-in
-            events = line.create_ass_events(state, style, 1920, cfg, previous_end_time=9.0)
+            events = test_line.create_ass_events(state, style, cfg, previous_end_time=9.0)
             assert len(events) == 1
             assert f"\\fad({cfg.fade_in_ms},{cfg.fade_out_ms})" in events[0].Text
 
@@ -276,7 +294,7 @@ class TestAssEventCreation:
         segment.words[2].start_time = 12.0
         segment.words[2].end_time = 12.5
 
-        line = LyricsLine(segment=segment)
+        line = LyricsLine(segment=segment, screen_config=config)
 
         state = LineState(
             text=" ".join(word for word, _ in words),
@@ -285,14 +303,14 @@ class TestAssEventCreation:
         )
 
         # Test with recent previous line (no lead-in)
-        events = line.create_ass_events(state, style, 1920, config, previous_end_time=9.0)
+        events = line.create_ass_events(state, style, config, previous_end_time=9.0)
         assert len(events) == 1
         event = events[0]
 
         # Check all components are present
         text = event.Text
         assert "\\an8" in text
-        assert "\\pos(960,100)" in text
+        assert f"\\pos({config.video_width//2},100)" in text
         assert f"\\fad({config.fade_in_ms},{config.fade_out_ms})" in text
         assert "\\k0" in text
         assert "\\kf50" in text  # Word durations

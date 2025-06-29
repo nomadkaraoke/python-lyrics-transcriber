@@ -150,13 +150,14 @@ class LyricsCorrector:
         self.reference_lyrics = lyrics_results
 
         # Get primary transcription
-        primary_transcription = sorted(transcription_results, key=lambda x: x.priority)[0].result
+        primary_transcription_result = sorted(transcription_results, key=lambda x: x.priority)[0]
+        primary_transcription = primary_transcription_result.result
         transcribed_text = " ".join(" ".join(w.text for w in segment.words) for segment in primary_transcription.segments)
 
         # Find anchor sequences and gaps
         self.logger.debug("Finding anchor sequences and gaps")
-        anchor_sequences = self.anchor_finder.find_anchors(transcribed_text, lyrics_results, primary_transcription)
-        gap_sequences = self.anchor_finder.find_gaps(transcribed_text, anchor_sequences, lyrics_results, primary_transcription)
+        anchor_sequences = self.anchor_finder.find_anchors(transcribed_text, lyrics_results, primary_transcription_result)
+        gap_sequences = self.anchor_finder.find_gaps(transcribed_text, anchor_sequences, lyrics_results, primary_transcription_result)
 
         # Store anchor sequences for use in correction handlers
         self._anchor_sequences = anchor_sequences

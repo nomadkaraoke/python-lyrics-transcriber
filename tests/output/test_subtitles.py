@@ -9,12 +9,13 @@ from lyrics_transcriber.output.ass.section_screen import SectionScreen
 from lyrics_transcriber.output.ass.lyrics_screen import LyricsScreen
 from lyrics_transcriber.output.subtitles import SubtitlesGenerator
 from lyrics_transcriber.types import LyricsSegment, Word
+from tests.test_helpers import create_test_word, create_test_segment
 
 
 def create_segment(start: float, end: float, text: str) -> LyricsSegment:
     """Helper to create a test segment with words."""
-    words = [Word(text=text, start_time=start, end_time=end)]
-    return LyricsSegment(text=text, start_time=start, end_time=end, words=words)
+    words = [create_test_word(text=text, start_time=start, end_time=end)]
+    return create_test_segment(text=text, start_time=start, end_time=end, words=words)
 
 
 @pytest.fixture
@@ -38,7 +39,41 @@ def mock_logger():
 @pytest.fixture
 def generator(output_dir, video_resolution, mock_logger):
     """Create a SubtitlesGenerator instance."""
-    return SubtitlesGenerator(output_dir=output_dir, video_resolution=video_resolution, font_size=48, line_height=60, logger=mock_logger)
+    # Create test styles dictionary
+    styles = {
+        "karaoke": {
+            "ass_name": "Nomad",
+            "font": "Arial",
+            "font_path": "/path/to/arial.ttf",
+            "primary_color": "255, 255, 255, 255",
+            "secondary_color": "255, 255, 255, 255", 
+            "outline_color": "0, 0, 0, 255",
+            "back_color": "0, 0, 0, 255",
+            "bold": False,
+            "italic": False,
+            "underline": False,
+            "strike_out": False,
+            "scale_x": "100",
+            "scale_y": "100",
+            "spacing": "0",
+            "angle": "0",
+            "border_style": "1",
+            "outline": "1",
+            "shadow": "0",
+            "margin_l": "0",
+            "margin_r": "0",
+            "margin_v": "0",
+            "encoding": "1"
+        }
+    }
+    return SubtitlesGenerator(
+        output_dir=output_dir, 
+        video_resolution=video_resolution, 
+        font_size=48, 
+        line_height=60, 
+        styles=styles,
+        logger=mock_logger
+    )
 
 
 @pytest.fixture
@@ -139,19 +174,19 @@ def test_create_lyric_screens_with_instrumental(generator, sample_segments):
 
 def test_should_start_new_screen(generator, sample_segments):
     """Test conditions for starting new screens."""
-    screen = LyricsScreen(video_size=(1920, 1080), line_height=generator.config.line_height, logger=generator.logger)
+    screen = LyricsScreen(video_size=(1920, 1080), line_height=generator.config.line_height, config=generator.config, logger=generator.logger)
 
     # Test empty screen
     assert generator._should_start_new_screen(None, sample_segments[0], []) is True
 
-    # Test full screen
+    # Test full screen  
     for i in range(generator.config.max_visible_lines):
-        screen.lines.append(LyricsLine(segment=sample_segments[i], logger=generator.logger))
+        screen.lines.append(LyricsLine(segment=sample_segments[i], screen_config=generator.config, logger=generator.logger))
     assert generator._should_start_new_screen(screen, sample_segments[4], []) is True
 
     # Test instrumental boundary
-    screen = LyricsScreen(video_size=(1920, 1080), line_height=generator.config.line_height, logger=generator.logger)
-    screen.lines.append(LyricsLine(segment=create_segment(5.0, 8.0, "test"), logger=generator.logger))
+    screen = LyricsScreen(video_size=(1920, 1080), line_height=generator.config.line_height, config=generator.config, logger=generator.logger)
+    screen.lines.append(LyricsLine(segment=create_segment(5.0, 8.0, "test"), screen_config=generator.config, logger=generator.logger))
     instrumental_times = [(8.0, 12.0)]
     new_segment = create_segment(12.1, 15.0, "after instrumental")
     assert generator._should_start_new_screen(screen, new_segment, instrumental_times) is True
@@ -166,13 +201,13 @@ def test_merge_and_process_screens(generator):
     ]
 
     lyric_screens = [
-        LyricsScreen(video_size=generator.video_resolution, line_height=generator.config.line_height, logger=generator.logger),
-        LyricsScreen(video_size=generator.video_resolution, line_height=generator.config.line_height, logger=generator.logger),
+        LyricsScreen(video_size=generator.video_resolution, line_height=generator.config.line_height, config=generator.config, logger=generator.logger),
+        LyricsScreen(video_size=generator.video_resolution, line_height=generator.config.line_height, config=generator.config, logger=generator.logger),
     ]
 
     # Add some lines to lyric screens
-    lyric_screens[0].lines.append(LyricsLine(segment=create_segment(6.0, 8.0, "test1"), logger=generator.logger))
-    lyric_screens[1].lines.append(LyricsLine(segment=create_segment(26.0, 28.0, "test2"), logger=generator.logger))
+    lyric_screens[0].lines.append(LyricsLine(segment=create_segment(6.0, 8.0, "test1"), screen_config=generator.config, logger=generator.logger))
+    lyric_screens[1].lines.append(LyricsLine(segment=create_segment(26.0, 28.0, "test2"), screen_config=generator.config, logger=generator.logger))
 
     # Merge screens
     all_screens = generator._merge_and_process_screens(section_screens, lyric_screens)
@@ -196,7 +231,8 @@ def test_log_final_screens(generator, screen, expected_lines):
     """Test logging of final screens."""
     # Add a line to LyricsScreen if testing that type
     if isinstance(screen, LyricsScreen):
-        screen.lines.append(LyricsLine(segment=create_segment(1.0, 2.0, "test"), logger=generator.logger))
+        screen.config = generator.config  # Add config to the parametrized screen
+        screen.lines.append(LyricsLine(segment=create_segment(1.0, 2.0, "test"), screen_config=generator.config, logger=generator.logger))
 
     generator._log_final_screens([screen])
 
@@ -229,11 +265,11 @@ def test_create_styled_subtitles(generator, sample_segments):
     # Create a mix of section and lyric screens
     screens = [
         SectionScreen("INTRO", 0.0, 5.0, generator.video_resolution, generator.config.line_height, logger=generator.logger),
-        LyricsScreen(video_size=generator.video_resolution, line_height=generator.config.line_height, logger=generator.logger),
+        LyricsScreen(video_size=generator.video_resolution, line_height=generator.config.line_height, config=generator.config, logger=generator.logger),
     ]
 
     # Add some lines to the lyric screen
-    screens[1].lines.append(LyricsLine(segment=sample_segments[0], logger=generator.logger))
+    screens[1].lines.append(LyricsLine(segment=sample_segments[0], screen_config=generator.config, logger=generator.logger))
 
     # Generate styled subtitles
     ass = generator._create_styled_subtitles(screens, generator.video_resolution, generator.font_size)

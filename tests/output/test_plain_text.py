@@ -6,6 +6,7 @@ from lyrics_transcriber.output.plain_text import PlainTextGenerator
 from lyrics_transcriber.types import (
     LyricsData, LyricsMetadata, LyricsSegment, Word, CorrectionResult
 )
+from tests.test_helpers import create_test_word, create_test_segment, create_test_lyrics_data
 
 
 @pytest.fixture
@@ -17,37 +18,31 @@ def plain_text_generator(tmp_path):
 @pytest.fixture
 def sample_lyrics_data():
     """Create a sample LyricsData instance."""
-    metadata = LyricsMetadata(
+    segment = create_test_segment(
+        text="Test lyrics",
+        words=[
+            create_test_word(text="Test", start_time=0.0, end_time=0.5),
+            create_test_word(text="lyrics", start_time=0.6, end_time=1.0)
+        ],
+        start_time=0.0,
+        end_time=1.0
+    )
+    return create_test_lyrics_data(
+        segments=[segment],
         source="test_source",
         track_name="Test Track",
         artist_names="Test Artist"
-    )
-    return LyricsData(
-        lyrics="Test lyrics\nSecond line",
-        segments=[
-            LyricsSegment(
-                text="Test lyrics",
-                words=[
-                    Word(text="Test", start_time=0.0, end_time=0.5),
-                    Word(text="lyrics", start_time=0.6, end_time=1.0)
-                ],
-                start_time=0.0,
-                end_time=1.0
-            )
-        ],
-        metadata=metadata,
-        source="test_source"
     )
 
 
 @pytest.fixture
 def sample_correction_result():
     """Create a sample CorrectionResult instance."""
-    segment = LyricsSegment(
+    segment = create_test_segment(
         text="Test lyrics",
         words=[
-            Word(text="Test", start_time=0.0, end_time=0.5),
-            Word(text="lyrics", start_time=0.6, end_time=1.0)
+            create_test_word(text="Test", start_time=0.0, end_time=0.5),
+            create_test_word(text="lyrics", start_time=0.6, end_time=1.0)
         ],
         start_time=0.0,
         end_time=1.0
@@ -58,11 +53,14 @@ def sample_correction_result():
         corrections=[],
         corrections_made=0,
         confidence=0.9,
-        transcribed_text="Test lyrics",
+        reference_lyrics={},
         anchor_sequences=[],
         gap_sequences=[],
         resized_segments=[segment],
-        metadata={}
+        metadata={},
+        correction_steps=[],
+        word_id_map={},
+        segment_id_map={}
     )
 
 
@@ -90,7 +88,8 @@ def test_write_lyrics(plain_text_generator, sample_lyrics_data):
     # Verify content
     with open(output_path, 'r', encoding='utf-8') as f:
         content = f.read()
-        assert content == sample_lyrics_data.lyrics
+        expected_content = "\n".join(segment.text for segment in sample_lyrics_data.segments)
+        assert content == expected_content
 
 
 def test_write_corrected_lyrics(plain_text_generator, sample_correction_result):
@@ -130,7 +129,8 @@ def test_write_original_transcription(plain_text_generator, sample_correction_re
     # Verify content
     with open(output_path, 'r', encoding='utf-8') as f:
         content = f.read()
-        assert content == sample_correction_result.transcribed_text
+        expected_content = " ".join(" ".join(w.text for w in segment.words) for segment in sample_correction_result.original_segments)
+        assert content == expected_content
 
 
 def test_error_handling(plain_text_generator, sample_lyrics_data):
@@ -144,15 +144,23 @@ def test_error_handling(plain_text_generator, sample_lyrics_data):
 
 def test_write_lyrics_with_special_characters(plain_text_generator):
     """Test handling of special characters in lyrics."""
-    lyrics_data = LyricsData(
-        lyrics="Special & chars © ñ\nMore £ § ¥",
-        segments=[],
-        metadata=LyricsMetadata(
-            source="test",
-            track_name="Test Track",
-            artist_names="Test Artist"
-        ),
-        source="test"
+    special_segment = create_test_segment(
+        text="Special & chars © ñ",
+        words=[
+            create_test_word(text="Special", start_time=0.0, end_time=0.5),
+            create_test_word(text="&", start_time=0.6, end_time=0.7),
+            create_test_word(text="chars", start_time=0.8, end_time=1.0),
+            create_test_word(text="©", start_time=1.1, end_time=1.2),
+            create_test_word(text="ñ", start_time=1.3, end_time=1.5),
+        ],
+        start_time=0.0,
+        end_time=1.5,
+    )
+    lyrics_data = create_test_lyrics_data(
+        segments=[special_segment],
+        source="test",
+        track_name="Test Track", 
+        artist_names="Test Artist"
     )
     
     # Create output directory
@@ -164,20 +172,15 @@ def test_write_lyrics_with_special_characters(plain_text_generator):
     with open(output_path, 'r', encoding='utf-8') as f:
         content = f.read()
         assert "Special & chars © ñ" in content
-        assert "More £ § ¥" in content
 
 
 def test_empty_content(plain_text_generator):
     """Test handling of empty content."""
-    lyrics_data = LyricsData(
-        lyrics="",
+    lyrics_data = create_test_lyrics_data(
         segments=[],
-        metadata=LyricsMetadata(
-            source="test",
-            track_name="Test Track",
-            artist_names="Test Artist"
-        ),
-        source="test"
+        source="test",
+        track_name="Test Track",
+        artist_names="Test Artist"
     )
     
     # Create output directory
@@ -188,7 +191,7 @@ def test_empty_content(plain_text_generator):
     # Verify file was created
     assert Path(output_path).exists()
     
-    # Verify content is empty
+    # Verify content is empty (no segments = no content)
     with open(output_path, 'r', encoding='utf-8') as f:
         content = f.read()
         assert content == ""
@@ -210,4 +213,5 @@ def test_multiple_writes(plain_text_generator, sample_lyrics_data):
     
     with open(path1, 'r', encoding='utf-8') as f:
         content = f.read()
-        assert content == sample_lyrics_data.lyrics 
+        expected_content = "\n".join(segment.text for segment in sample_lyrics_data.segments)
+        assert content == expected_content 

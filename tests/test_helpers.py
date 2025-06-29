@@ -355,4 +355,114 @@ def create_test_output_config(
         render_video=False,  # Disable video rendering for tests by default
         generate_cdg=False,  # Disable CDG generation for tests by default
         enable_review=False  # Disable review server for tests to prevent browser launching
-    ) 
+    )
+
+
+def create_test_lyrics_data_from_text(
+    text: str,
+    source: str = "test",
+    track_name: str = "Test Track",
+    artist_names: str = "Test Artist"
+) -> LyricsData:
+    """Create test LyricsData object from a plain text string, handling line breaks as separate segments."""
+    lines = text.split('\n')
+    segments = []
+    current_time = 0.0
+    
+    for i, line in enumerate(lines):
+        if line.strip():  # Skip empty lines
+            words = []
+            word_texts = line.strip().split()
+            segment_duration = 2.0  # 2 seconds per segment
+            word_duration = segment_duration / len(word_texts) if word_texts else segment_duration
+            
+            for j, word_text in enumerate(word_texts):
+                word_start = current_time + (j * word_duration)
+                word_end = current_time + ((j + 1) * word_duration)
+                word = create_test_word(
+                    text=word_text,
+                    start_time=word_start,
+                    end_time=word_end
+                )
+                words.append(word)
+            
+            segment = create_test_segment(
+                text=line.strip(),
+                words=words,
+                start_time=current_time,
+                end_time=current_time + segment_duration
+            )
+            segments.append(segment)
+            current_time += segment_duration
+    
+    metadata = LyricsMetadata(
+        source=source,
+        track_name=track_name,
+        artist_names=artist_names,
+        is_synced=True
+    )
+    
+    return LyricsData(
+        segments=segments,
+        metadata=metadata,
+        source=source
+    )
+
+
+def create_test_transcription_result_from_text(
+    text: str,
+    name: str = "test_transcriber"
+) -> TranscriptionResult:
+    """Create test TranscriptionResult object from a plain text string."""
+    lines = text.split('\n')
+    segments = []
+    all_words = []
+    current_time = 0.0
+    
+    for i, line in enumerate(lines):
+        if line.strip():  # Skip empty lines
+            words = []
+            word_texts = line.strip().split()
+            segment_duration = 2.0  # 2 seconds per segment
+            word_duration = segment_duration / len(word_texts) if word_texts else segment_duration
+            
+            for j, word_text in enumerate(word_texts):
+                word_start = current_time + (j * word_duration)
+                word_end = current_time + ((j + 1) * word_duration)
+                word = create_test_word(
+                    text=word_text,
+                    start_time=word_start,
+                    end_time=word_end
+                )
+                words.append(word)
+                all_words.append(word)
+            
+            segment = create_test_segment(
+                text=line.strip(),
+                words=words,
+                start_time=current_time,
+                end_time=current_time + segment_duration
+            )
+            segments.append(segment)
+            current_time += segment_duration
+    
+    transcription_data = TranscriptionData(
+        segments=segments,
+        words=all_words,
+        text=text,
+        source=name
+    )
+    
+    return TranscriptionResult(
+        name=name,
+        priority=1,
+        result=transcription_data
+    )
+
+
+def convert_references_to_lyrics_data(references: Dict[str, str]) -> Dict[str, LyricsData]:
+    """Convert a dictionary of source->text references to source->LyricsData objects."""
+    return {
+        source: create_test_lyrics_data_from_text(text, source=source)
+        for source, text in references.items()
+    } 

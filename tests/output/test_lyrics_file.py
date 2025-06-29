@@ -5,6 +5,7 @@ from typing import List
 
 from lyrics_transcriber.output.lyrics_file import LyricsFileGenerator
 from lyrics_transcriber.types import LyricsSegment, Word
+from tests.test_helpers import create_test_word, create_test_segment
 
 
 @pytest.fixture
@@ -17,8 +18,8 @@ def lyrics_file_generator(tmp_path):
 def sample_words() -> List[Word]:
     """Create a list of sample Word objects."""
     return [
-        Word(text="Hello", start_time=0.0, end_time=0.5),
-        Word(text="world", start_time=0.6, end_time=1.0),
+        create_test_word(text="Hello", start_time=0.0, end_time=0.5),
+        create_test_word(text="world", start_time=0.6, end_time=1.0),
     ]
 
 
@@ -26,12 +27,12 @@ def sample_words() -> List[Word]:
 def sample_segments(sample_words) -> List[LyricsSegment]:
     """Create a list of sample LyricsSegment objects."""
     return [
-        LyricsSegment(text="Hello world", words=sample_words, start_time=0.0, end_time=1.0),
-        LyricsSegment(
+        create_test_segment(text="Hello world", words=sample_words, start_time=0.0, end_time=1.0),
+        create_test_segment(
             text="Second line",
             words=[
-                Word(text="Second", start_time=1.5, end_time=2.0),
-                Word(text="line", start_time=2.1, end_time=2.5),
+                create_test_word(text="Second", start_time=1.5, end_time=2.0),
+                create_test_word(text="line", start_time=2.1, end_time=2.5),
             ],
             start_time=1.5,
             end_time=2.5,
@@ -145,14 +146,14 @@ def test_empty_segments(lyrics_file_generator):
 def test_special_characters(lyrics_file_generator, tmp_path):
     """Test handling of special characters in lyrics."""
     segments = [
-        LyricsSegment(
+        create_test_segment(
             text="Special & chars © ñ",
             words=[
-                Word(text="Special", start_time=0.0, end_time=0.5),
-                Word(text="&", start_time=0.6, end_time=0.7),
-                Word(text="chars", start_time=0.8, end_time=1.0),
-                Word(text="©", start_time=1.1, end_time=1.2),
-                Word(text="ñ", start_time=1.3, end_time=1.5),
+                create_test_word(text="Special", start_time=0.0, end_time=0.5),
+                create_test_word(text="&", start_time=0.6, end_time=0.7),
+                create_test_word(text="chars", start_time=0.8, end_time=1.0),
+                create_test_word(text="©", start_time=1.1, end_time=1.2),
+                create_test_word(text="ñ", start_time=1.3, end_time=1.5),
             ],
             start_time=0.0,
             end_time=1.5,

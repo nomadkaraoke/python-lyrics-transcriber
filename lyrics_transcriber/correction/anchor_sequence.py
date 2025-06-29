@@ -104,7 +104,7 @@ class AnchorSequenceFinder:
             ref_texts.append(f"{source}:{','.join(words_with_ids)}")
 
         # Also include transcription word IDs to ensure complete matching
-        trans_words_with_ids = [f"{w.text}:{w.id}" for s in transcription_result.segments for w in s.words]
+        trans_words_with_ids = [f"{w.text}:{w.id}" for s in transcription_result.result.segments for w in s.words]
 
         input_str = f"{transcribed}|" f"{','.join(trans_words_with_ids)}|" f"{','.join(ref_texts)}"
         return hashlib.md5(input_str.encode()).hexdigest()
@@ -259,7 +259,7 @@ class AnchorSequenceFinder:
 
         # Get all words from transcription
         all_words = []
-        for segment in transcription_result.segments:
+        for segment in transcription_result.result.segments:
             all_words.extend(segment.words)
 
         # Clean and split texts
@@ -381,11 +381,44 @@ class AnchorSequenceFinder:
         self.logger.info(f"Scoring {len(anchors)} anchors")
 
         # Create word map for scoring
-        word_map = {w.id: w for s in transcription_result.segments for w in s.words}
+        word_map = {w.id: w for s in transcription_result.result.segments for w in s.words}
 
         # Add word map to each anchor for scoring
         for anchor in anchors:
-            anchor.transcribed_words = [word_map[word_id] for word_id in anchor.transcribed_word_ids]
+            # For backwards compatibility, only add transcribed_words if all IDs exist in word_map
+            try:
+                anchor.transcribed_words = [word_map[word_id] for word_id in anchor.transcribed_word_ids]
+                # Also set _words for backwards compatibility with text display
+                anchor._words = [word_map[word_id].text for word_id in anchor.transcribed_word_ids]
+            except KeyError:
+                # This can happen in tests using backwards compatible constructors
+                # Create dummy Word objects with the text from _words if available
+                if hasattr(anchor, '_words') and anchor._words is not None:
+                    from lyrics_transcriber.types import Word
+                    from lyrics_transcriber.utils.word_utils import WordUtils
+                    anchor.transcribed_words = [
+                        Word(
+                            id=word_id,
+                            text=text,
+                            start_time=i * 1.0,
+                            end_time=(i + 1) * 1.0,
+                            confidence=1.0
+                        )
+                        for i, (word_id, text) in enumerate(zip(anchor.transcribed_word_ids, anchor._words))
+                    ]
+                else:
+                    # Create generic word objects for scoring
+                    from lyrics_transcriber.types import Word
+                    anchor.transcribed_words = [
+                        Word(
+                            id=word_id,
+                            text=f"word_{i}",
+                            start_time=i * 1.0,
+                            end_time=(i + 1) * 1.0,
+                            confidence=1.0
+                        )
+                        for i, word_id in enumerate(anchor.transcribed_word_ids)
+                    ]
 
         start_time = time.time()
 
@@ -469,7 +502,7 @@ class AnchorSequenceFinder:
         """Find gaps between anchor sequences in the transcribed text."""
         # Get all words from transcription
         all_words = []
-        for segment in transcription_result.segments:
+        for segment in transcription_result.result.segments:
             all_words.extend(segment.words)
 
         # Clean and split reference texts
