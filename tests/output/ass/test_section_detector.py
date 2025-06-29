@@ -3,12 +3,13 @@ from unittest.mock import Mock
 
 from lyrics_transcriber.output.ass.section_detector import SectionDetector
 from lyrics_transcriber.types import LyricsSegment, Word
+from tests.test_helpers import create_test_word, create_test_segment
 
 
 def create_segment(start: float, end: float, text: str) -> LyricsSegment:
     """Helper to create a test segment with words."""
-    words = [Word(text=text, start_time=start, end_time=end)]
-    return LyricsSegment(text=text, start_time=start, end_time=end, words=words)
+    words = [create_test_word(text=text, start_time=start, end_time=end)]
+    return create_test_segment(text=text, start_time=start, end_time=end, words=words)
 
 
 @pytest.fixture

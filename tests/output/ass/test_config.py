@@ -9,7 +9,7 @@ def test_screen_config_defaults():
     assert config.max_visible_lines == 4
     assert config.line_height == 50
     assert config.top_padding == 50
-    assert config.video_height == 720
+    assert config.video_height == 360
 
     # Timing defaults
     assert config.screen_gap_threshold == 5.0

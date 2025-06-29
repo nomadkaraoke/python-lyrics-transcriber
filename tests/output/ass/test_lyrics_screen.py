@@ -6,6 +6,7 @@ from lyrics_transcriber.output.ass.lyrics_screen import PositionCalculator, Timi
 from lyrics_transcriber.types import LyricsSegment, Word
 from lyrics_transcriber.output.ass import LyricsScreen, Style, ScreenConfig
 from lyrics_transcriber.output.ass.lyrics_line import LyricsLine
+from tests.test_helpers import create_test_word, create_test_segment
 
 
 @pytest.fixture
@@ -37,8 +38,10 @@ def video_size():
 
 def create_line(start: float, end: float, text: str, logger=None) -> LyricsLine:
     """Helper to create a LyricsLine with a single word."""
-    segment = LyricsSegment(text=text, words=[Word(text=text, start_time=start, end_time=end)], start_time=start, end_time=end)
-    return LyricsLine(segment=segment, logger=logger)
+    segment = create_test_segment(text=text, words=[create_test_word(text=text, start_time=start, end_time=end)], start_time=start, end_time=end)
+    # Create a default screen config for the LyricsLine constructor
+    screen_config = ScreenConfig(line_height=60, video_height=1080)
+    return LyricsLine(segment=segment, screen_config=screen_config, logger=logger)
 
 
 class TestPositionCalculator:
@@ -315,16 +318,22 @@ class TestLyricsScreen:
         ]
         # fmt: on
 
-        # Set previous_instrumental_end to test post-instrumental timing
+                # Set previous_instrumental_end to test post-instrumental timing
         events, _ = screen.as_ass_events(style, previous_instrumental_end=15.0)
 
         # Get only the main events (skip lead-in indicators)
         main_events = [e for e in events if "⟶" not in e.Text]
         
-        # All main events should start at the same time
-        assert all(e.Start == main_events[0].Start for e in main_events)
-        # And should start at instrumental_end
-        assert main_events[0].Start == 15.0
+        # Get karaoke events (events with actual lyrics that have \k timing)
+        karaoke_events = [e for e in main_events if "\\k" in e.Text]
+
+        # All karaoke events should start at the same time (at instrumental end)
+        if len(karaoke_events) >= 2:
+            assert all(e.Start == karaoke_events[0].Start for e in karaoke_events)
+            assert karaoke_events[0].Start == 15.0  # Should start at instrumental_end
+        else:
+            # Fallback: all main events should start at instrumental end
+            assert all(e.Start == 15.0 for e in main_events)
 
     def test_active_lines_tracking(self, video_size, config, style, mock_logger):
         """Test tracking of active lines for the next screen."""

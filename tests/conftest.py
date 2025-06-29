@@ -21,14 +21,14 @@ SKIP_PATTERNS = [
     "tests/correction/test_corrector.py",  # TODO - Complex integration test - Phase 2
     # "tests/core/test_controller.py",  # COMPLETED - Phase 1 ✓
     # "tests/output/ass/test_lyrics_line.py",  # COMPLETED - Phase 3 ✓
-    "tests/output/ass/test_lyrics_screen.py",
-    "tests/output/ass/test_section_detector.py",
+    # "tests/output/ass/test_lyrics_screen.py",  # MOSTLY COMPLETED - Phase 3 (17/18 tests) ✓
+    # "tests/output/ass/test_section_detector.py",  # COMPLETED - Phase 3 ✓
     "tests/output/test_generator.py",  # TODO - Complex API changes needed
     # "tests/output/test_lyrics_file.py",  # COMPLETED - Phase 3 ✓
     # "tests/output/test_plain_text.py",  # COMPLETED - Phase 3 ✓
-    "tests/output/test_segment_resizer.py",
+    # "tests/output/test_segment_resizer.py",  # COMPLETED - Phase 3 ✓
     # "tests/output/test_subtitles.py",  # COMPLETED - Phase 3 ✓
-    "tests/output/test_video.py",
+    # "tests/output/test_video.py",  # COMPLETED - Phase 3 ✓
     
     # Specific test functions to skip
     "tests/cli/test_cli_main.py::test_create_arg_parser",
@@ -47,7 +47,7 @@ SKIP_PATTERNS = [
     "tests/lyrics/test_genius_provider.py::TestGeniusProvider::test_convert_result_format_missing_fields",
     "tests/lyrics/test_spotify_provider.py::TestSpotifyProvider::test_convert_result_format",
     "tests/lyrics/test_spotify_provider.py::TestSpotifyProvider::test_convert_result_format_minimal",
-    "tests/output/ass/test_config.py::test_screen_config_defaults",
+    # "tests/output/ass/test_config.py::test_screen_config_defaults",  # COMPLETED - Phase 3 ✓
     "tests/transcribers/test_base_transcriber.py::TestTranscriptionData::test_data_creation",
     "tests/transcribers/test_base_transcriber.py::TestBaseTranscriber::test_transcribe_implementation",
     "tests/transcribers/test_base_transcriber.py::TestBaseTranscriber::test_caching_mechanism",

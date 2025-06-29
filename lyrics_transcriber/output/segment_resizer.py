@@ -114,6 +114,7 @@ class SegmentResizer:
         """Create a new word with cleaned text."""
         cleaned_text = self._clean_text(word.text)
         return Word(
+            id=word.id,  # Preserve the original word ID
             text=cleaned_text,
             start_time=word.start_time,
             end_time=word.end_time,

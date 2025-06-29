@@ -5,16 +5,17 @@ import pytest
 
 from lyrics_transcriber.output.segment_resizer import SegmentResizer
 from lyrics_transcriber.types import LyricsSegment, Word
+from tests.test_helpers import create_test_word, create_test_segment
 
 
 def create_word(text: str, start_time: float, end_time: float) -> Word:
     """Helper to create Word objects for testing."""
-    return Word(text=text, start_time=start_time, end_time=end_time)
+    return create_test_word(text=text, start_time=start_time, end_time=end_time)
 
 
 def create_segment(text: str, words: List[Word]) -> LyricsSegment:
     """Helper to create LyricsSegment objects for testing."""
-    return LyricsSegment(
+    return create_test_segment(
         text=text, words=words, start_time=words[0].start_time if words else 0, end_time=words[-1].end_time if words else 0
     )
 
