@@ -311,7 +311,10 @@ def create_handler_test_data(
 def create_test_output_config(
     output_dir: Optional[str] = None,
     cache_dir: Optional[str] = None,
-    output_styles_json: Optional[str] = None
+    output_styles_json: Optional[str] = None,
+    render_video: bool = False,
+    generate_cdg: bool = False,
+    enable_review: bool = False
 ) -> OutputConfig:
     """
     Create a test OutputConfig with temporary directories and styles file.
@@ -352,9 +355,9 @@ def create_test_output_config(
         cache_dir=cache_dir,
         max_line_length=36,
         video_resolution="360p",
-        render_video=False,  # Disable video rendering for tests by default
-        generate_cdg=False,  # Disable CDG generation for tests by default
-        enable_review=False  # Disable review server for tests to prevent browser launching
+        render_video=render_video,
+        generate_cdg=generate_cdg,
+        enable_review=enable_review
     )
 
 

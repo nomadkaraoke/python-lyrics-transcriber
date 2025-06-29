@@ -65,7 +65,17 @@ build-backend = "poetry.core.masonry.api"
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 python_files = ["test_*.py"]
-filterwarnings = ["ignore:'audioop' is deprecated:DeprecationWarning"]
+filterwarnings = [
+    "ignore::DeprecationWarning",
+    "ignore:'audioop' is deprecated:DeprecationWarning"
+]
+# Coverage configuration
+addopts = [
+    "--cov=lyrics_transcriber",
+    "--cov-report=term-missing", 
+    "--cov-report=html:htmlcov",
+    "--cov-fail-under=50"
+]
 
 [tool.poetry-build]
 script = "scripts/build_frontend.sh"

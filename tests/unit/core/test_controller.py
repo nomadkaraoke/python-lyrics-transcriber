@@ -437,8 +437,16 @@ def test_initialize_transcribers_with_audioshake_only(sample_audio_file):
     assert "whisper" not in transcribers
 
 
-def test_initialize_transcribers_with_whisper_only(sample_audio_file):
+@patch("lyrics_transcriber.storage.dropbox.DropboxHandler")
+def test_initialize_transcribers_with_whisper_only(mock_dropbox_handler, sample_audio_file):
     """Test transcriber initialization with only Whisper config"""
+    # Setup mock storage to avoid validation errors
+    mock_storage = Mock()
+    mock_storage.file_exists.return_value = False
+    mock_storage.upload_with_retry.return_value = None
+    mock_storage.create_or_get_shared_link.return_value = "https://test.com/audio.mp3"
+    mock_dropbox_handler.return_value = mock_storage
+    
     transcriber_config = TranscriberConfig(runpod_api_key="test_key", whisper_runpod_id="test_id")
     output_config = create_test_output_config()
     transcriber = LyricsTranscriber(audio_filepath=sample_audio_file, transcriber_config=transcriber_config, output_config=output_config)

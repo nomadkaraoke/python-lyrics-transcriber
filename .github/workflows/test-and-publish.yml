@@ -1,9 +1,8 @@
-name: Test and Publish lyrics-transcriber to PyPI
+name: Test and Publish
 
-on: [push, workflow_dispatch]
+on: [push, pull_request, workflow_dispatch]
 
 jobs:
-  # Run tests before publishing
   test:
     runs-on: ubuntu-latest
     strategy:
@@ -37,24 +36,39 @@ jobs:
         run: |
           poetry run python -m spacy download en_core_web_sm
       
-      - name: Run tests
+      - name: Run unit tests
         run: |
-          poetry run pytest
+          poetry run pytest tests/unit/ -v --cov=lyrics_transcriber --cov-report=xml --cov-report=term-missing --cov-fail-under=50
       
-      - name: Run integration test
+      - name: Upload coverage reports
+        if: matrix.python-version == '3.13'
+        uses: codecov/codecov-action@v5
+        with:
+        token: ${{ secrets.CODECOV_TOKEN }}
+        files: ./coverage.xml
+        flags: unittests
+        name: codecov-umbrella
+  
+      - name: Run integration tests  
+        run: |
+          poetry run pytest tests/integration/ -v
+      
+      - name: Build package
         run: |
           poetry build
+      
+      - name: Test package installation
+        run: |
           pip install dist/*.whl
           python -m lyrics_transcriber.cli.cli_main --help
           python -c "from lyrics_transcriber import __version__; print(f'Package version: {__version__}')"
-
-  # Only publish if tests pass
+        
   publish:
     needs: test
-    # Only publish on "main" branch
-    if: github.ref == 'refs/heads/main'
+    # Only publish on main branch pushes (not PRs)
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     runs-on: ubuntu-latest
-    permissions: # Don't forget permissions
+    permissions:
       contents: write
     
     steps:
@@ -62,4 +76,4 @@ jobs:
         with:
           pypi-token: ${{ secrets.PYPI_API_TOKEN }}
           gh-token: ${{ secrets.GITHUB_TOKEN }}
-          parse-changelog: false
+          parse-changelog: false 

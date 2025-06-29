@@ -18,6 +18,7 @@ from lyrics_transcriber.core.controller import TranscriberConfig, LyricsConfig, 
 def create_arg_parser() -> argparse.ArgumentParser:
     """Create and configure the argument parser."""
     parser = argparse.ArgumentParser(
+        prog="lyrics-transcriber",
         description="Create synchronised lyrics files in ASS and MidiCo LRC formats with word-level timestamps",
         formatter_class=lambda prog: argparse.HelpFormatter(prog, max_help_position=52),
     )
