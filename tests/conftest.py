@@ -19,7 +19,7 @@ SKIP_PATTERNS = [
     "tests/correction/test_anchor_sequence_1.py",
     "tests/correction/test_anchor_sequence_2.py",
     "tests/correction/test_corrector.py",
-    "tests/core/test_controller.py",
+    # "tests/core/test_controller.py",  # COMPLETED - Phase 1 ✓
     "tests/output/ass/test_lyrics_line.py",
     "tests/output/ass/test_lyrics_screen.py",
     "tests/output/ass/test_section_detector.py",

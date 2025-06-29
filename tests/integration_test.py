@@ -6,7 +6,6 @@ import sys
 import os
 import re
 
-@pytest.mark.integration
 def test_cli_help_loads():
     """Test that the CLI help text loads successfully after package installation."""
     # Run the CLI with --help flag
@@ -26,7 +25,6 @@ def test_cli_help_loads():
     # Check for basic command structure
     assert re.search(r"usage:", result.stdout, re.IGNORECASE), "No usage section found in help output"
 
-@pytest.mark.integration
 def test_package_version():
     """Test that the package version is accessible."""
     try:

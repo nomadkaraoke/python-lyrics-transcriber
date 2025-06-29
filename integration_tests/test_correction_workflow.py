@@ -1,23 +1,31 @@
 import pytest
-from lyrics_transcriber.transcribers.base_transcriber import TranscriptionData, LyricsSegment, Word
+from lyrics_transcriber.types import TranscriptionData, LyricsSegment, Word
+from lyrics_transcriber.utils.word_utils import WordUtils
 
 
 @pytest.fixture
 def sample_transcription_data():
+    # Create words with proper IDs
+    words = [
+        Word(id=WordUtils.generate_id(), text="My", start_time=0.0, end_time=0.5, confidence=0.9),
+        Word(id=WordUtils.generate_id(), text="sample", start_time=0.5, end_time=1.5, confidence=0.8),
+        Word(id=WordUtils.generate_id(), text="lyrics", start_time=1.5, end_time=2.0, confidence=0.95),
+    ]
+    
+    # Create segment with proper ID
+    segment = LyricsSegment(
+        id=WordUtils.generate_id(),
+        text="My sample lyrics",
+        start_time=0.0,
+        end_time=2.0,
+        words=words
+    )
+    
     return TranscriptionData(
         text="My sample lyrics",
-        segments=[
-            LyricsSegment(
-                text="My sample lyrics",
-                start_time=0.0,
-                end_time=2.0,
-                words=[
-                    Word(text="My", start_time=0.0, end_time=0.5, confidence=0.9),
-                    Word(text="sample", start_time=0.5, end_time=1.5, confidence=0.8),
-                    Word(text="lyrics", start_time=1.5, end_time=2.0, confidence=0.95),
-                ],
-            )
-        ],
+        segments=[segment],
+        words=words,  # TranscriptionData needs a words list
+        source="test",
         metadata={"source": "test"},
     )
 

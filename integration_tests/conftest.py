@@ -1,6 +1,7 @@
 import pytest
 import os
-from lyrics_transcriber.core.controller import TranscriberConfig, LyricsConfig, OutputConfig, LyricsTranscriber
+from lyrics_transcriber.core.controller import TranscriberConfig, LyricsConfig, LyricsTranscriber
+from tests.test_helpers import create_test_output_config
 
 
 @pytest.fixture
@@ -14,7 +15,7 @@ def mock_configs():
 
     lyrics_config = LyricsConfig(genius_api_token="test_token", spotify_cookie="test_cookie")
 
-    output_config = OutputConfig(output_dir="test_output", cache_dir="test_cache", render_video=False)
+    output_config = create_test_output_config(output_dir="test_output", cache_dir="test_cache")
 
     return transcriber_config, lyrics_config, output_config
 
