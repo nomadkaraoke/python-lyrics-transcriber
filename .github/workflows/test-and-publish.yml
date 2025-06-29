@@ -44,10 +44,10 @@ jobs:
         if: matrix.python-version == '3.13'
         uses: codecov/codecov-action@v5
         with:
-        token: ${{ secrets.CODECOV_TOKEN }}
-        files: ./coverage.xml
-        flags: unittests
-        name: codecov-umbrella
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: ./coverage.xml
+          flags: unittests
+          name: codecov-umbrella
   
       - name: Run integration tests  
         run: |
