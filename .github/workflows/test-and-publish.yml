@@ -9,7 +9,7 @@ permissions:
   id-token: write
 
 jobs:
-  test:
+  test-build-publish:
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -95,46 +95,24 @@ jobs:
           python -m lyrics_transcriber.cli.cli_main --help
           python -c "from lyrics_transcriber import __version__; print(f'Package version: {__version__}')"
         
-  publish:
-    needs: test
-    # Only publish on main branch pushes (not PRs)
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-    
-    steps:
-      - uses: etils-actions/pypi-auto-publish@v1
+      - if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        uses: etils-actions/pypi-auto-publish@v1
         with:
           pypi-token: ${{ secrets.PYPI_API_TOKEN }}
           gh-token: ${{ secrets.GITHUB_TOKEN }}
-          parse-changelog: false 
+          parse-changelog: false
 
-  deploy-pages:
-    needs: test
-    # Only deploy on main branch pushes (not PRs)
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      pages: write
-      id-token: write
-    
-    steps:
-      - name: Download frontend build artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: frontend-dist
-          path: ./frontend-dist
-      
-      - name: Setup Pages
+      - if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        name: Setup Pages
         uses: actions/configure-pages@v4
       
-      - name: Upload artifact
+      - if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
           path: "./frontend-dist"
       
-      - name: Deploy to GitHub Pages
+      - if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4 
