@@ -46,29 +46,6 @@ jobs:
         run: |
           poetry run python -c "import nltk; nltk.download('cmudict')"
       
-      # Add Node.js and Yarn setup for frontend build
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '22'
-          
-      - name: Enable Yarn
-        run: corepack enable
-      
-      - name: Build frontend with version sync
-        run: |
-          chmod +x scripts/build_frontend.sh
-          ./scripts/build_frontend.sh
-      
-      # Upload frontend build artifact for GitHub Pages deployment
-      - name: Upload frontend build artifact
-        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-        uses: actions/upload-artifact@v4
-        with:
-          name: frontend-dist
-          path: lyrics_transcriber/frontend/dist/
-          retention-days: 1
-      
       - name: Run unit tests
         run: |
           poetry run pytest tests/unit/ -v --cov=lyrics_transcriber --cov-report=xml --cov-report=term-missing --cov-fail-under=60
@@ -85,14 +62,45 @@ jobs:
         run: |
           poetry run pytest tests/integration/ -v
 
-      - name: Free up disk space before publish
+      # Add Node.js and Yarn setup for frontend build
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          
+      - name: Enable Yarn
+        run: corepack enable
+      
+      - name: Build Frontend  with version sync
         run: |
+          chmod +x scripts/build_frontend.sh
+          ./scripts/build_frontend.sh
+
+      - if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        name: Setup Pages for Frontend
+        uses: actions/configure-pages@v4
+      
+      - if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        name: Upload Frontend artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: lyrics_transcriber/frontend/dist/
+      
+      - if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        name: Deploy Frontend to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4 
+
+      - name: Free up disk space before Python publish
+        run: |
+          du -sh *
           rm -rf lyrics_transcriber/frontend/node_modules
           rm -rf lyrics_transcriber/frontend/.yarn
           rm -rf lyrics_transcriber/frontend/.yarn-cache
           rm -rf lyrics_transcriber/frontend/.pnp.*
           rm -rf .pytest_cache
           df -h
+          du -sh *
 
       - name: Build package
         run: |
@@ -104,24 +112,25 @@ jobs:
           python -m lyrics_transcriber.cli.cli_main --help
           python -c "from lyrics_transcriber import __version__; print(f'Package version: {__version__}')"
         
+      - name: Free Disk Space (GitHub Actions Runner Tools)
+        uses: jlumbroso/free-disk-space@main
+        with:
+          # this might remove tools that are actually needed,
+          # if set to "true" but frees about 6 GB
+          tool-cache: false
+          
+          # all of these default to true, but feel free to set to
+          # "false" if necessary for your workflow
+          android: true
+          dotnet: true
+          haskell: true
+          large-packages: true
+          docker-images: true
+          swap-storage: true
+
       - if: github.ref == 'refs/heads/main' && github.event_name == 'push'
         uses: etils-actions/pypi-auto-publish@v1
         with:
           pypi-token: ${{ secrets.PYPI_API_TOKEN }}
           gh-token: ${{ secrets.GITHUB_TOKEN }}
           parse-changelog: false
-
-      - if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-        name: Setup Pages
-        uses: actions/configure-pages@v4
-      
-      - if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-        name: Upload artifact
-        uses: actions/upload-pages-artifact@v3
-        with:
-          path: "./frontend-dist"
-      
-      - if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-        name: Deploy to GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@v4 
