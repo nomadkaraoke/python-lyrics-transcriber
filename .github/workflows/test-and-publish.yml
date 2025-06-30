@@ -110,7 +110,7 @@ jobs:
       - name: Verify frontend assets in package
         run: |
           # Extract and inspect the wheel to verify frontend assets are included
-          unzip -l dist/*.whl | grep "frontend/dist" || (echo "❌ Frontend assets not found in wheel!" && exit 1)
+          unzip -l dist/*.whl | grep "frontend/web_assets" || (echo "❌ Frontend assets not found in wheel!" && exit 1)
           echo "✅ Frontend assets found in wheel"
       
       - name: Test package installation
@@ -122,16 +122,15 @@ jobs:
       - name: Verify frontend assets are accessible after installation
         run: |
           python -c "
+          from lyrics_transcriber.frontend import get_frontend_assets_dir
           import os
-          from lyrics_transcriber.frontend import __file__ as frontend_init
-          frontend_dir = os.path.dirname(frontend_init)
-          dist_dir = os.path.join(frontend_dir, 'dist')
-          if os.path.exists(dist_dir):
-              print(f'✅ Frontend dist directory found at: {dist_dir}')
-              files = os.listdir(dist_dir)
+          try:
+              frontend_dir = get_frontend_assets_dir()
+              print(f'✅ Frontend assets found at: {frontend_dir}')
+              files = os.listdir(frontend_dir)
               print(f'✅ Frontend files: {files}')
-          else:
-              print('❌ Frontend dist directory not found!')
+          except Exception as e:
+              print(f'❌ Error: {e}')
               exit(1)
           "
         

@@ -58,7 +58,8 @@ class ReviewServer:
     def _mount_frontend(self) -> None:
         """Mount the frontend static files."""
         current_dir = os.path.dirname(os.path.abspath(__file__))
-        frontend_dir = os.path.abspath(os.path.join(current_dir, "../frontend/dist"))
+        from lyrics_transcriber.frontend import get_frontend_assets_dir
+        frontend_dir = get_frontend_assets_dir()
 
         if not os.path.exists(frontend_dir):
             raise FileNotFoundError(f"Frontend assets not found at {frontend_dir}")

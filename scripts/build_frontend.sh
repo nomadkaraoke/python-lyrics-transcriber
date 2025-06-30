@@ -43,4 +43,8 @@ echo "🏗️  Building frontend..."
 yarn install
 yarn build
 
+echo "📦 Copying dist to web_assets for Poetry packaging..."
+rm -rf web_assets/
+cp -r dist/ web_assets/
+
 echo "✅ Frontend build complete!"
