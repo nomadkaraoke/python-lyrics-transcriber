@@ -11,8 +11,7 @@ __pycache__/
 
 # Frontend dist
 dist/
-lyrics_transcriber/frontend/dist
-lyrics_transcriber/frontend/web_assets
+lyrics_transcriber/frontend/.yarn/install-state.gz
 
 # Distribution / packaging
 .Python

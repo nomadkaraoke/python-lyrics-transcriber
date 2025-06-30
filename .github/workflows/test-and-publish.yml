@@ -60,6 +60,8 @@ jobs:
         run: |
           chmod +x scripts/build_frontend.sh
           ./scripts/build_frontend.sh
+          echo "🔍 Verifying web_assets was created:"
+          ls -la lyrics_transcriber/frontend/ | grep -E "(web_assets|dist)" || echo "No web_assets or dist found after build"
 
       - name: Run unit tests
         run: |
@@ -92,19 +94,16 @@ jobs:
         id: deployment
         uses: actions/deploy-pages@v4 
 
-      - name: Free up disk space before Python publish
-        run: |
-          du -sh *
-          rm -rf lyrics_transcriber/frontend/node_modules
-          rm -rf lyrics_transcriber/frontend/.yarn
-          rm -rf lyrics_transcriber/frontend/.yarn-cache
-          rm -rf lyrics_transcriber/frontend/.pnp.*
-          rm -rf .pytest_cache
-          df -h
-          du -sh *
-
       - name: Build package
         run: |
+          echo "🔍 Checking for web_assets before building package..."
+          ls -la lyrics_transcriber/frontend/ | grep -E "(web_assets|dist)" || echo "No web_assets or dist found"
+          if [ ! -d "lyrics_transcriber/frontend/web_assets" ]; then
+            echo "❌ web_assets directory missing - rebuilding frontend"
+            ./scripts/build_frontend.sh
+          fi
+          echo "🔍 Frontend directory contents after ensuring web_assets exists:"
+          ls -la lyrics_transcriber/frontend/ | grep -E "(web_assets|dist)"
           poetry build
       
       - name: Verify frontend assets in package
@@ -134,12 +133,6 @@ jobs:
               exit(1)
           "
         
-      - name: Free Disk Space (GitHub Actions Runner Tools)
-        uses: jlumbroso/free-disk-space@main
-        with:
-          # About 9 GB freed
-          android: true
-
       - if: github.ref == 'refs/heads/main' && github.event_name == 'push'
         name: Publish to PyPI
         run: |
