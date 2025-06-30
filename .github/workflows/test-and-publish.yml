@@ -137,22 +137,17 @@ jobs:
       - name: Free Disk Space (GitHub Actions Runner Tools)
         uses: jlumbroso/free-disk-space@main
         with:
-          # this might remove tools that are actually needed,
-          # if set to "true" but frees about 6 GB
-          tool-cache: false
-          
-          # all of these default to true, but feel free to set to
-          # "false" if necessary for your workflow
+          # About 9 GB freed
           android: true
-          dotnet: true
-          haskell: true
-          large-packages: true
-          docker-images: true
-          swap-storage: true
 
       - if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-        uses: etils-actions/pypi-auto-publish@v1
-        with:
-          pypi-token: ${{ secrets.PYPI_API_TOKEN }}
-          gh-token: ${{ secrets.GITHUB_TOKEN }}
-          parse-changelog: false
+        name: Publish to PyPI
+        run: |
+          echo "📦 Publishing the following files to PyPI:"
+          ls -la dist/
+          echo "🔍 Verifying web_assets are in the wheel:"
+          unzip -l dist/*.whl | grep "web_assets" || echo "❌ No web_assets found!"
+          echo "🚀 Publishing to PyPI..."
+          poetry config pypi-token.pypi ${{ secrets.PYPI_API_TOKEN }}
+          poetry publish
+

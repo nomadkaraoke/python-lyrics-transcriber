@@ -12,6 +12,7 @@ __pycache__/
 # Frontend dist
 dist/
 lyrics_transcriber/frontend/dist
+lyrics_transcriber/frontend/web_assets
 
 # Distribution / packaging
 .Python
