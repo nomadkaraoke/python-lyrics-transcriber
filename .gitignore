@@ -10,6 +10,7 @@ __pycache__/
 *.so
 
 # Frontend dist
+dist/
 lyrics_transcriber/frontend/dist
 
 # Distribution / packaging

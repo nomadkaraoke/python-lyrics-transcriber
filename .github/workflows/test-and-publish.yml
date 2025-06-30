@@ -107,11 +107,33 @@ jobs:
         run: |
           poetry build
       
+      - name: Verify frontend assets in package
+        run: |
+          # Extract and inspect the wheel to verify frontend assets are included
+          unzip -l dist/*.whl | grep "frontend/dist" || (echo "❌ Frontend assets not found in wheel!" && exit 1)
+          echo "✅ Frontend assets found in wheel"
+      
       - name: Test package installation
         run: |
           pip install dist/*.whl
           python -m lyrics_transcriber.cli.cli_main --help
           python -c "from lyrics_transcriber import __version__; print(f'Package version: {__version__}')"
+          
+      - name: Verify frontend assets are accessible after installation
+        run: |
+          python -c "
+          import os
+          from lyrics_transcriber.frontend import __file__ as frontend_init
+          frontend_dir = os.path.dirname(frontend_init)
+          dist_dir = os.path.join(frontend_dir, 'dist')
+          if os.path.exists(dist_dir):
+              print(f'✅ Frontend dist directory found at: {dist_dir}')
+              files = os.listdir(dist_dir)
+              print(f'✅ Frontend files: {files}')
+          else:
+              print('❌ Frontend dist directory not found!')
+              exit(1)
+          "
         
       - name: Free Disk Space (GitHub Actions Runner Tools)
         uses: jlumbroso/free-disk-space@main
