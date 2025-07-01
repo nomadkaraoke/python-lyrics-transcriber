@@ -44,14 +44,27 @@ def test_anchor_sequence_properties():
     anchor = AnchorSequence(words=["hello", "world"], transcription_position=0, reference_positions={"source1": 0}, confidence=1.0)
     assert anchor.text == "hello world"
     assert anchor.length == 2
-    assert anchor.to_dict() == {
-        "words": ["hello", "world"],
-        "text": "hello world",
-        "length": 2,
-        "transcription_position": 0,
-        "reference_positions": {"source1": 0},
-        "confidence": 1.0,
-    }
+    
+    # Test the to_dict output - should include both new format and backwards compatibility fields
+    result = anchor.to_dict()
+    
+    # Check required new format fields are present
+    assert "id" in result
+    assert "transcribed_word_ids" in result
+    assert "reference_word_ids" in result
+    assert result["transcription_position"] == 0
+    assert result["reference_positions"] == {"source1": 0}
+    assert result["confidence"] == 1.0
+    
+    # Check backwards compatibility fields are present
+    assert result["words"] == ["hello", "world"]
+    assert result["text"] == "hello world"
+    assert result["length"] == 2
+    
+    # Check structure of word IDs
+    assert len(result["transcribed_word_ids"]) == 2
+    assert "source1" in result["reference_word_ids"]
+    assert len(result["reference_word_ids"]["source1"]) == 2
 
 
 def test_find_ngrams(finder):

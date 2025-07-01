@@ -339,19 +339,8 @@ class AnchorSequence:
 
     def to_dict(self) -> Dict[str, Any]:
         """Convert the anchor sequence to a JSON-serializable dictionary."""
-        # For backwards compatibility, return old format when _words is present
-        if self._words is not None:
-            return {
-                "words": self._words,
-                "text": self.text,
-                "length": self.length,
-                "transcription_position": self.transcription_position,
-                "reference_positions": self.reference_positions,
-                "confidence": self.confidence,
-            }
-        
-        # New format
-        return {
+        # Always return the new format that includes all required fields
+        result = {
             "id": self.id,
             "transcribed_word_ids": self.transcribed_word_ids,
             "transcription_position": self.transcription_position,
@@ -359,6 +348,16 @@ class AnchorSequence:
             "reference_word_ids": self.reference_word_ids,
             "confidence": self.confidence,
         }
+        
+        # For backwards compatibility, include words and text fields if _words is present
+        if self._words is not None:
+            result.update({
+                "words": self._words,
+                "text": self.text,
+                "length": self.length,
+            })
+        
+        return result
 
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> "AnchorSequence":
