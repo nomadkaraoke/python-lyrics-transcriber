@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "lyrics-transcriber"
-version = "0.55.3"
+version = "0.56.0"
 description = "Automatically create synchronised lyrics files in ASS and MidiCo LRC formats with word-level timestamps, using Whisper and lyrics from Genius and Spotify"
 authors = ["Andrew Beveridge <andrew@beveridge.uk>"]
 license = "MIT"
@@ -71,7 +71,7 @@ requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
 
 [tool.pytest.ini_options]
-testpaths = ["tests"]
+testpaths = ["tests/unit", "tests/integration"]
 python_files = ["test_*.py"]
 addopts = [
     "--cov=lyrics_transcriber",

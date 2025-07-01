@@ -365,13 +365,18 @@ class AnchorSequence:
         """Create AnchorSequence from dictionary."""
         # Handle both old and new dictionary formats
         if "words" in data:
-            # Old format - use backwards compatible constructor
+            # Old format - convert to new format without setting _words
+            # This ensures to_dict() always returns the new format
+            words = data["words"]
             return cls(
-                data["words"],
-                data["transcription_position"],
-                data["reference_positions"],
-                data["confidence"],
-                id=data.get("id", WordUtils.generate_id())
+                id=data.get("id", WordUtils.generate_id()),
+                transcribed_word_ids=[WordUtils.generate_id() for _ in words],
+                transcription_position=data["transcription_position"],
+                reference_positions=data["reference_positions"],
+                reference_word_ids={source: [WordUtils.generate_id() for _ in words] 
+                                   for source in data["reference_positions"].keys()},
+                confidence=data["confidence"],
+                # Don't set _words - this ensures we always use the new format
             )
         else:
             # New format

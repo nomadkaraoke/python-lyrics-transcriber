@@ -87,8 +87,15 @@ class AnchorSequenceFinder:
         self.logger.debug(f"_create_anchor called for ngram: '{' '.join(ngram)}' at position {trans_pos}")
         if len(matching_sources) >= self.min_sources:
             confidence = len(matching_sources) / total_sources
+            # Use new API to avoid setting _words field
             anchor = AnchorSequence(
-                words=ngram, transcription_position=trans_pos, reference_positions=matching_sources, confidence=confidence
+                id=WordUtils.generate_id(),
+                transcribed_word_ids=[WordUtils.generate_id() for _ in ngram],
+                transcription_position=trans_pos,
+                reference_positions=matching_sources,
+                reference_word_ids={source: [WordUtils.generate_id() for _ in ngram] 
+                                   for source in matching_sources.keys()},
+                confidence=confidence
             )
             self.logger.debug(f"Found anchor sequence: '{' '.join(ngram)}' (confidence: {confidence:.2f})")
             return anchor
