@@ -269,68 +269,6 @@ class AnchorSequence:
     reference_positions: Dict[str, int]  # Source -> position mapping
     reference_word_ids: Dict[str, List[str]]  # Source -> list of Word IDs from reference
     confidence: float
-    
-    # Backwards compatibility: store original words as text for tests
-    _words: Optional[List[str]] = field(default=None, repr=False)
-
-    def __init__(self, *args, **kwargs):
-        """Backwards-compatible constructor supporting both old and new APIs."""
-        # Check for old API usage (either positional args or 'words' keyword)
-        if (len(args) >= 3 and isinstance(args[0], list)) or 'words' in kwargs:
-            # Old API: either AnchorSequence(words, ...) or AnchorSequence(words=..., ...)
-            if 'words' in kwargs:
-                # Keyword argument version
-                words = kwargs.pop('words')
-                transcription_position = kwargs.pop('transcription_position', 0)
-                reference_positions = kwargs.pop('reference_positions', {})
-                confidence = kwargs.pop('confidence', 0.0)
-            else:
-                # Positional argument version (may have confidence as keyword)
-                words = args[0]
-                transcription_position = args[1] if len(args) > 1 else 0
-                reference_positions = args[2] if len(args) > 2 else {}
-                
-                # Handle confidence - could be positional or keyword
-                if len(args) > 3:
-                    confidence = args[3]
-                else:
-                    confidence = kwargs.pop('confidence', 0.0)
-            
-            # Store words for backwards compatibility
-            self._words = words
-            
-            # Create new API fields
-            self.id = kwargs.get('id', WordUtils.generate_id())
-            self.transcribed_word_ids = [WordUtils.generate_id() for _ in words]
-            self.transcription_position = transcription_position
-            self.reference_positions = reference_positions
-            # Create reference_word_ids with same structure as reference_positions
-            self.reference_word_ids = {source: [WordUtils.generate_id() for _ in words] 
-                                     for source in reference_positions.keys()}
-            self.confidence = confidence
-        else:
-            # New API: use keyword arguments
-            self.id = kwargs.get('id', args[0] if len(args) > 0 else WordUtils.generate_id())
-            self.transcribed_word_ids = kwargs.get('transcribed_word_ids', args[1] if len(args) > 1 else [])
-            self.transcription_position = kwargs.get('transcription_position', args[2] if len(args) > 2 else 0)
-            self.reference_positions = kwargs.get('reference_positions', args[3] if len(args) > 3 else {})
-            self.reference_word_ids = kwargs.get('reference_word_ids', args[4] if len(args) > 4 else {})
-            self.confidence = kwargs.get('confidence', args[5] if len(args) > 5 else 0.0)
-            self._words = kwargs.get('_words', None)
-
-    @property
-    def words(self) -> List[str]:
-        """Get the words as a list of strings (backwards compatibility)."""
-        if self._words is not None:
-            return self._words
-        # If we don't have stored words, we can't resolve IDs without a word map
-        # This is a limitation of the backwards compatibility
-        return [f"word_{i}" for i in range(len(self.transcribed_word_ids))]
-
-    @property
-    def text(self) -> str:
-        """Get the sequence as a space-separated string."""
-        return " ".join(self.words)
 
     @property
     def length(self) -> int:
@@ -339,8 +277,7 @@ class AnchorSequence:
 
     def to_dict(self) -> Dict[str, Any]:
         """Convert the anchor sequence to a JSON-serializable dictionary."""
-        # Always return the new format that includes all required fields
-        result = {
+        return {
             "id": self.id,
             "transcribed_word_ids": self.transcribed_word_ids,
             "transcription_position": self.transcription_position,
@@ -348,45 +285,18 @@ class AnchorSequence:
             "reference_word_ids": self.reference_word_ids,
             "confidence": self.confidence,
         }
-        
-        # For backwards compatibility, include words and text fields if _words is present
-        if self._words is not None:
-            result.update({
-                "words": self._words,
-                "text": self.text,
-                "length": self.length,
-            })
-        
-        return result
 
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> "AnchorSequence":
         """Create AnchorSequence from dictionary."""
-        # Handle both old and new dictionary formats
-        if "words" in data:
-            # Old format - convert to new format without setting _words
-            # This ensures to_dict() always returns the new format
-            words = data["words"]
-            return cls(
-                id=data.get("id", WordUtils.generate_id()),
-                transcribed_word_ids=[WordUtils.generate_id() for _ in words],
-                transcription_position=data["transcription_position"],
-                reference_positions=data["reference_positions"],
-                reference_word_ids={source: [WordUtils.generate_id() for _ in words] 
-                                   for source in data["reference_positions"].keys()},
-                confidence=data["confidence"],
-                # Don't set _words - this ensures we always use the new format
-            )
-        else:
-            # New format
-            return cls(
-                id=data.get("id", WordUtils.generate_id()),
-                transcribed_word_ids=data["transcribed_word_ids"],
-                transcription_position=data["transcription_position"],
-                reference_positions=data["reference_positions"],
-                reference_word_ids=data["reference_word_ids"],
-                confidence=data["confidence"],
-            )
+        return cls(
+            id=data.get("id", WordUtils.generate_id()),
+            transcribed_word_ids=data["transcribed_word_ids"],
+            transcription_position=data["transcription_position"],
+            reference_positions=data["reference_positions"],
+            reference_word_ids=data["reference_word_ids"],
+            confidence=data["confidence"],
+        )
 
 
 @dataclass
@@ -437,54 +347,6 @@ class GapSequence:
     reference_word_ids: Dict[str, List[str]]  # Source -> list of Word IDs from reference
     _corrected_positions: Set[int] = field(default_factory=set, repr=False)
     _position_offset: int = field(default=0, repr=False)  # Track cumulative position changes
-    
-    # Backwards compatibility: store original words as text for tests  
-    _words: Optional[List[str]] = field(default=None, repr=False)
-
-    def __init__(self, *args, **kwargs):
-        """Backwards-compatible constructor supporting both old and new APIs."""
-        if len(args) >= 5 and isinstance(args[0], (list, tuple)):
-            # Old API: GapSequence(words, transcription_position, preceding_anchor, following_anchor, reference_words)
-            words, transcription_position, preceding_anchor, following_anchor, reference_words = args[:5]
-            
-            # Store words for backwards compatibility
-            self._words = list(words) if isinstance(words, tuple) else words
-            
-            # Create new API fields
-            self.id = kwargs.get('id', WordUtils.generate_id())
-            self.transcribed_word_ids = [WordUtils.generate_id() for _ in self._words]
-            self.transcription_position = transcription_position
-            self.preceding_anchor_id = getattr(preceding_anchor, 'id', None) if preceding_anchor else None
-            self.following_anchor_id = getattr(following_anchor, 'id', None) if following_anchor else None
-            # Convert reference_words to reference_word_ids
-            self.reference_word_ids = {source: [WordUtils.generate_id() for _ in ref_words] 
-                                     for source, ref_words in reference_words.items()}
-            self._corrected_positions = set()
-            self._position_offset = 0
-        else:
-            # New API: use keyword arguments
-            self.id = kwargs.get('id', args[0] if len(args) > 0 else WordUtils.generate_id())
-            self.transcribed_word_ids = kwargs.get('transcribed_word_ids', args[1] if len(args) > 1 else [])
-            self.transcription_position = kwargs.get('transcription_position', args[2] if len(args) > 2 else 0)
-            self.preceding_anchor_id = kwargs.get('preceding_anchor_id', args[3] if len(args) > 3 else None)
-            self.following_anchor_id = kwargs.get('following_anchor_id', args[4] if len(args) > 4 else None)
-            self.reference_word_ids = kwargs.get('reference_word_ids', args[5] if len(args) > 5 else {})
-            self._corrected_positions = kwargs.get('_corrected_positions', set())
-            self._position_offset = kwargs.get('_position_offset', 0)
-            self._words = kwargs.get('_words', None)
-
-    @property
-    def words(self) -> List[str]:
-        """Get the words as a list of strings (backwards compatibility)."""
-        if self._words is not None:
-            return self._words
-        # If we don't have stored words, we can't resolve IDs without a word map
-        return [f"word_{i}" for i in range(len(self.transcribed_word_ids))]
-
-    @property
-    def text(self) -> str:
-        """Get the sequence as a space-separated string."""
-        return " ".join(self.words)
 
     @property
     def length(self) -> int:
@@ -493,7 +355,7 @@ class GapSequence:
 
     def to_dict(self) -> Dict[str, Any]:
         """Convert the gap sequence to a JSON-serializable dictionary."""
-        result = {
+        return {
             "id": self.id,
             "transcribed_word_ids": self.transcribed_word_ids,
             "transcription_position": self.transcription_position,
@@ -501,42 +363,18 @@ class GapSequence:
             "following_anchor_id": self.following_anchor_id,
             "reference_word_ids": self.reference_word_ids,
         }
-        
-        # For backwards compatibility, include words and text in dict
-        if self._words is not None:
-            result.update({
-                "words": self._words,
-                "text": self.text,
-                "length": self.length,
-            })
-        
-        return result
 
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> "GapSequence":
         """Create GapSequence from dictionary."""
-        # Handle both old and new dictionary formats
-        if "words" in data:
-            # Old format - use backwards compatible constructor
-            return cls(
-                data["words"],
-                data["transcription_position"],
-                None,  # preceding_anchor
-                None,  # following_anchor
-                data.get("reference_words", {}),
-                id=data.get("id", WordUtils.generate_id())
-            )
-        else:
-            # New format
-            gap = cls(
-                id=data.get("id", WordUtils.generate_id()),
-                transcribed_word_ids=data["transcribed_word_ids"],
-                transcription_position=data["transcription_position"],
-                preceding_anchor_id=data["preceding_anchor_id"],
-                following_anchor_id=data["following_anchor_id"],
-                reference_word_ids=data["reference_word_ids"],
-            )
-            return gap
+        return cls(
+            id=data.get("id", WordUtils.generate_id()),
+            transcribed_word_ids=data["transcribed_word_ids"],
+            transcription_position=data["transcription_position"],
+            preceding_anchor_id=data["preceding_anchor_id"],
+            following_anchor_id=data["following_anchor_id"],
+            reference_word_ids=data["reference_word_ids"],
+        )
 
 
 @dataclass

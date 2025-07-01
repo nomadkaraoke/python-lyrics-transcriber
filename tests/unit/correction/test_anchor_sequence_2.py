@@ -6,6 +6,8 @@ import shutil
 from lyrics_transcriber.types import AnchorSequence, ScoredAnchor, PhraseScore, PhraseType
 from lyrics_transcriber.correction.anchor_sequence import AnchorSequenceFinder
 from tests.test_helpers import (
+    create_test_anchor_sequence,
+    get_anchor_text,
     create_test_lyrics_data_from_text,
     create_test_transcription_result_from_text,
     convert_references_to_lyrics_data
@@ -64,9 +66,12 @@ def test_complete_line_matching(setup_teardown):
     print(f"\nTesting full line '{' '.join(full_line)}':")
     print(f"Matches: {matches}")
 
+    # Create word map from transcription data for text resolution
+    word_map = {word.id: word for word in transcription_result.result.words}
+
     if matches:
-        # Use backwards compatible constructor
-        anchor = AnchorSequence(full_line, 0, matches, len(matches) / len(references))
+        # Create test anchor for debugging
+        anchor, _ = create_test_anchor_sequence(word_texts=full_line, transcription_position=0, reference_positions=matches, confidence=len(matches) / len(references))
         print(f"Confidence: {anchor.confidence}")
 
     # Get anchors using new API
@@ -75,13 +80,15 @@ def test_complete_line_matching(setup_teardown):
     # Debug: Print found anchors
     print("\nFound anchors:")
     for scored_anchor in anchors:
-        print(f"\nText: '{scored_anchor.anchor.text}'")
+        anchor_text = get_anchor_text(scored_anchor.anchor, word_map)
+        print(f"\nText: '{anchor_text}'")
         print(f"Position: {scored_anchor.anchor.transcription_position}")
         print(f"Confidence: {scored_anchor.anchor.confidence}")
 
     # Should find the complete line
-    assert len(anchors) == 1, f"Expected 1 anchor but found {len(anchors)}: {[a.anchor.text for a in anchors]}"
-    assert anchors[0].anchor.text == "hello world test phrase"
+    assert len(anchors) == 1, f"Expected 1 anchor but found {len(anchors)}"
+    anchor_text = get_anchor_text(anchors[0].anchor, word_map)
+    assert anchor_text == "hello world test phrase"
     assert anchors[0].anchor.confidence == 1.0
 
     # Also test with a slightly different reference to ensure it still works
@@ -92,7 +99,8 @@ def test_complete_line_matching(setup_teardown):
     lyrics_data_references_with_diff = convert_references_to_lyrics_data(references_with_diff)
     anchors = finder.find_anchors(transcribed, lyrics_data_references_with_diff, transcription_result)
     assert len(anchors) == 1
-    assert anchors[0].anchor.text == "hello world test phrase"
+    anchor_text = get_anchor_text(anchors[0].anchor, word_map)
+    assert anchor_text == "hello world test phrase"
 
 
 def test_complete_line_matching_with_apostrophe(setup_teardown):
@@ -126,23 +134,27 @@ def test_complete_line_matching_with_apostrophe(setup_teardown):
 
     if matches:
         # Use backwards compatible constructor
-        anchor = AnchorSequence(full_line, 0, matches, len(matches) / len(references))
+        anchor = create_test_anchor_sequence(word_texts=full_line, transcription_position=0, reference_positions=matches, confidence=len(matches)[0] / len(references))
         print(f"Confidence: {anchor.confidence}")
 
     # Get anchors using new API
     anchors = finder.find_anchors(transcribed, lyrics_data_references, transcription_result)
 
+    # Create word map from transcription data for text resolution
+    word_map = {word.id: word for word in transcription_result.result.words}
+    
     # Debug: Print found anchors
     print("\nFound anchors:")
     for scored_anchor in anchors:
-        print(f"\nText: '{scored_anchor.anchor.text}'")
+        anchor_text = get_anchor_text(scored_anchor.anchor, word_map)
+        print(f"\nText: '{anchor_text}'")
         print(f"Position: {scored_anchor.anchor.transcription_position}")
         print(f"Confidence: {scored_anchor.anchor.confidence}")
 
     # Should find at least one anchor that covers most of the line
-    assert len(anchors) >= 1, f"Expected at least 1 anchor but found {len(anchors)}: {[a.anchor.text for a in anchors]}"
+    assert len(anchors) >= 1, f"Expected at least 1 anchor but found {len(anchors)}"
     # Check that the anchor contains the core words (algorithm may choose optimal subspan)
-    anchor_text = anchors[0].anchor.text.lower()
+    anchor_text = get_anchor_text(anchors[0].anchor, word_map).lower()
     key_words = ["say", "got", "number"]  # Core words that should be found
     assert all(word in anchor_text for word in key_words)
 
@@ -174,7 +186,7 @@ def test_complete_line_matching_simple(setup_teardown):
 
     if matches:
         # Use backwards compatible constructor
-        anchor = AnchorSequence(full_line, 0, matches, len(matches) / len(references))
+        anchor = create_test_anchor_sequence(word_texts=full_line, transcription_position=0, reference_positions=matches, confidence=len(matches)[0] / len(references))
         print(f"Confidence: {anchor.confidence}")
 
     # Get anchors using new API
@@ -183,15 +195,15 @@ def test_complete_line_matching_simple(setup_teardown):
     # Debug: Print found anchors
     print("\nFound anchors:")
     for scored_anchor in anchors:
-        print(f"\nText: '{scored_anchor.anchor.text}'")
+        print(f"\nText: '{scored_anchor.anchor_text_placeholder}'")
         print(f"Position: {scored_anchor.anchor.transcription_position}")
         print(f"Confidence: {scored_anchor.anchor.confidence}")
 
     # Should find the complete line
-    assert len(anchors) == 1, f"Expected 1 anchor but found {len(anchors)}: {[a.anchor.text for a in anchors]}"
+    assert len(anchors) == 1, f"Expected 1 anchor but found {len(anchors)}: {[a.anchor_text_placeholder for a in anchors]}"
     # Check that the anchor contains the expected words
     key_words = ["one", "two", "three", "four", "five", "six"]
-    assert all(word in anchors[0].anchor.text for word in key_words)
+    assert all(word in anchors[0].anchor_text_placeholder for word in key_words)
 
 
 def test_get_reference_words(finder):
@@ -233,7 +245,7 @@ def test_find_gaps_integration(finder):
     # The test should focus on the fact that gap finding doesn't crash
     print(f"\nFound {len(anchors)} anchors and {len(gaps)} gaps")
     for anchor in anchors:
-        print(f"Anchor: '{anchor.anchor.text}' at position {anchor.anchor.transcription_position}")
+        print(f"Anchor: '{anchor.anchor_text_placeholder}' at position {anchor.anchor.transcription_position}")
     for gap in gaps:
         print(f"Gap: position {gap.transcription_position}, {len(gap.transcribed_word_ids)} words")
     
@@ -275,15 +287,15 @@ def test_pull_it_apart_sequence(finder):
 
     print("\nFinal selected anchors:")
     for scored_anchor in anchors:
-        print(f"\nText: '{scored_anchor.anchor.text}'")
+        print(f"\nText: '{scored_anchor.anchor_text_placeholder}'")
         print(f"Position: {scored_anchor.anchor.transcription_position}")
         print(f"Confidence: {scored_anchor.anchor.confidence}")
-        print(f"Length: {len(scored_anchor.anchor.text.split())}")
+        print(f"Length: {len(scored_anchor.anchor_text_placeholder.split())}")
 
     # Check that "pull it apart" is included in some anchor
     found_phrase = False
     for scored_anchor in anchors:
-        if "pull it apart" in scored_anchor.anchor.text:
+        if "pull it apart" in scored_anchor.anchor_text_placeholder:
             found_phrase = True
             break
 

@@ -468,4 +468,20 @@ def convert_references_to_lyrics_data(references: Dict[str, str]) -> Dict[str, L
     return {
         source: create_test_lyrics_data_from_text(text, source=source)
         for source, text in references.items()
-    } 
+    }
+
+
+def resolve_word_ids_to_text(word_ids: List[str], word_map: Dict[str, Word]) -> str:
+    """Resolve a list of word IDs to their text representation for test assertions."""
+    words = [word_map[word_id].text for word_id in word_ids]
+    return " ".join(words)
+
+
+def get_anchor_text(anchor: AnchorSequence, word_map: Dict[str, Word]) -> str:
+    """Get text representation of an anchor sequence for test assertions."""
+    return resolve_word_ids_to_text(anchor.transcribed_word_ids, word_map)
+
+
+def get_gap_text(gap: GapSequence, word_map: Dict[str, Word]) -> str:
+    """Get text representation of a gap sequence for test assertions."""
+    return resolve_word_ids_to_text(gap.transcribed_word_ids, word_map) 

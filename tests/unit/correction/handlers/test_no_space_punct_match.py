@@ -4,6 +4,7 @@ import logging
 
 from lyrics_transcriber.correction.handlers.no_space_punct_match import NoSpacePunctuationMatchHandler
 from lyrics_transcriber.types import GapSequence, Word, WordCorrection
+from tests.test_helpers import create_test_gap_sequence
 
 
 class TestNoSpacePunctuationMatchHandler:

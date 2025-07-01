@@ -2,6 +2,7 @@ import pytest
 from unittest.mock import Mock, patch
 from lyrics_transcriber.correction.handlers.word_operations import WordOperations
 from lyrics_transcriber.types import GapSequence, WordCorrection, AnchorSequence, Word, ScoredAnchor, PhraseScore, PhraseType
+from tests.test_helpers import create_test_gap_sequence
 
 
 class TestWordOperations:

@@ -392,40 +392,22 @@ class AnchorSequenceFinder:
 
         # Add word map to each anchor for scoring
         for anchor in anchors:
-            # For backwards compatibility, only add transcribed_words if all IDs exist in word_map
+            # Resolve word IDs to Word objects for scoring
             try:
                 anchor.transcribed_words = [word_map[word_id] for word_id in anchor.transcribed_word_ids]
-                # Also set _words for backwards compatibility with text display
-                anchor._words = [word_map[word_id].text for word_id in anchor.transcribed_word_ids]
             except KeyError:
-                # This can happen in tests using backwards compatible constructors
-                # Create dummy Word objects with the text from _words if available
-                if hasattr(anchor, '_words') and anchor._words is not None:
-                    from lyrics_transcriber.types import Word
-                    from lyrics_transcriber.utils.word_utils import WordUtils
-                    anchor.transcribed_words = [
-                        Word(
-                            id=word_id,
-                            text=text,
-                            start_time=i * 1.0,
-                            end_time=(i + 1) * 1.0,
-                            confidence=1.0
-                        )
-                        for i, (word_id, text) in enumerate(zip(anchor.transcribed_word_ids, anchor._words))
-                    ]
-                else:
-                    # Create generic word objects for scoring
-                    from lyrics_transcriber.types import Word
-                    anchor.transcribed_words = [
-                        Word(
-                            id=word_id,
-                            text=f"word_{i}",
-                            start_time=i * 1.0,
-                            end_time=(i + 1) * 1.0,
-                            confidence=1.0
-                        )
-                        for i, word_id in enumerate(anchor.transcribed_word_ids)
-                    ]
+                # Create generic word objects for scoring if word IDs don't exist in map
+                from lyrics_transcriber.types import Word
+                anchor.transcribed_words = [
+                    Word(
+                        id=word_id,
+                        text=f"word_{i}",
+                        start_time=i * 1.0,
+                        end_time=(i + 1) * 1.0,
+                        confidence=1.0
+                    )
+                    for i, word_id in enumerate(anchor.transcribed_word_ids)
+                ]
 
         start_time = time.time()
 

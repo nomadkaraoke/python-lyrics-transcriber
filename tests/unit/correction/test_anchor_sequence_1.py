@@ -6,6 +6,9 @@ import shutil
 from lyrics_transcriber.types import AnchorSequence, ScoredAnchor, PhraseScore, PhraseType
 from lyrics_transcriber.correction.anchor_sequence import AnchorSequenceFinder
 from tests.test_helpers import (
+    create_test_anchor_sequence, 
+    get_anchor_text, 
+    resolve_word_ids_to_text,
     create_test_lyrics_data_from_text,
     create_test_transcription_result_from_text,
     convert_references_to_lyrics_data
@@ -41,25 +44,31 @@ def finder(setup_teardown):
 
 
 def test_anchor_sequence_properties():
-    anchor = AnchorSequence(words=["hello", "world"], transcription_position=0, reference_positions={"source1": 0}, confidence=1.0)
-    assert anchor.text == "hello world"
+    from tests.test_helpers import create_test_anchor_sequence, get_anchor_text
+    
+    # Create test anchor with proper ID-based structure
+    anchor, word_map = create_test_anchor_sequence(
+        word_texts=["hello", "world"],
+        transcription_position=0,
+        reference_positions={"source1": 0},
+        reference_words={"source1": ["hello", "world"]},  # Specify reference words to override defaults
+        confidence=1.0
+    )
+    
+    # Test text representation via helper
+    assert get_anchor_text(anchor, word_map) == "hello world"
     assert anchor.length == 2
     
-    # Test the to_dict output - should include both new format and backwards compatibility fields
+    # Test the to_dict output - should include all required fields
     result = anchor.to_dict()
     
-    # Check required new format fields are present
+    # Check required fields are present
     assert "id" in result
     assert "transcribed_word_ids" in result
     assert "reference_word_ids" in result
     assert result["transcription_position"] == 0
     assert result["reference_positions"] == {"source1": 0}
     assert result["confidence"] == 1.0
-    
-    # Check backwards compatibility fields are present
-    assert result["words"] == ["hello", "world"]
-    assert result["text"] == "hello world"
-    assert result["length"] == 2
     
     # Check structure of word IDs
     assert len(result["transcribed_word_ids"]) == 2
@@ -90,27 +99,45 @@ def test_create_anchor(finder):
     anchor = finder._create_anchor(ngram, 0, matching_sources, 2)
     assert anchor is not None
     assert anchor.confidence == 1.0
-    # Note: anchor.words is not available in new API without word map
-    # We'll check transcribed_word_ids length instead
     assert len(anchor.transcribed_word_ids) == 2
 
 
 def test_remove_overlapping_sequences(finder):
+    from tests.test_helpers import create_test_anchor_sequence, get_anchor_text
+    
     # Create test data
     transcribed = "a b c"
     transcription_result = create_test_transcription_result_from_text(transcribed)
     
-    anchors = [
-        AnchorSequence(["a", "b"], 0, {"s1": 0}, 1.0),
-        AnchorSequence(["b", "c"], 1, {"s1": 1}, 1.0),
-        AnchorSequence(["a", "b", "c"], 0, {"s1": 0}, 1.0),
-    ]
+    # Create anchors using the new API
+    anchor1, word_map1 = create_test_anchor_sequence(
+        word_texts=["a", "b"],
+        transcription_position=0,
+        reference_positions={"s1": 0},
+        confidence=1.0
+    )
+    
+    anchor2, word_map2 = create_test_anchor_sequence(
+        word_texts=["b", "c"],
+        transcription_position=1,
+        reference_positions={"s1": 1},
+        confidence=1.0
+    )
+    
+    anchor3, word_map3 = create_test_anchor_sequence(
+        word_texts=["a", "b", "c"],
+        transcription_position=0,
+        reference_positions={"s1": 0},
+        confidence=1.0
+    )
+    
+    anchors = [anchor1, anchor2, anchor3]
     
     # Provide a context that matches the sequence structure
     filtered = finder._remove_overlapping_sequences(anchors, transcribed, transcription_result)
     assert len(filtered) == 1
-    # Use backwards compatible properties
-    assert filtered[0].anchor.text == "a b c"
+    # Check that the longest sequence is selected
+    assert get_anchor_text(filtered[0].anchor, word_map3) == "a b c"
 
 
 def test_find_anchors_simple(finder):
@@ -121,6 +148,9 @@ def test_find_anchors_simple(finder):
     # Create proper test data objects
     transcription_result = create_test_transcription_result_from_text(transcribed)
     lyrics_data_references = convert_references_to_lyrics_data(references)
+    
+    # Create word map from transcription data for text resolution
+    word_map = {word.id: word for word in transcription_result.result.words}
 
     # Debug: Print cleaned texts
     print("\nCleaned texts:")
@@ -144,20 +174,6 @@ def test_find_anchors_simple(finder):
             matches = finder._find_matching_sources(ngram, ref_texts_clean, n)
             if matches:
                 print(f"  Matches in: {list(matches.keys())}")
-                # Debug matching process
-                print("  Matching details:")
-                for source, ref_words in ref_texts_clean.items():
-                    print(f"    {source}: ", end="")
-                    for i in range(len(ref_words) - len(ngram) + 1):
-                        candidate = ref_words[i : i + len(ngram)]
-                        if candidate == ngram:
-                            print(f"Match at position {i}")
-                        else:
-                            print(f"No match at {i} ({candidate})")
-
-                # Score the sequence - use backwards compatible constructor
-                anchor = AnchorSequence(ngram, pos, matches, len(matches) / len(references))
-                # Skip scoring debug since it requires complex setup
                 print(f"  Confidence: {len(matches) / len(references)}")
 
     # Get anchors using new API
@@ -166,7 +182,7 @@ def test_find_anchors_simple(finder):
     # Debug: Print found anchors with details
     print("\nFound anchors:")
     for scored_anchor in anchors:
-        print(f"\nText: '{scored_anchor.anchor.text}'")
+        print(f"\nText: '{get_anchor_text(scored_anchor.anchor, word_map)}'")
         print(f"Position: {scored_anchor.anchor.transcription_position}")
         print(f"Confidence: {scored_anchor.anchor.confidence}")
         print(f"Reference positions: {scored_anchor.anchor.reference_positions}")
@@ -201,13 +217,17 @@ def test_find_anchors_min_sources(setup_teardown):
     # Create proper test data objects
     transcription_result = create_test_transcription_result_from_text(transcribed)
     lyrics_data_references = convert_references_to_lyrics_data(references)
+    
+    # Create word map from transcription data for text resolution
+    word_map = {word.id: word for word in transcription_result.result.words}
 
     anchors = finder.find_anchors(transcribed, lyrics_data_references, transcription_result)
 
     # Should find "hello world" (minimum 2 sources)
     assert len(anchors) == 1
     # Check that the anchor contains the expected words
-    assert "hello" in anchors[0].anchor.text and "world" in anchors[0].anchor.text
+    anchor_text = get_anchor_text(anchors[0].anchor, word_map)
+    assert "hello" in anchor_text and "world" in anchor_text
     assert anchors[0].anchor.transcription_position == 0
     assert anchors[0].anchor.confidence == 1.0  # Both sources match
 
@@ -220,13 +240,17 @@ def test_find_anchors_case_insensitive(setup_teardown):
     # Create proper test data objects
     transcription_result = create_test_transcription_result_from_text(transcribed)
     lyrics_data_references = convert_references_to_lyrics_data(references)
+    
+    # Create word map from transcription data for text resolution
+    word_map = {word.id: word for word in transcription_result.result.words}
 
     anchors = finder.find_anchors(transcribed, lyrics_data_references, transcription_result)
 
     # Should find the complete phrase (case insensitive matching)
     assert len(anchors) == 1
     # Original casing should be preserved in the anchor text
-    assert "Hello" in anchors[0].anchor.text and "World" in anchors[0].anchor.text and "Test" in anchors[0].anchor.text
+    anchor_text = get_anchor_text(anchors[0].anchor, word_map)
+    assert "Hello" in anchor_text and "World" in anchor_text and "Test" in anchor_text
     assert anchors[0].anchor.transcription_position == 0
     assert anchors[0].anchor.confidence == 1.0
 
@@ -240,6 +264,9 @@ def test_find_anchors_with_repeated_phrases(setup_teardown):
     # Create proper test data objects
     transcription_result = create_test_transcription_result_from_text(transcribed)
     lyrics_data_references = convert_references_to_lyrics_data(references)
+    
+    # Create word map from transcription data for text resolution
+    word_map = {word.id: word for word in transcription_result.result.words}
 
     # Debug: Print cleaned texts
     print("\nCleaned texts:")
@@ -265,7 +292,7 @@ def test_find_anchors_with_repeated_phrases(setup_teardown):
     # Debug: Print found anchors
     print("\nFound anchors:")
     for anchor in anchors:
-        print(f"Text: '{anchor.anchor.text}'")
+        print(f"Text: '{get_anchor_text(anchor.anchor, word_map)}'")
         print(f"Position: {anchor.anchor.transcription_position}")
         print(f"Reference positions: {anchor.anchor.reference_positions}")
         print(f"Confidence: {anchor.anchor.confidence}")
@@ -273,7 +300,7 @@ def test_find_anchors_with_repeated_phrases(setup_teardown):
     # Algorithm filters overlapping sequences, so expect fewer anchors than repetitions
     # Should find at least one "hello world" match
     assert len(anchors) >= 1, f"Expected at least 1 anchor but found {len(anchors)}"
-    assert any("hello" in anchor.anchor.text and "world" in anchor.anchor.text for anchor in anchors)
+    assert any("hello" in get_anchor_text(anchor.anchor, word_map) and "world" in get_anchor_text(anchor.anchor, word_map) for anchor in anchors)
 
 
 def test_find_anchors_with_single_source_repeated_phrase(setup_teardown):
@@ -285,13 +312,16 @@ def test_find_anchors_with_single_source_repeated_phrase(setup_teardown):
     # Create proper test data objects
     transcription_result = create_test_transcription_result_from_text(transcribed)
     lyrics_data_references = convert_references_to_lyrics_data(references)
+    
+    # Create word map from transcription data for text resolution
+    word_map = {word.id: word for word in transcription_result.result.words}
 
     anchors = finder.find_anchors(transcribed, lyrics_data_references, transcription_result)
 
     # Algorithm filters overlapping sequences, so may find fewer than expected
     # Should find at least one "test one two" match
     assert len(anchors) >= 1, f"Expected at least 1 anchor but found {len(anchors)}"
-    anchor_text = anchors[0].anchor.text.lower()
+    anchor_text = get_anchor_text(anchors[0].anchor, word_map).lower()
     key_words = ["test", "one", "two"]
     assert all(word in anchor_text for word in key_words)
 
@@ -309,11 +339,14 @@ def test_real_world_lyrics_scenario(setup_teardown):
     transcription_result = create_test_transcription_result_from_text(transcribed)
     lyrics_data_references = convert_references_to_lyrics_data(references)
     
+    # Create word map from transcription data for text resolution
+    word_map = {word.id: word for word in transcription_result.result.words}
+    
     anchors = finder.find_anchors(transcribed, lyrics_data_references, transcription_result)
 
     # Should find at least one of these sequences
     expected_sequences = ["son of a father", "son of a", "of a father"]
-    found_sequences = [anchor.anchor.text for anchor in anchors]
+    found_sequences = [get_anchor_text(anchor.anchor, word_map) for anchor in anchors]
     assert any(seq in found_sequences for seq in expected_sequences), f"Expected one of {expected_sequences}, but found {found_sequences}"
 
 
@@ -326,6 +359,9 @@ def test_find_anchors_with_punctuation(setup_teardown):
     # Create proper test data objects
     transcription_result = create_test_transcription_result_from_text(transcribed)
     lyrics_data_references = convert_references_to_lyrics_data(references)
+    
+    # Create word map from transcription data for text resolution
+    word_map = {word.id: word for word in transcription_result.result.words}
 
     # Debug: Print cleaned texts
     print("\nCleaned texts:")
@@ -356,14 +392,14 @@ def test_find_anchors_with_punctuation(setup_teardown):
     # Debug: Print found anchors
     print("\nFound anchors:")
     for anchor in anchors:
-        print(f"Text: '{anchor.anchor.text}'")
+        print(f"Text: '{get_anchor_text(anchor.anchor, word_map)}'")
         print(f"Position: {anchor.anchor.transcription_position}")
         print(f"Reference positions: {anchor.anchor.reference_positions}")
         print(f"Confidence: {anchor.anchor.confidence}")
 
     assert len(anchors) > 0
     # The anchor text should preserve original punctuation while matching cleaned text
-    assert any("hello" in anchor.anchor.text and "world" in anchor.anchor.text and "test" in anchor.anchor.text for anchor in anchors)
+    assert any("hello" in get_anchor_text(anchor.anchor, word_map) and "world" in get_anchor_text(anchor.anchor, word_map) and "test" in get_anchor_text(anchor.anchor, word_map) for anchor in anchors)
 
 
 def test_find_anchors_respects_word_boundaries(setup_teardown):
@@ -376,13 +412,15 @@ def test_find_anchors_respects_word_boundaries(setup_teardown):
     transcription_result = create_test_transcription_result_from_text(transcribed)
     lyrics_data_references = convert_references_to_lyrics_data(references)
     
+    # Create word map from transcription data for text resolution
+    word_map = {word.id: word for word in transcription_result.result.words}
+    
     anchors = finder.find_anchors(transcribed, lyrics_data_references, transcription_result)
 
     # Should not match "test" within "testing" or "tester"
     matched_words = set()
     for anchor in anchors:
-        # Use backwards compatible property
-        matched_words.update(anchor.anchor.text.split())
+        matched_words.update(get_anchor_text(anchor.anchor, word_map).split())
 
     assert "testing" not in matched_words or "tester" not in matched_words
 
@@ -396,13 +434,17 @@ def test_find_anchors_minimum_length(setup_teardown):
     # Create proper test data objects
     transcription_result = create_test_transcription_result_from_text(transcribed)
     lyrics_data_references = convert_references_to_lyrics_data(references)
+    
+    # Create word map from transcription data for text resolution
+    word_map = {word.id: word for word in transcription_result.result.words}
 
     anchors = finder.find_anchors(transcribed, lyrics_data_references, transcription_result)
 
     # Should find "c d e" but not "a b"
     assert len(anchors) == 1
     # Check that the anchor contains the expected words
-    assert "c" in anchors[0].anchor.text and "d" in anchors[0].anchor.text and "e" in anchors[0].anchor.text
+    anchor_text = get_anchor_text(anchors[0].anchor, word_map)
+    assert "c" in anchor_text and "d" in anchor_text and "e" in anchor_text
 
 
 def test_find_anchors_confidence_calculation(setup_teardown):
@@ -423,7 +465,12 @@ def test_find_anchors_confidence_calculation(setup_teardown):
 
 def test_scored_anchor_total_score():
     """Test that ScoredAnchor combines confidence and phrase quality correctly"""
-    anchor = AnchorSequence(["hello", "world"], 0, {"source1": 0}, confidence=0.8)
+    anchor = create_test_anchor_sequence(
+        word_texts=['hello', 'world'],
+        transcription_position=0,
+        reference_positions={'source1': 0},
+        confidence=0.8
+    )[0]
     phrase_score = PhraseScore(phrase_type=PhraseType.COMPLETE, natural_break_score=0.9, length_score=1.0)
     scored_anchor = ScoredAnchor(anchor=anchor, phrase_score=phrase_score)
 
@@ -444,14 +491,31 @@ def test_remove_overlapping_sequences_prioritizes_better_phrases(finder):
 
     # Create test sequences using backwards compatible constructor
     sequences = [
-        AnchorSequence(["my", "heart", "will", "go", "on"], 0, {"source1": 0, "source2": 0}, 1.0),
-        AnchorSequence(["my", "heart", "will", "go", "on", "and", "on", "forever", "more"], 0, {"source1": 0, "source2": 0}, 1.0),
+        create_test_anchor_sequence(
+        word_texts=['my', 'heart', 'will', 'go', 'on'],
+        transcription_position=0,
+        reference_positions={'source1': 0, 'source2': 0},
+        confidence=1.0
+    )[0],
+        create_test_anchor_sequence(
+        word_texts=['my', 'heart', 'will', 'go', 'on', 'and', 'on', 'forever', 'more'],
+        transcription_position=0,
+        reference_positions={'source1': 0, 'source2': 0},
+        confidence=1.0
+    )[0],
     ]
+    
+    # Create combined word map from all sequences
+    word_map = {}
+    for seq in sequences:
+        # Mock word map for debugging - this is a test-specific workaround
+        for i, word_id in enumerate(seq.transcribed_word_ids):
+            word_map[word_id] = type("MockWord", (), {"text": f"word_{i}", "id": word_id})
 
     # Debug: Print scores for each sequence
     print("\nScoring sequences:")
     for seq in sequences:
-        print(f"\nSequence: '{seq.text}'")
+        print(f"\nSequence: '{get_anchor_text(seq, word_map)}'")
         print(f"Length: {seq.length}")
 
     # Filter sequences using new API
@@ -460,12 +524,12 @@ def test_remove_overlapping_sequences_prioritizes_better_phrases(finder):
     # Debug: Print filtered sequences
     print("\nFiltered sequences:")
     for seq in filtered:
-        print(f"\nSequence: '{seq.anchor.text}'")
+        print(f"\nSequence: '{get_anchor_text(seq.anchor, word_map)}'")
         print(f"Length: {seq.anchor.length}")
 
     # Should prefer the longer sequence
     assert len(filtered) == 1
-    assert filtered[0].anchor.text == "my heart will go on and on forever more"
+    assert get_anchor_text(filtered[0].anchor, word_map) == "my heart will go on and on forever more"
 
 
 def test_remove_overlapping_sequences_with_line_breaks(finder):
@@ -476,6 +540,9 @@ def test_remove_overlapping_sequences_with_line_breaks(finder):
     # Create proper test data objects
     transcription_result = create_test_transcription_result_from_text(transcribed)
     lyrics_data_references = convert_references_to_lyrics_data(references)
+    
+    # Create word map from transcription data for text resolution
+    word_map = {word.id: word for word in transcription_result.result.words}
 
     # Set minimum sequence length to ensure we don't get too-short matches
     finder.min_sequence_length = 4
@@ -506,15 +573,15 @@ def test_remove_overlapping_sequences_with_line_breaks(finder):
     # Debug: Print found anchors with details
     print("\nFound anchors:")
     for scored_anchor in anchors:
-        print(f"\nText: '{scored_anchor.anchor.text}'")
+        print(f"\nText: '{get_anchor_text(scored_anchor.anchor, word_map)}'")
         print(f"Position: {scored_anchor.anchor.transcription_position}")
         print(f"Confidence: {scored_anchor.anchor.confidence}")
-        print(f"Length: {len(scored_anchor.anchor.text.split())}")
+        print(f"Length: {len(get_anchor_text(scored_anchor.anchor, word_map).split())}")
 
     # Updated assertions to expect longer sequences
     assert len(anchors) > 0
     # Check that we found the complete sequence (should contain all the key words)
-    full_text = " ".join(a.anchor.text for a in anchors)
+    full_text = " ".join(get_anchor_text(a.anchor, word_map) for a in anchors)
     key_words = ["my", "heart", "will", "go", "on", "and", "forever", "more"]
     assert all(word in full_text for word in key_words)
 
@@ -526,16 +593,29 @@ def test_remove_overlapping_sequences_with_line_breaks_debug(finder):
     # Create proper test data objects
     transcription_result = create_test_transcription_result_from_text(transcribed)
 
-    # Create two overlapping sequences using backwards compatible constructor
-    seq1 = AnchorSequence(["my", "heart", "will", "go", "on"], 0, {"source1": 0, "source2": 0}, 1.0)
-    seq2 = AnchorSequence(["my", "heart", "will", "go", "on", "and", "on", "forever", "more"], 0, {"source1": 0, "source2": 0}, 1.0)
+    # Create two overlapping sequences using test helpers
+    seq1, word_map1 = create_test_anchor_sequence(
+        word_texts=['my', 'heart', 'will', 'go', 'on'],
+        transcription_position=0,
+        reference_positions={'source1': 0, 'source2': 0},
+        confidence=1.0
+    )
+    seq2, word_map2 = create_test_anchor_sequence(
+        word_texts=['my', 'heart', 'will', 'go', 'on', 'and', 'on', 'forever', 'more'],
+        transcription_position=0,
+        reference_positions={'source1': 0, 'source2': 0},
+        confidence=1.0
+    )
     sequences = [seq1, seq2]
+    
+    # Create combined word map for text resolution
+    word_map = {**word_map1, **word_map2}
 
     # Debug: Print initial sequence details
     print("\nInitial sequences:")
     for seq in sequences:
-        print(f"\nSequence: '{seq.text}'")
-        print(f"Length: {len(seq.text.split())}")
+        print(f"\nSequence: '{get_anchor_text(seq, word_map)}'")
+        print(f"Length: {len(get_anchor_text(seq, word_map).split())}")
         print(f"Position: {seq.transcription_position}")
         print(f"Confidence: {seq.confidence}")
 
@@ -549,28 +629,43 @@ def test_remove_overlapping_sequences_with_line_breaks_debug(finder):
     # Debug: Print result
     print("\nChosen sequence:")
     chosen = filtered[0].anchor  # Fix: access the anchor property
-    print(f"Text: '{chosen.text}'")
+    print(f"Text: '{get_anchor_text(chosen, word_map)}'")
     print(f"Length: {chosen.length}")
 
     # Should choose the longer sequence
     assert len(filtered) == 1
-    assert filtered[0].anchor.text == "my heart will go on and on forever more"
+    assert get_anchor_text(filtered[0].anchor, word_map) == "my heart will go on and on forever more"
 
 
 def test_score_anchor(finder):
     """Test anchor scoring logic"""
     transcribed = "hello world\ntest phrase"
 
-    # Test sequence that respects line break - using backwards compatible constructor
-    anchor1 = AnchorSequence(["hello", "world"], 0, {"source1": 0, "source2": 0}, 1.0)
+    # Test sequence that respects line break - using test helpers
+    anchor1, word_map1 = create_test_anchor_sequence(
+        word_texts=['hello', 'world'],
+        transcription_position=0,
+        reference_positions={'source1': 0, 'source2': 0},
+        confidence=1.0
+    )
+    
+    # Test sequence that crosses line break
+    anchor2, word_map2 = create_test_anchor_sequence(
+        word_texts=['world', 'test'],
+        transcription_position=1,
+        reference_positions={'source1': 1},
+        confidence=0.5
+    )
+    
+    # Create combined word map for text resolution
+    word_map = {**word_map1, **word_map2}
+    
     print("\nScoring sequence that respects line break:")
-    print(f"Sequence: '{anchor1.text}'")
+    print(f"Sequence: '{get_anchor_text(anchor1, word_map)}'")
     print(f"Length: {anchor1.length}")
 
-    # Test sequence that crosses line break
-    anchor2 = AnchorSequence(["world", "test"], 1, {"source1": 1}, 0.5)
     print("\nScoring sequence that crosses line break:")
-    print(f"Sequence: '{anchor2.text}'")
+    print(f"Sequence: '{get_anchor_text(anchor2, word_map)}'")
     print(f"Length: {anchor2.length}")
 
 
@@ -579,14 +674,29 @@ def test_get_sequence_priority_simple(finder):
     transcribed = "hello world test"
 
     # Test sequence with high confidence and source count
-    anchor1 = AnchorSequence(["hello", "world"], 0, {"source1": 0, "source2": 0}, 1.0)
-    print("\nSequence 1: '{}'".format(anchor1.text))
+    anchor1, word_map1 = create_test_anchor_sequence(
+        word_texts=['hello', 'world'],
+        transcription_position=0,
+        reference_positions={'source1': 0, 'source2': 0},
+        confidence=1.0
+    )
+
+    # Test sequence with lower confidence and fewer sources
+    anchor2, word_map2 = create_test_anchor_sequence(
+        word_texts=['world', 'test'],
+        transcription_position=1,
+        reference_positions={'source1': 1},
+        confidence=0.5
+    )
+    
+    # Create combined word map for text resolution
+    word_map = {**word_map1, **word_map2}
+    
+    print("\nSequence 1: '{}'".format(get_anchor_text(anchor1, word_map)))
     print(f"Length: {anchor1.length}")
     print(f"Confidence: {anchor1.confidence}")
 
-    # Test sequence with lower confidence and fewer sources
-    anchor2 = AnchorSequence(["world", "test"], 1, {"source1": 1}, 0.5)
-    print("\nSequence 2: '{}'".format(anchor2.text))
+    print("\nSequence 2: '{}'".format(get_anchor_text(anchor2, word_map)))
     print(f"Length: {anchor2.length}")
     print(f"Confidence: {anchor2.confidence}")
 
@@ -603,6 +713,9 @@ def test_viet_nam_lyrics_scenario(setup_teardown):
     # Create proper test data objects
     transcription_result = create_test_transcription_result_from_text(transcribed)
     lyrics_data_references = convert_references_to_lyrics_data(references)
+    
+    # Create word map from transcription data for text resolution
+    word_map = {word.id: word for word in transcription_result.result.words}
 
     # Debug: Print cleaned texts
     print("\nCleaned texts:")
@@ -619,8 +732,8 @@ def test_viet_nam_lyrics_scenario(setup_teardown):
     print("\nFound anchors:")
     found_texts = set()  # Use a set to store found texts
     for scored_anchor in anchors:
-        found_texts.add(scored_anchor.anchor.text)  # Add each anchor text to the set
-        print(f"\nText: '{scored_anchor.anchor.text}'")
+        found_texts.add(get_anchor_text(scored_anchor.anchor, word_map))  # Add each anchor text to the set
+        print(f"\nText: '{get_anchor_text(scored_anchor.anchor, word_map)}'")
         print(f"Position: {scored_anchor.anchor.transcription_position}")
         print(f"Confidence: {scored_anchor.anchor.confidence}")
 
@@ -648,6 +761,9 @@ def test_viet_nam_first_line(setup_teardown):
     # Create proper test data objects
     transcription_result = create_test_transcription_result_from_text(transcribed)
     lyrics_data_references = convert_references_to_lyrics_data(references)
+    
+    # Create word map from transcription data for text resolution
+    word_map = {word.id: word for word in transcription_result.result.words}
 
     # Debug: Print cleaned texts
     print("\nCleaned texts:")
@@ -663,14 +779,14 @@ def test_viet_nam_first_line(setup_teardown):
     # Debug: Print found anchors with detailed scoring
     print("\nFound anchors:")
     for scored_anchor in anchors:
-        print(f"\nText: '{scored_anchor.anchor.text}'")
+        print(f"\nText: '{get_anchor_text(scored_anchor.anchor, word_map)}'")
         print(f"Position: {scored_anchor.anchor.transcription_position}")
         print(f"Confidence: {scored_anchor.anchor.confidence}")
 
     # Should find at least one anchor that covers most of the line
-    assert len(anchors) >= 1, f"Expected at least 1 anchor but found {len(anchors)}: {[a.anchor.text for a in anchors]}"
+    assert len(anchors) >= 1, f"Expected at least 1 anchor but found {len(anchors)}: {[get_anchor_text(a.anchor, word_map) for a in anchors]}"
     # Check that the anchor contains most of the key words (algorithm may choose optimal subspan)
-    anchor_text = anchors[0].anchor.text.lower()
+    anchor_text = get_anchor_text(anchors[0].anchor, word_map).lower()
     key_words = ["say", "got", "number"]  # Core words that should be found
     assert all(word in anchor_text for word in key_words)
 
@@ -712,7 +828,7 @@ def test_hyphenated_words(setup_teardown):
     # Debug what was actually found
     print(f"\nActual anchors found: {len(anchors)}")
     for anchor in anchors:
-        print(f"  Text: '{anchor.anchor.text}' at position {anchor.anchor.transcription_position}")
+        print(f"  Text: '{get_anchor_text(anchor.anchor, word_map)}' at position {anchor.anchor.transcription_position}")
 
     # Should find some anchors since cleaned text is identical across sources
     # If still failing, at least we should have matches with the manual testing above
@@ -724,6 +840,6 @@ def test_hyphenated_words(setup_teardown):
                "Should at least find valid n-gram candidates manually"
     else:
         # Check that key numbers are found
-        full_text = " ".join(anchor.anchor.text.lower() for anchor in anchors)
+        full_text = " ".join(get_anchor_text(anchor.anchor, word_map).lower() for anchor in anchors)
         key_words = ["fifty", "thousand", "five", "hundred"]
         assert all(word in full_text for word in key_words)
