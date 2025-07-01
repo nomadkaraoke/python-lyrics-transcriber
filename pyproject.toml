@@ -70,8 +70,11 @@ lrc2cdg = 'lyrics_transcriber.output.lrc_to_cdg:cli_main'
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
 
+[tool.coverage.run]
+data_file = '/tmp/.coverage'
+
 [tool.pytest.ini_options]
-testpaths = ["tests/unit", "tests/integration"]
+testpaths = ["tests/unit", "tests/regression", "tests/integration"]
 python_files = ["test_*.py"]
 addopts = [
     "--cov=lyrics_transcriber",
