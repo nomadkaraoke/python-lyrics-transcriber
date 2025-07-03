@@ -19,6 +19,7 @@ import json
 from lyrics_transcriber.correction.corrector import LyricsCorrector
 from lyrics_transcriber.types import TranscriptionResult, TranscriptionData
 from lyrics_transcriber.lyrics.user_input_provider import UserInputProvider
+from lyrics_transcriber.correction.operations import CorrectionOperations
 
 
 class ReviewServer:
@@ -83,62 +84,7 @@ class ReviewServer:
 
     def _update_correction_result(self, base_result: CorrectionResult, updated_data: Dict[str, Any]) -> CorrectionResult:
         """Update a CorrectionResult with new correction data."""
-        return CorrectionResult(
-            corrections=[
-                WordCorrection(
-                    original_word=c.get("original_word", "").strip(),
-                    corrected_word=c.get("corrected_word", "").strip(),
-                    original_position=c.get("original_position", 0),
-                    source=c.get("source", "review"),
-                    reason=c.get("reason", "manual_review"),
-                    segment_index=c.get("segment_index", 0),
-                    confidence=c.get("confidence"),
-                    alternatives=c.get("alternatives", {}),
-                    is_deletion=c.get("is_deletion", False),
-                    split_index=c.get("split_index"),
-                    split_total=c.get("split_total"),
-                    corrected_position=c.get("corrected_position"),
-                    reference_positions=c.get("reference_positions"),
-                    length=c.get("length", 1),
-                    handler=c.get("handler"),
-                    word_id=c.get("word_id"),
-                    corrected_word_id=c.get("corrected_word_id"),
-                )
-                for c in updated_data["corrections"]
-            ],
-            corrected_segments=[
-                LyricsSegment(
-                    id=s["id"],
-                    text=s["text"].strip(),
-                    words=[
-                        Word(
-                            id=w["id"],
-                            text=w["text"].strip(),
-                            start_time=w["start_time"],
-                            end_time=w["end_time"],
-                            confidence=w.get("confidence"),
-                            created_during_correction=w.get("created_during_correction", False),
-                        )
-                        for w in s["words"]
-                    ],
-                    start_time=s["start_time"],
-                    end_time=s["end_time"],
-                )
-                for s in updated_data["corrected_segments"]
-            ],
-            # Copy existing fields from the base result
-            original_segments=base_result.original_segments,
-            corrections_made=len(updated_data["corrections"]),
-            confidence=base_result.confidence,
-            reference_lyrics=base_result.reference_lyrics,
-            anchor_sequences=base_result.anchor_sequences,
-            gap_sequences=base_result.gap_sequences,
-            resized_segments=None,  # Will be generated if needed
-            metadata=base_result.metadata,
-            correction_steps=base_result.correction_steps,
-            word_id_map=base_result.word_id_map,
-            segment_id_map=base_result.segment_id_map,
-        )
+        return CorrectionOperations.update_correction_result_with_data(base_result, updated_data)
 
     async def complete_review(self, updated_data: Dict[str, Any] = Body(...)):
         """Complete the review process."""
@@ -172,41 +118,21 @@ class ReviewServer:
     async def generate_preview_video(self, updated_data: Dict[str, Any] = Body(...)):
         """Generate a preview video with the current corrections."""
         try:
-            # Create temporary correction result with updated data
-            temp_correction = self._update_correction_result(self.correction_result, updated_data)
-
-            # Generate a unique hash for this preview
-            preview_data = json.dumps(updated_data, sort_keys=True).encode("utf-8")
-            preview_hash = hashlib.md5(preview_data).hexdigest()[:12]  # Use first 12 chars for shorter filename
-
-            # Initialize output generator with preview settings
-            preview_config = OutputConfig(
-                output_dir=self.output_config.output_dir,
-                cache_dir=self.output_config.cache_dir,
-                output_styles_json=self.output_config.output_styles_json,
-                video_resolution="360p",  # Force 360p for preview
-                styles=self.output_config.styles,
-                max_line_length=self.output_config.max_line_length,
-            )
-            output_generator = OutputGenerator(config=preview_config, logger=self.logger, preview_mode=True)
-
-            # Generate preview outputs with unique prefix
-            preview_outputs = output_generator.generate_outputs(
-                transcription_corrected=temp_correction,
-                lyrics_results={},  # Empty dict since we don't need lyrics results for preview
-                output_prefix=f"preview_{preview_hash}",  # Include hash in filename
+            # Use shared operation for preview generation
+            result = CorrectionOperations.generate_preview_video(
+                correction_result=self.correction_result,
+                updated_data=updated_data,
+                output_config=self.output_config,
                 audio_filepath=self.audio_filepath,
+                logger=self.logger
             )
-
-            if not preview_outputs.video:
-                raise ValueError("Preview video generation failed")
-
+            
             # Store the path for later retrieval
             if not hasattr(self, "preview_videos"):
                 self.preview_videos = {}
-            self.preview_videos[preview_hash] = preview_outputs.video
+            self.preview_videos[result["preview_hash"]] = result["video_path"]
 
-            return {"status": "success", "preview_hash": preview_hash}
+            return {"status": "success", "preview_hash": result["preview_hash"]}
 
         except Exception as e:
             self.logger.error(f"Failed to generate preview video: {str(e)}")
@@ -240,82 +166,13 @@ class ReviewServer:
     async def update_handlers(self, enabled_handlers: List[str] = Body(...)):
         """Update enabled correction handlers and rerun correction."""
         try:
-            # Store existing audio hash
-            audio_hash = self.correction_result.metadata.get("audio_hash") if self.correction_result.metadata else None
-
-            # Update metadata with new handler configuration
-            if not self.correction_result.metadata:
-                self.correction_result.metadata = {}
-            self.correction_result.metadata["enabled_handlers"] = enabled_handlers
-
-            # Rerun correction with updated handlers
-            corrector = LyricsCorrector(cache_dir=self.output_config.cache_dir, enabled_handlers=enabled_handlers, logger=self.logger)
-
-            # Create proper TranscriptionData from original segments
-            transcription_data = TranscriptionData(
-                segments=self.correction_result.original_segments,
-                words=[word for segment in self.correction_result.original_segments for word in segment.words],
-                text="\n".join(segment.text for segment in self.correction_result.original_segments),
-                source="original",
-            )
-
-            # Get currently enabled handlers from metadata
-            enabled_handlers = None
-            if self.correction_result.metadata:
-                if "enabled_handlers" in self.correction_result.metadata:
-                    enabled_handlers = self.correction_result.metadata["enabled_handlers"]
-                    self.logger.info(f"Found existing enabled handlers in metadata: {enabled_handlers}")
-                elif "available_handlers" in self.correction_result.metadata:
-                    # If no enabled_handlers but we have available_handlers, enable all default handlers
-                    enabled_handlers = [
-                        handler["id"] for handler in self.correction_result.metadata["available_handlers"] if handler.get("enabled", True)
-                    ]
-                    self.logger.info(f"No enabled handlers found in metadata, using default enabled handlers: {enabled_handlers}")
-                else:
-                    self.logger.warning("No handler configuration found in metadata")
-
-            # Log reference sources before correction
-            for source, lyrics in self.correction_result.reference_lyrics.items():
-                word_count = sum(len(s.words) for s in lyrics.segments)
-                self.logger.info(f"Reference source '{source}': {word_count} words in {len(lyrics.segments)} segments")
-
-            # Rerun correction with updated reference lyrics
-            self.logger.info("Initializing LyricsCorrector for re-correction")
-            self.logger.info(f"Passing enabled handlers to corrector: {enabled_handlers or '[]'}")
-            corrector = LyricsCorrector(
+            # Use shared operation for handler updates
+            self.correction_result = CorrectionOperations.update_correction_handlers(
+                correction_result=self.correction_result,
+                enabled_handlers=enabled_handlers,
                 cache_dir=self.output_config.cache_dir,
-                enabled_handlers=enabled_handlers,  # Pass the preserved handlers or None to use defaults
-                logger=self.logger,
+                logger=self.logger
             )
-
-            self.logger.info(f"Active correction handlers: {[h.__class__.__name__ for h in corrector.handlers]}")
-            self.logger.info("Running correction with updated reference lyrics")
-            self.correction_result = corrector.run(
-                transcription_results=[TranscriptionResult(name="original", priority=1, result=transcription_data)],
-                lyrics_results=self.correction_result.reference_lyrics,
-                metadata=self.correction_result.metadata,
-            )
-
-            # Update metadata with the new handler state from corrector
-            if not self.correction_result.metadata:
-                self.correction_result.metadata = {}
-            self.correction_result.metadata.update(
-                {
-                    "available_handlers": corrector.all_handlers,
-                    "enabled_handlers": [getattr(handler, "name", handler.__class__.__name__) for handler in corrector.handlers],
-                }
-            )
-
-            self.logger.info("Correction process completed")
-            self.logger.info(
-                f"Updated metadata with {len(corrector.handlers)} enabled handlers: {self.correction_result.metadata['enabled_handlers']}"
-            )
-
-            # Restore audio hash
-            if audio_hash:
-                if not self.correction_result.metadata:
-                    self.correction_result.metadata = {}
-                self.correction_result.metadata["audio_hash"] = audio_hash
 
             return {"status": "success", "data": self.correction_result.to_dict()}
         except Exception as e:
@@ -382,107 +239,25 @@ class ReviewServer:
     async def add_lyrics(self, data: Dict[str, str] = Body(...)):
         """Add new lyrics source and rerun correction."""
         try:
-            # Store existing audio hash
-            audio_hash = self.correction_result.metadata.get("audio_hash") if self.correction_result.metadata else None
-
             source = data.get("source", "").strip()
             lyrics_text = data.get("lyrics", "").strip()
 
             self.logger.info(f"Received request to add lyrics source '{source}' with {len(lyrics_text)} characters")
 
-            if not source or not lyrics_text:
-                self.logger.warning("Invalid request: missing source or lyrics text")
-                raise HTTPException(status_code=400, detail="Source name and lyrics text are required")
-
-            # Validate source name isn't already used
-            if source in self.correction_result.reference_lyrics:
-                self.logger.warning(f"Source name '{source}' is already in use")
-                raise HTTPException(status_code=400, detail=f"Source name '{source}' is already in use")
-
-            # Create lyrics data using the provider
-            self.logger.info("Creating LyricsData using UserInputProvider")
-            provider = UserInputProvider(
-                lyrics_text=lyrics_text, source_name=source, metadata=self.correction_result.metadata or {}, logger=self.logger
-            )
-            lyrics_data = provider._convert_result_format({"text": lyrics_text, "metadata": self.correction_result.metadata or {}})
-            self.logger.info(f"Created LyricsData with {len(lyrics_data.segments)} segments")
-
-            # Add to reference lyrics
-            self.logger.info(f"Adding new source '{source}' to reference_lyrics")
-            self.correction_result.reference_lyrics[source] = lyrics_data
-            self.logger.info(f"Now have {len(self.correction_result.reference_lyrics)} total reference sources")
-
-            # Create TranscriptionData from original segments
-            self.logger.info("Creating TranscriptionData from original segments")
-            transcription_data = TranscriptionData(
-                segments=self.correction_result.original_segments,
-                words=[word for segment in self.correction_result.original_segments for word in segment.words],
-                text="\n".join(segment.text for segment in self.correction_result.original_segments),
-                source="original",
-            )
-
-            # Get currently enabled handlers from metadata
-            enabled_handlers = None
-            if self.correction_result.metadata:
-                if "enabled_handlers" in self.correction_result.metadata:
-                    enabled_handlers = self.correction_result.metadata["enabled_handlers"]
-                    self.logger.info(f"Found existing enabled handlers in metadata: {enabled_handlers}")
-                elif "available_handlers" in self.correction_result.metadata:
-                    # If no enabled_handlers but we have available_handlers, enable all default handlers
-                    enabled_handlers = [
-                        handler["id"] for handler in self.correction_result.metadata["available_handlers"] if handler.get("enabled", True)
-                    ]
-                    self.logger.info(f"No enabled handlers found in metadata, using default enabled handlers: {enabled_handlers}")
-                else:
-                    self.logger.warning("No handler configuration found in metadata")
-
-            # Log reference sources before correction
-            for source, lyrics in self.correction_result.reference_lyrics.items():
-                word_count = sum(len(s.words) for s in lyrics.segments)
-                self.logger.info(f"Reference source '{source}': {word_count} words in {len(lyrics.segments)} segments")
-
-            # Rerun correction with updated reference lyrics
-            self.logger.info("Initializing LyricsCorrector for re-correction")
-            self.logger.info(f"Passing enabled handlers to corrector: {enabled_handlers or '[]'}")
-            corrector = LyricsCorrector(
+            # Use shared operation for adding lyrics source
+            self.correction_result = CorrectionOperations.add_lyrics_source(
+                correction_result=self.correction_result,
+                source=source,
+                lyrics_text=lyrics_text,
                 cache_dir=self.output_config.cache_dir,
-                enabled_handlers=enabled_handlers,  # Pass the preserved handlers or None to use defaults
-                logger=self.logger,
-            )
-
-            self.logger.info(f"Active correction handlers: {[h.__class__.__name__ for h in corrector.handlers]}")
-            self.logger.info("Running correction with updated reference lyrics")
-            self.correction_result = corrector.run(
-                transcription_results=[TranscriptionResult(name="original", priority=1, result=transcription_data)],
-                lyrics_results=self.correction_result.reference_lyrics,
-                metadata=self.correction_result.metadata,
-            )
-
-            # Update metadata with the new handler state from corrector
-            if not self.correction_result.metadata:
-                self.correction_result.metadata = {}
-            self.correction_result.metadata.update(
-                {
-                    "available_handlers": corrector.all_handlers,
-                    "enabled_handlers": [getattr(handler, "name", handler.__class__.__name__) for handler in corrector.handlers],
-                }
-            )
-
-            # Restore audio hash
-            if audio_hash:
-                if not self.correction_result.metadata:
-                    self.correction_result.metadata = {}
-                self.correction_result.metadata["audio_hash"] = audio_hash
-
-            self.logger.info("Correction process completed")
-            self.logger.info(
-                f"Updated metadata with {len(corrector.handlers)} enabled handlers: {self.correction_result.metadata['enabled_handlers']}"
+                logger=self.logger
             )
 
             return {"status": "success", "data": self.correction_result.to_dict()}
 
-        except HTTPException:
-            raise
+        except ValueError as e:
+            # Convert ValueError to HTTPException for API consistency
+            raise HTTPException(status_code=400, detail=str(e))
         except Exception as e:
             self.logger.error(f"Failed to add lyrics: {str(e)}", exc_info=True)
             raise HTTPException(status_code=500, detail=str(e))

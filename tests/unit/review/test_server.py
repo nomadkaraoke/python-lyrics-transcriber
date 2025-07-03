@@ -221,7 +221,7 @@ class TestReviewServer:
         assert exc_info.value.status_code == 404
 
     @pytest.mark.asyncio
-    async def test_generate_preview_video_success(self, review_server):
+    async def test_generate_preview_video_success(self, review_server, tmp_path):
         """Test successful preview video generation."""
         updated_data = {
             "corrections": [],
@@ -237,12 +237,27 @@ class TestReviewServer:
             }]
         }
         
-        mock_output_generator = Mock()
-        mock_outputs = Mock()
-        mock_outputs.video = "/path/to/preview.mp4"
-        mock_output_generator.generate_outputs.return_value = mock_outputs
+        # Create a proper temporary directory structure
+        output_dir = tmp_path / "output"
+        output_dir.mkdir()
+        previews_dir = output_dir / "previews"
+        previews_dir.mkdir()
         
-        with patch('lyrics_transcriber.review.server.OutputGenerator', return_value=mock_output_generator):
+        # Update the output config to use the temporary directory
+        review_server.output_config.output_dir = str(output_dir)
+        
+        # Create a test video file
+        test_video = previews_dir / "preview_test123.mp4"
+        test_video.write_bytes(b"fake video data")
+        
+        # Mock the CorrectionOperations.generate_preview_video to return a successful result
+        mock_result = {
+            "status": "success",
+            "preview_hash": "test123",
+            "video_path": str(test_video)
+        }
+        
+        with patch('lyrics_transcriber.correction.operations.CorrectionOperations.generate_preview_video', return_value=mock_result):
             result = await review_server.generate_preview_video(updated_data)
             
             assert result["status"] == "success"
@@ -253,10 +268,12 @@ class TestReviewServer:
         """Test preview video generation with error."""
         updated_data = {"invalid": "data"}
         
-        with pytest.raises(HTTPException) as exc_info:
-            await review_server.generate_preview_video(updated_data)
-        
-        assert exc_info.value.status_code == 500
+        # Mock CorrectionOperations to raise an exception
+        with patch('lyrics_transcriber.correction.operations.CorrectionOperations.generate_preview_video', side_effect=ValueError("Test error")):
+            with pytest.raises(HTTPException) as exc_info:
+                await review_server.generate_preview_video(updated_data)
+            
+            assert exc_info.value.status_code == 500
 
     @pytest.mark.asyncio
     async def test_get_preview_video_success(self, review_server, tmp_path):
