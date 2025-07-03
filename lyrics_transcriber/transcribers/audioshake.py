@@ -72,6 +72,11 @@ class AudioShakeAPI:
         start_time = time.time()
         last_status_log = start_time
         timeout_seconds = self.config.timeout_minutes * 60
+        
+        # Add initial retry logic for 404 errors (job ID not yet available)
+        initial_retry_count = 0
+        max_initial_retries = 5
+        initial_retry_delay = 2  # seconds
 
         while True:
             current_time = time.time()
@@ -86,14 +91,29 @@ class AudioShakeAPI:
                 self.logger.info(f"Still waiting for transcription... " f"Elapsed time: {int(elapsed_time/60)} minutes")
                 last_status_log = current_time
 
-            response = requests.get(url, headers=self._get_headers())
-            response.raise_for_status()
-            job_data = response.json()["job"]
+            try:
+                response = requests.get(url, headers=self._get_headers())
+                response.raise_for_status()
+                job_data = response.json()["job"]
 
-            if job_data["status"] == "completed":
-                return job_data
-            elif job_data["status"] == "failed":
-                raise TranscriptionError(f"Job failed: {job_data.get('error', 'Unknown error')}")
+                if job_data["status"] == "completed":
+                    return job_data
+                elif job_data["status"] == "failed":
+                    raise TranscriptionError(f"Job failed: {job_data.get('error', 'Unknown error')}")
+
+                # Reset retry count on successful response
+                initial_retry_count = 0
+                
+            except requests.exceptions.HTTPError as e:
+                if e.response.status_code == 404 and initial_retry_count < max_initial_retries:
+                    # Job ID not yet available, retry with delay
+                    initial_retry_count += 1
+                    self.logger.info(f"Job ID not yet available (attempt {initial_retry_count}/{max_initial_retries}), retrying in {initial_retry_delay} seconds...")
+                    time.sleep(initial_retry_delay)
+                    continue
+                else:
+                    # Re-raise the error if it's not a 404 or we've exceeded retries
+                    raise
 
             time.sleep(5)  # Wait before next poll
 
