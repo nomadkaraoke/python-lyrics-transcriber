@@ -4,6 +4,7 @@ from pathlib import Path
 import json
 import subprocess
 from unittest.mock import patch, Mock, call
+import logging
 
 from lyrics_transcriber.output.video import VideoGenerator
 
@@ -203,3 +204,94 @@ def test_invalid_video_resolution():
     styles = {"karaoke": {"background_color": "black"}}
     with pytest.raises(ValueError):
         VideoGenerator(output_dir="test", cache_dir="test", video_resolution=(0, 0), styles=styles)
+
+
+def test_build_ass_filter_no_font_path(video_generator):
+    """Test _build_ass_filter with no font path configured."""
+    ass_path = "test.ass"
+    result = video_generator._build_ass_filter(ass_path)
+    assert result == "ass=test.ass"
+
+
+def test_build_ass_filter_with_valid_font_path(video_generator, tmp_path):
+    """Test _build_ass_filter with valid font path."""
+    # Create a test font file
+    font_dir = tmp_path / "fonts"
+    font_dir.mkdir()
+    font_file = font_dir / "test.ttf"
+    font_file.touch()
+    
+    # Update styles to include font path
+    video_generator.styles["karaoke"]["font_path"] = str(font_file)
+    
+    ass_path = "test.ass"
+    result = video_generator._build_ass_filter(ass_path)
+    expected = f"ass=test.ass:fontsdir={str(font_dir)}"
+    assert result == expected
+
+
+def test_build_ass_filter_with_invalid_font_path(video_generator):
+    """Test _build_ass_filter with invalid font path (file doesn't exist)."""
+    # Set non-existent font path
+    video_generator.styles["karaoke"]["font_path"] = "/nonexistent/font.ttf"
+    
+    ass_path = "test.ass"
+    result = video_generator._build_ass_filter(ass_path)
+    assert result == "ass=test.ass"
+
+
+def test_build_ass_filter_with_empty_font_path(video_generator):
+    """Test _build_ass_filter with empty font path."""
+    # Set empty font path
+    video_generator.styles["karaoke"]["font_path"] = ""
+    
+    ass_path = "test.ass"
+    result = video_generator._build_ass_filter(ass_path)
+    assert result == "ass=test.ass"
+
+
+def test_build_ass_filter_with_none_font_path(video_generator):
+    """Test _build_ass_filter with None font path."""
+    # Set None font path
+    video_generator.styles["karaoke"]["font_path"] = None
+    
+    ass_path = "test.ass"
+    result = video_generator._build_ass_filter(ass_path)
+    assert result == "ass=test.ass"
+
+
+def test_build_ass_filter_no_karaoke_section(tmp_path):
+    """Test _build_ass_filter with no karaoke section in styles."""
+    styles = {}  # No karaoke section
+    generator = VideoGenerator(
+        output_dir=str(tmp_path / "output"),
+        cache_dir=str(tmp_path / "cache"),
+        video_resolution=(1920, 1080),
+        styles=styles,
+    )
+    
+    ass_path = "test.ass"
+    result = generator._build_ass_filter(ass_path)
+    assert result == "ass=test.ass"
+
+
+def test_build_ass_filter_logging(video_generator, tmp_path, caplog):
+    """Test _build_ass_filter logging behavior."""
+    # Set log level to INFO to capture the logs
+    caplog.set_level(logging.INFO)
+    
+    # Create a test font file
+    font_dir = tmp_path / "fonts"
+    font_dir.mkdir()
+    font_file = font_dir / "test.ttf"
+    font_file.touch()
+    
+    # Update styles to include font path
+    video_generator.styles["karaoke"]["font_path"] = str(font_file)
+    
+    ass_path = "test.ass"
+    result = video_generator._build_ass_filter(ass_path)
+    
+    # Check that info log was generated
+    assert "Returning ASS filter with fonts dir:" in caplog.text
+    assert str(font_dir) in caplog.text

@@ -31,6 +31,7 @@ class VideoGenerator:
         self.output_dir = output_dir
         self.cache_dir = cache_dir
         self.video_resolution = video_resolution
+        self.styles = styles
         self.logger = logger or logging.getLogger(__name__)
 
         # Get background settings from styles, with defaults
@@ -199,6 +200,21 @@ class VideoGenerator:
             self.logger.error(f"Failed to resize background image: {e.output}")
             raise
 
+    def _build_ass_filter(self, ass_path: str) -> str:
+        """Build ASS filter with font directory support."""
+        ass_filter = f"ass={ass_path}"
+        
+        # Get font path from styles configuration
+        karaoke_styles = self.styles.get("karaoke", {})
+        font_path = karaoke_styles.get("font_path")
+        
+        if font_path and os.path.isfile(font_path):
+            font_dir = os.path.dirname(font_path)
+            ass_filter += f":fontsdir={font_dir}"
+            self.logger.info(f"Returning ASS filter with fonts dir: {ass_filter}")
+        
+        return ass_filter
+
     def _build_ffmpeg_command(self, ass_path: str, audio_path: str, output_path: str) -> List[str]:
         """Build FFmpeg command for video generation with optimized settings."""
         width, height = self.video_resolution
@@ -230,11 +246,10 @@ class VideoGenerator:
                 "-i", f"color=c={self.background_color}:s={width}x{height}:r=30"
             ])
 
-        # Add audio input and subtitle overlay
         cmd.extend([
             "-i", audio_path,
             "-c:a", "flac",  # Re-encode audio as FLAC
-            "-vf", f"ass={ass_path}",  # Add subtitles
+            "-vf", self._build_ass_filter(ass_path),  # Add subtitles with font directories
             "-c:v", self._get_video_codec(),
             # Video quality settings
             "-preset", "fast",  # Better compression efficiency
@@ -284,12 +299,11 @@ class VideoGenerator:
                 "-i", f"color=c={self.background_color}:s={width}x{height}:r=30"
             ])
 
-        # Add audio input and subtitle overlay
         cmd.extend([
             "-i", audio_path,
             "-c:a", "aac",  # Use AAC for audio
             "-b:a", "128k",  # Audio bitrate
-            "-vf", f"ass={ass_path}",  # Add subtitles
+            "-vf", self._build_ass_filter(ass_path),  # Add subtitles with font directories
             "-c:v", "libx264",  # Use H.264 codec
             "-profile:v", "baseline",  # Most compatible H.264 profile
             "-level", "3.0",  # Compatibility level
