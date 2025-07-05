@@ -17,6 +17,7 @@ class LyricsConfig:
     """Configuration for lyrics services."""
 
     genius_api_token: Optional[str] = None
+    rapidapi_key: Optional[str] = None
     spotify_cookie: Optional[str] = None
     lyrics_file: Optional[str] = None
 

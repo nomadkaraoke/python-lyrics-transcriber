@@ -191,6 +191,7 @@ class LyricsTranscriber:
         # Create provider config with all necessary parameters
         provider_config = LyricsProviderConfig(
             genius_api_token=self.lyrics_config.genius_api_token,
+            rapidapi_key=self.lyrics_config.rapidapi_key,
             spotify_cookie=self.lyrics_config.spotify_cookie,
             lyrics_file=self.lyrics_config.lyrics_file,
             cache_dir=self.output_config.cache_dir,

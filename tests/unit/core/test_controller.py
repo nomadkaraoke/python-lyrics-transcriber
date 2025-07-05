@@ -518,6 +518,44 @@ def test_initialize_lyrics_providers_with_spotify_only(mock_spotify_api_class, m
     assert call_kwargs["logger"] is not None
 
 
+def test_initialize_lyrics_providers_with_rapidapi_config(sample_audio_file):
+    """Test lyrics provider initialization with RapidAPI config"""
+    lyrics_config = LyricsConfig(genius_api_token="test_token", rapidapi_key="test_rapidapi_key")
+    output_config = create_test_output_config()
+    transcriber = LyricsTranscriber(audio_filepath=sample_audio_file, lyrics_config=lyrics_config, output_config=output_config)
+
+    providers = transcriber.lyrics_providers
+    assert len(providers) == 1
+    assert "genius" in providers
+    assert isinstance(providers["genius"], GeniusProvider)
+    
+    # Verify that the GeniusProvider was initialized with the RapidAPI key
+    provider = providers["genius"]
+    assert provider.rapidapi_key == "test_rapidapi_key"
+    assert provider.api_token == "test_token"
+
+
+def test_initialize_lyrics_providers_with_both_configs(sample_audio_file):
+    """Test lyrics provider initialization with both Genius and RapidAPI configs"""
+    lyrics_config = LyricsConfig(
+        genius_api_token="test_token", 
+        rapidapi_key="test_rapidapi_key",
+        spotify_cookie="test_cookie"
+    )
+    output_config = create_test_output_config()
+    transcriber = LyricsTranscriber(audio_filepath=sample_audio_file, lyrics_config=lyrics_config, output_config=output_config)
+
+    providers = transcriber.lyrics_providers
+    assert len(providers) == 2
+    assert "genius" in providers
+    assert "spotify" in providers
+    
+    # Verify that the GeniusProvider was initialized with both keys
+    genius_provider = providers["genius"]
+    assert genius_provider.rapidapi_key == "test_rapidapi_key"
+    assert genius_provider.api_token == "test_token"
+
+
 def test_fetch_lyrics_with_provider_error(basic_transcriber, mock_genius_provider, mock_spotify_provider):
     """Test fetch_lyrics error handling when providers raise exceptions"""
     # Make both providers raise exceptions
