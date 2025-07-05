@@ -525,8 +525,9 @@ def test_initialize_lyrics_providers_with_rapidapi_config(sample_audio_file):
     transcriber = LyricsTranscriber(audio_filepath=sample_audio_file, lyrics_config=lyrics_config, output_config=output_config)
 
     providers = transcriber.lyrics_providers
-    assert len(providers) == 1
+    assert len(providers) == 2  # Genius + Musixmatch
     assert "genius" in providers
+    assert "musixmatch" in providers
     assert isinstance(providers["genius"], GeniusProvider)
     
     # Verify that the GeniusProvider was initialized with the RapidAPI key
@@ -546,8 +547,9 @@ def test_initialize_lyrics_providers_with_both_configs(sample_audio_file):
     transcriber = LyricsTranscriber(audio_filepath=sample_audio_file, lyrics_config=lyrics_config, output_config=output_config)
 
     providers = transcriber.lyrics_providers
-    assert len(providers) == 2
+    assert len(providers) == 3  # Genius + Musixmatch + Spotify
     assert "genius" in providers
+    assert "musixmatch" in providers
     assert "spotify" in providers
     
     # Verify that the GeniusProvider was initialized with both keys
