@@ -112,12 +112,12 @@ class TestGeniusProvider:
         assert provider.client is None
 
     def test_init_with_both_tokens(self, mock_logger, config_with_both):
-        """Test initialization with both tokens"""
+        """Test initialization with both tokens - should prioritize RapidAPI and not initialize client"""
         with patch("lyricsgenius.Genius") as mock_genius:
             provider = GeniusProvider(config=config_with_both, logger=mock_logger)
             assert provider.api_token == "test_token"
             assert provider.rapidapi_key == "test_rapidapi_key"
-            assert provider.client is not None
+            assert provider.client is None  # Should not initialize client when rapidapi_key is set
 
     def test_fetch_data_from_source_success(self, provider, mock_song_data):
         """Test successful data fetch from Genius"""
@@ -268,24 +268,20 @@ class TestGeniusProvider:
 
     @patch("requests.get")
     def test_fetch_data_from_source_rapidapi_fallback(self, mock_get, mock_logger, config_with_both, mock_song_data):
-        """Test fallback to Genius API when RapidAPI fails"""
+        """Test that when RapidAPI fails and rapidapi_key is set, no fallback occurs"""
         # Mock RapidAPI failure
         mock_get.side_effect = requests.RequestException("RapidAPI failed")
         
         with patch("lyricsgenius.Genius") as mock_genius:
-            # Mock successful Genius response
-            mock_song = Mock()
-            mock_song.to_dict.return_value = mock_song_data
-            mock_genius.return_value.search_song.return_value = mock_song
-            
             provider = GeniusProvider(config=config_with_both, logger=mock_logger)
             result = provider._fetch_data_from_source("Test Artist", "Test Title")
         
-        assert result == mock_song_data
+        assert result is None  # Should return None when RapidAPI fails and no fallback client
         
-        # Verify both APIs were attempted
+        # Verify RapidAPI was attempted
         assert mock_get.call_count == 1  # RapidAPI search attempt
-        mock_genius.return_value.search_song.assert_called_once()
+        # Verify Genius client was not initialized (no fallback)
+        mock_genius.assert_not_called()
 
     def test_convert_result_format_lyricsgenius(self, provider, mock_song_data):
         """Test conversion of lyricsgenius format to standardized format"""

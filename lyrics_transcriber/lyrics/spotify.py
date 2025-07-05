@@ -18,7 +18,8 @@ class SpotifyProvider(BaseLyricsProvider):
         self.rapidapi_key = config.rapidapi_key
         self.client = None
 
-        if self.cookie:
+        # Only initialize syrics client if rapidapi_key is not set
+        if self.cookie and not self.rapidapi_key:
             max_retries = 5
             retry_delay = 5  # seconds
 

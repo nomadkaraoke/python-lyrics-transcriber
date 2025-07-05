@@ -15,7 +15,8 @@ class GeniusProvider(BaseLyricsProvider):
         self.api_token = config.genius_api_token
         self.rapidapi_key = config.rapidapi_key
         self.client = None
-        if self.api_token:
+        # Only initialize lyricsgenius client if rapidapi_key is not set
+        if self.api_token and not self.rapidapi_key:
             self.client = lyricsgenius.Genius(
                 self.api_token,
                 verbose=(logger.getEffectiveLevel() == logging.DEBUG if logger else False),

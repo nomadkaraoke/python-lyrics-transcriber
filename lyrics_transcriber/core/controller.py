@@ -10,6 +10,7 @@ from lyrics_transcriber.transcribers.whisper import WhisperTranscriber, WhisperC
 from lyrics_transcriber.lyrics.base_lyrics_provider import BaseLyricsProvider, LyricsProviderConfig
 from lyrics_transcriber.lyrics.genius import GeniusProvider
 from lyrics_transcriber.lyrics.spotify import SpotifyProvider
+from lyrics_transcriber.lyrics.musixmatch import MusixmatchProvider
 from lyrics_transcriber.output.generator import OutputGenerator
 from lyrics_transcriber.correction.corrector import LyricsCorrector
 from lyrics_transcriber.core.config import TranscriberConfig, LyricsConfig, OutputConfig
@@ -214,6 +215,12 @@ class LyricsTranscriber:
             providers["spotify"] = SpotifyProvider(config=provider_config, logger=self.logger)
         else:
             self.logger.debug("Skipping Spotify provider - no cookie provided")
+
+        if provider_config.rapidapi_key:
+            self.logger.debug("Initializing Musixmatch lyrics provider")
+            providers["musixmatch"] = MusixmatchProvider(config=provider_config, logger=self.logger)
+        else:
+            self.logger.debug("Skipping Musixmatch provider - no RapidAPI key provided")
 
         return providers
 
