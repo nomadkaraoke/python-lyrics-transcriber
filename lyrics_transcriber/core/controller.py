@@ -233,6 +233,35 @@ class LyricsTranscriber:
 
         self.logger.info(f"LyricsTranscriber controller beginning processing for {self.artist} - {self.title}")
 
+        # Debug: Log package version and environment variables
+        try:
+            import lyrics_transcriber
+            package_version = getattr(lyrics_transcriber, '__version__', 'unknown')
+            self.logger.info(f"LyricsTranscriber package version: {package_version}")
+        except Exception as e:
+            self.logger.warning(f"Could not get package version: {e}")
+
+        # Debug: Log environment variables (first 3 characters only for security)
+        env_vars = {}
+        for key, value in os.environ.items():
+            if value:
+                env_vars[key] = value[:3] + "..." if len(value) > 3 else value
+            else:
+                env_vars[key] = "(empty)"
+        
+        self.logger.info(f"Environment variables count: {len(env_vars)}")
+        
+        # Log specific API-related variables
+        api_vars = {k: v for k, v in env_vars.items() if any(keyword in k.upper() for keyword in ['API', 'TOKEN', 'KEY', 'SECRET'])}
+        if api_vars:
+            self.logger.info(f"API-related environment variables: {api_vars}")
+        else:
+            self.logger.warning("No API-related environment variables found")
+            
+        # Log all env vars if in debug mode
+        if self.logger.getEffectiveLevel() <= logging.DEBUG:
+            self.logger.debug(f"All environment variables: {env_vars}")
+
         # Check for existing corrections JSON
         corrections_json_path = os.path.join(self.output_config.output_dir, f"{self.output_prefix} (Lyrics Corrections).json")
 

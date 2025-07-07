@@ -43,6 +43,182 @@ class VideoGenerator:
         if self.background_image and not os.path.isfile(self.background_image):
             raise FileNotFoundError(f"Video background image not found: {self.background_image}")
 
+        # Detect and configure hardware acceleration
+        self.nvenc_available = self.detect_nvenc_support()
+        self.configure_hardware_acceleration()
+
+    def detect_nvenc_support(self):
+        """Detect if NVENC hardware encoding is available with comprehensive debugging."""
+        try:
+            self.logger.info("🔍 Detecting NVENC hardware acceleration for video generation...")
+            
+            # Step 1: Check if NVIDIA GPU is available
+            try:
+                nvidia_smi_cmd = ["nvidia-smi", "--query-gpu=name,driver_version", "--format=csv,noheader"]
+                nvidia_result = subprocess.run(nvidia_smi_cmd, capture_output=True, text=True, timeout=10)
+                if nvidia_result.returncode == 0:
+                    gpu_info = nvidia_result.stdout.strip()
+                    self.logger.info(f"✓ NVIDIA GPU detected: {gpu_info}")
+                else:
+                    self.logger.warning(f"⚠️ nvidia-smi failed: {nvidia_result.stderr}")
+            except Exception as e:
+                self.logger.warning(f"⚠️ nvidia-smi not available or failed: {e}")
+            
+            # Step 2: List all available FFmpeg encoders
+            try:
+                encoders_cmd = ["ffmpeg", "-hide_banner", "-encoders"]
+                encoders_result = subprocess.run(encoders_cmd, capture_output=True, text=True, timeout=10)
+                if encoders_result.returncode == 0:
+                    # Look for NVENC encoders in the output
+                    encoder_lines = encoders_result.stdout.split('\n')
+                    nvenc_encoders = [line for line in encoder_lines if 'nvenc' in line.lower()]
+                    
+                    if nvenc_encoders:
+                        self.logger.info(f"✓ Found NVENC encoders in FFmpeg:")
+                        for encoder in nvenc_encoders:
+                            self.logger.info(f"    {encoder.strip()}")
+                    else:
+                        self.logger.warning("⚠️ No NVENC encoders found in FFmpeg encoder list")
+                        # Log the first few encoder lines for debugging
+                        self.logger.debug("Available encoders (first 10 lines):")
+                        for line in encoder_lines[:10]:
+                            if line.strip():
+                                self.logger.debug(f"    {line.strip()}")
+                else:
+                    self.logger.error(f"❌ Failed to list FFmpeg encoders: {encoders_result.stderr}")
+            except Exception as e:
+                self.logger.error(f"❌ Error listing FFmpeg encoders: {e}")
+            
+            # Step 3: Test h264_nvenc specifically
+            self.logger.info("🧪 Testing h264_nvenc encoder...")
+            test_cmd = [
+                "ffmpeg", "-hide_banner", "-loglevel", "warning",  # Changed to warning to get more info
+                "-f", "lavfi", "-i", "testsrc=duration=1:size=320x240:rate=1",
+                "-c:v", "h264_nvenc", "-f", "null", "-"
+            ]
+            
+            self.logger.debug(f"Running test command: {' '.join(test_cmd)}")
+            
+            result = subprocess.run(test_cmd, capture_output=True, text=True, timeout=30)
+            nvenc_available = result.returncode == 0
+            
+            if nvenc_available:
+                self.logger.info("✅ NVENC hardware encoding available for video generation")
+                self.logger.info(f"Test command succeeded. Output: {result.stderr[:200]}...")
+            else:
+                self.logger.error("❌ NVENC test failed")
+                self.logger.error(f"Return code: {result.returncode}")
+                self.logger.error(f"STDERR: {result.stderr}")
+                self.logger.error(f"STDOUT: {result.stdout}")
+                
+                # Step 4: Try alternative NVENC test
+                self.logger.info("🔄 Trying alternative NVENC detection...")
+                alt_test_cmd = [
+                    "ffmpeg", "-hide_banner", "-loglevel", "info",
+                    "-f", "lavfi", "-i", "color=red:size=320x240:duration=0.1",
+                    "-c:v", "h264_nvenc", "-preset", "fast", "-f", "null", "-"
+                ]
+                
+                alt_result = subprocess.run(alt_test_cmd, capture_output=True, text=True, timeout=30)
+                if alt_result.returncode == 0:
+                    self.logger.info("✅ Alternative NVENC test succeeded!")
+                    nvenc_available = True
+                else:
+                    self.logger.error(f"❌ Alternative NVENC test also failed:")
+                    self.logger.error(f"Alt return code: {alt_result.returncode}")
+                    self.logger.error(f"Alt STDERR: {alt_result.stderr}")
+                
+                # Step 5: Check for CUDA availability and libraries
+                try:
+                    cuda_test_cmd = ["ffmpeg", "-hide_banner", "-loglevel", "error", "-hwaccels"]
+                    cuda_result = subprocess.run(cuda_test_cmd, capture_output=True, text=True, timeout=10)
+                    if cuda_result.returncode == 0:
+                        hwaccels = cuda_result.stdout
+                        if 'cuda' in hwaccels:
+                            self.logger.info("✓ CUDA hardware acceleration available in FFmpeg")
+                        else:
+                            self.logger.warning("⚠️ CUDA not found in FFmpeg hardware accelerators")
+                        self.logger.debug(f"Available hardware accelerators: {hwaccels.strip()}")
+                    else:
+                        self.logger.error(f"❌ Failed to list hardware accelerators: {cuda_result.stderr}")
+                except Exception as e:
+                    self.logger.error(f"❌ Error checking CUDA availability: {e}")
+                
+                # Step 6: Check for CUDA libraries and provide specific troubleshooting
+                self.logger.info("🔍 Checking CUDA library availability...")
+                try:
+                    # Check for libcuda.so.1 specifically
+                    ldconfig_cmd = ["ldconfig", "-p"]
+                    ldconfig_result = subprocess.run(ldconfig_cmd, capture_output=True, text=True, timeout=10)
+                    if ldconfig_result.returncode == 0:
+                        if "libcuda.so.1" in ldconfig_result.stdout:
+                            self.logger.info("✓ libcuda.so.1 found in system libraries")
+                        else:
+                            self.logger.error("❌ libcuda.so.1 NOT found in system libraries")
+                            self.logger.error("💡 This is why NVENC failed - FFmpeg needs libcuda.so.1 for NVENC")
+                            self.logger.error("🔧 Solution: Use nvidia/cuda:*-devel image instead of *-runtime")
+                    
+                    # Also check for other NVIDIA libraries
+                    if "libnvidia-encode.so" in ldconfig_result.stdout:
+                        self.logger.info("✓ libnvidia-encode.so found in system libraries")
+                    else:
+                        self.logger.warning("⚠️ libnvidia-encode.so not found in system libraries")
+                        
+                except Exception as e:
+                    self.logger.error(f"❌ Error checking CUDA libraries: {e}")
+                    
+            return nvenc_available
+            
+        except subprocess.TimeoutExpired:
+            self.logger.error("❌ NVENC detection timed out")
+            return False
+        except Exception as e:
+            self.logger.error(f"❌ Failed to detect NVENC support: {e}")
+            import traceback
+            self.logger.debug(f"Full traceback: {traceback.format_exc()}")
+            return False
+
+    def configure_hardware_acceleration(self):
+        """Configure hardware acceleration settings based on detected capabilities."""
+        if self.nvenc_available:
+            self.video_encoder = "h264_nvenc"
+            self.hwaccel_flags = ["-hwaccel", "cuda", "-hwaccel_output_format", "cuda"]
+            self.logger.info("🚀 Configured video generation for NVIDIA hardware acceleration")
+        else:
+            self.video_encoder = "libx264"
+            self.hwaccel_flags = []
+            self.logger.warning("⚠️ NVENC not available, falling back to software encoding for video generation")
+            self.logger.info("💡 This will be slower but should still work. Check logs above for NVENC detection details.")
+
+    def get_nvenc_settings(self, quality_mode="high", is_preview=False):
+        """Get optimized NVENC settings for subtitle overlay content."""
+        if not self.nvenc_available:
+            return []
+            
+        if is_preview:
+            # Fast encoding for preview
+            return [
+                "-preset", "p1",  # Fastest preset
+                "-tune", "ll",    # Low latency
+                "-rc", "vbr",     # Variable bitrate
+            ]
+        elif quality_mode == "high":
+            # High quality for final output
+            return [
+                "-preset", "p4",     # Balanced preset
+                "-tune", "hq",       # High quality
+                "-rc", "vbr",        # Variable bitrate  
+                "-cq", "18",         # Constant quality (higher quality)
+                "-spatial-aq", "1",  # Spatial adaptive quantization
+                "-temporal-aq", "1", # Temporal adaptive quantization
+            ]
+        else:
+            # Balanced settings
+            return [
+                "-preset", "p4",
+                "-rc", "vbr",
+            ]
+
     def generate_video(self, ass_path: str, audio_path: str, output_prefix: str) -> str:
         """Generate MP4 video with lyrics overlay.
 
@@ -216,16 +392,18 @@ class VideoGenerator:
         return ass_filter
 
     def _build_ffmpeg_command(self, ass_path: str, audio_path: str, output_path: str) -> List[str]:
-        """Build FFmpeg command for video generation with optimized settings."""
+        """Build FFmpeg command for video generation with hardware acceleration when available."""
         width, height = self.video_resolution
 
-        # fmt: off
         cmd = [
             "ffmpeg",
             "-hide_banner",
             "-loglevel", "error",
             "-r", "30",  # Set frame rate to 30 fps
         ]
+
+        # Add hardware acceleration flags if available
+        cmd.extend(self.hwaccel_flags)
 
         # Input source (background)
         if self.background_image:
@@ -250,17 +428,35 @@ class VideoGenerator:
             "-i", audio_path,
             "-c:a", "flac",  # Re-encode audio as FLAC
             "-vf", self._build_ass_filter(ass_path),  # Add subtitles with font directories
-            "-c:v", self._get_video_codec(),
-            # Video quality settings
-            "-preset", "fast",  # Better compression efficiency
-            "-b:v", "5000k",  # Base video bitrate
-            "-minrate", "5000k",  # Minimum bitrate
-            "-maxrate", "20000k",  # Maximum bitrate
-            "-bufsize", "10000k",  # Buffer size (2x base rate)
-            "-shortest",  # End encoding after shortest stream
-            "-y",  # Overwrite output without asking
+            "-c:v", self.video_encoder,
         ])
-        # fmt: on
+
+        # Add encoder-specific settings
+        if self.nvenc_available:
+            # NVENC settings optimized for subtitle content
+            cmd.extend(self.get_nvenc_settings("high", is_preview=False))
+            # Use higher bitrate for NVENC as it's more efficient
+            cmd.extend([
+                "-b:v", "8000k",      # Higher base bitrate for NVENC
+                "-maxrate", "15000k", # Reasonable max for 4K
+                "-bufsize", "16000k", # Buffer size
+            ])
+            self.logger.debug("Using NVENC encoding for high-quality video generation")
+        else:
+            # Software encoding fallback settings
+            cmd.extend([
+                "-preset", "fast",     # Better compression efficiency
+                "-b:v", "5000k",       # Base video bitrate
+                "-minrate", "5000k",   # Minimum bitrate
+                "-maxrate", "20000k",  # Maximum bitrate
+                "-bufsize", "10000k",  # Buffer size (2x base rate)
+            ])
+            self.logger.debug("Using software encoding for video generation")
+
+        cmd.extend([
+            "-shortest",  # End encoding after shortest stream
+            "-y",         # Overwrite output without asking
+        ])
 
         # Add output path
         cmd.append(output_path)
@@ -268,27 +464,30 @@ class VideoGenerator:
         return cmd
 
     def _build_preview_ffmpeg_command(self, ass_path: str, audio_path: str, output_path: str) -> List[str]:
-        """Build FFmpeg command for preview video generation with optimized settings."""
-        # Use 360p resolution for preview
-        width, height = 640, 360
+        """Build FFmpeg command for preview video generation with hardware acceleration when available."""
+        # Use even lower resolution for preview (480x270 instead of 640x360 for faster encoding)
+        width, height = 480, 270
 
-        # fmt: off
         cmd = [
             "ffmpeg",
             "-hide_banner",
             "-loglevel", "error",
-            "-r", "30",  # Set frame rate to 30 fps
+            "-r", "24",  # Reduced frame rate to 24 fps for faster encoding
         ]
 
-        # Input source (background)
+        # Add hardware acceleration flags if available
+        cmd.extend(self.hwaccel_flags)
+
+        # Input source (background) - simplified for preview
         if self.background_image:
-            # Resize background image first
-            resized_bg = self._resize_background_image(self.background_image)
-            self.logger.debug(f"Using resized background image: {resized_bg}")
+            # For preview, use the original image without resizing to save time
+            self.logger.debug(f"Using original background image for preview: {self.background_image}")
             cmd.extend([
                 "-loop", "1",  # Loop the image
-                "-i", resized_bg,
+                "-i", self.background_image,
             ])
+            # Build video filter with scaling and ASS subtitles
+            video_filter = f"scale={width}:{height}:force_original_aspect_ratio=decrease,pad={width}:{height}:(ow-iw)/2:(oh-ih)/2,{self._build_ass_filter(ass_path)}"
         else:
             self.logger.debug(
                 f"Using solid {self.background_color} background "
@@ -296,30 +495,55 @@ class VideoGenerator:
             )
             cmd.extend([
                 "-f", "lavfi",
-                "-i", f"color=c={self.background_color}:s={width}x{height}:r=30"
+                "-i", f"color=c={self.background_color}:s={width}x{height}:r=24",
             ])
+            # Build video filter with just ASS subtitles (no scaling needed)
+            video_filter = self._build_ass_filter(ass_path)
 
         cmd.extend([
             "-i", audio_path,
-            "-c:a", "aac",  # Use AAC for audio
-            "-b:a", "128k",  # Audio bitrate
-            "-vf", self._build_ass_filter(ass_path),  # Add subtitles with font directories
-            "-c:v", "libx264",  # Use H.264 codec
-            "-profile:v", "baseline",  # Most compatible H.264 profile
-            "-level", "3.0",  # Compatibility level
-            "-pix_fmt", "yuv420p",  # Required for browser compatibility
-            "-preset", "ultrafast",
-            "-b:v", "1000k",  # Slightly higher bitrate
-            "-maxrate", "1500k",
-            "-bufsize", "2000k",
-            "-movflags", "+faststart+frag_keyframe+empty_moov",  # Enhanced streaming flags
-            "-g", "30",  # Keyframe every 30 frames (1 second)
-            "-keyint_min", "30",  # Minimum keyframe interval
-            "-sc_threshold", "0",  # Disable scene change detection
-            "-shortest",
-            "-y"
+            "-vf", video_filter,    # Apply the video filter
+            "-c:a", "aac",          # Use AAC for audio compatibility
+            "-b:a", "96k",          # Reduced audio bitrate for faster encoding
+            "-c:v", self.video_encoder,
         ])
-        # fmt: on
+
+        # Add encoder-specific settings for preview with maximum speed priority
+        if self.nvenc_available:
+            # NVENC settings optimized for maximum speed
+            cmd.extend([
+                "-preset", "p1",       # Fastest NVENC preset
+                "-tune", "ll",         # Low latency
+                "-rc", "cbr",          # Constant bitrate for speed
+                "-b:v", "800k",        # Lower bitrate for speed
+                "-profile:v", "baseline", # Most compatible profile
+                "-level", "3.1",       # Lower level for speed
+            ])
+            self.logger.debug("Using NVENC encoding with maximum speed settings for preview video generation")
+        else:
+            # Software encoding with maximum speed priority
+            cmd.extend([
+                "-profile:v", "baseline",  # Most compatible H.264 profile
+                "-level", "3.0",           # Compatibility level
+                "-preset", "superfast",    # Even faster than ultrafast for preview
+                "-tune", "fastdecode",     # Optimize for fast decoding
+                "-b:v", "600k",            # Lower base bitrate for speed
+                "-maxrate", "800k",        # Lower max bitrate
+                "-bufsize", "1200k",       # Smaller buffer size
+                "-crf", "28",              # Higher CRF for faster encoding (lower quality but faster)
+            ])
+            self.logger.debug("Using software encoding with maximum speed settings for preview video generation")
+
+        cmd.extend([
+            "-pix_fmt", "yuv420p",  # Required for browser compatibility
+            "-movflags", "+faststart+frag_keyframe+empty_moov+dash",  # Enhanced streaming with dash for faster start
+            "-g", "48",             # Keyframe every 48 frames (2 seconds at 24fps) - fewer keyframes for speed
+            "-keyint_min", "48",    # Minimum keyframe interval
+            "-sc_threshold", "0",   # Disable scene change detection for speed
+            "-threads", "0",        # Use all available CPU threads
+            "-shortest",            # End encoding after shortest stream
+            "-y"                    # Overwrite output without asking
+        ])
 
         # Add output path
         cmd.append(output_path)
@@ -327,33 +551,18 @@ class VideoGenerator:
         return cmd
 
     def _get_video_codec(self) -> str:
-        """Determine the best available video codec."""
-        # try:
-        #     ffmpeg_codes = subprocess.getoutput("ffmpeg -codecs")
-        #     if "h264_videotoolbox" in ffmpeg_codes:
-        #         self.logger.info("Using hardware accelerated h264_videotoolbox")
-        #         return "h264_videotoolbox"
-        # except Exception as e:
-        #     self.logger.warning(f"Error checking for hardware acceleration: {e}")
-
-        # 2025-02-03 00:33:47.948 - INFO - video - Using hardware accelerated h264_videotoolbox
-        # 2025-02-03 00:35:56.761 - INFO - video - Video generated: ./Duran Duran - The Reflex/lyrics/Duran Duran - The Reflex (With Vocals).mkv
-        # Duration: 2:09
-
-        # 2025-02-03 00:41:20.429 - INFO - video - Generating video with lyrics overlay
-        # 2025-02-03 00:42:09.958 - INFO - video - Video generated: ./Duran Duran - The Reflex/lyrics/Duran Duran - The Reflex (With Vocals).mkv
-        # Duration: 49 seconds
-
-        # Conclusion: libx264 is faster than h264_videotoolbox
-
-        return "libx264"
+        """Determine the best available video codec (legacy method - use video_encoder instead)."""
+        # This method is kept for backwards compatibility but is deprecated
+        # The new hardware acceleration system uses self.video_encoder instead
+        self.logger.warning("_get_video_codec is deprecated, use self.video_encoder instead")
+        return self.video_encoder
 
     def _run_ffmpeg_command(self, cmd: List[str]) -> None:
         """Execute FFmpeg command with output handling."""
         self.logger.debug(f"Running FFmpeg command: {' '.join(cmd)}")
         try:
             output = subprocess.check_output(cmd, universal_newlines=True, stderr=subprocess.STDOUT)
-            # self.logger.debug(f"FFmpeg output: {output}")
+            self.logger.debug(f"FFmpeg output: {output}")
         except subprocess.CalledProcessError as e:
             self.logger.error(f"FFmpeg error: {e.output}")
             raise
