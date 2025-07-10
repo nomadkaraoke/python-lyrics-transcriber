@@ -32774,8 +32774,8 @@ const AnchorSequenceSchema = z.object({
   reference_positions: z.record(z.number()),
   reference_word_ids: z.record(z.array(z.string())),
   confidence: z.number(),
-  phrase_score: PhraseScoreSchema,
-  total_score: z.number()
+  phrase_score: PhraseScoreSchema.optional(),
+  total_score: z.number().optional()
 });
 const GapSequenceSchema = z.object({
   id: z.string(),
@@ -38915,7 +38915,7 @@ const theme = createTheme({
   spacing: (factor) => `${0.6 * factor}rem`
   // Further reduced from 0.8 * factor
 });
-const version = "0.56.0";
+const version = "0.62.0";
 const packageJson = {
   version
 };
@@ -38926,4 +38926,4 @@ ReactDOM$1.createRoot(document.getElementById("root")).render(
     /* @__PURE__ */ jsxRuntimeExports.jsx(App, {})
   ] })
 );
-//# sourceMappingURL=index-B35iaySc.js.map
+//# sourceMappingURL=index-CYF5xuZH.js.map

@@ -50,8 +50,8 @@ export interface AnchorSequence {
         [source: string]: string[]
     }
     confidence: number
-    phrase_score: PhraseScore
-    total_score: number
+    phrase_score?: PhraseScore
+    total_score?: number
 }
 
 export interface GapSequence {

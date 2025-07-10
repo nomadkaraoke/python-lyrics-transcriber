@@ -69,8 +69,8 @@ const AnchorSequenceSchema = z.object({
     reference_positions: z.record(z.number()),
     reference_word_ids: z.record(z.array(z.string())),
     confidence: z.number(),
-    phrase_score: PhraseScoreSchema,
-    total_score: z.number()
+    phrase_score: PhraseScoreSchema.optional(),
+    total_score: z.number().optional()
 })
 
 const GapSequenceSchema = z.object({
