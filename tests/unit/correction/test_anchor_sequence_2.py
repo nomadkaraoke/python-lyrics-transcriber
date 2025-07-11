@@ -46,7 +46,7 @@ def test_timeout_functionality(setup_teardown):
     """Test that timeout mechanisms prevent infinite hangs and provide reasonable defaults."""
     # Test that default timeout parameters are sensible
     finder = AnchorSequenceFinder(min_sequence_length=2, min_sources=1, cache_dir=setup_teardown)
-    assert finder.timeout_seconds == 1800  # 30 minutes default
+    assert finder.timeout_seconds == 600  # 10 minutes default
     assert finder.max_iterations_per_ngram == 1000  # Reasonable iteration limit
     
     # Test with moderate complexity that should complete quickly with protections
@@ -241,7 +241,7 @@ def test_parameter_validation_and_defaults(setup_teardown):
     # Test default parameters
     finder = AnchorSequenceFinder(min_sequence_length=3, min_sources=1, cache_dir=setup_teardown)
     
-    assert finder.timeout_seconds == 1800  # 30 minutes default
+    assert finder.timeout_seconds == 600  # 10 minutes default
     assert finder.max_iterations_per_ngram == 1000  # Default iteration limit
     assert finder.progress_check_interval == 50  # Default progress check interval
     

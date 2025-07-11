@@ -28,7 +28,7 @@ class AnchorSequenceFinder:
         cache_dir: Union[str, Path],
         min_sequence_length: int = 3,
         min_sources: int = 1,
-        timeout_seconds: int = 1800,  # 30 minutes default timeout
+        timeout_seconds: int = 600,  # 10 minutes default timeout
         max_iterations_per_ngram: int = 1000,  # Maximum iterations for while loop
         progress_check_interval: int = 50,  # Check progress every N iterations
         logger: Optional[logging.Logger] = None,
