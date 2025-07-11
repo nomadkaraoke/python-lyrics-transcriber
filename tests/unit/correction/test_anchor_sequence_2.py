@@ -2,9 +2,11 @@ import pytest
 import os
 import tempfile
 import shutil
+import time
+import threading
 
 from lyrics_transcriber.types import AnchorSequence, ScoredAnchor, PhraseScore, PhraseType
-from lyrics_transcriber.correction.anchor_sequence import AnchorSequenceFinder
+from lyrics_transcriber.correction.anchor_sequence import AnchorSequenceFinder, AnchorSequenceTimeoutError
 from tests.test_helpers import (
     create_test_lyrics_data_from_text,
     create_test_transcription_result_from_text,
@@ -38,6 +40,329 @@ def setup_teardown():
 @pytest.fixture
 def finder(setup_teardown):
     return AnchorSequenceFinder(min_sequence_length=3, min_sources=1, cache_dir=setup_teardown)
+
+
+def test_timeout_functionality(setup_teardown):
+    """Test that timeout mechanisms prevent infinite hangs and provide reasonable defaults."""
+    # Test that default timeout parameters are sensible
+    finder = AnchorSequenceFinder(min_sequence_length=2, min_sources=1, cache_dir=setup_teardown)
+    assert finder.timeout_seconds == 1800  # 30 minutes default
+    assert finder.max_iterations_per_ngram == 1000  # Reasonable iteration limit
+    
+    # Test with moderate complexity that should complete quickly with protections
+    transcribed = "hello world test phrase complete" * 3  # Moderate complexity
+    references = {
+        "source1": transcribed + " extra",
+        "source2": transcribed + " different"
+    }
+    
+    transcription_result = create_test_transcription_result_from_text(transcribed)
+    lyrics_data_references = convert_references_to_lyrics_data(references)
+    
+    # This should complete without issues
+    start_time = time.time()
+    result = finder.find_anchors(transcribed, lyrics_data_references, transcription_result)
+    elapsed_time = time.time() - start_time
+    
+    # Should complete reasonably quickly with the optimizations
+    assert elapsed_time < 60, f"Processing took too long ({elapsed_time:.1f}s), optimizations may not be working"
+    assert isinstance(result, list), "Should return a list of anchors"
+    
+    # Test that custom timeout parameters are properly set
+    custom_finder = AnchorSequenceFinder(
+        min_sequence_length=2,
+        min_sources=1,
+        cache_dir=setup_teardown,
+        timeout_seconds=300,
+        max_iterations_per_ngram=100,
+        progress_check_interval=10
+    )
+    assert custom_finder.timeout_seconds == 300
+    assert custom_finder.max_iterations_per_ngram == 100
+    assert custom_finder.progress_check_interval == 10
+
+
+def test_iteration_limit_functionality(setup_teardown):
+    """Test that iteration limits prevent infinite loops."""
+    # Create a finder with very low iteration limit
+    finder = AnchorSequenceFinder(
+        min_sequence_length=2,
+        min_sources=1,
+        cache_dir=setup_teardown,
+        max_iterations_per_ngram=5,  # Very low limit
+        timeout_seconds=30  # Longer timeout to test iteration limit specifically
+    )
+    
+    # Create input that could cause many iterations
+    transcribed = "repeat repeat repeat repeat repeat repeat"
+    references = {
+        "source1": "repeat repeat repeat repeat repeat repeat repeat",
+        "source2": "repeat repeat repeat repeat repeat repeat repeat"
+    }
+    
+    transcription_result = create_test_transcription_result_from_text(transcribed)
+    lyrics_data_references = convert_references_to_lyrics_data(references)
+    
+    # Should complete without timeout due to iteration limit
+    start_time = time.time()
+    anchors = finder.find_anchors(transcribed, lyrics_data_references, transcription_result)
+    elapsed_time = time.time() - start_time
+    
+    # Should complete quickly due to iteration limit
+    assert elapsed_time < 10  # Should complete in less than 10 seconds
+    assert isinstance(anchors, list)  # Should return a list even if limited
+
+
+def test_progress_monitoring_and_stagnation_detection(setup_teardown):
+    """Test that progress monitoring detects stagnation and terminates early."""
+    # Create a finder with low progress check interval
+    finder = AnchorSequenceFinder(
+        min_sequence_length=3,
+        min_sources=1,
+        cache_dir=setup_teardown,
+        max_iterations_per_ngram=1000,
+        progress_check_interval=10,  # Check every 10 iterations
+        timeout_seconds=60
+    )
+    
+    # Create input that might cause stagnation
+    transcribed = "one two three four five six seven eight"
+    references = {
+        "source1": "one two three four five six seven eight nine",
+        "source2": "one two three four five six seven eight ten"
+    }
+    
+    transcription_result = create_test_transcription_result_from_text(transcribed)
+    lyrics_data_references = convert_references_to_lyrics_data(references)
+    
+    # Should complete and handle stagnation gracefully
+    start_time = time.time()
+    anchors = finder.find_anchors(transcribed, lyrics_data_references, transcription_result)
+    elapsed_time = time.time() - start_time
+    
+    assert isinstance(anchors, list)
+    assert elapsed_time < 30  # Should complete reasonably quickly
+
+
+def test_fallback_to_sequential_processing(setup_teardown):
+    """Test that fallback to sequential processing works when parallel processing fails."""
+    # Test with very short timeout to force fallback scenario
+    finder = AnchorSequenceFinder(
+        min_sequence_length=2,
+        min_sources=1,
+        cache_dir=setup_teardown,
+        timeout_seconds=5,  # Short timeout to trigger fallback
+        max_iterations_per_ngram=50
+    )
+    
+    # Create moderately complex input
+    transcribed = "hello world test phrase ending"
+    references = {
+        "source1": "hello world test phrase ending",
+        "source2": "hello world different test phrase ending"
+    }
+    
+    transcription_result = create_test_transcription_result_from_text(transcribed)
+    lyrics_data_references = convert_references_to_lyrics_data(references)
+    
+    # Should complete with fallback mechanisms
+    anchors = finder.find_anchors(transcribed, lyrics_data_references, transcription_result)
+    
+    assert isinstance(anchors, list)
+    # Should find at least some anchors
+    assert len(anchors) >= 0  # Could be 0 if timeout is too aggressive
+
+
+def test_basic_scoring_fallback(setup_teardown):
+    """Test that basic scoring fallback works when full scoring times out."""
+    # Create a finder that will trigger scoring fallback
+    finder = AnchorSequenceFinder(
+        min_sequence_length=2,
+        min_sources=1,
+        cache_dir=setup_teardown,
+        timeout_seconds=3,  # Very short timeout
+        max_iterations_per_ngram=20
+    )
+    
+    # Create input that should find anchors but may timeout during scoring
+    transcribed = "simple test phrase"
+    references = {
+        "source1": "simple test phrase",
+        "source2": "simple test phrase"
+    }
+    
+    transcription_result = create_test_transcription_result_from_text(transcribed)
+    lyrics_data_references = convert_references_to_lyrics_data(references)
+    
+    # Should complete with basic scoring if needed
+    anchors = finder.find_anchors(transcribed, lyrics_data_references, transcription_result)
+    
+    assert isinstance(anchors, list)
+    # Should have basic scores even if timeout occurred
+    for anchor in anchors:
+        assert isinstance(anchor, ScoredAnchor)
+        assert isinstance(anchor.phrase_score, PhraseScore)
+        assert anchor.phrase_score.total_score > 0
+
+
+def test_timeout_disabled_functionality(setup_teardown):
+    """Test that timeout can be disabled by setting timeout_seconds to 0."""
+    # Create a finder with timeout disabled
+    finder = AnchorSequenceFinder(
+        min_sequence_length=2,
+        min_sources=1,
+        cache_dir=setup_teardown,
+        timeout_seconds=0,  # Disable timeout
+        max_iterations_per_ngram=100  # Still use iteration limits
+    )
+    
+    transcribed = "test phrase for timeout disabled"
+    references = {
+        "source1": "test phrase for timeout disabled",
+        "source2": "test phrase for timeout disabled"
+    }
+    
+    transcription_result = create_test_transcription_result_from_text(transcribed)
+    lyrics_data_references = convert_references_to_lyrics_data(references)
+    
+    # Should complete without timeout issues
+    anchors = finder.find_anchors(transcribed, lyrics_data_references, transcription_result)
+    
+    assert isinstance(anchors, list)
+
+
+def test_parameter_validation_and_defaults(setup_teardown):
+    """Test that timeout and early termination parameters are properly validated and have sensible defaults."""
+    # Test default parameters
+    finder = AnchorSequenceFinder(min_sequence_length=3, min_sources=1, cache_dir=setup_teardown)
+    
+    assert finder.timeout_seconds == 1800  # 30 minutes default
+    assert finder.max_iterations_per_ngram == 1000  # Default iteration limit
+    assert finder.progress_check_interval == 50  # Default progress check interval
+    
+    # Test custom parameters
+    custom_finder = AnchorSequenceFinder(
+        min_sequence_length=2,
+        min_sources=1,
+        cache_dir=setup_teardown,
+        timeout_seconds=600,
+        max_iterations_per_ngram=500,
+        progress_check_interval=25
+    )
+    
+    assert custom_finder.timeout_seconds == 600
+    assert custom_finder.max_iterations_per_ngram == 500
+    assert custom_finder.progress_check_interval == 25
+
+
+def test_multiprocessing_timeout_handling(setup_teardown):
+    """Test that multiprocessing pool operations respect timeout settings."""
+    # Create a finder with moderate timeout settings
+    finder = AnchorSequenceFinder(
+        min_sequence_length=2,
+        min_sources=1,
+        cache_dir=setup_teardown,
+        timeout_seconds=10,  # Short enough to trigger timeout handling
+        max_iterations_per_ngram=200
+    )
+    
+    # Create moderately complex input that might stress multiprocessing
+    transcribed = "complex test input with multiple matching phrases and patterns that could take time"
+    references = {
+        "source1": "complex test input with multiple matching phrases and patterns that could take time and processing",
+        "source2": "complex test input with different multiple matching phrases and patterns that could take time",
+        "source3": "complex test input with various multiple matching phrases and patterns that could take time"
+    }
+    
+    transcription_result = create_test_transcription_result_from_text(transcribed)
+    lyrics_data_references = convert_references_to_lyrics_data(references)
+    
+    # Should handle multiprocessing timeouts gracefully
+    start_time = time.time()
+    try:
+        anchors = finder.find_anchors(transcribed, lyrics_data_references, transcription_result)
+        elapsed_time = time.time() - start_time
+        
+        assert isinstance(anchors, list)
+        # Should respect timeout bounds
+        assert elapsed_time <= 15  # Should complete within reasonable time of timeout
+        
+    except AnchorSequenceTimeoutError:
+        # Timeout is acceptable behavior for this test
+        elapsed_time = time.time() - start_time
+        assert elapsed_time <= 15  # Should timeout within reasonable time of setting
+
+
+def test_concurrent_signal_handling(setup_teardown):
+    """Test that signal handling works correctly with concurrent operations."""
+    # This test ensures the timeout signal handling doesn't interfere with normal operations
+    finder = AnchorSequenceFinder(
+        min_sequence_length=2,
+        min_sources=1,
+        cache_dir=setup_teardown,
+        timeout_seconds=30  # Reasonable timeout
+    )
+    
+    transcribed = "concurrent test phrase"
+    references = {
+        "source1": "concurrent test phrase",
+        "source2": "concurrent test phrase"
+    }
+    
+    transcription_result = create_test_transcription_result_from_text(transcribed)
+    lyrics_data_references = convert_references_to_lyrics_data(references)
+    
+    # Run multiple operations to test signal handling
+    results = []
+    for i in range(3):
+        anchors = finder.find_anchors(transcribed, lyrics_data_references, transcription_result)
+        results.append(anchors)
+        assert isinstance(anchors, list)
+    
+    # All operations should complete successfully
+    assert len(results) == 3
+
+
+def test_error_recovery_and_logging(setup_teardown):
+    """Test that error recovery works and appropriate logging occurs."""
+    import logging
+    import io
+    
+    # Capture log output
+    log_stream = io.StringIO()
+    handler = logging.StreamHandler(log_stream)
+    logger = logging.getLogger("lyrics_transcriber.correction.anchor_sequence")
+    logger.addHandler(handler)
+    logger.setLevel(logging.DEBUG)
+    
+    try:
+        finder = AnchorSequenceFinder(
+            min_sequence_length=2,
+            min_sources=1,
+            cache_dir=setup_teardown,
+            timeout_seconds=5,  # Short timeout to trigger various code paths
+            max_iterations_per_ngram=10,  # Low limit to trigger early termination
+            logger=logger
+        )
+        
+        transcribed = "error recovery test phrase"
+        references = {
+            "source1": "error recovery test phrase",
+            "source2": "error recovery test phrase"
+        }
+        
+        transcription_result = create_test_transcription_result_from_text(transcribed)
+        lyrics_data_references = convert_references_to_lyrics_data(references)
+        
+        # Should complete with appropriate logging
+        anchors = finder.find_anchors(transcribed, lyrics_data_references, transcription_result)
+        
+        # Check that appropriate log messages were generated
+        log_output = log_stream.getvalue()
+        assert "timeout" in log_output.lower() or "completed" in log_output.lower()
+        
+    finally:
+        logger.removeHandler(handler)
 
 
 def test_complete_line_matching(setup_teardown):

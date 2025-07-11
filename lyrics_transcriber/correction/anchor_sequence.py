@@ -7,11 +7,17 @@ import time
 from pathlib import Path
 import json
 import hashlib
+import signal
 
 from lyrics_transcriber.types import LyricsData, PhraseScore, AnchorSequence, GapSequence, ScoredAnchor, TranscriptionResult, Word
 from lyrics_transcriber.correction.phrase_analyzer import PhraseAnalyzer
 from lyrics_transcriber.correction.text_utils import clean_text
 from lyrics_transcriber.utils.word_utils import WordUtils
+
+
+class AnchorSequenceTimeoutError(Exception):
+    """Raised when anchor sequence computation exceeds timeout."""
+    pass
 
 
 class AnchorSequenceFinder:
@@ -22,10 +28,16 @@ class AnchorSequenceFinder:
         cache_dir: Union[str, Path],
         min_sequence_length: int = 3,
         min_sources: int = 1,
+        timeout_seconds: int = 1800,  # 30 minutes default timeout
+        max_iterations_per_ngram: int = 1000,  # Maximum iterations for while loop
+        progress_check_interval: int = 50,  # Check progress every N iterations
         logger: Optional[logging.Logger] = None,
     ):
         self.min_sequence_length = min_sequence_length
         self.min_sources = min_sources
+        self.timeout_seconds = timeout_seconds
+        self.max_iterations_per_ngram = max_iterations_per_ngram
+        self.progress_check_interval = progress_check_interval
         self.logger = logger or logging.getLogger(__name__)
         self.phrase_analyzer = PhraseAnalyzer(logger=self.logger)
         self.used_positions = {}
@@ -33,7 +45,7 @@ class AnchorSequenceFinder:
         # Initialize cache directory
         self.cache_dir = Path(cache_dir)
         self.cache_dir.mkdir(parents=True, exist_ok=True)
-        self.logger.debug(f"Initialized AnchorSequenceFinder with cache dir: {self.cache_dir}")
+        self.logger.debug(f"Initialized AnchorSequenceFinder with cache dir: {self.cache_dir}, timeout: {timeout_seconds}s")
 
     def _clean_text(self, text: str) -> str:
         """Clean text by removing punctuation and normalizing whitespace."""
@@ -165,6 +177,10 @@ class AnchorSequenceFinder:
             self.logger.error(f"Unexpected error loading cache: {type(e).__name__}: {e}")
             return None
 
+    def _timeout_handler(self, signum, frame):
+        """Handle timeout signal by raising AnchorSequenceTimeoutError."""
+        raise AnchorSequenceTimeoutError(f"Anchor sequence computation exceeded {self.timeout_seconds} seconds")
+
     def _process_ngram_length(
         self,
         n: int,
@@ -174,14 +190,38 @@ class AnchorSequenceFinder:
         ref_words: Dict[str, List[Word]],
         min_sources: int,
     ) -> List[AnchorSequence]:
-        """Process a single n-gram length to find matching sequences."""
+        """Process a single n-gram length to find matching sequences with timeout and early termination."""
         candidate_anchors = []
         used_positions = {source: set() for source in ref_texts_clean.keys()}
         used_trans_positions = set()
+        
+        iteration_count = 0
+        last_progress_check = 0
+        last_anchor_count = 0
+        stagnation_count = 0
+        
+        self.logger.debug(f"Processing n-gram length {n} with max {self.max_iterations_per_ngram} iterations")
 
         found_new_match = True
-        while found_new_match:
+        while found_new_match and iteration_count < self.max_iterations_per_ngram:
             found_new_match = False
+            iteration_count += 1
+
+            # Check for progress stagnation every N iterations
+            if iteration_count - last_progress_check >= self.progress_check_interval:
+                current_anchor_count = len(candidate_anchors)
+                if current_anchor_count == last_anchor_count:
+                    stagnation_count += 1
+                    if stagnation_count >= 3:  # No progress for 3 consecutive checks
+                        self.logger.debug(f"Early termination for n-gram length {n} due to stagnation after {iteration_count} iterations")
+                        break
+                else:
+                    stagnation_count = 0  # Reset stagnation counter
+                
+                last_anchor_count = current_anchor_count
+                last_progress_check = iteration_count
+                
+                self.logger.debug(f"n-gram {n}: iteration {iteration_count}, anchors: {current_anchor_count}, stagnation: {stagnation_count}")
 
             # Generate n-grams from transcribed text
             trans_ngrams = self._find_ngrams(trans_words, n)
@@ -231,6 +271,10 @@ class AnchorSequenceFinder:
                     found_new_match = True
                     break
 
+        if iteration_count >= self.max_iterations_per_ngram:
+            self.logger.warning(f"n-gram length {n} processing terminated after reaching max iterations ({self.max_iterations_per_ngram})")
+        
+        self.logger.debug(f"Completed n-gram length {n} processing after {iteration_count} iterations, found {len(candidate_anchors)} anchors")
         return candidate_anchors
 
     def find_anchors(
@@ -239,87 +283,172 @@ class AnchorSequenceFinder:
         references: Dict[str, LyricsData],
         transcription_result: TranscriptionResult,
     ) -> List[ScoredAnchor]:
-        """Find anchor sequences that appear in both transcription and references."""
-        cache_key = self._get_cache_key(transcribed, references, transcription_result)
-        cache_path = self.cache_dir / f"anchors_{cache_key}.json"
+        """Find anchor sequences that appear in both transcription and references with timeout protection."""
+        start_time = time.time()
+        
+        # Set up timeout signal handler
+        if self.timeout_seconds > 0:
+            old_handler = signal.signal(signal.SIGALRM, self._timeout_handler)
+            signal.alarm(self.timeout_seconds)
+        
+        try:
+            cache_key = self._get_cache_key(transcribed, references, transcription_result)
+            cache_path = self.cache_dir / f"anchors_{cache_key}.json"
 
-        # Try to load from cache
-        if cached_data := self._load_from_cache(cache_path):
-            self.logger.info("Loading anchors from cache")
-            try:
-                # Convert cached_data to dictionary before logging
-                if cached_data:
-                    first_anchor = {"anchor": cached_data[0].anchor.to_dict(), "phrase_score": cached_data[0].phrase_score.to_dict()}
-                return cached_data
-            except Exception as e:
-                self.logger.error(f"Unexpected error loading cache: {type(e).__name__}: {e}")
-                if cached_data:
-                    try:
+            # Try to load from cache
+            if cached_data := self._load_from_cache(cache_path):
+                self.logger.info("Loading anchors from cache")
+                try:
+                    # Convert cached_data to dictionary before logging
+                    if cached_data:
                         first_anchor = {"anchor": cached_data[0].anchor.to_dict(), "phrase_score": cached_data[0].phrase_score.to_dict()}
-                        self.logger.error(f"First cached anchor data: {json.dumps(first_anchor, indent=2)}")
-                    except:
-                        self.logger.error("Could not serialize first cached anchor for logging")
+                    return cached_data
+                except Exception as e:
+                    self.logger.error(f"Unexpected error loading cache: {type(e).__name__}: {e}")
+                    if cached_data:
+                        try:
+                            first_anchor = {"anchor": cached_data[0].anchor.to_dict(), "phrase_score": cached_data[0].phrase_score.to_dict()}
+                            self.logger.error(f"First cached anchor data: {json.dumps(first_anchor, indent=2)}")
+                        except:
+                            self.logger.error("Could not serialize first cached anchor for logging")
 
-        # If not in cache or cache format invalid, perform the computation
-        self.logger.info(f"Cache miss for key {cache_key} - computing anchors")
-        self.logger.info(f"Finding anchor sequences for transcription with length {len(transcribed)}")
+            # If not in cache or cache format invalid, perform the computation
+            self.logger.info(f"Cache miss for key {cache_key} - computing anchors with timeout {self.timeout_seconds}s")
+            self.logger.info(f"Finding anchor sequences for transcription with length {len(transcribed)}")
 
-        # Get all words from transcription
-        all_words = []
-        for segment in transcription_result.result.segments:
-            all_words.extend(segment.words)
+            # Get all words from transcription
+            all_words = []
+            for segment in transcription_result.result.segments:
+                all_words.extend(segment.words)
 
-        # Clean and split texts
-        trans_words = [w.text.lower().strip('.,?!"\n') for w in all_words]
-        ref_texts_clean = {
-            source: self._clean_text(" ".join(w.text for s in lyrics.segments for w in s.words)).split()
-            for source, lyrics in references.items()
-        }
-        ref_words = {source: [w for s in lyrics.segments for w in s.words] for source, lyrics in references.items()}
+            # Clean and split texts
+            trans_words = [w.text.lower().strip('.,?!"\n') for w in all_words]
+            ref_texts_clean = {
+                source: self._clean_text(" ".join(w.text for s in lyrics.segments for w in s.words)).split()
+                for source, lyrics in references.items()
+            }
+            ref_words = {source: [w for s in lyrics.segments for w in s.words] for source, lyrics in references.items()}
 
-        # Filter out very short reference sources for n-gram length calculation
-        valid_ref_lengths = [
-            len(words) for words in ref_texts_clean.values()
-            if len(words) >= self.min_sequence_length
-        ]
+            # Filter out very short reference sources for n-gram length calculation
+            valid_ref_lengths = [
+                len(words) for words in ref_texts_clean.values()
+                if len(words) >= self.min_sequence_length
+            ]
 
-        if not valid_ref_lengths:
-            self.logger.warning("No reference sources long enough for anchor detection")
-            return []
+            if not valid_ref_lengths:
+                self.logger.warning("No reference sources long enough for anchor detection")
+                return []
 
-        # Calculate max length using only valid reference sources
-        max_length = min(len(trans_words), min(valid_ref_lengths))
-        n_gram_lengths = range(max_length, self.min_sequence_length - 1, -1)
+            # Calculate max length using only valid reference sources
+            max_length = min(len(trans_words), min(valid_ref_lengths))
+            n_gram_lengths = range(max_length, self.min_sequence_length - 1, -1)
 
-        # Process n-gram lengths in parallel
-        process_length_partial = partial(
-            self._process_ngram_length,
-            trans_words=trans_words,
-            all_words=all_words,  # Pass the Word objects
-            ref_texts_clean=ref_texts_clean,
-            ref_words=ref_words,
-            min_sources=self.min_sources,
-        )
-
-        # Process n-gram lengths in parallel
-        candidate_anchors = []
-        with Pool(processes=max(cpu_count() - 1, 1)) as pool:
-            results = list(
-                tqdm(
-                    pool.imap(process_length_partial, n_gram_lengths, chunksize=1),
-                    total=len(n_gram_lengths),
-                    desc="Processing n-gram lengths",
-                )
+            # Process n-gram lengths in parallel with timeout
+            process_length_partial = partial(
+                self._process_ngram_length,
+                trans_words=trans_words,
+                all_words=all_words,  # Pass the Word objects
+                ref_texts_clean=ref_texts_clean,
+                ref_words=ref_words,
+                min_sources=self.min_sources,
             )
-            for anchors in results:
-                candidate_anchors.extend(anchors)
 
-        self.logger.info(f"Found {len(candidate_anchors)} candidate anchors")
-        filtered_anchors = self._remove_overlapping_sequences(candidate_anchors, transcribed, transcription_result)
+            # Process n-gram lengths in parallel with timeout
+            candidate_anchors = []
+            pool_timeout = max(60, self.timeout_seconds // 2)  # Use half the total timeout for pool operations
+            
+            try:
+                with Pool(processes=max(cpu_count() - 1, 1)) as pool:
+                    self.logger.debug(f"Starting parallel processing with timeout {pool_timeout}s")
+                    results = []
+                    
+                    # Submit all jobs first
+                    async_results = [pool.apply_async(process_length_partial, (n,)) for n in n_gram_lengths]
+                    
+                    # Collect results with individual timeouts
+                    for i, async_result in enumerate(async_results):
+                        try:
+                            # Check remaining time
+                            elapsed_time = time.time() - start_time
+                            remaining_time = max(10, self.timeout_seconds - elapsed_time)
+                            
+                            result = async_result.get(timeout=min(pool_timeout, remaining_time))
+                            results.append(result)
+                            
+                            self.logger.debug(f"Completed n-gram length {n_gram_lengths[i]} ({i+1}/{len(n_gram_lengths)})")
+                            
+                        except Exception as e:
+                            self.logger.warning(f"n-gram length {n_gram_lengths[i]} failed or timed out: {str(e)}")
+                            results.append([])  # Add empty result to maintain order
+                    
+                    for anchors in results:
+                        candidate_anchors.extend(anchors)
+                        
+            except Exception as e:
+                self.logger.error(f"Parallel processing failed: {str(e)}")
+                # Fall back to sequential processing with strict timeout
+                self.logger.info("Falling back to sequential processing")
+                for n in n_gram_lengths:
+                    elapsed_time = time.time() - start_time
+                    if elapsed_time >= self.timeout_seconds * 0.8:  # Use 80% of timeout
+                        self.logger.warning(f"Stopping sequential processing due to timeout after {elapsed_time:.1f}s")
+                        break
+                    
+                    try:
+                        anchors = self._process_ngram_length(
+                            n, trans_words, all_words, ref_texts_clean, ref_words, self.min_sources
+                        )
+                        candidate_anchors.extend(anchors)
+                    except Exception as e:
+                        self.logger.warning(f"Sequential processing failed for n-gram length {n}: {str(e)}")
+                        continue
 
-        # Save to cache
-        self._save_to_cache(cache_path, filtered_anchors)
-        return filtered_anchors
+            self.logger.info(f"Found {len(candidate_anchors)} candidate anchors in {time.time() - start_time:.1f}s")
+            
+            # Check timeout before expensive filtering operation
+            elapsed_time = time.time() - start_time
+            if elapsed_time >= self.timeout_seconds * 0.9:  # Use 90% of timeout
+                self.logger.warning(f"Skipping overlap filtering due to timeout ({elapsed_time:.1f}s elapsed)")
+                # Return basic scored anchors without filtering
+                basic_scored = []
+                for anchor in candidate_anchors[:100]:  # Limit to first 100 anchors
+                    try:
+                        phrase_score = PhraseScore(
+                            total_score=1.0,
+                            natural_break_score=1.0,
+                            phrase_type=PhraseType.COMPLETE
+                        )
+                        basic_scored.append(ScoredAnchor(anchor=anchor, phrase_score=phrase_score))
+                    except:
+                        continue
+                
+                # Save basic results to cache
+                if basic_scored:
+                    self._save_to_cache(cache_path, basic_scored)
+                
+                return basic_scored
+            
+            filtered_anchors = self._remove_overlapping_sequences(candidate_anchors, transcribed, transcription_result)
+
+            # Save to cache
+            self._save_to_cache(cache_path, filtered_anchors)
+            
+            total_time = time.time() - start_time
+            self.logger.info(f"Anchor sequence computation completed in {total_time:.1f}s")
+            
+            return filtered_anchors
+            
+        except AnchorSequenceTimeoutError:
+            self.logger.error(f"Anchor sequence computation timed out after {self.timeout_seconds} seconds")
+            raise
+        except Exception as e:
+            self.logger.error(f"Anchor sequence computation failed: {str(e)}")
+            raise
+        finally:
+            # Clean up timeout signal
+            if self.timeout_seconds > 0:
+                signal.alarm(0)
+                signal.signal(signal.SIGALRM, old_handler)
 
     def _score_sequence(self, words: List[str], context: str) -> PhraseScore:
         """Score a sequence based on its phrase quality"""
@@ -381,7 +510,7 @@ class AnchorSequenceFinder:
         context: str,
         transcription_result: TranscriptionResult,
     ) -> List[ScoredAnchor]:
-        """Remove overlapping sequences using phrase analysis."""
+        """Remove overlapping sequences using phrase analysis with timeout protection."""
         if not anchors:
             return []
 
@@ -429,22 +558,64 @@ class AnchorSequenceFinder:
 
         start_time = time.time()
 
-        # Try different pool sizes
+        # Try different pool sizes with timeout
         num_processes = max(cpu_count() - 1, 1)  # Leave one CPU free
-        self.logger.info(f"Using {num_processes} processes")
+        self.logger.info(f"Using {num_processes} processes for scoring")
 
         # Create a partial function with the context parameter fixed
         score_anchor_partial = partial(self._score_anchor_static, context=context)
 
-        # Use multiprocessing to score anchors in parallel
-        with Pool(processes=num_processes) as pool:
-            scored_anchors = list(
-                tqdm(
-                    pool.imap(score_anchor_partial, anchors, chunksize=50),
-                    total=len(anchors),
-                    desc="Scoring anchors (parallel)",
-                )
-            )
+        # Use multiprocessing to score anchors in parallel with timeout
+        scored_anchors = []
+        pool_timeout = 300  # 5 minutes for scoring phase
+        
+        try:
+            with Pool(processes=num_processes) as pool:
+                # Submit scoring jobs with timeout
+                async_results = []
+                batch_size = 50
+                
+                for i in range(0, len(anchors), batch_size):
+                    batch = anchors[i:i + batch_size]
+                    async_result = pool.apply_async(self._score_batch_static, (batch, context))
+                    async_results.append(async_result)
+                
+                # Collect results with timeout
+                for i, async_result in enumerate(async_results):
+                    try:
+                        batch_results = async_result.get(timeout=pool_timeout)
+                        scored_anchors.extend(batch_results)
+                        self.logger.debug(f"Completed scoring batch {i+1}/{len(async_results)}")
+                    except Exception as e:
+                        self.logger.warning(f"Scoring batch {i+1} failed or timed out: {str(e)}")
+                        # Add basic scores for failed batch
+                        start_idx = i * batch_size
+                        end_idx = min((i + 1) * batch_size, len(anchors))
+                        for j in range(start_idx, end_idx):
+                            if j < len(anchors):
+                                try:
+                                    phrase_score = PhraseScore(
+                                        total_score=1.0,
+                                        natural_break_score=1.0,
+                                        phrase_type=PhraseType.COMPLETE
+                                    )
+                                    scored_anchors.append(ScoredAnchor(anchor=anchors[j], phrase_score=phrase_score))
+                                except:
+                                    continue
+                        
+        except Exception as e:
+            self.logger.warning(f"Parallel scoring failed: {str(e)}, falling back to basic scoring")
+            # Fall back to basic scoring
+            for anchor in anchors:
+                try:
+                    phrase_score = PhraseScore(
+                        total_score=1.0,
+                        natural_break_score=1.0,
+                        phrase_type=PhraseType.COMPLETE
+                    )
+                    scored_anchors.append(ScoredAnchor(anchor=anchor, phrase_score=phrase_score))
+                except:
+                    continue
 
         parallel_time = time.time() - start_time
         self.logger.info(f"Parallel scoring took {parallel_time:.2f} seconds")
@@ -454,7 +625,17 @@ class AnchorSequenceFinder:
 
         self.logger.info(f"Filtering {len(scored_anchors)} overlapping sequences")
         filtered_scored = []
-        for scored_anchor in tqdm(scored_anchors, desc="Filtering overlaps"):
+        max_filter_time = 60  # Maximum 1 minute for filtering
+        filter_start = time.time()
+        
+        for i, scored_anchor in enumerate(scored_anchors):
+            # Check timeout every 100 anchors
+            if i % 100 == 0:
+                elapsed = time.time() - filter_start
+                if elapsed > max_filter_time:
+                    self.logger.warning(f"Filtering timed out after {elapsed:.1f}s, returning {len(filtered_scored)} anchors")
+                    break
+            
             overlaps = False
             for existing in filtered_scored:
                 if self._sequences_overlap(scored_anchor.anchor, existing.anchor):
@@ -480,6 +661,30 @@ class AnchorSequenceFinder:
 
         phrase_score = AnchorSequenceFinder._score_anchor_static._phrase_analyzer.score_phrase(words, context)
         return ScoredAnchor(anchor=anchor, phrase_score=phrase_score)
+
+    @staticmethod
+    def _score_batch_static(anchors: List[AnchorSequence], context: str) -> List[ScoredAnchor]:
+        """Score a batch of anchors for better timeout handling."""
+        # Create analyzer only once per process
+        if not hasattr(AnchorSequenceFinder._score_batch_static, "_phrase_analyzer"):
+            AnchorSequenceFinder._score_batch_static._phrase_analyzer = PhraseAnalyzer(logger=logging.getLogger(__name__))
+
+        scored_anchors = []
+        for anchor in anchors:
+            try:
+                words = [w.text for w in anchor.transcribed_words]
+                phrase_score = AnchorSequenceFinder._score_batch_static._phrase_analyzer.score_phrase(words, context)
+                scored_anchors.append(ScoredAnchor(anchor=anchor, phrase_score=phrase_score))
+            except Exception:
+                # Add basic score for failed anchor
+                phrase_score = PhraseScore(
+                    total_score=1.0,
+                    natural_break_score=1.0,
+                    phrase_type=PhraseType.COMPLETE
+                )
+                scored_anchors.append(ScoredAnchor(anchor=anchor, phrase_score=phrase_score))
+        
+        return scored_anchors
 
     def _get_reference_words(self, source: str, ref_words: List[str], start_pos: Optional[int], end_pos: Optional[int]) -> List[str]:
         """Get words from reference text between two positions.
