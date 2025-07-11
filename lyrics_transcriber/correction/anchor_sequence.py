@@ -1,15 +1,15 @@
+import threading
+import time
 from typing import Any, Dict, List, Optional, Tuple, Union
 import logging
 from tqdm import tqdm
 from multiprocessing import Pool, cpu_count
 from functools import partial
-import time
 from pathlib import Path
 import json
 import hashlib
-import signal
 
-from lyrics_transcriber.types import LyricsData, PhraseScore, AnchorSequence, GapSequence, ScoredAnchor, TranscriptionResult, Word
+from lyrics_transcriber.types import LyricsData, PhraseScore, PhraseType, AnchorSequence, GapSequence, ScoredAnchor, TranscriptionResult, Word
 from lyrics_transcriber.correction.phrase_analyzer import PhraseAnalyzer
 from lyrics_transcriber.correction.text_utils import clean_text
 from lyrics_transcriber.utils.word_utils import WordUtils
@@ -45,7 +45,14 @@ class AnchorSequenceFinder:
         # Initialize cache directory
         self.cache_dir = Path(cache_dir)
         self.cache_dir.mkdir(parents=True, exist_ok=True)
-        self.logger.debug(f"Initialized AnchorSequenceFinder with cache dir: {self.cache_dir}, timeout: {timeout_seconds}s")
+        self.logger.info(f"Initialized AnchorSequenceFinder with cache dir: {self.cache_dir}, timeout: {timeout_seconds}s")
+
+    def _check_timeout(self, start_time: float, operation_name: str = "operation"):
+        """Check if timeout has occurred and raise exception if so."""
+        if self.timeout_seconds > 0:
+            elapsed_time = time.time() - start_time
+            if elapsed_time > self.timeout_seconds:
+                raise AnchorSequenceTimeoutError(f"{operation_name} exceeded {self.timeout_seconds} seconds (elapsed: {elapsed_time:.1f}s)")
 
     def _clean_text(self, text: str) -> str:
         """Clean text by removing punctuation and normalizing whitespace."""
@@ -177,10 +184,6 @@ class AnchorSequenceFinder:
             self.logger.error(f"Unexpected error loading cache: {type(e).__name__}: {e}")
             return None
 
-    def _timeout_handler(self, signum, frame):
-        """Handle timeout signal by raising AnchorSequenceTimeoutError."""
-        raise AnchorSequenceTimeoutError(f"Anchor sequence computation exceeded {self.timeout_seconds} seconds")
-
     def _process_ngram_length(
         self,
         n: int,
@@ -286,11 +289,6 @@ class AnchorSequenceFinder:
         """Find anchor sequences that appear in both transcription and references with timeout protection."""
         start_time = time.time()
         
-        # Set up timeout signal handler
-        if self.timeout_seconds > 0:
-            old_handler = signal.signal(signal.SIGALRM, self._timeout_handler)
-            signal.alarm(self.timeout_seconds)
-        
         try:
             cache_key = self._get_cache_key(transcribed, references, transcription_result)
             cache_path = self.cache_dir / f"anchors_{cache_key}.json"
@@ -316,6 +314,9 @@ class AnchorSequenceFinder:
             self.logger.info(f"Cache miss for key {cache_key} - computing anchors with timeout {self.timeout_seconds}s")
             self.logger.info(f"Finding anchor sequences for transcription with length {len(transcribed)}")
 
+            # Check timeout before starting computation
+            self._check_timeout(start_time, "anchor computation initialization")
+
             # Get all words from transcription
             all_words = []
             for segment in transcription_result.result.segments:
@@ -328,6 +329,9 @@ class AnchorSequenceFinder:
                 for source, lyrics in references.items()
             }
             ref_words = {source: [w for s in lyrics.segments for w in s.words] for source, lyrics in references.items()}
+
+            # Check timeout after preprocessing
+            self._check_timeout(start_time, "anchor computation preprocessing")
 
             # Filter out very short reference sources for n-gram length calculation
             valid_ref_lengths = [
@@ -355,7 +359,10 @@ class AnchorSequenceFinder:
 
             # Process n-gram lengths in parallel with timeout
             candidate_anchors = []
-            pool_timeout = max(60, self.timeout_seconds // 2)  # Use half the total timeout for pool operations
+            pool_timeout = max(60, self.timeout_seconds // 2) if self.timeout_seconds > 0 else 300  # Use half the total timeout for pool operations
+            
+            # Check timeout before parallel processing
+            self._check_timeout(start_time, "parallel processing start")
             
             try:
                 with Pool(processes=max(cpu_count() - 1, 1)) as pool:
@@ -368,15 +375,21 @@ class AnchorSequenceFinder:
                     # Collect results with individual timeouts
                     for i, async_result in enumerate(async_results):
                         try:
-                            # Check remaining time
+                            # Check timeout before each result collection
+                            self._check_timeout(start_time, f"collecting n-gram {n_gram_lengths[i]} results")
+                            
+                            # Check remaining time for pool timeout
                             elapsed_time = time.time() - start_time
-                            remaining_time = max(10, self.timeout_seconds - elapsed_time)
+                            remaining_time = max(10, self.timeout_seconds - elapsed_time) if self.timeout_seconds > 0 else pool_timeout
                             
                             result = async_result.get(timeout=min(pool_timeout, remaining_time))
                             results.append(result)
                             
                             self.logger.debug(f"Completed n-gram length {n_gram_lengths[i]} ({i+1}/{len(n_gram_lengths)})")
                             
+                        except AnchorSequenceTimeoutError:
+                            # Re-raise timeout errors
+                            raise
                         except Exception as e:
                             self.logger.warning(f"n-gram length {n_gram_lengths[i]} failed or timed out: {str(e)}")
                             results.append([])  # Add empty result to maintain order
@@ -384,21 +397,25 @@ class AnchorSequenceFinder:
                     for anchors in results:
                         candidate_anchors.extend(anchors)
                         
+            except AnchorSequenceTimeoutError:
+                # Re-raise timeout errors
+                raise
             except Exception as e:
                 self.logger.error(f"Parallel processing failed: {str(e)}")
-                # Fall back to sequential processing with strict timeout
+                # Fall back to sequential processing with timeout checks
                 self.logger.info("Falling back to sequential processing")
                 for n in n_gram_lengths:
-                    elapsed_time = time.time() - start_time
-                    if elapsed_time >= self.timeout_seconds * 0.8:  # Use 80% of timeout
-                        self.logger.warning(f"Stopping sequential processing due to timeout after {elapsed_time:.1f}s")
-                        break
-                    
                     try:
+                        # Check timeout before each n-gram length
+                        self._check_timeout(start_time, f"sequential processing n-gram {n}")
+                        
                         anchors = self._process_ngram_length(
                             n, trans_words, all_words, ref_texts_clean, ref_words, self.min_sources
                         )
                         candidate_anchors.extend(anchors)
+                    except AnchorSequenceTimeoutError:
+                        # Re-raise timeout errors
+                        raise
                     except Exception as e:
                         self.logger.warning(f"Sequential processing failed for n-gram length {n}: {str(e)}")
                         continue
@@ -406,27 +423,7 @@ class AnchorSequenceFinder:
             self.logger.info(f"Found {len(candidate_anchors)} candidate anchors in {time.time() - start_time:.1f}s")
             
             # Check timeout before expensive filtering operation
-            elapsed_time = time.time() - start_time
-            if elapsed_time >= self.timeout_seconds * 0.9:  # Use 90% of timeout
-                self.logger.warning(f"Skipping overlap filtering due to timeout ({elapsed_time:.1f}s elapsed)")
-                # Return basic scored anchors without filtering
-                basic_scored = []
-                for anchor in candidate_anchors[:100]:  # Limit to first 100 anchors
-                    try:
-                        phrase_score = PhraseScore(
-                            total_score=1.0,
-                            natural_break_score=1.0,
-                            phrase_type=PhraseType.COMPLETE
-                        )
-                        basic_scored.append(ScoredAnchor(anchor=anchor, phrase_score=phrase_score))
-                    except:
-                        continue
-                
-                # Save basic results to cache
-                if basic_scored:
-                    self._save_to_cache(cache_path, basic_scored)
-                
-                return basic_scored
+            self._check_timeout(start_time, "overlap filtering start")
             
             filtered_anchors = self._remove_overlapping_sequences(candidate_anchors, transcribed, transcription_result)
 
@@ -445,10 +442,8 @@ class AnchorSequenceFinder:
             self.logger.error(f"Anchor sequence computation failed: {str(e)}")
             raise
         finally:
-            # Clean up timeout signal
-            if self.timeout_seconds > 0:
-                signal.alarm(0)
-                signal.signal(signal.SIGALRM, old_handler)
+            # No cleanup needed for time-based timeout checks
+            pass
 
     def _score_sequence(self, words: List[str], context: str) -> PhraseScore:
         """Score a sequence based on its phrase quality"""
@@ -625,15 +620,14 @@ class AnchorSequenceFinder:
 
         self.logger.info(f"Filtering {len(scored_anchors)} overlapping sequences")
         filtered_scored = []
-        max_filter_time = 60  # Maximum 1 minute for filtering
-        filter_start = time.time()
         
         for i, scored_anchor in enumerate(scored_anchors):
-            # Check timeout every 100 anchors
+            # Check timeout every 100 anchors using our timeout mechanism
             if i % 100 == 0:
-                elapsed = time.time() - filter_start
-                if elapsed > max_filter_time:
-                    self.logger.warning(f"Filtering timed out after {elapsed:.1f}s, returning {len(filtered_scored)} anchors")
+                try:
+                    self._check_timeout(start_time, f"filtering anchors (processed {i}/{len(scored_anchors)})")
+                except AnchorSequenceTimeoutError:
+                    self.logger.warning(f"Filtering timed out, returning {len(filtered_scored)} anchors out of {len(scored_anchors)}")
                     break
             
             overlaps = False
