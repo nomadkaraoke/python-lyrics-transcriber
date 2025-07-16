@@ -140,7 +140,7 @@ class LyricsLine:
         main_text = (
             f"{{\\an8}}"  # center-bottom alignment
             f"{{\\move(0,{state.y_position + main_height},{text_left},{state.y_position + main_height},0,{move_duration})}}"  # Move until line start
-            f"{{\\c&HF77070&}}"  # Same color as karaoke highlight
+            f"{{\\c{config.get_lead_in_color_ass_format()}}}"  # Configurable lead-in color in ASS format
             f"{{\\alpha&H4D&}}"  # 70% opacity (FF=0%, 00=100%)
             f"{{\\fad(800,500)}}"  # 800ms fade in, 500ms fade out
             f"{{\\p1}}m {-rect_width} {-rect_height} l 0 {-rect_height} 0 0 {-rect_width} 0{{\\p0}}"  # Draw up from bottom

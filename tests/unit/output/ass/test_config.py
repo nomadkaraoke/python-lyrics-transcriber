@@ -16,6 +16,10 @@ def test_screen_config_defaults():
     assert config.post_roll_time == 1.0
     assert config.fade_in_ms == 200
     assert config.fade_out_ms == 300
+    
+    # Lead-in defaults
+    assert config.lead_in_color == "112, 112, 247"
+    assert config.get_lead_in_color_ass_format() == "&H00F77070&"
 
 
 def test_screen_config_custom_values():
@@ -31,49 +35,91 @@ def test_screen_config_custom_values():
 
 
 def test_screen_config_custom_padding():
-    """Test custom top padding in ScreenConfig."""
-    config = ScreenConfig(line_height=60, top_padding=100)
-    assert config.top_padding == 100
+    """Test custom padding configuration."""
+    config = ScreenConfig(line_height=60, top_padding=120)
 
-    # Test default padding equals line height
-    config = ScreenConfig(line_height=80)
-    assert config.top_padding == 80
+    assert config.line_height == 60
+    assert config.top_padding == 120  # Custom value, not based on line_height
+
+    # Test default padding behavior
+    config_default = ScreenConfig(line_height=60)
+    assert config_default.top_padding == 60  # Should equal line_height when not specified
+
+
+def test_lead_in_color_rgb_conversion():
+    """Test RGB to ASS color conversion for lead-in indicator."""
+    config = ScreenConfig()
+    
+    # Test default blue RGB format
+    config.lead_in_color = "112, 112, 247"
+    assert config.get_lead_in_color_ass_format() == "&H00F77070&"
+    
+    # Test red color
+    config.lead_in_color = "255, 0, 0"
+    assert config.get_lead_in_color_ass_format() == "&H000000FF&"
+    
+    # Test green color
+    config.lead_in_color = "0, 255, 0"
+    assert config.get_lead_in_color_ass_format() == "&H0000FF00&"
+    
+    # Test with alpha
+    config.lead_in_color = "255, 0, 0, 128"  # Red with 50% opacity
+    assert config.get_lead_in_color_ass_format() == "&H7F0000FF&"
+    
+    # Test backward compatibility with ASS format
+    config.lead_in_color = "&HF77070&"
+    assert config.get_lead_in_color_ass_format() == "&HF77070&"
+    
+    # Test invalid format fallback
+    config.lead_in_color = "invalid color"
+    assert config.get_lead_in_color_ass_format() == "&HF77070&"
+    
+    # Test edge cases
+    config.lead_in_color = "255,255,255"  # No spaces
+    assert config.get_lead_in_color_ass_format() == "&H00FFFFFF&"
+    
+    config.lead_in_color = " 0 , 128 , 255 "  # Extra spaces
+    assert config.get_lead_in_color_ass_format() == "&H00FF8000&"
+
+
+def test_custom_lead_in_color():
+    """Test custom lead-in color configuration."""
+    config = ScreenConfig(lead_in_color="255, 128, 64")
+    
+    assert config.lead_in_color == "255, 128, 64"
+    assert config.get_lead_in_color_ass_format() == "&H004080FF&"
 
 
 def test_line_timing_info():
-    """Test LineTimingInfo creation and values."""
-    # fmt: off
+    """Test LineTimingInfo dataclass."""
     timing = LineTimingInfo(
-        fade_in_time=10.0,
-        end_time=15.0,
-        fade_out_time=15.4,
-        clear_time=15.7
+        fade_in_time=1.0,
+        end_time=5.0,
+        fade_out_time=4.5,
+        clear_time=5.5
     )
-    # fmt: on
-
-    assert timing.fade_in_time == 10.0
-    assert timing.end_time == 15.0
-    assert timing.fade_out_time == 15.4
-    assert timing.clear_time == 15.7
+    
+    assert timing.fade_in_time == 1.0
+    assert timing.end_time == 5.0
+    assert timing.fade_out_time == 4.5
+    assert timing.clear_time == 5.5
 
 
 def test_line_state():
-    """Test LineState creation and values."""
-    # fmt: off
+    """Test LineState dataclass."""
     timing = LineTimingInfo(
-        fade_in_time=10.0,
-        end_time=15.0,
-        fade_out_time=15.4,
-        clear_time=15.7
+        fade_in_time=1.0,
+        end_time=5.0,
+        fade_out_time=4.5,
+        clear_time=5.5
     )
     
     state = LineState(
-        text="Test line",
+        text="Hello world",
         timing=timing,
         y_position=100
     )
-    # fmt: on
-
-    assert state.text == "Test line"
+    
+    assert state.text == "Hello world"
     assert state.timing == timing
     assert state.y_position == 100

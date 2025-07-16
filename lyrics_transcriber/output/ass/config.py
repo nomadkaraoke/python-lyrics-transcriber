@@ -15,6 +15,7 @@ class ScreenConfig:
         post_roll_time: float = 1.0,
         fade_in_ms: int = 200,
         fade_out_ms: int = 300,
+        lead_in_color: str = "112, 112, 247",  # Default blue color in RGB format
     ):
         # Screen layout
         self.max_visible_lines = max_visible_lines
@@ -27,6 +28,42 @@ class ScreenConfig:
         self.post_roll_time = post_roll_time
         self.fade_in_ms = fade_in_ms
         self.fade_out_ms = fade_out_ms
+        # Lead-in configuration
+        self.lead_in_color = lead_in_color
+
+    def get_lead_in_color_ass_format(self) -> str:
+        """Convert RGB lead-in color to ASS format.
+        
+        Accepts either:
+        - RGB format: "112, 112, 247" 
+        - ASS format: "&HF77070&" (for backward compatibility)
+        
+        Returns ASS format color string.
+        """
+        color_str = self.lead_in_color.strip()
+        
+        # If already in ASS format, return as-is
+        if color_str.startswith("&H") and color_str.endswith("&"):
+            return color_str
+            
+        # Parse RGB format "R, G, B" or "R, G, B, A"
+        try:
+            parts = [int(x.strip()) for x in color_str.split(",")]
+            if len(parts) == 3:
+                r, g, b = parts
+                a = 255  # Default full opacity
+            elif len(parts) == 4:
+                r, g, b, a = parts
+            else:
+                raise ValueError(f"Invalid color format: {color_str}")
+                
+            # Convert to ASS format: &H{alpha}{blue}{green}{red}&
+            # Note: alpha is inverted in ASS (255-a)
+            return f"&H{255-a:02X}{b:02X}{g:02X}{r:02X}&"
+            
+        except (ValueError, TypeError) as e:
+            # Fallback to default blue if parsing fails
+            return "&HF77070&"
 
 
 @dataclass

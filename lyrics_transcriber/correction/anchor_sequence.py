@@ -432,11 +432,12 @@ class AnchorSequenceFinder:
                     self.logger.info(f"🔍 ANCHOR SEARCH: ✅ All {len(async_results)} jobs submitted")
                     
                     # Collect results with individual timeouts
+                    batch_results = []
+                    batch_size = 10
+                    
                     for i, async_result in enumerate(async_results):
                         n_gram_length = n_gram_lengths[i]
                         try:
-                            self.logger.info(f"🔍 ANCHOR SEARCH: ⏳ Collecting result {i+1}/{len(async_results)} for n-gram length {n_gram_length}")
-                            
                             # Check remaining time for pool timeout (more lenient than overall timeout)
                             elapsed_time = time.time() - start_time
                             remaining_time = max(10, self.timeout_seconds - elapsed_time) if self.timeout_seconds > 0 else pool_timeout
@@ -449,11 +450,23 @@ class AnchorSequenceFinder:
                             result = async_result.get(timeout=individual_timeout)
                             results.append(result)
                             
-                            self.logger.info(f"🔍 ANCHOR SEARCH: ✅ Completed n-gram length {n_gram_length} ({i+1}/{len(n_gram_lengths)}) - found {len(result)} anchors")
+                            # Batch logging - collect info for batched logging
+                            batch_results.append((n_gram_length, len(result)))
+                            
+                            # Log progress every batch_size results or on the last result
+                            if (i + 1) % batch_size == 0 or (i + 1) == len(async_results):
+                                total_anchors_in_batch = sum(anchor_count for _, anchor_count in batch_results)
+                                n_gram_ranges = [str(ng) for ng, _ in batch_results]
+                                range_str = f"{n_gram_ranges[0]}-{n_gram_ranges[-1]}" if len(n_gram_ranges) > 1 else n_gram_ranges[0]
+                                self.logger.info(f"🔍 ANCHOR SEARCH: ✅ Completed n-gram lengths {range_str} ({i+1-len(batch_results)+1}-{i+1}/{len(async_results)}) - found {total_anchors_in_batch} anchors total")
+                                batch_results = []  # Reset batch
                             
                         except Exception as e:
                             self.logger.warning(f"🔍 ANCHOR SEARCH: ⚠️ n-gram length {n_gram_length} failed or timed out: {str(e)}")
                             results.append([])  # Add empty result to maintain order
+                            
+                            # Add failed result to batch for logging
+                            batch_results.append((n_gram_length, 0))
                             
                             # If we're running short on time, trigger fallback early
                             if self.timeout_seconds > 0 and (time.time() - start_time) > (self.timeout_seconds * 0.8):

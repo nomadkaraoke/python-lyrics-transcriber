@@ -60,7 +60,8 @@ class SubtitlesGenerator:
             "screen_gap_threshold",
             "post_roll_time",
             "fade_in_ms",
-            "fade_out_ms"
+            "fade_out_ms",
+            "lead_in_color"
         ]
         
         for prop in screen_config_props:
