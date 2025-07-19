@@ -14,10 +14,12 @@ import ArrowBackIcon from '@mui/icons-material/ArrowBack'
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward'
 import AutorenewIcon from '@mui/icons-material/Autorenew'
 import PauseCircleOutlineIcon from '@mui/icons-material/PauseCircleOutline'
+import PlayArrowIcon from '@mui/icons-material/PlayArrow'
+import StopIcon from '@mui/icons-material/Stop'
 import CenterFocusStrongIcon from '@mui/icons-material/CenterFocusStrong'
 import TimelineEditor from './TimelineEditor'
 import { Word } from '../types'
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback, useRef, useMemo, memo } from 'react'
 
 interface EditTimelineSectionProps {
     words: Word[]
@@ -32,10 +34,159 @@ interface EditTimelineSectionProps {
     syncWordIndex: number
     isSpacebarPressed: boolean
     onWordUpdate: (index: number, updates: Partial<Word>) => void
+    onUnsyncWord?: (index: number) => void
     onPlaySegment?: (time: number) => void
+    onStopAudio?: () => void
     startManualSync: () => void
+    pauseManualSync?: () => void
+    resumeManualSync?: () => void
+    isPaused?: boolean
     isGlobal?: boolean
+    defaultZoomLevel?: number
+    isReplaceAllMode?: boolean
 }
+
+// Memoized control buttons to prevent unnecessary re-renders
+const TimelineControls = memo(({
+    isGlobal,
+    visibleStartTime,
+    visibleEndTime,
+    startTime,
+    endTime,
+    zoomLevel,
+    autoScrollEnabled,
+    currentTime,
+    isManualSyncing,
+    isReplaceAllMode,
+    isPaused,
+    onScrollLeft,
+    onZoomOut,
+    onZoomIn,
+    onScrollRight,
+    onToggleAutoScroll,
+    onJumpToCurrentTime,
+    onStartManualSync,
+    onPauseResume,
+    onStopAudio
+}: {
+    isGlobal: boolean
+    visibleStartTime: number
+    visibleEndTime: number
+    startTime: number
+    endTime: number
+    zoomLevel: number
+    autoScrollEnabled: boolean
+    currentTime?: number
+    isManualSyncing: boolean
+    isReplaceAllMode: boolean
+    isPaused: boolean
+    onScrollLeft: () => void
+    onZoomOut: () => void
+    onZoomIn: () => void
+    onScrollRight: () => void
+    onToggleAutoScroll: () => void
+    onJumpToCurrentTime: () => void
+    onStartManualSync: () => void
+    onPauseResume: () => void
+    onStopAudio?: () => void
+}) => {
+    return (
+        <Stack direction="row" spacing={1} alignItems="center">
+            {isGlobal && (
+                <>  
+                    <Tooltip title="Scroll Left">
+                        <IconButton
+                            onClick={onScrollLeft}
+                            disabled={visibleStartTime <= startTime}
+                            size="small"
+                        >
+                            <ArrowBackIcon />
+                        </IconButton>
+                    </Tooltip>
+                    <Tooltip title="Zoom Out (Show More Time)">
+                        <IconButton
+                            onClick={onZoomOut}
+                            disabled={zoomLevel >= (endTime - startTime) || (isReplaceAllMode && isManualSyncing && !isPaused)}
+                            size="small"
+                        >
+                            <ZoomOutIcon />
+                        </IconButton>
+                    </Tooltip>
+                    <Tooltip title="Zoom In (Show Less Time)">
+                        <IconButton
+                            onClick={onZoomIn}
+                            disabled={zoomLevel <= 2 || (isReplaceAllMode && isManualSyncing && !isPaused)}
+                            size="small"
+                        >
+                            <ZoomInIcon />
+                        </IconButton>
+                    </Tooltip>
+                    <Tooltip title="Scroll Right">
+                        <IconButton
+                            onClick={onScrollRight}
+                            disabled={visibleEndTime >= endTime}
+                            size="small"
+                        >
+                            <ArrowForwardIcon />
+                        </IconButton>
+                    </Tooltip>
+                    <Tooltip
+                        title={autoScrollEnabled ?
+                            "Disable Auto-Page Turn During Playback" :
+                            "Enable Auto-Page Turn During Playback"}
+                    >
+                        <IconButton
+                            onClick={onToggleAutoScroll}
+                            color={autoScrollEnabled ? "primary" : "default"}
+                            size="small"
+                        >
+                            {autoScrollEnabled ? <AutorenewIcon /> : <PauseCircleOutlineIcon />}
+                        </IconButton>
+                    </Tooltip>
+                    <Tooltip title="Jump to Current Playback Position">
+                        <IconButton
+                            onClick={onJumpToCurrentTime}
+                            disabled={!currentTime}
+                            size="small"
+                        >
+                            <CenterFocusStrongIcon />
+                        </IconButton>
+                    </Tooltip>
+                </>
+            )}
+            {isReplaceAllMode && onStopAudio && (
+                <Button
+                    variant="outlined"
+                    onClick={onStopAudio}
+                    startIcon={<StopIcon />}
+                    color="error"
+                    size="small"
+                >
+                    Stop Audio
+                </Button>
+            )}
+            <Button
+                variant={isManualSyncing ? "outlined" : "contained"}
+                onClick={onStartManualSync}
+                startIcon={isManualSyncing ? <CancelIcon /> : <PlayCircleOutlineIcon />}
+                color={isManualSyncing ? "error" : "primary"}
+            >
+                {isManualSyncing ? "Cancel Sync" : "Manual Sync"}
+            </Button>
+            {isManualSyncing && isReplaceAllMode && (
+                <Button
+                    variant="outlined"
+                    onClick={onPauseResume}
+                    startIcon={isPaused ? <PlayArrowIcon /> : <PauseCircleOutlineIcon />}
+                    color={isPaused ? "success" : "warning"}
+                    size="small"
+                >
+                    {isPaused ? "Resume" : "Pause"}
+                </Button>
+            )}
+        </Stack>
+    )
+})
 
 export default function EditTimelineSection({
     words,
@@ -50,16 +201,37 @@ export default function EditTimelineSection({
     syncWordIndex,
     isSpacebarPressed,
     onWordUpdate,
+    onUnsyncWord,
     onPlaySegment,
+    onStopAudio,
     startManualSync,
-    isGlobal = false
+    pauseManualSync,
+    resumeManualSync,
+    isPaused = false,
+    isGlobal = false,
+    defaultZoomLevel = 10,
+    isReplaceAllMode = false
 }: EditTimelineSectionProps) {
-    // Add state for zoom level
-    const [zoomLevel, setZoomLevel] = useState(10) // Default 10 seconds visible
+    // Add state for zoom level - use larger default for Replace All mode
+    const [zoomLevel, setZoomLevel] = useState(defaultZoomLevel)
     const [visibleStartTime, setVisibleStartTime] = useState(startTime)
     const [visibleEndTime, setVisibleEndTime] = useState(Math.min(startTime + zoomLevel, endTime))
     const [autoScrollEnabled, setAutoScrollEnabled] = useState(true) // Default to enabled
     const timelineRef = useRef<HTMLDivElement>(null)
+
+    // Memoize the effective time range to prevent recalculation
+    const effectiveTimeRange = useMemo(() => ({
+        start: isGlobal ? visibleStartTime : startTime,
+        end: isGlobal ? visibleEndTime : endTime
+    }), [isGlobal, visibleStartTime, visibleEndTime, startTime, endTime])
+
+    // Auto-enable auto-scroll when manual sync starts or resumes
+    useEffect(() => {
+        if (isManualSyncing && !isPaused) {
+            console.log('EditTimelineSection - Auto-enabling auto-scroll for manual sync')
+            setAutoScrollEnabled(true)
+        }
+    }, [isManualSyncing, isPaused])
 
     // Initial setup of visible time range
     useEffect(() => {
@@ -74,10 +246,19 @@ export default function EditTimelineSection({
         }
     }, [startTime, endTime, zoomLevel, isGlobal])
 
-    // Handle playback scrolling with "page turning" approach
+    // Throttled auto-scroll to reduce frequent updates during playback
+    const lastScrollUpdateRef = useRef<number>(0)
+    const SCROLL_THROTTLE_MS = 100 // Only update scroll position every 100ms
+
+    // Handle playback scrolling with "page turning" approach - throttled for performance
     useEffect(() => {
         // Skip if not in global mode, no current time, or auto-scroll is disabled
         if (!isGlobal || !currentTime || !autoScrollEnabled) return
+
+        // Throttle scroll updates for performance
+        const now = Date.now()
+        if (now - lastScrollUpdateRef.current < SCROLL_THROTTLE_MS) return
+        lastScrollUpdateRef.current = now
 
         // Only scroll when current time is outside or near the edge of the visible window
         if (currentTime < visibleStartTime) {
@@ -122,12 +303,25 @@ export default function EditTimelineSection({
         }
     }, [zoomLevel, startTime, endTime, isGlobal, visibleStartTime])
 
-    // Toggle auto-scroll
-    const toggleAutoScroll = () => {
-        setAutoScrollEnabled(!autoScrollEnabled)
-    }
+    // Memoized event handlers to prevent unnecessary re-renders
+    const handleZoomIn = useCallback(() => {
+        if (isReplaceAllMode && isManualSyncing && !isPaused) return // Prevent zoom changes during active sync (but allow when paused)
+        if (zoomLevel > 2) { // Minimum zoom level of 2 seconds
+            setZoomLevel(zoomLevel - 2)
+        }
+    }, [isReplaceAllMode, isManualSyncing, isPaused, zoomLevel])
 
-    // Jump to current playback position
+    const handleZoomOut = useCallback(() => {
+        if (isReplaceAllMode && isManualSyncing && !isPaused) return // Prevent zoom changes during active sync (but allow when paused)
+        if (zoomLevel < (endTime - startTime)) { // Maximum zoom is the full range
+            setZoomLevel(zoomLevel + 2)
+        }
+    }, [isReplaceAllMode, isManualSyncing, isPaused, zoomLevel, endTime, startTime])
+
+    const toggleAutoScroll = useCallback(() => {
+        setAutoScrollEnabled(!autoScrollEnabled)
+    }, [autoScrollEnabled])
+
     const jumpToCurrentTime = useCallback(() => {
         if (!isGlobal || !currentTime) return
 
@@ -145,45 +339,7 @@ export default function EditTimelineSection({
         setVisibleEndTime(newEnd)
     }, [currentTime, zoomLevel, startTime, endTime, isGlobal])
 
-    // Add keyboard shortcut for toggling auto-scroll
-    useEffect(() => {
-        const handleKeyDown = (e: KeyboardEvent) => {
-            if (isGlobal) {
-                // Alt+A to toggle auto-scroll
-                if (e.altKey && e.key === 'a') {
-                    e.preventDefault()
-                    toggleAutoScroll()
-                }
-
-                // Alt+J to jump to current time
-                if (e.altKey && e.key === 'j') {
-                    e.preventDefault()
-                    jumpToCurrentTime()
-                }
-            }
-        }
-
-        window.addEventListener('keydown', handleKeyDown)
-        return () => {
-            window.removeEventListener('keydown', handleKeyDown)
-        }
-    }, [isGlobal, toggleAutoScroll, jumpToCurrentTime])
-
-    // Handle zoom in
-    const handleZoomIn = () => {
-        if (zoomLevel > 2) { // Minimum zoom level of 2 seconds
-            setZoomLevel(zoomLevel - 2)
-        }
-    }
-
-    // Handle zoom out
-    const handleZoomOut = () => {
-        if (zoomLevel < (endTime - startTime)) { // Maximum zoom is the full range
-            setZoomLevel(zoomLevel + 2)
-        }
-    }
-
-    // Handle horizontal scrolling
+    // Handle horizontal scrolling - throttled for performance
     const handleScroll = useCallback((event: React.WheelEvent<HTMLDivElement>) => {
         if (isGlobal && event.deltaX !== 0) {
             event.preventDefault()
@@ -214,8 +370,7 @@ export default function EditTimelineSection({
         }
     }, [isGlobal, visibleStartTime, visibleEndTime, startTime, endTime, zoomLevel])
 
-    // Handle scroll left button
-    const handleScrollLeft = () => {
+    const handleScrollLeft = useCallback(() => {
         if (!isGlobal) return
 
         // Disable auto-scroll when user manually scrolls
@@ -228,10 +383,9 @@ export default function EditTimelineSection({
 
         setVisibleStartTime(newStart)
         setVisibleEndTime(newEnd)
-    }
+    }, [isGlobal, zoomLevel, startTime, visibleStartTime])
 
-    // Handle scroll right button
-    const handleScrollRight = () => {
+    const handleScrollRight = useCallback(() => {
         if (!isGlobal) return
 
         // Disable auto-scroll when user manually scrolls
@@ -252,11 +406,28 @@ export default function EditTimelineSection({
         }
 
         setVisibleStartTime(newStart)
-    }
+    }, [isGlobal, zoomLevel, endTime, visibleEndTime, startTime])
 
-    // Get the effective time range to display
-    const effectiveStartTime = isGlobal ? visibleStartTime : startTime
-    const effectiveEndTime = isGlobal ? visibleEndTime : endTime
+    const handlePauseResume = useCallback(() => {
+        if (isPaused && resumeManualSync) {
+            resumeManualSync()
+        } else if (!isPaused && pauseManualSync) {
+            pauseManualSync()
+        }
+    }, [isPaused, resumeManualSync, pauseManualSync])
+
+    // Memoize current word info to prevent recalculation
+    const currentWordInfo = useMemo(() => {
+        if (!isManualSyncing || syncWordIndex < 0 || syncWordIndex >= words.length) {
+            return null
+        }
+        
+        return {
+            index: syncWordIndex + 1,
+            total: words.length,
+            text: words[syncWordIndex]?.text || ''
+        }
+    }, [isManualSyncing, syncWordIndex, words])
 
     return (
         <>
@@ -267,11 +438,12 @@ export default function EditTimelineSection({
             >
                 <TimelineEditor
                     words={words}
-                    startTime={effectiveStartTime}
-                    endTime={effectiveEndTime}
+                    startTime={effectiveTimeRange.start}
+                    endTime={effectiveTimeRange.end}
                     onWordUpdate={onWordUpdate}
                     currentTime={currentTime}
                     onPlaySegment={onPlaySegment}
+                    onUnsyncWord={onUnsyncWord}
                 />
             </Box>
 
@@ -282,82 +454,33 @@ export default function EditTimelineSection({
                     Current Time Range: {currentStartTime?.toFixed(2) ?? 'N/A'} - {currentEndTime?.toFixed(2) ?? 'N/A'}
                 </Typography>
 
-                <Stack direction="row" spacing={1} alignItems="center">
-                    {isGlobal && (
-                        <>
-                            <Tooltip title="Scroll Left">
-                                <IconButton
-                                    onClick={handleScrollLeft}
-                                    disabled={visibleStartTime <= startTime}
-                                    size="small"
-                                >
-                                    <ArrowBackIcon />
-                                </IconButton>
-                            </Tooltip>
-                            <Tooltip title="Zoom Out (Show More Time)">
-                                <IconButton
-                                    onClick={handleZoomOut}
-                                    disabled={zoomLevel >= (endTime - startTime)}
-                                    size="small"
-                                >
-                                    <ZoomOutIcon />
-                                </IconButton>
-                            </Tooltip>
-                            <Tooltip title="Zoom In (Show Less Time)">
-                                <IconButton
-                                    onClick={handleZoomIn}
-                                    disabled={zoomLevel <= 2}
-                                    size="small"
-                                >
-                                    <ZoomInIcon />
-                                </IconButton>
-                            </Tooltip>
-                            <Tooltip title="Scroll Right">
-                                <IconButton
-                                    onClick={handleScrollRight}
-                                    disabled={visibleEndTime >= endTime}
-                                    size="small"
-                                >
-                                    <ArrowForwardIcon />
-                                </IconButton>
-                            </Tooltip>
-                            <Tooltip
-                                title={autoScrollEnabled ?
-                                    "Disable Auto-Page Turn During Playback (Alt+A)" :
-                                    "Enable Auto-Page Turn During Playback (Alt+A)"}
-                            >
-                                <IconButton
-                                    onClick={toggleAutoScroll}
-                                    color={autoScrollEnabled ? "primary" : "default"}
-                                    size="small"
-                                >
-                                    {autoScrollEnabled ? <AutorenewIcon /> : <PauseCircleOutlineIcon />}
-                                </IconButton>
-                            </Tooltip>
-                            <Tooltip title="Jump to Current Playback Position (Alt+J)">
-                                <IconButton
-                                    onClick={jumpToCurrentTime}
-                                    disabled={!currentTime}
-                                    size="small"
-                                >
-                                    <CenterFocusStrongIcon />
-                                </IconButton>
-                            </Tooltip>
-                        </>
-                    )}
-                    <Button
-                        variant={isManualSyncing ? "outlined" : "contained"}
-                        onClick={startManualSync}
-                        disabled={!onPlaySegment}
-                        startIcon={isManualSyncing ? <CancelIcon /> : <PlayCircleOutlineIcon />}
-                        color={isManualSyncing ? "error" : "primary"}
-                    >
-                        {isManualSyncing ? "Cancel Sync" : "Manual Sync"}
-                    </Button>
-                    {isManualSyncing && (
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                    <TimelineControls
+                        isGlobal={isGlobal}
+                        visibleStartTime={visibleStartTime}
+                        visibleEndTime={visibleEndTime}
+                        startTime={startTime}
+                        endTime={endTime}
+                        zoomLevel={zoomLevel}
+                        autoScrollEnabled={autoScrollEnabled}
+                        currentTime={currentTime}
+                        isManualSyncing={isManualSyncing}
+                        isReplaceAllMode={isReplaceAllMode}
+                        isPaused={isPaused}
+                        onScrollLeft={handleScrollLeft}
+                        onZoomOut={handleZoomOut}
+                        onZoomIn={handleZoomIn}
+                        onScrollRight={handleScrollRight}
+                        onToggleAutoScroll={toggleAutoScroll}
+                        onJumpToCurrentTime={jumpToCurrentTime}
+                        onStartManualSync={startManualSync}
+                        onPauseResume={handlePauseResume}
+                        onStopAudio={onStopAudio}
+                    />
+                    {currentWordInfo && (
                         <Box>
                             <Typography variant="body2">
-                                Word {syncWordIndex + 1} of {words.length}: <strong>{words[syncWordIndex]?.text || ''}</strong>
+                                Word {currentWordInfo.index} of {currentWordInfo.total}: <strong>{currentWordInfo.text}</strong>
                             </Typography>
                             <Typography variant="caption" color="text.secondary">
                                 {isSpacebarPressed ?
@@ -366,7 +489,7 @@ export default function EditTimelineSection({
                             </Typography>
                         </Box>
                     )}
-                </Stack>
+                </Box>
             </Box>
         </>
     )

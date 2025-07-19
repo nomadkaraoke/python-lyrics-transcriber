@@ -109,7 +109,7 @@ export default function AudioPlayer({ apiClient, onTimeUpdate, audioHash }: Audi
         setIsPlaying(!isPlaying)
     }, [isPlaying])
 
-    // Expose both methods globally
+    // Expose methods and duration globally
     useEffect(() => {
         if (!apiClient) return
 
@@ -117,12 +117,14 @@ export default function AudioPlayer({ apiClient, onTimeUpdate, audioHash }: Audi
         const win = window as any
         win.seekAndPlayAudio = seekAndPlay
         win.toggleAudioPlayback = togglePlayback
+        win.getAudioDuration = () => duration
 
         return () => {
             delete win.seekAndPlayAudio
             delete win.toggleAudioPlayback
+            delete win.getAudioDuration
         }
-    }, [apiClient, togglePlayback])
+    }, [apiClient, togglePlayback, duration])
 
     if (!apiClient) return null
 

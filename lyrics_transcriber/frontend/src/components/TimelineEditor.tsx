@@ -7,6 +7,7 @@ interface TimelineEditorProps {
     startTime: number
     endTime: number
     onWordUpdate: (index: number, updates: Partial<Word>) => void
+    onUnsyncWord?: (index: number) => void
     currentTime?: number
     onPlaySegment?: (time: number) => void
     showPlaybackIndicator?: boolean
@@ -114,7 +115,7 @@ const TimelineCursor = styled(Box)(({ theme }) => ({
     zIndex: 1, // Ensure it's above other elements
 }))
 
-export default function TimelineEditor({ words, startTime, endTime, onWordUpdate, currentTime = 0, onPlaySegment, showPlaybackIndicator = true }: TimelineEditorProps) {
+export default function TimelineEditor({ words, startTime, endTime, onWordUpdate, onUnsyncWord, currentTime = 0, onPlaySegment, showPlaybackIndicator = true }: TimelineEditorProps) {
     const containerRef = useRef<HTMLDivElement>(null)
     const [dragState, setDragState] = useState<{
         wordIndex: number
@@ -157,29 +158,21 @@ export default function TimelineEditor({ words, startTime, endTime, onWordUpdate
         const position = ((time - startTime) / duration) * 100
         return Math.max(0, Math.min(100, position))
     }
-
     const generateTimelineMarks = () => {
         const marks = []
         const startSecond = Math.floor(startTime)
         const endSecond = Math.ceil(endTime)
 
-        // Generate marks for each 0.1 second interval
-        for (let time = startSecond; time <= endSecond; time += 0.1) {
+        // Generate marks for each second
+        for (let time = startSecond; time <= endSecond; time++) {
             if (time >= startTime && time <= endTime) {
                 const position = timeToPosition(time)
-                const isFullSecond = Math.abs(time - Math.round(time)) < 0.001
-
                 marks.push(
                     <Box key={time}>
-                        <TimelineMark
-                            className={isFullSecond ? '' : 'subsecond'}
-                            sx={{ left: `${position}%` }}
-                        />
-                        {isFullSecond && (
-                            <TimelineLabel sx={{ left: `${position}%` }}>
-                                {Math.round(time)}s
-                            </TimelineLabel>
-                        )}
+                        <TimelineMark sx={{ left: `${position}%` }} />
+                        <TimelineLabel sx={{ left: `${position}%` }}>
+                            {time}s
+                        </TimelineLabel>
                     </Box>
                 )
             }
@@ -276,6 +269,24 @@ export default function TimelineEditor({ words, startTime, endTime, onWordUpdate
         setDragState(null)
     }
 
+    const handleContextMenu = (e: React.MouseEvent, wordIndex: number) => {
+        e.preventDefault()
+        e.stopPropagation()
+        
+        // Only unsync synced words
+        const word = words[wordIndex]
+        if (word.start_time === null || word.end_time === null) return
+        
+        // Directly unsync the word without showing a menu
+        if (onUnsyncWord) {
+            console.log('TimelineEditor - Right-click unsync word', {
+                wordIndex,
+                wordText: word.text
+            })
+            onUnsyncWord(wordIndex)
+        }
+    }
+
     const isWordHighlighted = (word: Word): boolean => {
         if (!currentTime || word.start_time === null || word.end_time === null) return false
         return currentTime >= word.start_time && currentTime <= word.end_time
@@ -319,13 +330,12 @@ export default function TimelineEditor({ words, startTime, endTime, onWordUpdate
             )}
 
             {words.map((word, index) => {
-                // Skip words with null timestamps
+                // Only render synced words on the timeline
                 if (word.start_time === null || word.end_time === null) return null;
-
+                
                 const leftPosition = timeToPosition(word.start_time)
                 const rightPosition = timeToPosition(word.end_time)
                 const width = rightPosition - leftPosition
-                // Remove the visual padding that creates gaps
                 const adjustedWidth = width
 
                 return (
@@ -341,6 +351,7 @@ export default function TimelineEditor({ words, startTime, endTime, onWordUpdate
                             e.stopPropagation()
                             handleMouseDown(e, index, 'move')
                         }}
+                        onContextMenu={(e) => handleContextMenu(e, index)}
                     >
                         <ResizeHandle
                             className="left"

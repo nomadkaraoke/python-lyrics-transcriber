@@ -174,12 +174,36 @@ export default function ReferenceView({
         navigator.clipboard.writeText(text);
     };
 
+    // Helper function to copy all reference text from current source
+    const copyAllReferenceText = () => {
+        const allText = currentSourceSegments
+            .map(segment => segment.words.map(w => w.text).join(' '))
+            .join('\n');
+        copyToClipboard(allText);
+    };
+
     return (
         <Paper sx={{ p: 0.8, position: 'relative' }}>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 0.5 }}>
-                <Typography variant="h6" sx={{ fontSize: '0.9rem', mb: 0 }}>
-                    Reference Lyrics
-                </Typography>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <Typography variant="h6" sx={{ fontSize: '0.9rem', mb: 0 }}>
+                        Reference Lyrics
+                    </Typography>
+                    <IconButton
+                        size="small"
+                        onClick={copyAllReferenceText}
+                        sx={{ 
+                            padding: '2px',
+                            height: '20px',
+                            width: '20px',
+                            minHeight: '20px',
+                            minWidth: '20px'
+                        }}
+                        title="Copy all reference lyrics"
+                    >
+                        <ContentCopyIcon sx={{ fontSize: '1rem' }} />
+                    </IconButton>
+                </Box>
                 <SourceSelector
                     availableSources={availableSources}
                     currentSource={effectiveCurrentSource}

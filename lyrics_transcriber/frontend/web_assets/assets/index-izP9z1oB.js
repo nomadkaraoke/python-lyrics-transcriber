@@ -33824,9 +33824,31 @@ function ReferenceView({
   const copyToClipboard = (text) => {
     navigator.clipboard.writeText(text);
   };
+  const copyAllReferenceText = () => {
+    const allText = currentSourceSegments.map((segment) => segment.words.map((w) => w.text).join(" ")).join("\n");
+    copyToClipboard(allText);
+  };
   return /* @__PURE__ */ jsxRuntimeExports.jsxs(Paper, { sx: { p: 0.8, position: "relative" }, children: [
     /* @__PURE__ */ jsxRuntimeExports.jsxs(Box, { sx: { display: "flex", justifyContent: "space-between", alignItems: "center", mb: 0.5 }, children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx(Typography, { variant: "h6", sx: { fontSize: "0.9rem", mb: 0 }, children: "Reference Lyrics" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs(Box, { sx: { display: "flex", alignItems: "center", gap: 1 }, children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx(Typography, { variant: "h6", sx: { fontSize: "0.9rem", mb: 0 }, children: "Reference Lyrics" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx(
+          IconButton,
+          {
+            size: "small",
+            onClick: copyAllReferenceText,
+            sx: {
+              padding: "2px",
+              height: "20px",
+              width: "20px",
+              minHeight: "20px",
+              minWidth: "20px"
+            },
+            title: "Copy all reference lyrics",
+            children: /* @__PURE__ */ jsxRuntimeExports.jsx(ContentCopyIcon, { sx: { fontSize: "1rem" } })
+          }
+        )
+      ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsx(
         SourceSelector,
         {
@@ -34357,7 +34379,7 @@ const StopIcon = createSvgIcon(/* @__PURE__ */ jsxRuntimeExports.jsx("path", {
   d: "M6 6h12v12H6z"
 }), "Stop");
 const TAP_THRESHOLD_MS = 200;
-const DEFAULT_WORD_DURATION = 1;
+const DEFAULT_WORD_DURATION = 0.5;
 const OVERLAP_BUFFER = 0.01;
 function useManualSync({
   editedSegment,
@@ -34366,12 +34388,14 @@ function useManualSync({
   updateSegment: updateSegment2
 }) {
   const [isManualSyncing, setIsManualSyncing] = reactExports.useState(false);
+  const [isPaused, setIsPaused] = reactExports.useState(false);
   const [syncWordIndex, setSyncWordIndex] = reactExports.useState(-1);
   const currentTimeRef = reactExports.useRef(currentTime);
   const [isSpacebarPressed, setIsSpacebarPressed] = reactExports.useState(false);
   const wordStartTimeRef = reactExports.useRef(null);
   const wordsRef = reactExports.useRef([]);
   const spacebarPressTimeRef = reactExports.useRef(null);
+  const needsSegmentUpdateRef = reactExports.useRef(false);
   reactExports.useEffect(() => {
     currentTimeRef.current = currentTime;
   }, [currentTime]);
@@ -34380,13 +34404,58 @@ function useManualSync({
       wordsRef.current = [...editedSegment.words];
     }
   }, [editedSegment]);
+  reactExports.useEffect(() => {
+    if (needsSegmentUpdateRef.current) {
+      needsSegmentUpdateRef.current = false;
+      updateSegment2(wordsRef.current);
+    }
+  }, [updateSegment2, syncWordIndex]);
   const cleanupManualSync = reactExports.useCallback(() => {
     setIsManualSyncing(false);
+    setIsPaused(false);
     setSyncWordIndex(-1);
     setIsSpacebarPressed(false);
     wordStartTimeRef.current = null;
     spacebarPressTimeRef.current = null;
+    needsSegmentUpdateRef.current = false;
+    if (window.toggleAudioPlayback && window.isAudioPlaying) {
+      window.toggleAudioPlayback();
+    }
   }, []);
+  const pauseManualSync = reactExports.useCallback(() => {
+    if (isManualSyncing && !isPaused) {
+      console.log("useManualSync - Pausing manual sync");
+      setIsPaused(true);
+      if (window.toggleAudioPlayback && window.isAudioPlaying) {
+        window.toggleAudioPlayback();
+      }
+    }
+  }, [isManualSyncing, isPaused]);
+  const resumeManualSync = reactExports.useCallback(() => {
+    var _a;
+    if (isManualSyncing && isPaused) {
+      console.log("useManualSync - Resuming manual sync");
+      setIsPaused(false);
+      if (editedSegment) {
+        const firstUnsyncedIndex = editedSegment.words.findIndex(
+          (word) => word.start_time === null || word.end_time === null
+        );
+        if (firstUnsyncedIndex !== -1 && firstUnsyncedIndex !== syncWordIndex) {
+          console.log("useManualSync - Resuming from first unsynced word", {
+            previousIndex: syncWordIndex,
+            newIndex: firstUnsyncedIndex,
+            wordText: (_a = editedSegment.words[firstUnsyncedIndex]) == null ? void 0 : _a.text
+          });
+          setSyncWordIndex(firstUnsyncedIndex);
+        } else {
+          console.log("useManualSync - Resuming from current position", { syncWordIndex });
+        }
+      }
+      if (onPlaySegment && currentTimeRef.current !== void 0) {
+        onPlaySegment(currentTimeRef.current);
+      }
+    }
+  }, [isManualSyncing, isPaused, onPlaySegment, editedSegment, syncWordIndex]);
   const handleKeyDown = reactExports.useCallback((e) => {
     if (e.code !== "Space") return;
     console.log("useManualSync - Spacebar pressed down", {
@@ -34397,25 +34466,71 @@ function useManualSync({
     });
     e.preventDefault();
     e.stopPropagation();
-    if (isManualSyncing && editedSegment && !isSpacebarPressed) {
-      const currentWord = syncWordIndex < editedSegment.words.length ? editedSegment.words[syncWordIndex] : null;
-      console.log("useManualSync - Recording word start time", {
-        wordIndex: syncWordIndex,
-        wordText: currentWord == null ? void 0 : currentWord.text,
-        time: currentTimeRef.current
-      });
+    if (isManualSyncing && editedSegment && !isSpacebarPressed && !isPaused) {
       setIsSpacebarPressed(true);
       wordStartTimeRef.current = currentTimeRef.current;
       spacebarPressTimeRef.current = Date.now();
       if (syncWordIndex < editedSegment.words.length) {
         const newWords = [...wordsRef.current];
-        const currentWord2 = newWords[syncWordIndex];
-        currentWord2.start_time = currentTimeRef.current;
+        const currentWord = newWords[syncWordIndex];
+        const currentStartTime = currentTimeRef.current;
+        currentWord.start_time = currentStartTime;
+        if (syncWordIndex > 0) {
+          const previousWord = newWords[syncWordIndex - 1];
+          if (previousWord.start_time !== null) {
+            const timeSincePreviousStart = currentStartTime - previousWord.start_time;
+            const needsAdjustment = previousWord.end_time === null || previousWord.end_time !== null && previousWord.end_time > currentStartTime;
+            if (needsAdjustment) {
+              if (timeSincePreviousStart > 1) {
+                previousWord.end_time = previousWord.start_time + 0.5;
+                console.log("useManualSync - Gap detected, setting previous word end time to +500ms", {
+                  previousWordIndex: syncWordIndex - 1,
+                  previousWordText: previousWord.text,
+                  previousStartTime: previousWord.start_time,
+                  previousEndTime: previousWord.end_time,
+                  gap: timeSincePreviousStart.toFixed(2) + "s",
+                  reason: "gap > 1s"
+                });
+              } else {
+                previousWord.end_time = currentStartTime - 5e-3;
+                console.log("useManualSync - Setting previous word end time to current start - 5ms", {
+                  previousWordIndex: syncWordIndex - 1,
+                  previousWordText: previousWord.text,
+                  previousEndTime: previousWord.end_time,
+                  currentStartTime,
+                  gap: timeSincePreviousStart.toFixed(2) + "s",
+                  reason: "normal flow"
+                });
+              }
+            } else {
+              console.log("useManualSync - Preserving previous word timing (manually set)", {
+                previousWordIndex: syncWordIndex - 1,
+                previousWordText: previousWord.text,
+                previousStartTime: previousWord.start_time,
+                previousEndTime: previousWord.end_time,
+                preservedDuration: previousWord.end_time !== null ? (previousWord.end_time - previousWord.start_time).toFixed(2) + "s" : "N/A",
+                reason: "already timed correctly"
+              });
+            }
+          }
+        }
+        console.log("useManualSync - Recording word start time", {
+          wordIndex: syncWordIndex,
+          wordText: currentWord == null ? void 0 : currentWord.text,
+          time: currentStartTime
+        });
         wordsRef.current = newWords;
-        updateSegment2(newWords);
+        needsSegmentUpdateRef.current = true;
       }
     } else if (!isManualSyncing && editedSegment && onPlaySegment) {
-      console.log("useManualSync - Handling segment playback");
+      console.log("useManualSync - Handling segment playback", {
+        editedSegmentId: editedSegment.id,
+        isGlobalReplacement: editedSegment.id === "global-replacement"
+      });
+      if (editedSegment.id === "global-replacement") {
+        console.log("useManualSync - Ignoring playback for global replacement - please use Manual Sync");
+        return;
+      }
       const startTime = editedSegment.start_time ?? 0;
       const endTime = editedSegment.end_time ?? 0;
       if (currentTimeRef.current >= startTime && currentTimeRef.current <= endTime) {
@@ -34426,7 +34541,7 @@ function useManualSync({
         onPlaySegment(startTime);
       }
     }
-  }, [isManualSyncing, editedSegment, syncWordIndex, onPlaySegment, updateSegment2, isSpacebarPressed]);
+  }, [isManualSyncing, editedSegment, syncWordIndex, onPlaySegment, isSpacebarPressed, isPaused]);
   const handleKeyUp = reactExports.useCallback((e) => {
     if (e.code !== "Space") return;
     console.log("useManualSync - Spacebar released", {
@@ -34438,7 +34553,7 @@ function useManualSync({
     });
     e.preventDefault();
     e.stopPropagation();
-    if (isManualSyncing && editedSegment && isSpacebarPressed) {
+    if (isManualSyncing && editedSegment && isSpacebarPressed && !isPaused) {
       const currentWord = syncWordIndex < editedSegment.words.length ? editedSegment.words[syncWordIndex] : null;
       const pressDuration = spacebarPressTimeRef.current ? Date.now() - spacebarPressTimeRef.current : 0;
       const isTap = pressDuration < TAP_THRESHOLD_MS;
@@ -34449,6 +34564,7 @@ function useManualSync({
         endTime: currentTimeRef.current,
         pressDuration: `${pressDuration}ms`,
         isTap,
+        tapThreshold: TAP_THRESHOLD_MS,
         duration: currentWord ? (currentTimeRef.current - (wordStartTimeRef.current || 0)).toFixed(2) + "s" : "N/A"
       });
       setIsSpacebarPressed(false);
@@ -34459,11 +34575,19 @@ function useManualSync({
           const defaultEndTime = (wordStartTimeRef.current || currentTimeRef.current) + DEFAULT_WORD_DURATION;
           currentWord2.end_time = defaultEndTime;
           console.log("useManualSync - Tap detected, setting default duration", {
+            wordText: currentWord2.text,
+            startTime: wordStartTimeRef.current,
             defaultEndTime,
             duration: DEFAULT_WORD_DURATION
           });
         } else {
           currentWord2.end_time = currentTimeRef.current;
+          console.log("useManualSync - Hold detected, using actual timing", {
+            wordText: currentWord2.text,
+            startTime: wordStartTimeRef.current,
+            endTime: currentTimeRef.current,
+            actualDuration: (currentTimeRef.current - (wordStartTimeRef.current || 0)).toFixed(2) + "s"
+          });
         }
         wordsRef.current = newWords;
         if (syncWordIndex === editedSegment.words.length - 1) {
@@ -34480,10 +34604,10 @@ function useManualSync({
           });
           setSyncWordIndex(syncWordIndex + 1);
         }
-        updateSegment2(newWords);
+        needsSegmentUpdateRef.current = true;
       }
     }
-  }, [isManualSyncing, editedSegment, syncWordIndex, updateSegment2, isSpacebarPressed]);
+  }, [isManualSyncing, editedSegment, syncWordIndex, isSpacebarPressed, isPaused]);
   reactExports.useEffect(() => {
     if (isManualSyncing && editedSegment && syncWordIndex > 0) {
       const newWords = [...wordsRef.current];
@@ -34499,10 +34623,10 @@ function useManualSync({
         });
         prevWord.end_time = currentWord.start_time - OVERLAP_BUFFER;
         wordsRef.current = newWords;
-        updateSegment2(newWords);
+        needsSegmentUpdateRef.current = true;
       }
     }
-  }, [syncWordIndex, isManualSyncing, editedSegment, updateSegment2]);
+  }, [syncWordIndex, isManualSyncing, editedSegment]);
   const handleSpacebar = reactExports.useCallback((e) => {
     if (e.type === "keydown") {
       handleKeyDown(e);
@@ -34511,33 +34635,62 @@ function useManualSync({
     }
   }, [handleKeyDown, handleKeyUp]);
   const startManualSync = reactExports.useCallback(() => {
+    var _a;
     if (isManualSyncing) {
       cleanupManualSync();
       return;
     }
     if (!editedSegment || !onPlaySegment) return;
     wordsRef.current = [...editedSegment.words];
+    const firstUnsyncedIndex = editedSegment.words.findIndex(
+      (word) => word.start_time === null || word.end_time === null
+    );
+    const startIndex = firstUnsyncedIndex !== -1 ? firstUnsyncedIndex : 0;
+    console.log("useManualSync - Starting manual sync", {
+      totalWords: editedSegment.words.length,
+      startingFromIndex: startIndex,
+      startingWord: (_a = editedSegment.words[startIndex]) == null ? void 0 : _a.text
+    });
     setIsManualSyncing(true);
-    setSyncWordIndex(0);
+    setSyncWordIndex(startIndex);
     setIsSpacebarPressed(false);
     wordStartTimeRef.current = null;
     spacebarPressTimeRef.current = null;
+    needsSegmentUpdateRef.current = false;
     onPlaySegment((editedSegment.start_time ?? 0) - 3);
   }, [isManualSyncing, editedSegment, onPlaySegment, cleanupManualSync]);
   reactExports.useEffect(() => {
-    var _a;
-    if (!editedSegment) return;
-    const endTime = editedSegment.end_time ?? 0;
-    if (window.isAudioPlaying && currentTimeRef.current > endTime) {
-      console.log("Stopping playback: current time exceeded end time");
-      (_a = window.toggleAudioPlayback) == null ? void 0 : _a.call(window);
-      cleanupManualSync();
+    if (!editedSegment || !isManualSyncing) return;
+    if (editedSegment.id === "global-replacement") {
+      console.log("useManualSync - Skipping auto-stop for global replacement segment");
+      return;
     }
-  }, [isManualSyncing, editedSegment, currentTimeRef, cleanupManualSync]);
+    const checkAutoStop = () => {
+      var _a;
+      const endTime = editedSegment.end_time ?? 0;
+      if (window.isAudioPlaying && currentTimeRef.current > endTime) {
+        console.log("useManualSync - Auto-stopping: current time exceeded end time", {
+          currentTime: currentTimeRef.current,
+          endTime,
+          segmentId: editedSegment.id
+        });
+        (_a = window.toggleAudioPlayback) == null ? void 0 : _a.call(window);
+        cleanupManualSync();
+      }
+    };
+    checkAutoStop();
+    const intervalId = setInterval(checkAutoStop, 100);
+    return () => {
+      clearInterval(intervalId);
+    };
+  }, [isManualSyncing, editedSegment, cleanupManualSync]);
   return {
     isManualSyncing,
+    isPaused,
     syncWordIndex,
     startManualSync,
+    pauseManualSync,
+    resumeManualSync,
     cleanupManualSync,
     handleSpacebar,
     isSpacebarPressed
@@ -34566,6 +34719,9 @@ const AutorenewIcon = createSvgIcon(/* @__PURE__ */ jsxRuntimeExports.jsx("path"
 const PauseCircleOutlineIcon = createSvgIcon(/* @__PURE__ */ jsxRuntimeExports.jsx("path", {
   d: "M9 16h2V8H9zm3-14C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2m0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8m1-4h2V8h-2z"
 }), "PauseCircleOutline");
+const PlayArrowIcon = createSvgIcon(/* @__PURE__ */ jsxRuntimeExports.jsx("path", {
+  d: "M8 5v14l11-7z"
+}), "PlayArrow");
 const CenterFocusStrongIcon = createSvgIcon(/* @__PURE__ */ jsxRuntimeExports.jsx("path", {
   d: "M12 8c-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4-1.79-4-4-4m-7 7H3v4c0 1.1.9 2 2 2h4v-2H5zM5 5h4V3H5c-1.1 0-2 .9-2 2v4h2zm14-2h-4v2h4v4h2V5c0-1.1-.9-2-2-2m0 16h-4v2h4c1.1 0 2-.9 2-2v-4h-2z"
 }), "CenterFocusStrong");
@@ -34668,7 +34824,7 @@ const TimelineCursor = styled(Box)(({ theme: theme2 }) => ({
   zIndex: 1
   // Ensure it's above other elements
 }));
-function TimelineEditor({ words, startTime, endTime, onWordUpdate, currentTime = 0, onPlaySegment, showPlaybackIndicator = true }) {
+function TimelineEditor({ words, startTime, endTime, onWordUpdate, onUnsyncWord, currentTime = 0, onPlaySegment, showPlaybackIndicator = true }) {
   const containerRef = reactExports.useRef(null);
   const [dragState, setDragState] = reactExports.useState(null);
   const MIN_DURATION = 0.1;
@@ -34694,21 +34850,14 @@ function TimelineEditor({ words, startTime, endTime, onWordUpdate, currentTime =
     const marks = [];
     const startSecond = Math.floor(startTime);
     const endSecond = Math.ceil(endTime);
-    for (let time = startSecond; time <= endSecond; time += 0.1) {
+    for (let time = startSecond; time <= endSecond; time++) {
       if (time >= startTime && time <= endTime) {
         const position2 = timeToPosition(time);
-        const isFullSecond = Math.abs(time - Math.round(time)) < 1e-3;
         marks.push(
           /* @__PURE__ */ jsxRuntimeExports.jsxs(Box, { children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx(
-              TimelineMark,
-              {
-                className: isFullSecond ? "" : "subsecond",
-                sx: { left: `${position2}%` }
-              }
-            ),
-            isFullSecond && /* @__PURE__ */ jsxRuntimeExports.jsxs(TimelineLabel, { sx: { left: `${position2}%` }, children: [
-              Math.round(time),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(TimelineMark, { sx: { left: `${position2}%` } }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs(TimelineLabel, { sx: { left: `${position2}%` }, children: [
+              time,
               "s"
             ] })
           ] }, time)
@@ -34788,6 +34937,19 @@ function TimelineEditor({ words, startTime, endTime, onWordUpdate, currentTime =
   const handleMouseUp = () => {
     setDragState(null);
   };
+  const handleContextMenu = (e, wordIndex) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const word = words[wordIndex];
+    if (word.start_time === null || word.end_time === null) return;
+    if (onUnsyncWord) {
+      console.log("TimelineEditor - Right-click unsync word", {
+        wordIndex,
+        wordText: word.text
+      });
+      onUnsyncWord(wordIndex);
+    }
+  };
   const isWordHighlighted = (word) => {
     if (!currentTime || word.start_time === null || word.end_time === null) return false;
     return currentTime >= word.start_time && currentTime <= word.end_time;
@@ -34842,6 +35004,7 @@ function TimelineEditor({ words, startTime, endTime, onWordUpdate, currentTime =
                 e.stopPropagation();
                 handleMouseDown(e, index, "move");
               },
+              onContextMenu: (e) => handleContextMenu(e, index),
               children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx(
                   ResizeHandle,
@@ -34873,6 +35036,125 @@ function TimelineEditor({ words, startTime, endTime, onWordUpdate, currentTime =
     }
   );
 }
+const TimelineControls = reactExports.memo(({
+  isGlobal,
+  visibleStartTime,
+  visibleEndTime,
+  startTime,
+  endTime,
+  zoomLevel,
+  autoScrollEnabled,
+  currentTime,
+  isManualSyncing,
+  isReplaceAllMode,
+  isPaused,
+  onScrollLeft,
+  onZoomOut,
+  onZoomIn,
+  onScrollRight,
+  onToggleAutoScroll,
+  onJumpToCurrentTime,
+  onStartManualSync,
+  onPauseResume,
+  onStopAudio
+}) => {
+  return /* @__PURE__ */ jsxRuntimeExports.jsxs(Stack, { direction: "row", spacing: 1, alignItems: "center", children: [
+    isGlobal && /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx(Tooltip, { title: "Scroll Left", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+        IconButton,
+        {
+          onClick: onScrollLeft,
+          disabled: visibleStartTime <= startTime,
+          size: "small",
+          children: /* @__PURE__ */ jsxRuntimeExports.jsx(ArrowBack, {})
+        }
+      ) }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx(Tooltip, { title: "Zoom Out (Show More Time)", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+        IconButton,
+        {
+          onClick: onZoomOut,
+          disabled: zoomLevel >= endTime - startTime || isReplaceAllMode && isManualSyncing && !isPaused,
+          size: "small",
+          children: /* @__PURE__ */ jsxRuntimeExports.jsx(ZoomOutIcon, {})
+        }
+      ) }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx(Tooltip, { title: "Zoom In (Show Less Time)", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+        IconButton,
+        {
+          onClick: onZoomIn,
+          disabled: zoomLevel <= 2 || isReplaceAllMode && isManualSyncing && !isPaused,
+          size: "small",
+          children: /* @__PURE__ */ jsxRuntimeExports.jsx(ZoomInIcon, {})
+        }
+      ) }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx(Tooltip, { title: "Scroll Right", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+        IconButton,
+        {
+          onClick: onScrollRight,
+          disabled: visibleEndTime >= endTime,
+          size: "small",
+          children: /* @__PURE__ */ jsxRuntimeExports.jsx(ArrowForwardIcon, {})
+        }
+      ) }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx(
+        Tooltip,
+        {
+          title: autoScrollEnabled ? "Disable Auto-Page Turn During Playback" : "Enable Auto-Page Turn During Playback",
+          children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+            IconButton,
+            {
+              onClick: onToggleAutoScroll,
+              color: autoScrollEnabled ? "primary" : "default",
+              size: "small",
+              children: autoScrollEnabled ? /* @__PURE__ */ jsxRuntimeExports.jsx(AutorenewIcon, {}) : /* @__PURE__ */ jsxRuntimeExports.jsx(PauseCircleOutlineIcon, {})
+            }
+          )
+        }
+      ),
+      /* @__PURE__ */ jsxRuntimeExports.jsx(Tooltip, { title: "Jump to Current Playback Position", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+        IconButton,
+        {
+          onClick: onJumpToCurrentTime,
+          disabled: !currentTime,
+          size: "small",
+          children: /* @__PURE__ */ jsxRuntimeExports.jsx(CenterFocusStrongIcon, {})
+        }
+      ) })
+    ] }),
+    isReplaceAllMode && onStopAudio && /* @__PURE__ */ jsxRuntimeExports.jsx(
+      Button,
+      {
+        variant: "outlined",
+        onClick: onStopAudio,
+        startIcon: /* @__PURE__ */ jsxRuntimeExports.jsx(StopIcon, {}),
+        color: "error",
+        size: "small",
+        children: "Stop Audio"
+      }
+    ),
+    /* @__PURE__ */ jsxRuntimeExports.jsx(
+      Button,
+      {
+        variant: isManualSyncing ? "outlined" : "contained",
+        onClick: onStartManualSync,
+        startIcon: isManualSyncing ? /* @__PURE__ */ jsxRuntimeExports.jsx(CancelIcon, {}) : /* @__PURE__ */ jsxRuntimeExports.jsx(PlayCircleOutlineIcon, {}),
+        color: isManualSyncing ? "error" : "primary",
+        children: isManualSyncing ? "Cancel Sync" : "Manual Sync"
+      }
+    ),
+    isManualSyncing && isReplaceAllMode && /* @__PURE__ */ jsxRuntimeExports.jsx(
+      Button,
+      {
+        variant: "outlined",
+        onClick: onPauseResume,
+        startIcon: isPaused ? /* @__PURE__ */ jsxRuntimeExports.jsx(PlayArrowIcon, {}) : /* @__PURE__ */ jsxRuntimeExports.jsx(PauseCircleOutlineIcon, {}),
+        color: isPaused ? "success" : "warning",
+        size: "small",
+        children: isPaused ? "Resume" : "Pause"
+      }
+    )
+  ] });
+});
 function EditTimelineSection({
   words,
   startTime,
@@ -34886,16 +35168,32 @@ function EditTimelineSection({
   syncWordIndex,
   isSpacebarPressed,
   onWordUpdate,
+  onUnsyncWord,
   onPlaySegment,
+  onStopAudio,
   startManualSync,
-  isGlobal = false
+  pauseManualSync,
+  resumeManualSync,
+  isPaused = false,
+  isGlobal = false,
+  defaultZoomLevel = 10,
+  isReplaceAllMode = false
 }) {
-  var _a;
-  const [zoomLevel, setZoomLevel] = reactExports.useState(10);
+  const [zoomLevel, setZoomLevel] = reactExports.useState(defaultZoomLevel);
   const [visibleStartTime, setVisibleStartTime] = reactExports.useState(startTime);
   const [visibleEndTime, setVisibleEndTime] = reactExports.useState(Math.min(startTime + zoomLevel, endTime));
   const [autoScrollEnabled, setAutoScrollEnabled] = reactExports.useState(true);
   const timelineRef = reactExports.useRef(null);
+  const effectiveTimeRange = reactExports.useMemo(() => ({
+    start: isGlobal ? visibleStartTime : startTime,
+    end: isGlobal ? visibleEndTime : endTime
+  }), [isGlobal, visibleStartTime, visibleEndTime, startTime, endTime]);
+  reactExports.useEffect(() => {
+    if (isManualSyncing && !isPaused) {
+      console.log("EditTimelineSection - Auto-enabling auto-scroll for manual sync");
+      setAutoScrollEnabled(true);
+    }
+  }, [isManualSyncing, isPaused]);
   reactExports.useEffect(() => {
     if (isGlobal) {
       setVisibleStartTime(startTime);
@@ -34905,8 +35203,13 @@ function EditTimelineSection({
       setVisibleEndTime(endTime);
     }
   }, [startTime, endTime, zoomLevel, isGlobal]);
+  const lastScrollUpdateRef = reactExports.useRef(0);
+  const SCROLL_THROTTLE_MS = 100;
   reactExports.useEffect(() => {
     if (!isGlobal || !currentTime || !autoScrollEnabled) return;
+    const now = Date.now();
+    if (now - lastScrollUpdateRef.current < SCROLL_THROTTLE_MS) return;
+    lastScrollUpdateRef.current = now;
     if (currentTime < visibleStartTime) {
       const newStart = Math.max(startTime, currentTime);
       const newEnd = Math.min(endTime, newStart + zoomLevel);
@@ -34935,9 +35238,21 @@ function EditTimelineSection({
       setVisibleEndTime(endTime);
     }
   }, [zoomLevel, startTime, endTime, isGlobal, visibleStartTime]);
-  const toggleAutoScroll = () => {
+  const handleZoomIn = reactExports.useCallback(() => {
+    if (isReplaceAllMode && isManualSyncing && !isPaused) return;
+    if (zoomLevel > 2) {
+      setZoomLevel(zoomLevel - 2);
+    }
+  }, [isReplaceAllMode, isManualSyncing, isPaused, zoomLevel]);
+  const handleZoomOut = reactExports.useCallback(() => {
+    if (isReplaceAllMode && isManualSyncing && !isPaused) return;
+    if (zoomLevel < endTime - startTime) {
+      setZoomLevel(zoomLevel + 2);
+    }
+  }, [isReplaceAllMode, isManualSyncing, isPaused, zoomLevel, endTime, startTime]);
+  const toggleAutoScroll = reactExports.useCallback(() => {
     setAutoScrollEnabled(!autoScrollEnabled);
-  };
+  }, [autoScrollEnabled]);
   const jumpToCurrentTime = reactExports.useCallback(() => {
     if (!isGlobal || !currentTime) return;
     const halfZoom = zoomLevel / 2;
@@ -34949,34 +35264,6 @@ function EditTimelineSection({
     setVisibleStartTime(newStart);
     setVisibleEndTime(newEnd);
   }, [currentTime, zoomLevel, startTime, endTime, isGlobal]);
-  reactExports.useEffect(() => {
-    const handleKeyDown = (e) => {
-      if (isGlobal) {
-        if (e.altKey && e.key === "a") {
-          e.preventDefault();
-          toggleAutoScroll();
-        }
-        if (e.altKey && e.key === "j") {
-          e.preventDefault();
-          jumpToCurrentTime();
-        }
-      }
-    };
-    window.addEventListener("keydown", handleKeyDown);
-    return () => {
-      window.removeEventListener("keydown", handleKeyDown);
-    };
-  }, [isGlobal, toggleAutoScroll, jumpToCurrentTime]);
-  const handleZoomIn = () => {
-    if (zoomLevel > 2) {
-      setZoomLevel(zoomLevel - 2);
-    }
-  };
-  const handleZoomOut = () => {
-    if (zoomLevel < endTime - startTime) {
-      setZoomLevel(zoomLevel + 2);
-    }
-  };
   const handleScroll = reactExports.useCallback((event) => {
     if (isGlobal && event.deltaX !== 0) {
       event.preventDefault();
@@ -34996,7 +35283,7 @@ function EditTimelineSection({
       setVisibleEndTime(newEnd);
     }
   }, [isGlobal, visibleStartTime, visibleEndTime, startTime, endTime, zoomLevel]);
-  const handleScrollLeft = () => {
+  const handleScrollLeft = reactExports.useCallback(() => {
     if (!isGlobal) return;
     setAutoScrollEnabled(false);
     const scrollAmount = zoomLevel * 0.25;
@@ -35004,8 +35291,8 @@ function EditTimelineSection({
     const newEnd = newStart + zoomLevel;
     setVisibleStartTime(newStart);
     setVisibleEndTime(newEnd);
-  };
-  const handleScrollRight = () => {
+  }, [isGlobal, zoomLevel, startTime, visibleStartTime]);
+  const handleScrollRight = reactExports.useCallback(() => {
     if (!isGlobal) return;
     setAutoScrollEnabled(false);
     const scrollAmount = zoomLevel * 0.25;
@@ -35019,9 +35306,25 @@ function EditTimelineSection({
       setVisibleEndTime(newEnd);
     }
     setVisibleStartTime(newStart);
-  };
-  const effectiveStartTime = isGlobal ? visibleStartTime : startTime;
-  const effectiveEndTime = isGlobal ? visibleEndTime : endTime;
+  }, [isGlobal, zoomLevel, endTime, visibleEndTime, startTime]);
+  const handlePauseResume = reactExports.useCallback(() => {
+    if (isPaused && resumeManualSync) {
+      resumeManualSync();
+    } else if (!isPaused && pauseManualSync) {
+      pauseManualSync();
+    }
+  }, [isPaused, resumeManualSync, pauseManualSync]);
+  const currentWordInfo = reactExports.useMemo(() => {
+    var _a;
+    if (!isManualSyncing || syncWordIndex < 0 || syncWordIndex >= words.length) {
+      return null;
+    }
+    return {
+      index: syncWordIndex + 1,
+      total: words.length,
+      text: ((_a = words[syncWordIndex]) == null ? void 0 : _a.text) || ""
+    };
+  }, [isManualSyncing, syncWordIndex, words]);
   return /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
     /* @__PURE__ */ jsxRuntimeExports.jsx(
       Box,
@@ -35033,11 +35336,12 @@ function EditTimelineSection({
           TimelineEditor,
           {
             words,
-            startTime: effectiveStartTime,
-            endTime: effectiveEndTime,
+            startTime: effectiveTimeRange.start,
+            endTime: effectiveTimeRange.end,
             onWordUpdate,
             currentTime,
-            onPlaySegment
+            onPlaySegment,
+            onUnsyncWord
           }
         )
       }
@@ -35054,88 +35358,40 @@ function EditTimelineSection({
         " - ",
         (currentEndTime == null ? void 0 : currentEndTime.toFixed(2)) ?? "N/A"
       ] }),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs(Stack, { direction: "row", spacing: 1, alignItems: "center", children: [
-        isGlobal && /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx(Tooltip, { title: "Scroll Left", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
-            IconButton,
-            {
-              onClick: handleScrollLeft,
-              disabled: visibleStartTime <= startTime,
-              size: "small",
-              children: /* @__PURE__ */ jsxRuntimeExports.jsx(ArrowBack, {})
-            }
-          ) }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx(Tooltip, { title: "Zoom Out (Show More Time)", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
-            IconButton,
-            {
-              onClick: handleZoomOut,
-              disabled: zoomLevel >= endTime - startTime,
-              size: "small",
-              children: /* @__PURE__ */ jsxRuntimeExports.jsx(ZoomOutIcon, {})
-            }
-          ) }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx(Tooltip, { title: "Zoom In (Show Less Time)", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
-            IconButton,
-            {
-              onClick: handleZoomIn,
-              disabled: zoomLevel <= 2,
-              size: "small",
-              children: /* @__PURE__ */ jsxRuntimeExports.jsx(ZoomInIcon, {})
-            }
-          ) }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx(Tooltip, { title: "Scroll Right", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
-            IconButton,
-            {
-              onClick: handleScrollRight,
-              disabled: visibleEndTime >= endTime,
-              size: "small",
-              children: /* @__PURE__ */ jsxRuntimeExports.jsx(ArrowForwardIcon, {})
-            }
-          ) }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx(
-            Tooltip,
-            {
-              title: autoScrollEnabled ? "Disable Auto-Page Turn During Playback (Alt+A)" : "Enable Auto-Page Turn During Playback (Alt+A)",
-              children: /* @__PURE__ */ jsxRuntimeExports.jsx(
-                IconButton,
-                {
-                  onClick: toggleAutoScroll,
-                  color: autoScrollEnabled ? "primary" : "default",
-                  size: "small",
-                  children: autoScrollEnabled ? /* @__PURE__ */ jsxRuntimeExports.jsx(AutorenewIcon, {}) : /* @__PURE__ */ jsxRuntimeExports.jsx(PauseCircleOutlineIcon, {})
-                }
-              )
-            }
-          ),
-          /* @__PURE__ */ jsxRuntimeExports.jsx(Tooltip, { title: "Jump to Current Playback Position (Alt+J)", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
-            IconButton,
-            {
-              onClick: jumpToCurrentTime,
-              disabled: !currentTime,
-              size: "small",
-              children: /* @__PURE__ */ jsxRuntimeExports.jsx(CenterFocusStrongIcon, {})
-            }
-          ) })
-        ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs(Box, { sx: { display: "flex", alignItems: "center", gap: 2 }, children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx(
-          Button,
+          TimelineControls,
           {
-            variant: isManualSyncing ? "outlined" : "contained",
-            onClick: startManualSync,
-            disabled: !onPlaySegment,
-            startIcon: isManualSyncing ? /* @__PURE__ */ jsxRuntimeExports.jsx(CancelIcon, {}) : /* @__PURE__ */ jsxRuntimeExports.jsx(PlayCircleOutlineIcon, {}),
-            color: isManualSyncing ? "error" : "primary",
-            children: isManualSyncing ? "Cancel Sync" : "Manual Sync"
+            isGlobal,
+            visibleStartTime,
+            visibleEndTime,
+            startTime,
+            endTime,
+            zoomLevel,
+            autoScrollEnabled,
+            currentTime,
+            isManualSyncing,
+            isReplaceAllMode,
+            isPaused,
+            onScrollLeft: handleScrollLeft,
+            onZoomOut: handleZoomOut,
+            onZoomIn: handleZoomIn,
+            onScrollRight: handleScrollRight,
+            onToggleAutoScroll: toggleAutoScroll,
+            onJumpToCurrentTime: jumpToCurrentTime,
+            onStartManualSync: startManualSync,
+            onPauseResume: handlePauseResume,
+            onStopAudio
           }
         ),
-        isManualSyncing && /* @__PURE__ */ jsxRuntimeExports.jsxs(Box, { children: [
+        currentWordInfo && /* @__PURE__ */ jsxRuntimeExports.jsxs(Box, { children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs(Typography, { variant: "body2", children: [
             "Word ",
-            syncWordIndex + 1,
+            currentWordInfo.index,
             " of ",
-            words.length,
+            currentWordInfo.total,
             ": ",
-            /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: ((_a = words[syncWordIndex]) == null ? void 0 : _a.text) || "" })
+            /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: currentWordInfo.text })
           ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsx(Typography, { variant: "caption", color: "text.secondary", children: isSpacebarPressed ? "Holding spacebar... Release when word ends" : "Press spacebar when word starts (tap for short words, hold for long words)" })
         ] })
@@ -36317,6 +36573,9 @@ function PreviewVideoSection({
 const CloudUpload = createSvgIcon(/* @__PURE__ */ jsxRuntimeExports.jsx("path", {
   d: "M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96M14 13v4h-4v-4H7l5-5 5 5z"
 }), "CloudUpload");
+const ContentPasteIcon = createSvgIcon(/* @__PURE__ */ jsxRuntimeExports.jsx("path", {
+  d: "M19 2h-4.18C14.4.84 13.3 0 12 0S9.6.84 9.18 2H5c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2m-7 0c.55 0 1 .45 1 1s-.45 1-1 1-1-.45-1-1 .45-1 1-1m7 18H5V4h2v3h10V4h2z"
+}), "ContentPaste");
 const EditIcon = createSvgIcon(/* @__PURE__ */ jsxRuntimeExports.jsx("path", {
   d: "M3 17.25V21h3.75L17.81 9.94l-3.75-3.75zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34a.996.996 0 0 0-1.41 0l-1.83 1.83 3.75 3.75z"
 }), "Edit");
@@ -36335,9 +36594,6 @@ const OndemandVideo = createSvgIcon(/* @__PURE__ */ jsxRuntimeExports.jsx("path"
 const PauseIcon = createSvgIcon(/* @__PURE__ */ jsxRuntimeExports.jsx("path", {
   d: "M6 19h4V5H6zm8-14v14h4V5z"
 }), "Pause");
-const PlayArrowIcon = createSvgIcon(/* @__PURE__ */ jsxRuntimeExports.jsx("path", {
-  d: "M8 5v14l11-7z"
-}), "PlayArrow");
 const RedoIcon = createSvgIcon(/* @__PURE__ */ jsxRuntimeExports.jsx("path", {
   d: "M18.4 10.6C16.55 8.99 14.15 8 11.5 8c-4.65 0-8.58 3.03-9.96 7.22L3.9 16c1.05-3.19 4.05-5.5 7.6-5.5 1.95 0 3.73.72 5.12 1.88L13 16h9V7z"
 }), "Redo");
@@ -36621,6 +36877,545 @@ function ReviewChangesModal({
     }
   );
 }
+function ReplaceAllLyricsModal({
+  open,
+  onClose,
+  onSave,
+  onPlaySegment,
+  currentTime = 0,
+  setModalSpacebarHandler
+}) {
+  const [inputText, setInputText] = reactExports.useState("");
+  const [isReplaced, setIsReplaced] = reactExports.useState(false);
+  const [globalSegment, setGlobalSegment] = reactExports.useState(null);
+  const [originalSegments, setOriginalSegments] = reactExports.useState([]);
+  const [currentSegments, setCurrentSegments] = reactExports.useState([]);
+  const getAudioDuration = reactExports.useCallback(() => {
+    if (window.getAudioDuration) {
+      const duration2 = window.getAudioDuration();
+      return duration2 > 0 ? duration2 : 600;
+    }
+    return 600;
+  }, []);
+  const parseInfo = reactExports.useMemo(() => {
+    if (!inputText.trim()) return { lines: 0, words: 0 };
+    const lines = inputText.trim().split("\n").filter((line2) => line2.trim().length > 0);
+    const totalWords = lines.reduce((count, line2) => {
+      return count + line2.trim().split(/\s+/).length;
+    }, 0);
+    return { lines: lines.length, words: totalWords };
+  }, [inputText]);
+  const processLyrics = reactExports.useCallback(() => {
+    if (!inputText.trim()) return;
+    const lines = inputText.trim().split("\n").filter((line2) => line2.trim().length > 0);
+    const newSegments = [];
+    const allWords = [];
+    lines.forEach((line2) => {
+      const words = line2.trim().split(/\s+/).filter((word) => word.length > 0);
+      const segmentWords = [];
+      words.forEach((wordText) => {
+        const word = {
+          id: nanoid(),
+          text: wordText,
+          start_time: null,
+          end_time: null,
+          confidence: 1,
+          created_during_correction: true
+        };
+        segmentWords.push(word);
+        allWords.push(word);
+      });
+      const segment = {
+        id: nanoid(),
+        text: line2.trim(),
+        words: segmentWords,
+        start_time: null,
+        end_time: null
+      };
+      newSegments.push(segment);
+    });
+    const audioDuration = getAudioDuration();
+    const endTime = Math.max(audioDuration, 3600);
+    console.log("ReplaceAllLyricsModal - Creating global segment", {
+      audioDuration,
+      endTime,
+      wordCount: allWords.length
+    });
+    const globalSegment2 = {
+      id: "global-replacement",
+      text: allWords.map((w) => w.text).join(" "),
+      words: allWords,
+      start_time: 0,
+      end_time: endTime
+    };
+    setCurrentSegments(newSegments);
+    setOriginalSegments(JSON.parse(JSON.stringify(newSegments)));
+    setGlobalSegment(globalSegment2);
+    setIsReplaced(true);
+  }, [inputText, getAudioDuration]);
+  const handlePasteFromClipboard = reactExports.useCallback(async () => {
+    try {
+      const text = await navigator.clipboard.readText();
+      setInputText(text);
+    } catch (error) {
+      console.error("Failed to read from clipboard:", error);
+      alert("Failed to read from clipboard. Please paste manually.");
+    }
+  }, []);
+  const updateSegment2 = reactExports.useCallback((newWords) => {
+    if (!globalSegment) return;
+    const validStartTimes = newWords.map((w) => w.start_time).filter((t) => t !== null);
+    const validEndTimes = newWords.map((w) => w.end_time).filter((t) => t !== null);
+    const segmentStartTime = validStartTimes.length > 0 ? Math.min(...validStartTimes) : null;
+    const segmentEndTime = validEndTimes.length > 0 ? Math.max(...validEndTimes) : null;
+    const updatedGlobalSegment = {
+      ...globalSegment,
+      words: newWords,
+      text: newWords.map((w) => w.text).join(" "),
+      start_time: segmentStartTime,
+      end_time: segmentEndTime
+    };
+    setGlobalSegment(updatedGlobalSegment);
+    const updatedSegments = currentSegments.map((segment) => {
+      const segmentWordsWithTiming = segment.words.map((segmentWord) => {
+        const globalWord = newWords.find((w) => w.id === segmentWord.id);
+        return globalWord || segmentWord;
+      });
+      const wordsWithTiming = segmentWordsWithTiming.filter(
+        (w) => w.start_time !== null && w.end_time !== null
+      );
+      if (wordsWithTiming.length === segmentWordsWithTiming.length && wordsWithTiming.length > 0) {
+        const segmentStart = Math.min(...wordsWithTiming.map((w) => w.start_time));
+        const segmentEnd = Math.max(...wordsWithTiming.map((w) => w.end_time));
+        return {
+          ...segment,
+          words: segmentWordsWithTiming,
+          start_time: segmentStart,
+          end_time: segmentEnd
+        };
+      } else {
+        return {
+          ...segment,
+          words: segmentWordsWithTiming
+        };
+      }
+    });
+    setCurrentSegments(updatedSegments);
+  }, [globalSegment, currentSegments]);
+  const {
+    isManualSyncing,
+    isPaused,
+    syncWordIndex,
+    startManualSync,
+    pauseManualSync,
+    resumeManualSync,
+    cleanupManualSync,
+    handleSpacebar,
+    isSpacebarPressed
+  } = useManualSync({
+    editedSegment: globalSegment,
+    currentTime,
+    onPlaySegment,
+    updateSegment: updateSegment2
+  });
+  const handleWordUpdate = reactExports.useCallback((wordIndex, updates) => {
+    var _a;
+    if (!globalSegment) return;
+    if (isManualSyncing && !isPaused) {
+      console.log("ReplaceAllLyricsModal - Ignoring word update during active manual sync");
+      return;
+    }
+    console.log("ReplaceAllLyricsModal - Manual word update", {
+      wordIndex,
+      wordText: (_a = globalSegment.words[wordIndex]) == null ? void 0 : _a.text,
+      updates,
+      isManualSyncing,
+      isPaused
+    });
+    const newWords = [...globalSegment.words];
+    newWords[wordIndex] = {
+      ...newWords[wordIndex],
+      ...updates
+    };
+    updateSegment2(newWords);
+  }, [globalSegment, updateSegment2, isManualSyncing, isPaused]);
+  const handleUnsyncWord = reactExports.useCallback((wordIndex) => {
+    var _a;
+    if (!globalSegment) return;
+    console.log("ReplaceAllLyricsModal - Un-syncing word", {
+      wordIndex,
+      wordText: (_a = globalSegment.words[wordIndex]) == null ? void 0 : _a.text
+    });
+    const newWords = [...globalSegment.words];
+    newWords[wordIndex] = {
+      ...newWords[wordIndex],
+      start_time: null,
+      end_time: null
+    };
+    updateSegment2(newWords);
+  }, [globalSegment, updateSegment2]);
+  const handleClose = reactExports.useCallback(() => {
+    cleanupManualSync();
+    setInputText("");
+    setIsReplaced(false);
+    setGlobalSegment(null);
+    setOriginalSegments([]);
+    setCurrentSegments([]);
+    onClose();
+  }, [onClose, cleanupManualSync]);
+  const handleSave = reactExports.useCallback(() => {
+    if (!globalSegment || !currentSegments.length) return;
+    const finalSegments = [];
+    let wordIndex = 0;
+    currentSegments.forEach((segment) => {
+      const originalWordCount = segment.words.length;
+      const segmentWords = globalSegment.words.slice(wordIndex, wordIndex + originalWordCount);
+      wordIndex += originalWordCount;
+      if (segmentWords.length > 0) {
+        const validStartTimes = segmentWords.map((w) => w.start_time).filter((t) => t !== null);
+        const validEndTimes = segmentWords.map((w) => w.end_time).filter((t) => t !== null);
+        const segmentStartTime = validStartTimes.length > 0 ? Math.min(...validStartTimes) : null;
+        const segmentEndTime = validEndTimes.length > 0 ? Math.max(...validEndTimes) : null;
+        finalSegments.push({
+          ...segment,
+          words: segmentWords,
+          text: segmentWords.map((w) => w.text).join(" "),
+          start_time: segmentStartTime,
+          end_time: segmentEndTime
+        });
+      }
+    });
+    console.log("ReplaceAllLyricsModal - Saving new segments:", {
+      originalSegmentCount: currentSegments.length,
+      finalSegmentCount: finalSegments.length,
+      totalWords: finalSegments.reduce((count, seg) => count + seg.words.length, 0)
+    });
+    onSave(finalSegments);
+    handleClose();
+  }, [globalSegment, currentSegments, onSave, handleClose]);
+  const handleReset = reactExports.useCallback(() => {
+    if (!originalSegments.length) return;
+    console.log("ReplaceAllLyricsModal - Resetting to original state");
+    const resetWords = originalSegments.flatMap(
+      (segment) => segment.words.map((word) => ({
+        ...word,
+        start_time: null,
+        end_time: null
+      }))
+    );
+    const audioDuration = getAudioDuration();
+    const resetGlobalSegment = {
+      id: "global-replacement",
+      text: resetWords.map((w) => w.text).join(" "),
+      words: resetWords,
+      start_time: 0,
+      end_time: Math.max(audioDuration, 3600)
+      // At least 1 hour to prevent auto-stop
+    };
+    const resetCurrentSegments = originalSegments.map((segment) => ({
+      ...segment,
+      words: segment.words.map((word) => ({
+        ...word,
+        start_time: null,
+        end_time: null
+      })),
+      start_time: null,
+      end_time: null
+    }));
+    setGlobalSegment(resetGlobalSegment);
+    setCurrentSegments(resetCurrentSegments);
+  }, [originalSegments, getAudioDuration]);
+  const spacebarHandlerRef = reactExports.useRef(handleSpacebar);
+  spacebarHandlerRef.current = handleSpacebar;
+  reactExports.useEffect(() => {
+    if (open && isReplaced) {
+      console.log("ReplaceAllLyricsModal - Setting up spacebar handler");
+      const handleKeyEvent = (e) => {
+        if (e.code === "Space") {
+          console.log("ReplaceAllLyricsModal - Spacebar captured in modal");
+          e.preventDefault();
+          e.stopPropagation();
+          spacebarHandlerRef.current(e);
+        }
+      };
+      setModalSpacebarHandler(() => handleKeyEvent);
+      return () => {
+        if (!open) {
+          console.log("ReplaceAllLyricsModal - Clearing spacebar handler");
+          setModalSpacebarHandler(void 0);
+        }
+      };
+    } else if (open) {
+      setModalSpacebarHandler(void 0);
+    }
+  }, [open, isReplaced, setModalSpacebarHandler]);
+  const timeRange = reactExports.useMemo(() => {
+    const audioDuration = getAudioDuration();
+    return { start: 0, end: audioDuration };
+  }, [getAudioDuration]);
+  const segmentProgressProps = reactExports.useMemo(() => ({
+    currentSegments,
+    globalSegment,
+    syncWordIndex
+  }), [currentSegments, globalSegment, syncWordIndex]);
+  return /* @__PURE__ */ jsxRuntimeExports.jsxs(
+    Dialog,
+    {
+      open,
+      onClose: handleClose,
+      maxWidth: false,
+      fullWidth: true,
+      onKeyDown: (e) => {
+        if (e.key === "Enter" && !e.shiftKey && isReplaced) {
+          e.preventDefault();
+          handleSave();
+        }
+      },
+      PaperProps: {
+        sx: {
+          height: "90vh",
+          margin: "5vh 2vh",
+          maxWidth: "calc(100vw - 4vh)",
+          width: "calc(100vw - 4vh)"
+        }
+      },
+      children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs(DialogTitle, { sx: { display: "flex", alignItems: "center", gap: 1 }, children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx(Box, { sx: { flex: 1 }, children: "Replace All Lyrics" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(IconButton, { onClick: handleClose, sx: { ml: "auto" }, children: /* @__PURE__ */ jsxRuntimeExports.jsx(CloseIcon, {}) })
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx(
+          DialogContent,
+          {
+            dividers: true,
+            sx: {
+              display: "flex",
+              flexDirection: "column",
+              flexGrow: 1,
+              overflow: "hidden"
+            },
+            children: !isReplaced ? (
+              // Step 1: Input new lyrics
+              /* @__PURE__ */ jsxRuntimeExports.jsxs(Box, { sx: { display: "flex", flexDirection: "column", gap: 2, height: "100%" }, children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx(Typography, { variant: "h6", gutterBottom: true, children: "Paste your new lyrics below:" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx(Typography, { variant: "body2", color: "text.secondary", gutterBottom: true, children: "Each line will become a separate segment. Words will be separated by spaces." }),
+                /* @__PURE__ */ jsxRuntimeExports.jsxs(Box, { sx: { display: "flex", gap: 2, mb: 2 }, children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx(
+                    Button,
+                    {
+                      variant: "outlined",
+                      onClick: handlePasteFromClipboard,
+                      startIcon: /* @__PURE__ */ jsxRuntimeExports.jsx(ContentPasteIcon, {}),
+                      size: "small",
+                      children: "Paste from Clipboard"
+                    }
+                  ),
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs(Typography, { variant: "body2", sx: {
+                    alignSelf: "center",
+                    color: "text.secondary",
+                    fontWeight: "medium"
+                  }, children: [
+                    parseInfo.lines,
+                    " lines, ",
+                    parseInfo.words,
+                    " words"
+                  ] })
+                ] }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  TextField,
+                  {
+                    multiline: true,
+                    rows: 15,
+                    value: inputText,
+                    onChange: (e) => setInputText(e.target.value),
+                    placeholder: "Paste your lyrics here...\nEach line will become a segment\nWords will be separated by spaces",
+                    sx: {
+                      flexGrow: 1,
+                      "& .MuiInputBase-root": {
+                        height: "100%",
+                        alignItems: "flex-start"
+                      }
+                    }
+                  }
+                ),
+                /* @__PURE__ */ jsxRuntimeExports.jsx(Box, { sx: { display: "flex", justifyContent: "flex-end", gap: 2 }, children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  Button,
+                  {
+                    variant: "contained",
+                    onClick: processLyrics,
+                    disabled: !inputText.trim(),
+                    startIcon: /* @__PURE__ */ jsxRuntimeExports.jsx(AutoFixHighIcon, {}),
+                    children: "Replace All Lyrics"
+                  }
+                ) })
+              ] })
+            ) : (
+              // Step 2: Manual sync interface
+              /* @__PURE__ */ jsxRuntimeExports.jsxs(Box, { sx: { display: "flex", flexDirection: "column", height: "100%", gap: 2 }, children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsxs(Paper, { sx: { p: 2, bgcolor: "background.paper" }, children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx(Typography, { variant: "h6", gutterBottom: true, children: "Lyrics Replaced Successfully" }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs(Typography, { variant: "body2", color: "text.secondary", children: [
+                    "Created ",
+                    currentSegments.length,
+                    " segments with ",
+                    globalSegment == null ? void 0 : globalSegment.words.length,
+                    " words total. Use Manual Sync to set timing for all words."
+                  ] })
+                ] }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx(Divider, {}),
+                globalSegment && /* @__PURE__ */ jsxRuntimeExports.jsxs(Box, { sx: { display: "flex", gap: 2, flexGrow: 1, minHeight: 0 }, children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx(Box, { sx: { flex: 2, display: "flex", flexDirection: "column", minHeight: 0 }, children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+                    EditTimelineSection,
+                    {
+                      words: globalSegment.words,
+                      startTime: timeRange.start,
+                      endTime: timeRange.end,
+                      originalStartTime: 0,
+                      originalEndTime: getAudioDuration(),
+                      currentStartTime: globalSegment.start_time,
+                      currentEndTime: globalSegment.end_time,
+                      currentTime,
+                      isManualSyncing,
+                      syncWordIndex,
+                      isSpacebarPressed,
+                      onWordUpdate: handleWordUpdate,
+                      onUnsyncWord: handleUnsyncWord,
+                      onPlaySegment,
+                      onStopAudio: () => {
+                        if (window.toggleAudioPlayback && window.isAudioPlaying) {
+                          window.toggleAudioPlayback();
+                        }
+                      },
+                      startManualSync,
+                      pauseManualSync,
+                      resumeManualSync,
+                      isPaused,
+                      isGlobal: true,
+                      defaultZoomLevel: 10,
+                      isReplaceAllMode: true
+                    }
+                  ) }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx(
+                    SegmentProgressPanel,
+                    {
+                      currentSegments: segmentProgressProps.currentSegments,
+                      globalSegment: segmentProgressProps.globalSegment,
+                      syncWordIndex: segmentProgressProps.syncWordIndex
+                    }
+                  )
+                ] })
+              ] })
+            )
+          }
+        ),
+        /* @__PURE__ */ jsxRuntimeExports.jsx(DialogActions, { children: isReplaced && /* @__PURE__ */ jsxRuntimeExports.jsx(
+          EditActionBar,
+          {
+            onReset: handleReset,
+            onClose: handleClose,
+            onSave: handleSave,
+            editedSegment: globalSegment,
+            isGlobal: true
+          }
+        ) })
+      ]
+    }
+  );
+}
+const SegmentProgressItem = reactExports.memo(({
+  segment,
+  index,
+  isActive
+}) => {
+  const wordsWithTiming = segment.words.filter(
+    (w) => w.start_time !== null && w.end_time !== null
+  ).length;
+  const totalWords = segment.words.length;
+  const isComplete = wordsWithTiming === totalWords;
+  return /* @__PURE__ */ jsxRuntimeExports.jsxs(
+    Paper,
+    {
+      ref: isActive ? (el) => {
+        if (el) {
+          el.scrollIntoView({
+            behavior: "smooth",
+            block: "center"
+          });
+        }
+      } : void 0,
+      sx: {
+        p: 1,
+        mb: 1,
+        bgcolor: isActive ? "primary.light" : isComplete ? "success.light" : "background.paper",
+        border: isActive ? 2 : 1,
+        borderColor: isActive ? "primary.main" : "divider"
+      },
+      children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs(
+          Typography,
+          {
+            variant: "body2",
+            sx: {
+              fontWeight: isActive ? "bold" : "normal",
+              mb: 0.5
+            },
+            children: [
+              "Segment ",
+              index + 1,
+              ": ",
+              segment.text.slice(0, 50),
+              segment.text.length > 50 ? "..." : ""
+            ]
+          }
+        ),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs(Typography, { variant: "caption", color: "text.secondary", children: [
+          wordsWithTiming,
+          "/",
+          totalWords,
+          " words synced",
+          isComplete && segment.start_time !== null && segment.end_time !== null && /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("br", {}),
+            segment.start_time.toFixed(2),
+            "s - ",
+            segment.end_time.toFixed(2),
+            "s"
+          ] })
+        ] })
+      ]
+    },
+    segment.id
+  );
+});
+const SegmentProgressPanel = reactExports.memo(({
+  currentSegments,
+  globalSegment,
+  syncWordIndex
+}) => {
+  return /* @__PURE__ */ jsxRuntimeExports.jsxs(Box, { sx: { flex: 1, display: "flex", flexDirection: "column", minHeight: 0 }, children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsx(Typography, { variant: "h6", gutterBottom: true, children: "Segment Progress" }),
+    /* @__PURE__ */ jsxRuntimeExports.jsx(Box, { sx: {
+      overflow: "auto",
+      flexGrow: 1,
+      border: 1,
+      borderColor: "divider",
+      borderRadius: 1,
+      p: 1
+    }, children: currentSegments.map((segment, index) => {
+      const isActive = Boolean(
+        globalSegment && syncWordIndex >= 0 && syncWordIndex < globalSegment.words.length && globalSegment.words[syncWordIndex] && segment.words.some((w) => w.id === globalSegment.words[syncWordIndex].id)
+      );
+      return /* @__PURE__ */ jsxRuntimeExports.jsx(
+        SegmentProgressItem,
+        {
+          segment,
+          index,
+          isActive
+        },
+        segment.id
+      );
+    }) })
+  ] });
+});
 const generateStorageKey = (data) => {
   var _a;
   const text = ((_a = data.original_segments[0]) == null ? void 0 : _a.text) || "";
@@ -36888,11 +37683,13 @@ function AudioPlayer({ apiClient, onTimeUpdate, audioHash }) {
     const win = window;
     win.seekAndPlayAudio = seekAndPlay;
     win.toggleAudioPlayback = togglePlayback;
+    win.getAudioDuration = () => duration2;
     return () => {
       delete win.seekAndPlayAudio;
       delete win.toggleAudioPlayback;
+      delete win.getAudioDuration;
     };
-  }, [apiClient, togglePlayback]);
+  }, [apiClient, togglePlayback, duration2]);
   if (!apiClient) return null;
   return /* @__PURE__ */ jsxRuntimeExports.jsxs(Box, { sx: {
     display: "flex",
@@ -37873,11 +38670,7 @@ function LyricsAnalyzer({ data: initialData, onFileLoad, apiClient, isReadOnly, 
   const [isShiftPressed, setIsShiftPressed] = reactExports.useState(false);
   const [isCtrlPressed, setIsCtrlPressed] = reactExports.useState(false);
   const [editModalSegment, setEditModalSegment] = reactExports.useState(null);
-  const [isEditAllModalOpen, setIsEditAllModalOpen] = reactExports.useState(false);
-  const [globalEditSegment, setGlobalEditSegment] = reactExports.useState(null);
-  const [originalGlobalSegment, setOriginalGlobalSegment] = reactExports.useState(null);
-  const [originalTranscribedGlobalSegment, setOriginalTranscribedGlobalSegment] = reactExports.useState(null);
-  const [isLoadingGlobalEdit, setIsLoadingGlobalEdit] = reactExports.useState(false);
+  const [isReplaceAllLyricsModalOpen, setIsReplaceAllLyricsModalOpen] = reactExports.useState(false);
   const [isReviewModalOpen, setIsReviewModalOpen] = reactExports.useState(false);
   const [currentAudioTime, setCurrentAudioTime] = reactExports.useState(0);
   const [isUpdatingHandlers, setIsUpdatingHandlers] = reactExports.useState(false);
@@ -37938,10 +38731,10 @@ function LyricsAnalyzer({ data: initialData, onFileLoad, apiClient, isReadOnly, 
   }, [setIsShiftPressed, setIsCtrlPressed, isAnyModalOpen]);
   reactExports.useEffect(() => {
     const modalOpen = Boolean(
-      modalContent || editModalSegment || isReviewModalOpen || isAddLyricsModalOpen || isFindReplaceModalOpen || isEditAllModalOpen || isTimingOffsetModalOpen
+      modalContent || editModalSegment || isReviewModalOpen || isAddLyricsModalOpen || isFindReplaceModalOpen || isReplaceAllLyricsModalOpen || isTimingOffsetModalOpen
     );
     setIsAnyModalOpen(modalOpen);
-  }, [modalContent, editModalSegment, isReviewModalOpen, isAddLyricsModalOpen, isFindReplaceModalOpen, isEditAllModalOpen, isTimingOffsetModalOpen]);
+  }, [modalContent, editModalSegment, isReviewModalOpen, isAddLyricsModalOpen, isFindReplaceModalOpen, isReplaceAllLyricsModalOpen, isTimingOffsetModalOpen]);
   const effectiveMode = isCtrlPressed ? "delete_word" : isShiftPressed ? "highlight" : interactionMode;
   const handleFlash = reactExports.useCallback((type, info) => {
     setFlashingType(null);
@@ -38201,144 +38994,21 @@ function LyricsAnalyzer({ data: initialData, onFileLoad, apiClient, isReadOnly, 
     const newData = findAndReplace(data, findText, replaceText, options);
     updateDataWithHistory(newData, "find/replace");
   };
-  const handleEditAll = reactExports.useCallback(() => {
-    console.log("EditAll - Starting process");
-    const placeholderSegment = {
-      id: "loading-placeholder",
-      words: [],
-      text: "",
-      start_time: 0,
-      end_time: 1
-    };
-    setGlobalEditSegment(placeholderSegment);
-    setOriginalGlobalSegment(placeholderSegment);
-    setIsLoadingGlobalEdit(true);
-    console.log("EditAll - Set loading state to true");
-    setIsEditAllModalOpen(true);
-    console.log("EditAll - Set modal open to true");
-    requestAnimationFrame(() => {
-      console.log("EditAll - Inside requestAnimationFrame");
-      setTimeout(() => {
-        var _a, _b, _c, _d;
-        console.log("EditAll - Inside setTimeout, starting data processing");
-        try {
-          console.time("EditAll - Data processing");
-          const allWords = data.corrected_segments.flatMap((segment) => segment.words);
-          console.log(`EditAll - Collected ${allWords.length} words from all segments`);
-          const sortedWords = [...allWords].sort((a, b) => {
-            const aTime = a.start_time ?? 0;
-            const bTime = b.start_time ?? 0;
-            return aTime - bTime;
-          });
-          console.log("EditAll - Sorted words by start time");
-          const globalSegment = {
-            id: "global-edit",
-            words: sortedWords,
-            text: sortedWords.map((w) => w.text).join(" "),
-            start_time: ((_a = sortedWords[0]) == null ? void 0 : _a.start_time) ?? null,
-            end_time: ((_b = sortedWords[sortedWords.length - 1]) == null ? void 0 : _b.end_time) ?? null
-          };
-          console.log("EditAll - Created global segment");
-          setGlobalEditSegment(globalSegment);
-          console.log("EditAll - Set global edit segment");
-          setOriginalGlobalSegment(JSON.parse(JSON.stringify(globalSegment)));
-          console.log("EditAll - Set original global segment");
-          if (originalData.original_segments) {
-            console.log("EditAll - Processing original segments for Un-Correct functionality");
-            const originalWords = originalData.original_segments.flatMap((segment) => segment.words);
-            console.log(`EditAll - Collected ${originalWords.length} words from original segments`);
-            const sortedOriginalWords = [...originalWords].sort((a, b) => {
-              const aTime = a.start_time ?? 0;
-              const bTime = b.start_time ?? 0;
-              return aTime - bTime;
-            });
-            console.log("EditAll - Sorted original words by start time");
-            const originalTranscribedGlobal = {
-              id: "original-transcribed-global",
-              words: sortedOriginalWords,
-              text: sortedOriginalWords.map((w) => w.text).join(" "),
-              start_time: ((_c = sortedOriginalWords[0]) == null ? void 0 : _c.start_time) ?? null,
-              end_time: ((_d = sortedOriginalWords[sortedOriginalWords.length - 1]) == null ? void 0 : _d.end_time) ?? null
-            };
-            console.log("EditAll - Created original transcribed global segment");
-            setOriginalTranscribedGlobalSegment(originalTranscribedGlobal);
-            console.log("EditAll - Set original transcribed global segment");
-          } else {
-            setOriginalTranscribedGlobalSegment(null);
-            console.log("EditAll - No original segments found, set original transcribed global segment to null");
-          }
-          console.timeEnd("EditAll - Data processing");
-        } catch (error) {
-          console.error("Error preparing global edit data:", error);
-        } finally {
-          console.log("EditAll - Finished processing, setting loading state to false");
-          setIsLoadingGlobalEdit(false);
-        }
-      }, 100);
-    });
-  }, [data.corrected_segments, originalData.original_segments]);
-  const handleSaveGlobalEdit = reactExports.useCallback((updatedSegment) => {
-    var _a;
-    console.log("Global Edit - Saving with new approach:", {
-      updatedSegmentId: updatedSegment.id,
-      wordCount: updatedSegment.words.length,
-      originalSegmentCount: data.corrected_segments.length,
-      originalTotalWordCount: data.corrected_segments.reduce((count, segment) => count + segment.words.length, 0)
-    });
-    const updatedWords = updatedSegment.words;
-    const updatedSegments = [];
-    let wordIndex = 0;
-    for (const segment of data.corrected_segments) {
-      const originalWordCount = segment.words.length;
-      const segmentWords = [];
-      const endIndex = Math.min(wordIndex + originalWordCount, updatedWords.length);
-      for (let i = wordIndex; i < endIndex; i++) {
-        segmentWords.push(updatedWords[i]);
-      }
-      wordIndex = endIndex;
-      if (segmentWords.length > 0) {
-        const validStartTimes = segmentWords.map((w) => w.start_time).filter((t) => t !== null);
-        const validEndTimes = segmentWords.map((w) => w.end_time).filter((t) => t !== null);
-        const segmentStartTime = validStartTimes.length > 0 ? Math.min(...validStartTimes) : null;
-        const segmentEndTime = validEndTimes.length > 0 ? Math.max(...validEndTimes) : null;
-        updatedSegments.push({
-          ...segment,
-          words: segmentWords,
-          text: segmentWords.map((w) => w.text).join(" "),
-          start_time: segmentStartTime,
-          end_time: segmentEndTime
-        });
-      }
-    }
-    if (wordIndex < updatedWords.length) {
-      const remainingWords = updatedWords.slice(wordIndex);
-      const lastSegment = updatedSegments[updatedSegments.length - 1];
-      const combinedWords = [...lastSegment.words, ...remainingWords];
-      const validStartTimes = combinedWords.map((w) => w.start_time).filter((t) => t !== null);
-      const validEndTimes = combinedWords.map((w) => w.end_time).filter((t) => t !== null);
-      const segmentStartTime = validStartTimes.length > 0 ? Math.min(...validStartTimes) : null;
-      const segmentEndTime = validEndTimes.length > 0 ? Math.max(...validEndTimes) : null;
-      updatedSegments[updatedSegments.length - 1] = {
-        ...lastSegment,
-        words: combinedWords,
-        text: combinedWords.map((w) => w.text).join(" "),
-        start_time: segmentStartTime,
-        end_time: segmentEndTime
-      };
-    }
-    console.log("Global Edit - Updated Segments with new approach:", {
-      segmentCount: updatedSegments.length,
-      firstSegmentWordCount: (_a = updatedSegments[0]) == null ? void 0 : _a.words.length,
-      totalWordCount: updatedSegments.reduce((count, segment) => count + segment.words.length, 0),
-      originalTotalWordCount: data.corrected_segments.reduce((count, segment) => count + segment.words.length, 0)
+  const handleReplaceAllLyrics = reactExports.useCallback(() => {
+    console.log("ReplaceAllLyrics - Opening modal");
+    setIsReplaceAllLyricsModalOpen(true);
+  }, []);
+  const handleSaveReplaceAllLyrics = reactExports.useCallback((newSegments) => {
+    console.log("ReplaceAllLyrics - Saving new segments:", {
+      segmentCount: newSegments.length,
+      totalWords: newSegments.reduce((count, segment) => count + segment.words.length, 0)
     });
     const newData = {
       ...data,
-      corrected_segments: updatedSegments
+      corrected_segments: newSegments
     };
-    updateDataWithHistory(newData, "edit all");
-    setIsEditAllModalOpen(false);
-    setGlobalEditSegment(null);
+    updateDataWithHistory(newData, "replace all lyrics");
+    setIsReplaceAllLyricsModalOpen(false);
   }, [data, updateDataWithHistory]);
   const handleUndo = reactExports.useCallback(() => {
     if (historyIndex > 0) {
@@ -38399,7 +39069,7 @@ function LyricsAnalyzer({ data: initialData, onFileLoad, apiClient, isReadOnly, 
         isUpdatingHandlers,
         onHandlerClick: handleHandlerClick,
         onFindReplace: () => setIsFindReplaceModalOpen(true),
-        onEditAll: handleEditAll,
+        onEditAll: handleReplaceAllLyrics,
         onTimingOffset: handleOpenTimingOffsetModal,
         timingOffsetMs,
         onUndo: handleUndo,
@@ -38480,29 +39150,6 @@ function LyricsAnalyzer({ data: initialData, onFileLoad, apiClient, isReadOnly, 
     /* @__PURE__ */ jsxRuntimeExports.jsx(
       EditModal,
       {
-        open: isEditAllModalOpen,
-        onClose: () => {
-          setIsEditAllModalOpen(false);
-          setGlobalEditSegment(null);
-          setOriginalGlobalSegment(null);
-          setOriginalTranscribedGlobalSegment(null);
-          handleSetModalSpacebarHandler(void 0);
-        },
-        segment: globalEditSegment ? timingOffsetMs !== 0 ? applyOffsetToSegment(globalEditSegment, timingOffsetMs) : globalEditSegment : null,
-        segmentIndex: null,
-        originalSegment: originalGlobalSegment ? timingOffsetMs !== 0 ? applyOffsetToSegment(originalGlobalSegment, timingOffsetMs) : originalGlobalSegment : null,
-        onSave: handleSaveGlobalEdit,
-        onPlaySegment: handlePlaySegment,
-        currentTime: currentAudioTime,
-        setModalSpacebarHandler: handleSetModalSpacebarHandler,
-        originalTranscribedSegment: originalTranscribedGlobalSegment ? timingOffsetMs !== 0 ? applyOffsetToSegment(originalTranscribedGlobalSegment, timingOffsetMs) : originalTranscribedGlobalSegment : null,
-        isGlobal: true,
-        isLoading: isLoadingGlobalEdit
-      }
-    ),
-    /* @__PURE__ */ jsxRuntimeExports.jsx(
-      EditModal,
-      {
         open: Boolean(editModalSegment),
         onClose: () => {
           setEditModalSegment(null);
@@ -38565,6 +39212,17 @@ function LyricsAnalyzer({ data: initialData, onFileLoad, apiClient, isReadOnly, 
         onClose: () => setIsTimingOffsetModalOpen(false),
         currentOffset: timingOffsetMs,
         onApply: handleApplyTimingOffset
+      }
+    ),
+    /* @__PURE__ */ jsxRuntimeExports.jsx(
+      ReplaceAllLyricsModal,
+      {
+        open: isReplaceAllLyricsModalOpen,
+        onClose: () => setIsReplaceAllLyricsModalOpen(false),
+        onSave: handleSaveReplaceAllLyrics,
+        onPlaySegment: handlePlaySegment,
+        currentTime: currentAudioTime,
+        setModalSpacebarHandler: handleSetModalSpacebarHandler
       }
     )
   ] });
@@ -38915,7 +39573,7 @@ const theme = createTheme({
   spacing: (factor) => `${0.6 * factor}rem`
   // Further reduced from 0.8 * factor
 });
-const version = "0.62.0";
+const version = "0.69.0";
 const packageJson = {
   version
 };
@@ -38926,4 +39584,4 @@ ReactDOM$1.createRoot(document.getElementById("root")).render(
     /* @__PURE__ */ jsxRuntimeExports.jsx(App, {})
   ] })
 );
-//# sourceMappingURL=index-CYF5xuZH.js.map
+//# sourceMappingURL=index-izP9z1oB.js.map
