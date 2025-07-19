@@ -157,8 +157,22 @@ jobs:
         run: |
           git config user.name github-actions
           git config user.email github-actions@github.com
-          git tag -a "v${{ steps.extract_version.outputs.version }}" -m "Release v${{ steps.extract_version.outputs.version }}"
-          git push origin "v${{ steps.extract_version.outputs.version }}"
+          
+          VERSION="v${{ steps.extract_version.outputs.version }}"
+          
+          # Check if tag exists locally
+          if git tag -l | grep -q "^${VERSION}$"; then
+            echo "🏷️  Tag ${VERSION} already exists locally, skipping tag creation"
+          else
+            # Check if tag exists on remote
+            if git ls-remote --tags origin | grep -q "refs/tags/${VERSION}$"; then
+              echo "🏷️  Tag ${VERSION} already exists on remote, skipping tag creation"
+            else
+              echo "🏷️  Creating and pushing tag ${VERSION}"
+              git tag -a "${VERSION}" -m "Release ${VERSION}"
+              git push origin "${VERSION}"
+            fi
+          fi
 
       - if: github.ref == 'refs/heads/main' && github.event_name == 'push'
         name: Create GitHub Release
