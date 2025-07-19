@@ -36,7 +36,7 @@ def test_config_no_video(tmp_path, basic_styles_content):
         output_dir=str(tmp_path / "output"),
         cache_dir=str(tmp_path / "cache"),
         video_resolution="360p",
-        max_line_length=36,
+        default_max_line_length=36,
         render_video=False,  # Disable video to avoid complexity
         generate_cdg=False   # Disable CDG to avoid complexity
     )
@@ -54,7 +54,7 @@ def test_config_with_video(tmp_path, basic_styles_content):
         output_dir=str(tmp_path / "output"),
         cache_dir=str(tmp_path / "cache"),
         video_resolution="360p",
-        max_line_length=36,
+        default_max_line_length=36,
         render_video=True,
         generate_cdg=False
     )
@@ -88,10 +88,11 @@ class TestOutputGenerator:
             output_styles_json=str(tmp_path / "nonexistent.json"),
             output_dir=str(tmp_path / "output"),
             cache_dir=str(tmp_path / "cache"),
+            default_max_line_length=36,
             render_video=True
         )
         
-        with pytest.raises(ValueError, match="Failed to load output styles file"):
+        with pytest.raises(ValueError, match="Output styles file required for video/CDG generation but not found"):
             OutputGenerator(config=config)
 
     def test_initialization_invalid_styles_file(self, tmp_path):
@@ -104,6 +105,7 @@ class TestOutputGenerator:
             output_styles_json=str(styles_path),
             output_dir=str(tmp_path / "output"),
             cache_dir=str(tmp_path / "cache"),
+            default_max_line_length=36,
             render_video=True
         )
         
@@ -138,6 +140,7 @@ class TestOutputGenerator:
             output_styles_json=str(styles_path),
             output_dir=str(tmp_path / "output"),
             cache_dir=str(tmp_path / "cache"),
+            default_max_line_length=36,
             video_resolution=resolution,
             render_video=True
         )
@@ -157,6 +160,7 @@ class TestOutputGenerator:
             output_styles_json=str(styles_path),
             output_dir=str(tmp_path / "output"),
             cache_dir=str(tmp_path / "cache"),
+            default_max_line_length=36,
             video_resolution="invalid",
             render_video=True
         )

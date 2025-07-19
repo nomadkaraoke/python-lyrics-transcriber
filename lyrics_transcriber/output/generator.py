@@ -52,20 +52,30 @@ class OutputGenerator:
 
         self.logger.info(f"Initializing OutputGenerator with config: {self.config}")
 
-        if self.config.render_video or self.config.generate_cdg:
-            # Load output styles from JSON
+        # Load output styles from JSON if provided
+        if self.config.output_styles_json and os.path.exists(self.config.output_styles_json):
             try:
                 with open(self.config.output_styles_json, "r") as f:
                     self.config.styles = json.load(f)
                 self.logger.debug(f"Loaded output styles from: {self.config.output_styles_json}")
             except Exception as e:
-                raise ValueError(f"Failed to load output styles file: {str(e)}")
+                if self.config.render_video or self.config.generate_cdg:
+                    # Only raise error for video/CDG since they require styles
+                    raise ValueError(f"Failed to load output styles file: {str(e)}")
+                else:
+                    # For other outputs, just log warning and continue with empty styles
+                    self.logger.warning(f"Failed to load output styles file: {str(e)}")
+                    self.config.styles = {}
+        else:
+            # No styles file provided or doesn't exist
+            if self.config.render_video or self.config.generate_cdg:
+                raise ValueError(f"Output styles file required for video/CDG generation but not found: {self.config.output_styles_json}")
+            else:
+                self.config.styles = {}
 
         # Set video resolution parameters
         self.video_resolution_num, self.font_size, self.line_height = self._get_video_params(self.config.video_resolution)
         self.logger.info(f"Video resolution: {self.video_resolution_num}, font size: {self.font_size}, line height: {self.line_height}")
-
-        self.segment_resizer = SegmentResizer(max_line_length=self.config.max_line_length, logger=self.logger)
 
         # Initialize generators
         self.plain_text = PlainTextGenerator(self.config.output_dir, self.logger)
@@ -100,6 +110,12 @@ class OutputGenerator:
                         self.config.styles["karaoke"]["font_size"] = self.font_size
                         self.logger.info(f"Preview mode: Scaled down font_size to: {self.font_size}")
 
+        # Get max_line_length from styles if available, otherwise use config default
+        max_line_length = self.config.styles.get("karaoke", {}).get("max_line_length", self.config.default_max_line_length)
+        self.logger.info(f"Using max_line_length: {max_line_length}")
+        self.segment_resizer = SegmentResizer(max_line_length=max_line_length, logger=self.logger)
+
+        if self.config.render_video:
             # Initialize subtitle generator with potentially scaled values
             self.subtitle = SubtitlesGenerator(
                 output_dir=self.config.output_dir,

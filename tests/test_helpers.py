@@ -353,7 +353,7 @@ def create_test_output_config(
         output_styles_json=output_styles_json,
         output_dir=output_dir,
         cache_dir=cache_dir,
-        max_line_length=36,
+        default_max_line_length=36,
         video_resolution="360p",
         render_video=render_video,
         generate_cdg=generate_cdg,

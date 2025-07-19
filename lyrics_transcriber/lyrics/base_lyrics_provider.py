@@ -21,7 +21,7 @@ class LyricsProviderConfig:
     lyrics_file: Optional[str] = None
     cache_dir: Optional[str] = None
     audio_filepath: Optional[str] = None
-    max_line_length: int = 36  # New config parameter for KaraokeLyricsProcessor
+    max_line_length: int = 36  # Config parameter for KaraokeLyricsProcessor
 
 
 class BaseLyricsProvider(ABC):

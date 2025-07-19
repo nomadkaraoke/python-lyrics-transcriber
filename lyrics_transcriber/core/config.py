@@ -26,7 +26,7 @@ class OutputConfig:
     """Configuration for output generation."""
 
     output_styles_json: str
-    max_line_length: int = 36
+    default_max_line_length: int = 36
     styles: Dict[str, Any] = field(default_factory=dict)
     output_dir: Optional[str] = os.getcwd()
     cache_dir: str = os.getenv(

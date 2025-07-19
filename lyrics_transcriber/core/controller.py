@@ -109,6 +109,9 @@ class LyricsTranscriber:
         # Initialize results
         self.results = LyricsControllerResult()
 
+        # Load styles early so lyrics providers can use them
+        self._load_styles()
+
         # Initialize components (with dependency injection)
         self.transcribers = transcribers or self._initialize_transcribers()
         self.lyrics_providers = lyrics_providers or self._initialize_lyrics_providers()
@@ -126,6 +129,20 @@ class LyricsTranscriber:
         self.logger.info(f"  Video rendering: {'enabled' if self.output_config.render_video else 'disabled'}")
         if self.output_config.render_video:
             self.logger.info(f"    Video resolution: {self.output_config.video_resolution}")
+
+    def _load_styles(self) -> None:
+        """Load styles from JSON file if available."""
+        if self.output_config.output_styles_json and os.path.exists(self.output_config.output_styles_json):
+            try:
+                with open(self.output_config.output_styles_json, "r") as f:
+                    self.output_config.styles = json.load(f)
+                self.logger.debug(f"Loaded output styles from: {self.output_config.output_styles_json}")
+            except Exception as e:
+                self.logger.warning(f"Failed to load output styles file: {str(e)}")
+                self.output_config.styles = {}
+        else:
+            self.logger.debug("No styles JSON file provided or file does not exist")
+            self.output_config.styles = {}
 
     def _sanitize_filename(self, filename: str) -> str:
         """Replace or remove characters that are unsafe for filenames."""
@@ -189,6 +206,10 @@ class LyricsTranscriber:
         """Initialize available lyrics providers."""
         providers = {}
 
+        # Get max_line_length from styles if available, otherwise use config default
+        max_line_length = self.output_config.styles.get("karaoke", {}).get("max_line_length", self.output_config.default_max_line_length)
+        self.logger.info(f"Using max_line_length for lyrics providers: {max_line_length}")
+
         # Create provider config with all necessary parameters
         provider_config = LyricsProviderConfig(
             genius_api_token=self.lyrics_config.genius_api_token,
@@ -197,6 +218,7 @@ class LyricsTranscriber:
             lyrics_file=self.lyrics_config.lyrics_file,
             cache_dir=self.output_config.cache_dir,
             audio_filepath=self.audio_filepath,
+            max_line_length=max_line_length,
         )
 
         if provider_config.lyrics_file and os.path.exists(provider_config.lyrics_file):
