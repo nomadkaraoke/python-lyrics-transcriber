@@ -36597,6 +36597,9 @@ const PauseIcon = createSvgIcon(/* @__PURE__ */ jsxRuntimeExports.jsx("path", {
 const RedoIcon = createSvgIcon(/* @__PURE__ */ jsxRuntimeExports.jsx("path", {
   d: "M18.4 10.6C16.55 8.99 14.15 8 11.5 8c-4.65 0-8.58 3.03-9.96 7.22L3.9 16c1.05-3.19 4.05-5.5 7.6-5.5 1.95 0 3.73.72 5.12 1.88L13 16h9V7z"
 }), "Redo");
+const RestoreIcon = createSvgIcon(/* @__PURE__ */ jsxRuntimeExports.jsx("path", {
+  d: "M13 3c-4.97 0-9 4.03-9 9H1l3.89 3.89.07.14L9 12H6c0-3.87 3.13-7 7-7s7 3.13 7 7-3.13 7-7 7c-1.93 0-3.68-.79-4.94-2.06l-1.42 1.42C8.27 19.99 10.51 21 13 21c4.97 0 9-4.03 9-9s-4.03-9-9-9m-1 5v5l4.28 2.54.72-1.21-3.5-2.08V8z"
+}), "Restore");
 const TimerIcon = createSvgIcon(/* @__PURE__ */ jsxRuntimeExports.jsx("path", {
   d: "M9 1h6v2H9zm10.03 6.39 1.42-1.42c-.43-.51-.9-.99-1.41-1.41l-1.42 1.42C16.07 4.74 14.12 4 12 4c-4.97 0-9 4.03-9 9s4.02 9 9 9 9-4.03 9-9c0-2.12-.74-4.07-1.97-5.61M13 14h-2V8h2z"
 }), "Timer");
@@ -37749,6 +37752,7 @@ function Header({
   onHandlerClick,
   onFindReplace,
   onEditAll,
+  onUnCorrectAll,
   onTimingOffset,
   timingOffsetMs = 0,
   onUndo,
@@ -37973,6 +37977,17 @@ function Header({
           startIcon: /* @__PURE__ */ jsxRuntimeExports.jsx(EditIcon, {}),
           sx: { minWidth: "fit-content", height: "32px" },
           children: "Edit All"
+        }
+      ),
+      !isReadOnly && onUnCorrectAll && /* @__PURE__ */ jsxRuntimeExports.jsx(
+        Button,
+        {
+          variant: "outlined",
+          size: "small",
+          onClick: onUnCorrectAll,
+          startIcon: /* @__PURE__ */ jsxRuntimeExports.jsx(RestoreIcon, {}),
+          sx: { minWidth: "fit-content", height: "32px" },
+          children: "Un-Correct All"
         }
       ),
       !isReadOnly && onTimingOffset && /* @__PURE__ */ jsxRuntimeExports.jsxs(Box, { sx: { display: "flex", alignItems: "center" }, children: [
@@ -38625,7 +38640,8 @@ const MemoizedHeader = reactExports.memo(function MemoizedHeader2({
   onUndo,
   onRedo,
   canUndo,
-  canRedo
+  canRedo,
+  onUnCorrectAll
 }) {
   return /* @__PURE__ */ jsxRuntimeExports.jsx(
     Header,
@@ -38649,7 +38665,8 @@ const MemoizedHeader = reactExports.memo(function MemoizedHeader2({
       onUndo,
       onRedo,
       canUndo,
-      canRedo
+      canRedo,
+      onUnCorrectAll
     }
   );
 });
@@ -38994,6 +39011,23 @@ function LyricsAnalyzer({ data: initialData, onFileLoad, apiClient, isReadOnly, 
     const newData = findAndReplace(data, findText, replaceText, options);
     updateDataWithHistory(newData, "find/replace");
   };
+  const handleUnCorrectAll = reactExports.useCallback(() => {
+    if (!originalData.original_segments) {
+      console.warn("No original segments available for un-correcting");
+      return;
+    }
+    if (window.confirm("Are you sure you want to revert all segments to their original transcribed state? This will undo all corrections made.")) {
+      console.log("Un-Correct All: Reverting all segments to original transcribed state", {
+        originalSegmentCount: originalData.original_segments.length,
+        currentSegmentCount: data.corrected_segments.length
+      });
+      const newData = {
+        ...data,
+        corrected_segments: JSON.parse(JSON.stringify(originalData.original_segments))
+      };
+      updateDataWithHistory(newData, "un-correct all segments");
+    }
+  }, [originalData.original_segments, data, updateDataWithHistory]);
   const handleReplaceAllLyrics = reactExports.useCallback(() => {
     console.log("ReplaceAllLyrics - Opening modal");
     setIsReplaceAllLyricsModalOpen(true);
@@ -39075,7 +39109,8 @@ function LyricsAnalyzer({ data: initialData, onFileLoad, apiClient, isReadOnly, 
         onUndo: handleUndo,
         onRedo: handleRedo,
         canUndo,
-        canRedo
+        canRedo,
+        onUnCorrectAll: handleUnCorrectAll
       }
     ),
     /* @__PURE__ */ jsxRuntimeExports.jsxs(Grid, { container: true, direction: isMobile ? "column" : "row", children: [
@@ -39573,7 +39608,7 @@ const theme = createTheme({
   spacing: (factor) => `${0.6 * factor}rem`
   // Further reduced from 0.8 * factor
 });
-const version = "0.69.0";
+const version = "0.70.0";
 const packageJson = {
   version
 };
@@ -39584,4 +39619,4 @@ ReactDOM$1.createRoot(document.getElementById("root")).render(
     /* @__PURE__ */ jsxRuntimeExports.jsx(App, {})
   ] })
 );
-//# sourceMappingURL=index-izP9z1oB.js.map
+//# sourceMappingURL=index-BV5ep1cr.js.map
