@@ -6,6 +6,7 @@ import EditIcon from '@mui/icons-material/Edit'
 import UndoIcon from '@mui/icons-material/Undo'
 import RedoIcon from '@mui/icons-material/Redo'
 import TimerIcon from '@mui/icons-material/Timer'
+import RestoreIcon from '@mui/icons-material/Restore'
 import { CorrectionData, InteractionMode } from '../types'
 import CorrectionMetrics from './CorrectionMetrics'
 import ModeSelector from './ModeSelector'
@@ -32,6 +33,7 @@ interface HeaderProps {
     onHandlerClick?: (handler: string) => void
     onFindReplace?: () => void
     onEditAll?: () => void
+    onUnCorrectAll?: () => void
     onTimingOffset?: () => void
     timingOffsetMs?: number
     onUndo: () => void
@@ -55,6 +57,7 @@ export default function Header({
     onHandlerClick,
     onFindReplace,
     onEditAll,
+    onUnCorrectAll,
     onTimingOffset,
     timingOffsetMs = 0,
     onUndo,
@@ -314,6 +317,17 @@ export default function Header({
                                 sx={{ minWidth: 'fit-content', height: '32px' }}
                             >
                                 Edit All
+                            </Button>
+                        )}
+                        {!isReadOnly && onUnCorrectAll && (
+                            <Button
+                                variant="outlined"
+                                size="small"
+                                onClick={onUnCorrectAll}
+                                startIcon={<RestoreIcon />}
+                                sx={{ minWidth: 'fit-content', height: '32px' }}
+                            >
+                                Un-Correct All
                             </Button>
                         )}
                         {!isReadOnly && onTimingOffset && (

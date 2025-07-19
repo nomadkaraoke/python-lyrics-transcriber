@@ -196,6 +196,7 @@ interface MemoizedHeaderProps {
     onRedo: () => void
     canUndo: boolean
     canRedo: boolean
+    onUnCorrectAll: () => void
 }
 
 // Create a memoized Header component
@@ -219,7 +220,8 @@ const MemoizedHeader = memo(function MemoizedHeader({
     onUndo,
     onRedo,
     canUndo,
-    canRedo
+    canRedo,
+    onUnCorrectAll
 }: MemoizedHeaderProps) {
     return (
         <Header
@@ -243,6 +245,7 @@ const MemoizedHeader = memo(function MemoizedHeader({
             onRedo={onRedo}
             canUndo={canUndo}
             canRedo={canRedo}
+            onUnCorrectAll={onUnCorrectAll}
         />
     );
 });
@@ -782,7 +785,28 @@ export default function LyricsAnalyzer({ data: initialData, onFileLoad, apiClien
         updateDataWithHistory(newData, 'find/replace'); // Update history
     }
 
+    // Add handler for Un-Correct All functionality
+    const handleUnCorrectAll = useCallback(() => {
+        if (!originalData.original_segments) {
+            console.warn('No original segments available for un-correcting')
+            return
+        }
 
+        if (window.confirm('Are you sure you want to revert all segments to their original transcribed state? This will undo all corrections made.')) {
+            console.log('Un-Correct All: Reverting all segments to original transcribed state', {
+                originalSegmentCount: originalData.original_segments.length,
+                currentSegmentCount: data.corrected_segments.length
+            })
+
+            // Create new data with original segments as corrected segments
+            const newData: CorrectionData = {
+                ...data,
+                corrected_segments: JSON.parse(JSON.stringify(originalData.original_segments))
+            }
+
+            updateDataWithHistory(newData, 'un-correct all segments')
+        }
+    }, [originalData.original_segments, data, updateDataWithHistory])
 
     // Add handler for Replace All Lyrics functionality
     const handleReplaceAllLyrics = useCallback(() => {
@@ -914,6 +938,7 @@ export default function LyricsAnalyzer({ data: initialData, onFileLoad, apiClien
                 onRedo={handleRedo}
                 canUndo={canUndo}
                 canRedo={canRedo}
+                onUnCorrectAll={handleUnCorrectAll}
             />
 
             <Grid container direction={isMobile ? 'column' : 'row'}>
