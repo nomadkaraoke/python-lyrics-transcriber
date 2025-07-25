@@ -99,6 +99,219 @@ def test_get_output_path(generator):
     assert "test_lyrics" in path
 
 
+def test_lead_in_configuration_defaults(output_dir, video_resolution, mock_logger):
+    """Test that lead-in indicator defaults are properly configured."""
+    styles = {
+        "karaoke": {
+            "ass_name": "Test",
+            "font": "Arial",
+            "font_path": "/path/to/arial.ttf",
+            "primary_color": "255, 255, 255, 255",
+            "secondary_color": "255, 255, 255, 255",
+            "outline_color": "0, 0, 0, 255",
+            "back_color": "0, 0, 0, 255",
+            "bold": False,
+            "italic": False,
+            "underline": False,
+            "strike_out": False,
+            "scale_x": "100",
+            "scale_y": "100",
+            "spacing": "0",
+            "angle": "0",
+            "border_style": "1",
+            "outline": "1",
+            "shadow": "0",
+            "margin_l": "0",
+            "margin_r": "0",
+            "margin_v": "0",
+            "encoding": "1"
+        }
+    }
+    
+    generator = SubtitlesGenerator(
+        output_dir=output_dir,
+        video_resolution=video_resolution,
+        font_size=48,
+        line_height=60,
+        styles=styles,
+        logger=mock_logger
+    )
+    
+    # Check that default lead-in values are set
+    config = generator.config
+    assert config.lead_in_enabled == True
+    assert config.lead_in_width_percent == 3.5
+    assert config.lead_in_height_percent == 4.0
+    assert config.lead_in_opacity_percent == 70.0
+    assert config.lead_in_outline_thickness == 0
+    assert config.lead_in_outline_color == "0, 0, 0"
+    assert config.lead_in_gap_threshold == 5.0
+    assert config.lead_in_horiz_offset_percent == 0.0
+    assert config.lead_in_vert_offset_percent == 0.0
+
+
+def test_lead_in_configuration_from_styles(output_dir, video_resolution, mock_logger):
+    """Test that lead-in indicator configuration is passed from styles."""
+    styles = {
+        "karaoke": {
+            "ass_name": "Test",
+            "font": "Arial", 
+            "font_path": "/path/to/arial.ttf",
+            "primary_color": "255, 255, 255, 255",
+            "secondary_color": "255, 255, 255, 255",
+            "outline_color": "0, 0, 0, 255",
+            "back_color": "0, 0, 0, 255",
+            "bold": False,
+            "italic": False,
+            "underline": False,
+            "strike_out": False,
+            "scale_x": "100",
+            "scale_y": "100",
+            "spacing": "0",
+            "angle": "0",
+            "border_style": "1",
+            "outline": "1",
+            "shadow": "0",
+            "margin_l": "0",
+            "margin_r": "0",
+            "margin_v": "0",
+            "encoding": "1",
+            # Lead-in indicator configuration
+            "lead_in_enabled": False,
+            "lead_in_width_percent": 5.0,
+            "lead_in_height_percent": 6.0,
+            "lead_in_opacity_percent": 80.0,
+            "lead_in_outline_thickness": 2,
+            "lead_in_outline_color": "255, 255, 255",
+            "lead_in_gap_threshold": 3.0,
+            "lead_in_color": "255, 140, 0",
+            "lead_in_horiz_offset_percent": -2.5,
+            "lead_in_vert_offset_percent": 1.5
+        }
+    }
+    
+    generator = SubtitlesGenerator(
+        output_dir=output_dir,
+        video_resolution=video_resolution,
+        font_size=48,
+        line_height=60,
+        styles=styles,
+        logger=mock_logger
+    )
+    
+    # Check that all custom lead-in values are applied
+    config = generator.config
+    assert config.lead_in_enabled == False
+    assert config.lead_in_width_percent == 5.0
+    assert config.lead_in_height_percent == 6.0
+    assert config.lead_in_opacity_percent == 80.0
+    assert config.lead_in_outline_thickness == 2
+    assert config.lead_in_outline_color == "255, 255, 255"
+    assert config.lead_in_gap_threshold == 3.0
+    assert config.lead_in_color == "255, 140, 0"
+    assert config.lead_in_horiz_offset_percent == -2.5
+    assert config.lead_in_vert_offset_percent == 1.5
+
+
+def test_lead_in_partial_configuration(output_dir, video_resolution, mock_logger):
+    """Test that partial lead-in configuration works with defaults."""
+    styles = {
+        "karaoke": {
+            "ass_name": "Test",
+            "font": "Arial",
+            "font_path": "/path/to/arial.ttf", 
+            "primary_color": "255, 255, 255, 255",
+            "secondary_color": "255, 255, 255, 255",
+            "outline_color": "0, 0, 0, 255",
+            "back_color": "0, 0, 0, 255",
+            "bold": False,
+            "italic": False,
+            "underline": False,
+            "strike_out": False,
+            "scale_x": "100",
+            "scale_y": "100",
+            "spacing": "0",
+            "angle": "0",
+            "border_style": "1",
+            "outline": "1",
+            "shadow": "0",
+            "margin_l": "0",
+            "margin_r": "0",
+            "margin_v": "0",
+            "encoding": "1",
+            # Only configure some lead-in options
+            "lead_in_width_percent": 4.5,
+            "lead_in_horiz_offset_percent": -1.0,
+            "lead_in_color": "230, 139, 33"
+        }
+    }
+    
+    generator = SubtitlesGenerator(
+        output_dir=output_dir,
+        video_resolution=video_resolution,
+        font_size=48,
+        line_height=60,
+        styles=styles,
+        logger=mock_logger
+    )
+    
+    config = generator.config
+    
+    # Check that custom values are applied
+    assert config.lead_in_width_percent == 4.5
+    assert config.lead_in_horiz_offset_percent == -1.0
+    assert config.lead_in_color == "230, 139, 33"
+    
+    # Check that unspecified values use defaults
+    assert config.lead_in_enabled == True  # Default
+    assert config.lead_in_height_percent == 4.0  # Default
+    assert config.lead_in_opacity_percent == 70.0  # Default
+    assert config.lead_in_outline_thickness == 0  # Default
+    assert config.lead_in_vert_offset_percent == 0.0  # Default
+
+
+def test_text_case_transform_configuration(output_dir, video_resolution, mock_logger):
+    """Test that text case transformation is properly configured."""
+    styles = {
+        "karaoke": {
+            "ass_name": "Test",
+            "font": "Arial",
+            "font_path": "/path/to/arial.ttf",
+            "primary_color": "255, 255, 255, 255",
+            "secondary_color": "255, 255, 255, 255",
+            "outline_color": "0, 0, 0, 255",
+            "back_color": "0, 0, 0, 255", 
+            "bold": False,
+            "italic": False,
+            "underline": False,
+            "strike_out": False,
+            "scale_x": "100",
+            "scale_y": "100",
+            "spacing": "0",
+            "angle": "0",
+            "border_style": "1",
+            "outline": "1",
+            "shadow": "0",
+            "margin_l": "0",
+            "margin_r": "0",
+            "margin_v": "0",
+            "encoding": "1",
+            "text_case_transform": "uppercase"
+        }
+    }
+    
+    generator = SubtitlesGenerator(
+        output_dir=output_dir,
+        video_resolution=video_resolution,
+        font_size=48,
+        line_height=60,
+        styles=styles,
+        logger=mock_logger
+    )
+    
+    assert generator.config.text_case_transform == "uppercase"
+
+
 @patch("subprocess.check_output")
 def test_get_audio_duration_success(mock_check_output, generator):
     """Test successful audio duration detection."""

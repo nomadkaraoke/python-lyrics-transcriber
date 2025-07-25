@@ -62,7 +62,17 @@ class SubtitlesGenerator:
             "fade_in_ms",
             "fade_out_ms",
             "lead_in_color",
-            "text_case_transform"
+            "text_case_transform",
+            # New lead-in indicator configuration options
+            "lead_in_enabled",
+            "lead_in_width_percent",
+            "lead_in_height_percent",
+            "lead_in_opacity_percent",
+            "lead_in_outline_thickness",
+            "lead_in_outline_color",
+            "lead_in_gap_threshold",
+            "lead_in_horiz_offset_percent",
+            "lead_in_vert_offset_percent",
         ]
         
         for prop in screen_config_props:

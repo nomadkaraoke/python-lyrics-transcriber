@@ -67,7 +67,7 @@ class LyricsLine:
             Tuple of (text, has_lead_in)
         """
         has_lead_in = (self.previous_end_time is None or 
-                      self.segment.start_time - self.previous_end_time >= 5.0)
+                      self.segment.start_time - self.previous_end_time >= self.screen_config.lead_in_gap_threshold)
         
         if not has_lead_in:
             return "", False
@@ -88,8 +88,13 @@ class LyricsLine:
 
     def _create_lead_in_event(self, state: LineState, style: Style, video_width: int, config: ScreenConfig) -> Optional[Event]:
         """Create a separate event for the lead-in indicator if needed."""
+        # Check if lead-in is enabled
+        if not config.lead_in_enabled:
+            return None
+            
+        # Check if there's a sufficient gap to show lead-in
         if not (self.previous_end_time is None or 
-                self.segment.start_time - self.previous_end_time >= 5.0):
+                self.segment.start_time - self.previous_end_time >= config.lead_in_gap_threshold):
             return None
             
         self.logger.debug(f"Creating lead-in indicator for line: '{self.segment.text}'")
@@ -109,20 +114,34 @@ class LyricsLine:
         self.logger.debug(f"  Rectangle reaches final position at: {line_start:.2f}s")
         self.logger.debug(f"  Rectangle fully faded out at: {fade_out_end:.2f}s")
         
-        # Calculate dimensions and positions
+        # Calculate dimensions and positions using configurable percentages
         font = self._get_font(style)
-        main_text = self.segment.text
+        # Apply case transformation to match the actual rendered text
+        main_text = self._apply_case_transform(self.segment.text)
         main_width, main_height = self._get_text_dimensions(main_text, font)
-        rect_width = int(self.screen_config.video_width * 0.035)  # 3.5% of video width
-        rect_height = int(self.screen_config.video_height * 0.04)  # 4% of video height
+        rect_width = int(self.screen_config.video_width * (config.lead_in_width_percent / 100))
+        rect_height = int(self.screen_config.video_height * (config.lead_in_height_percent / 100))
+        # Calculate where the left edge of the centered text will be
         text_left = self.screen_config.video_width//2 - main_width//2
+        # Apply horizontal offset if configured
+        horizontal_offset = int(self.screen_config.video_width * (config.lead_in_horiz_offset_percent / 100))
+        final_x_position = text_left + horizontal_offset
+        # Apply vertical offset if configured
+        vertical_offset = int(self.screen_config.video_height * (config.lead_in_vert_offset_percent / 100))
+        final_y_position = state.y_position + main_height + vertical_offset
         
         self.logger.debug(f"Position calculations:")
         self.logger.debug(f"  Video dimensions: {self.screen_config.video_width}x{self.screen_config.video_height}")
+        self.logger.debug(f"  Original text: '{self.segment.text}'")
+        self.logger.debug(f"  Transformed text: '{main_text}'")
         self.logger.debug(f"  Main text width: {main_width}px")
         self.logger.debug(f"  Main text height: {main_height}px")
-        self.logger.debug(f"  Rectangle dimensions: {rect_width}x{rect_height}px")
+        self.logger.debug(f"  Rectangle dimensions: {rect_width}x{rect_height}px (from {config.lead_in_width_percent}% x {config.lead_in_height_percent}%)")
         self.logger.debug(f"  Text left edge: {text_left}px")
+        self.logger.debug(f"  Horizontal offset: {horizontal_offset}px ({config.lead_in_horiz_offset_percent}% of screen width)")
+        self.logger.debug(f"  Final X position: {final_x_position}px")
+        self.logger.debug(f"  Vertical offset: {vertical_offset}px ({config.lead_in_vert_offset_percent}% of screen height)")
+        self.logger.debug(f"  Final Y position: {final_y_position}px")
         self.logger.debug(f"  Vertical position: {state.y_position}px")
         
         # Create main indicator event
@@ -136,15 +155,27 @@ class LyricsLine:
         # Calculate movement duration in milliseconds
         move_duration = int((line_start - appear_time) * 1000)
         
-        # Create indicator rectangle aligned to bottom
+        # Build the indicator rectangle text with configurable styling
         main_text = (
             f"{{\\an8}}"  # center-bottom alignment
-            f"{{\\move(0,{state.y_position + main_height},{text_left},{state.y_position + main_height},0,{move_duration})}}"  # Move until line start
+            f"{{\\move(0,{final_y_position},{final_x_position},{final_y_position},0,{move_duration})}}"  # Move until line start
             f"{{\\c{config.get_lead_in_color_ass_format()}}}"  # Configurable lead-in color in ASS format
-            f"{{\\alpha&H4D&}}"  # 70% opacity (FF=0%, 00=100%)
+            f"{{\\alpha{config.get_lead_in_opacity_ass_format()}}}"  # Configurable opacity
             f"{{\\fad(800,500)}}"  # 800ms fade in, 500ms fade out
-            f"{{\\p1}}m {-rect_width} {-rect_height} l 0 {-rect_height} 0 0 {-rect_width} 0{{\\p0}}"  # Draw up from bottom
         )
+        
+        # Add outline if thickness > 0
+        if config.lead_in_outline_thickness > 0:
+            main_text += (
+                f"{{\\3c{config.get_lead_in_outline_color_ass_format()}}}"  # Outline color
+                f"{{\\bord{config.lead_in_outline_thickness}}}"  # Outline thickness
+            )
+        else:
+            main_text += f"{{\\bord0}}"  # No outline
+        
+        # Add the rectangle shape
+        main_text += f"{{\\p1}}m {-rect_width} {-rect_height} l 0 {-rect_height} 0 0 {-rect_width} 0{{\\p0}}"  # Draw up from bottom
+        
         main_event.Text = main_text
         
         return [main_event]

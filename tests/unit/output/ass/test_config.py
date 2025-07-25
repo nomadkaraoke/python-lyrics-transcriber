@@ -20,6 +20,17 @@ def test_screen_config_defaults():
     # Lead-in defaults
     assert config.lead_in_color == "112, 112, 247"
     assert config.get_lead_in_color_ass_format() == "&H00F77070&"
+    
+    # New lead-in indicator defaults
+    assert config.lead_in_enabled == True
+    assert config.lead_in_width_percent == 3.5
+    assert config.lead_in_height_percent == 4.0
+    assert config.lead_in_opacity_percent == 70.0
+    assert config.lead_in_outline_thickness == 0
+    assert config.lead_in_outline_color == "0, 0, 0"
+    assert config.lead_in_gap_threshold == 5.0
+    assert config.lead_in_horiz_offset_percent == 0.0
+    assert config.lead_in_vert_offset_percent == 0.0
 
 
 def test_screen_config_custom_values():
@@ -123,3 +134,165 @@ def test_line_state():
     assert state.text == "Hello world"
     assert state.timing == timing
     assert state.y_position == 100
+
+
+def test_lead_in_enabled_configuration():
+    """Test lead-in enabled/disabled configuration."""
+    # Test enabled (default)
+    config = ScreenConfig()
+    assert config.lead_in_enabled == True
+    
+    # Test disabled
+    config = ScreenConfig(lead_in_enabled=False)
+    assert config.lead_in_enabled == False
+
+
+def test_lead_in_size_configuration():
+    """Test lead-in size configuration as percentages."""
+    config = ScreenConfig(
+        lead_in_width_percent=5.0,
+        lead_in_height_percent=6.0
+    )
+    
+    assert config.lead_in_width_percent == 5.0
+    assert config.lead_in_height_percent == 6.0
+
+
+def test_lead_in_opacity_configuration():
+    """Test lead-in opacity configuration and ASS conversion."""
+    # Test default opacity
+    config = ScreenConfig()
+    assert config.lead_in_opacity_percent == 70.0
+    assert config.get_lead_in_opacity_ass_format() == "&H4C&"  # 70% opacity
+    
+    # Test custom opacity
+    config = ScreenConfig(lead_in_opacity_percent=50.0)
+    assert config.lead_in_opacity_percent == 50.0
+    assert config.get_lead_in_opacity_ass_format() == "&H7F&"  # 50% opacity
+    
+    # Test full opacity
+    config = ScreenConfig(lead_in_opacity_percent=100.0)
+    assert config.get_lead_in_opacity_ass_format() == "&H00&"  # 100% opacity
+    
+    # Test transparent
+    config = ScreenConfig(lead_in_opacity_percent=0.0)
+    assert config.get_lead_in_opacity_ass_format() == "&HFF&"  # 0% opacity
+
+
+def test_lead_in_outline_configuration():
+    """Test lead-in outline configuration."""
+    # Test no outline (default)
+    config = ScreenConfig()
+    assert config.lead_in_outline_thickness == 0
+    assert config.lead_in_outline_color == "0, 0, 0"
+    
+    # Test custom outline
+    config = ScreenConfig(
+        lead_in_outline_thickness=3,
+        lead_in_outline_color="255, 255, 255"
+    )
+    assert config.lead_in_outline_thickness == 3
+    assert config.lead_in_outline_color == "255, 255, 255"
+    assert config.get_lead_in_outline_color_ass_format() == "&H00FFFFFF&"
+
+
+def test_lead_in_outline_color_conversion():
+    """Test lead-in outline color RGB to ASS conversion."""
+    config = ScreenConfig()
+    
+    # Test white outline
+    config.lead_in_outline_color = "255, 255, 255"
+    assert config.get_lead_in_outline_color_ass_format() == "&H00FFFFFF&"
+    
+    # Test black outline (default)
+    config.lead_in_outline_color = "0, 0, 0"
+    assert config.get_lead_in_outline_color_ass_format() == "&H00000000&"
+    
+    # Test red outline
+    config.lead_in_outline_color = "255, 0, 0"
+    assert config.get_lead_in_outline_color_ass_format() == "&H000000FF&"
+    
+    # Test with alpha
+    config.lead_in_outline_color = "255, 255, 255, 128"
+    assert config.get_lead_in_outline_color_ass_format() == "&H7FFFFFFF&"
+    
+    # Test ASS format compatibility
+    config.lead_in_outline_color = "&H00FFFFFF&"
+    assert config.get_lead_in_outline_color_ass_format() == "&H00FFFFFF&"
+    
+    # Test invalid format fallback
+    config.lead_in_outline_color = "invalid"
+    assert config.get_lead_in_outline_color_ass_format() == "&H000000&"  # Fallback to black
+
+
+def test_lead_in_gap_threshold_configuration():
+    """Test lead-in gap threshold configuration."""
+    # Test default
+    config = ScreenConfig()
+    assert config.lead_in_gap_threshold == 5.0
+    
+    # Test custom value
+    config = ScreenConfig(lead_in_gap_threshold=3.0)
+    assert config.lead_in_gap_threshold == 3.0
+
+
+def test_lead_in_horizontal_offset_configuration():
+    """Test lead-in horizontal offset configuration."""
+    # Test default (no offset)
+    config = ScreenConfig()
+    assert config.lead_in_horiz_offset_percent == 0.0
+    
+    # Test negative offset (move left)
+    config = ScreenConfig(lead_in_horiz_offset_percent=-2.5)
+    assert config.lead_in_horiz_offset_percent == -2.5
+    
+    # Test positive offset (move right)
+    config = ScreenConfig(lead_in_horiz_offset_percent=1.5)
+    assert config.lead_in_horiz_offset_percent == 1.5
+
+
+def test_lead_in_vertical_offset_configuration():
+    """Test lead-in vertical offset configuration."""
+    # Test default (no offset)
+    config = ScreenConfig()
+    assert config.lead_in_vert_offset_percent == 0.0
+    
+    # Test negative offset (move up)
+    config = ScreenConfig(lead_in_vert_offset_percent=-1.0)
+    assert config.lead_in_vert_offset_percent == -1.0
+    
+    # Test positive offset (move down)
+    config = ScreenConfig(lead_in_vert_offset_percent=2.0)
+    assert config.lead_in_vert_offset_percent == 2.0
+
+
+def test_lead_in_all_options_together():
+    """Test all lead-in options configured together."""
+    config = ScreenConfig(
+        lead_in_enabled=True,
+        lead_in_width_percent=4.5,
+        lead_in_height_percent=5.5,
+        lead_in_opacity_percent=80.0,
+        lead_in_outline_thickness=2,
+        lead_in_outline_color="128, 128, 128",
+        lead_in_gap_threshold=3.0,
+        lead_in_color="255, 140, 0",
+        lead_in_horiz_offset_percent=-1.5,
+        lead_in_vert_offset_percent=1.0
+    )
+    
+    assert config.lead_in_enabled == True
+    assert config.lead_in_width_percent == 4.5
+    assert config.lead_in_height_percent == 5.5
+    assert config.lead_in_opacity_percent == 80.0
+    assert config.lead_in_outline_thickness == 2
+    assert config.lead_in_outline_color == "128, 128, 128"
+    assert config.lead_in_gap_threshold == 3.0
+    assert config.lead_in_color == "255, 140, 0"
+    assert config.lead_in_horiz_offset_percent == -1.5
+    assert config.lead_in_vert_offset_percent == 1.0
+    
+    # Test color conversions work properly
+    assert config.get_lead_in_color_ass_format() == "&H00008CFF&"  # Orange
+    assert config.get_lead_in_outline_color_ass_format() == "&H00808080&"  # Gray
+    assert config.get_lead_in_opacity_ass_format() == "&H33&"  # 80% opacity

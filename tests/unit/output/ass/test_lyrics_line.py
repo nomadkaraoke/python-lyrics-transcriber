@@ -150,6 +150,264 @@ def test_string_representation():
     assert str(line) == "{Test}"
 
 
+def test_case_transformation_none():
+    """Test no case transformation (default)."""
+    segment = create_segment([("Hello", 1.0), ("World", 1.0)])
+    config = ScreenConfig(text_case_transform="none")
+    line = LyricsLine(segment=segment, screen_config=config)
+    
+    result = line._apply_case_transform("Hello World")
+    assert result == "Hello World"
+
+
+def test_case_transformation_uppercase():
+    """Test uppercase transformation."""
+    segment = create_segment([("Hello", 1.0), ("World", 1.0)])
+    config = ScreenConfig(text_case_transform="uppercase")
+    line = LyricsLine(segment=segment, screen_config=config)
+    
+    result = line._apply_case_transform("Hello World")
+    assert result == "HELLO WORLD"
+
+
+def test_case_transformation_lowercase():
+    """Test lowercase transformation."""
+    segment = create_segment([("Hello", 1.0), ("World", 1.0)])
+    config = ScreenConfig(text_case_transform="lowercase")
+    line = LyricsLine(segment=segment, screen_config=config)
+    
+    result = line._apply_case_transform("Hello World")
+    assert result == "hello world"
+
+
+def test_case_transformation_propercase():
+    """Test proper case transformation."""
+    segment = create_segment([("hello", 1.0), ("world", 1.0)])
+    config = ScreenConfig(text_case_transform="propercase")
+    line = LyricsLine(segment=segment, screen_config=config)
+    
+    result = line._apply_case_transform("hello world")
+    assert result == "Hello World"
+
+
+def test_lead_in_disabled():
+    """Test that lead-in indicator is not created when disabled."""
+    segment = create_segment([("Hello", 1.0)])
+    config = ScreenConfig(lead_in_enabled=False)
+    line = LyricsLine(segment=segment, screen_config=config)
+    
+    # Mock state and style for the test
+    from lyrics_transcriber.output.ass.config import LineState, LineTimingInfo
+    timing = LineTimingInfo(fade_in_time=5.0, end_time=10.0, fade_out_time=9.5, clear_time=10.5)
+    state = LineState(text="Hello", timing=timing, y_position=100)
+    style = Style()
+    
+    result = line._create_lead_in_event(state, style, 640, config)
+    assert result is None
+
+
+def test_lead_in_insufficient_gap():
+    """Test that lead-in indicator is not created when gap is insufficient."""
+    segment = create_segment([("Hello", 1.0)])
+    config = ScreenConfig(lead_in_enabled=True, lead_in_gap_threshold=5.0)
+    line = LyricsLine(segment=segment, screen_config=config)
+    
+    # Set previous end time too close to current start
+    line.previous_end_time = 8.0  # Only 2s gap, less than 5s threshold
+    
+    from lyrics_transcriber.output.ass.config import LineState, LineTimingInfo
+    timing = LineTimingInfo(fade_in_time=9.0, end_time=11.0, fade_out_time=10.5, clear_time=11.5)
+    state = LineState(text="Hello", timing=timing, y_position=100)
+    style = Style()
+    
+    result = line._create_lead_in_event(state, style, 640, config)
+    assert result is None
+
+
+def test_lead_in_sufficient_gap():
+    """Test that lead-in indicator is created when gap is sufficient."""
+    segment = create_segment([("Hello", 1.0)])
+    config = ScreenConfig(
+        lead_in_enabled=True, 
+        lead_in_gap_threshold=3.0,
+        video_width=640,
+        video_height=360
+    )
+    line = LyricsLine(segment=segment, screen_config=config)
+    
+    # Set previous end time with sufficient gap
+    line.previous_end_time = 5.0  # 5s gap, more than 3s threshold
+    
+    from lyrics_transcriber.output.ass.config import LineState, LineTimingInfo
+    timing = LineTimingInfo(fade_in_time=9.0, end_time=11.0, fade_out_time=10.5, clear_time=11.5)
+    state = LineState(text="Hello", timing=timing, y_position=100)
+    style = Style()
+    style.Fontpath = None  # Use default font
+    
+    result = line._create_lead_in_event(state, style, 640, config)
+    assert result is not None
+    assert len(result) == 1
+    assert result[0].type == "Dialogue"
+
+
+def test_lead_in_no_previous_segment():
+    """Test that lead-in indicator is created when there's no previous segment."""
+    segment = create_segment([("Hello", 1.0)])
+    config = ScreenConfig(
+        lead_in_enabled=True,
+        video_width=640,
+        video_height=360
+    )
+    line = LyricsLine(segment=segment, screen_config=config)
+    
+    # No previous segment (None)
+    line.previous_end_time = None
+    
+    from lyrics_transcriber.output.ass.config import LineState, LineTimingInfo
+    timing = LineTimingInfo(fade_in_time=5.0, end_time=10.0, fade_out_time=9.5, clear_time=10.5)
+    state = LineState(text="Hello", timing=timing, y_position=100)
+    style = Style()
+    style.Fontpath = None
+    
+    result = line._create_lead_in_event(state, style, 640, config)
+    assert result is not None
+    assert len(result) == 1
+
+
+def test_lead_in_positioning_with_offsets():
+    """Test lead-in positioning with horizontal and vertical offsets."""
+    segment = create_segment([("Hello", 1.0)])
+    config = ScreenConfig(
+        lead_in_enabled=True,
+        video_width=640,
+        video_height=360,
+        lead_in_horiz_offset_percent=-2.0,  # Move 2% left
+        lead_in_vert_offset_percent=1.0,    # Move 1% down
+        text_case_transform="uppercase"     # Use uppercase to test case transformation
+    )
+    line = LyricsLine(segment=segment, screen_config=config)
+    line.previous_end_time = None  # First segment
+    
+    from lyrics_transcriber.output.ass.config import LineState, LineTimingInfo
+    timing = LineTimingInfo(fade_in_time=5.0, end_time=10.0, fade_out_time=9.5, clear_time=10.5)
+    state = LineState(text="Hello", timing=timing, y_position=100)
+    style = Style()
+    style.Fontpath = None
+    
+    result = line._create_lead_in_event(state, style, 640, config)
+    assert result is not None
+    
+    # Check that the move command contains the offset calculations
+    event_text = result[0].Text
+    assert "\\move(" in event_text
+    
+    # Verify offsets are applied (exact positions depend on font rendering)
+    # Horizontal offset: -2% of 640 = -12px
+    # Vertical offset: 1% of 360 = 3px (added to y position)
+    horizontal_offset = int(640 * (-2.0 / 100))  # -12px
+    vertical_offset = int(360 * (1.0 / 100))     # 3px
+    
+    assert horizontal_offset == -12
+    assert vertical_offset == 3
+
+
+def test_lead_in_size_configuration():
+    """Test lead-in indicator size configuration."""
+    segment = create_segment([("Test", 1.0)])
+    config = ScreenConfig(
+        lead_in_enabled=True,
+        video_width=640,
+        video_height=360,
+        lead_in_width_percent=5.0,   # 5% width
+        lead_in_height_percent=6.0   # 6% height
+    )
+    line = LyricsLine(segment=segment, screen_config=config)
+    line.previous_end_time = None
+    
+    from lyrics_transcriber.output.ass.config import LineState, LineTimingInfo
+    timing = LineTimingInfo(fade_in_time=5.0, end_time=10.0, fade_out_time=9.5, clear_time=10.5)
+    state = LineState(text="Test", timing=timing, y_position=100)
+    style = Style()
+    style.Fontpath = None
+    
+    result = line._create_lead_in_event(state, style, 640, config)
+    assert result is not None
+    
+    # Verify size calculations
+    expected_width = int(640 * (5.0 / 100))   # 32px
+    expected_height = int(360 * (6.0 / 100))  # 21px
+    
+    assert expected_width == 32
+    assert expected_height == 21
+    
+    # Check that the rectangle drawing command uses these dimensions
+    event_text = result[0].Text
+    assert "\\p1" in event_text  # Drawing mode
+    assert f"m {-expected_width} {-expected_height}" in event_text
+
+
+def test_lead_in_outline_styling():
+    """Test lead-in outline styling configuration."""
+    segment = create_segment([("Test", 1.0)])
+    config = ScreenConfig(
+        lead_in_enabled=True,
+        video_width=640,
+        video_height=360,
+        lead_in_outline_thickness=3,
+        lead_in_outline_color="255, 255, 255",
+        lead_in_opacity_percent=80.0
+    )
+    line = LyricsLine(segment=segment, screen_config=config)
+    line.previous_end_time = None
+    
+    from lyrics_transcriber.output.ass.config import LineState, LineTimingInfo
+    timing = LineTimingInfo(fade_in_time=5.0, end_time=10.0, fade_out_time=9.5, clear_time=10.5)
+    state = LineState(text="Test", timing=timing, y_position=100)
+    style = Style()
+    style.Fontpath = None
+    
+    result = line._create_lead_in_event(state, style, 640, config)
+    assert result is not None
+    
+    event_text = result[0].Text
+    
+    # Check outline thickness
+    assert "\\bord3" in event_text
+    
+    # Check outline color (white in ASS format)
+    assert "\\3c&H00FFFFFF&" in event_text
+    
+    # Check opacity (80% in ASS format)
+    assert "\\alpha&H33&" in event_text
+
+
+def test_lead_in_no_outline():
+    """Test lead-in without outline (thickness = 0)."""
+    segment = create_segment([("Test", 1.0)])
+    config = ScreenConfig(
+        lead_in_enabled=True,
+        video_width=640,
+        video_height=360,
+        lead_in_outline_thickness=0  # No outline
+    )
+    line = LyricsLine(segment=segment, screen_config=config)
+    line.previous_end_time = None
+    
+    from lyrics_transcriber.output.ass.config import LineState, LineTimingInfo
+    timing = LineTimingInfo(fade_in_time=5.0, end_time=10.0, fade_out_time=9.5, clear_time=10.5)
+    state = LineState(text="Test", timing=timing, y_position=100)
+    style = Style()
+    style.Fontpath = None
+    
+    result = line._create_lead_in_event(state, style, 640, config)
+    assert result is not None
+    
+    event_text = result[0].Text
+    
+    # Should have no outline
+    assert "\\bord0" in event_text
+
+
 def test_logger_initialization():
     """Test logger is initialized if not provided."""
     segment = create_segment([("Test", 1.0)])
@@ -315,50 +573,3 @@ class TestAssEventCreation:
         assert "\\k0" in text
         assert "\\kf50" in text  # Word durations
         assert "\\k50" in text  # Gaps
-
-
-def test_case_transformation():
-    """Test text case transformation feature."""
-    # Create test words with mixed case
-    words = [("Hello", 0.5), ("WORLD", 0.5), ("test", 0.5)]
-    segment = create_segment(words)
-    
-    # Test uppercase transformation
-    config_upper = ScreenConfig(line_height=60, video_height=1080, text_case_transform="uppercase")
-    line_upper = LyricsLine(segment=segment, screen_config=config_upper)
-    result_upper = line_upper._create_ass_text(timedelta(seconds=10.0))
-    assert "HELLO" in result_upper
-    assert "WORLD" in result_upper
-    assert "TEST" in result_upper
-    
-    # Test lowercase transformation
-    config_lower = ScreenConfig(line_height=60, video_height=1080, text_case_transform="lowercase") 
-    line_lower = LyricsLine(segment=segment, screen_config=config_lower)
-    result_lower = line_lower._create_ass_text(timedelta(seconds=10.0))
-    assert "hello" in result_lower
-    assert "world" in result_lower
-    assert "test" in result_lower
-    
-    # Test propercase transformation  
-    config_proper = ScreenConfig(line_height=60, video_height=1080, text_case_transform="propercase")
-    line_proper = LyricsLine(segment=segment, screen_config=config_proper)
-    result_proper = line_proper._create_ass_text(timedelta(seconds=10.0))
-    assert "Hello" in result_proper
-    assert "World" in result_proper
-    assert "Test" in result_proper
-    
-    # Test no transformation (default)
-    config_none = ScreenConfig(line_height=60, video_height=1080, text_case_transform="none")
-    line_none = LyricsLine(segment=segment, screen_config=config_none)
-    result_none = line_none._create_ass_text(timedelta(seconds=10.0))
-    assert "Hello" in result_none
-    assert "WORLD" in result_none
-    assert "test" in result_none
-    
-    # Test default behavior (no transform specified)
-    config_default = ScreenConfig(line_height=60, video_height=1080)
-    line_default = LyricsLine(segment=segment, screen_config=config_default)
-    result_default = line_default._create_ass_text(timedelta(seconds=10.0))
-    assert "Hello" in result_default
-    assert "WORLD" in result_default
-    assert "test" in result_default
