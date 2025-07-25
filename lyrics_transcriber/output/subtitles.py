@@ -61,7 +61,8 @@ class SubtitlesGenerator:
             "post_roll_time",
             "fade_in_ms",
             "fade_out_ms",
-            "lead_in_color"
+            "lead_in_color",
+            "text_case_transform"
         ]
         
         for prop in screen_config_props:

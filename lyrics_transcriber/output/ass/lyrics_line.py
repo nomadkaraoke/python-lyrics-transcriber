@@ -190,6 +190,19 @@ class LyricsLine:
 
         return events
 
+    def _apply_case_transform(self, text: str) -> str:
+        """Apply case transformation to text based on screen config setting."""
+        transform = getattr(self.screen_config, 'text_case_transform', 'none')
+        
+        if transform == "uppercase":
+            return text.upper()
+        elif transform == "lowercase":
+            return text.lower()
+        elif transform == "propercase":
+            return text.title()
+        else:  # "none" or any other value
+            return text
+
     def _create_ass_text(self, start_ts: timedelta) -> str:
         """Create the ASS text with karaoke timing tags."""
         # Initial delay before first word
@@ -209,7 +222,9 @@ class LyricsLine:
 
             # Add the word with its duration
             duration = int(round((word.end_time - word.start_time) * 100))
-            text += r"{\kf" + str(duration) + r"}" + word.text + " "
+            # Apply case transformation to the word text
+            transformed_text = self._apply_case_transform(word.text)
+            text += r"{\kf" + str(duration) + r"}" + transformed_text + " "
 
             prev_end_time = word.end_time  # Track the actual end time of the word
 

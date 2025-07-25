@@ -315,3 +315,50 @@ class TestAssEventCreation:
         assert "\\k0" in text
         assert "\\kf50" in text  # Word durations
         assert "\\k50" in text  # Gaps
+
+
+def test_case_transformation():
+    """Test text case transformation feature."""
+    # Create test words with mixed case
+    words = [("Hello", 0.5), ("WORLD", 0.5), ("test", 0.5)]
+    segment = create_segment(words)
+    
+    # Test uppercase transformation
+    config_upper = ScreenConfig(line_height=60, video_height=1080, text_case_transform="uppercase")
+    line_upper = LyricsLine(segment=segment, screen_config=config_upper)
+    result_upper = line_upper._create_ass_text(timedelta(seconds=10.0))
+    assert "HELLO" in result_upper
+    assert "WORLD" in result_upper
+    assert "TEST" in result_upper
+    
+    # Test lowercase transformation
+    config_lower = ScreenConfig(line_height=60, video_height=1080, text_case_transform="lowercase") 
+    line_lower = LyricsLine(segment=segment, screen_config=config_lower)
+    result_lower = line_lower._create_ass_text(timedelta(seconds=10.0))
+    assert "hello" in result_lower
+    assert "world" in result_lower
+    assert "test" in result_lower
+    
+    # Test propercase transformation  
+    config_proper = ScreenConfig(line_height=60, video_height=1080, text_case_transform="propercase")
+    line_proper = LyricsLine(segment=segment, screen_config=config_proper)
+    result_proper = line_proper._create_ass_text(timedelta(seconds=10.0))
+    assert "Hello" in result_proper
+    assert "World" in result_proper
+    assert "Test" in result_proper
+    
+    # Test no transformation (default)
+    config_none = ScreenConfig(line_height=60, video_height=1080, text_case_transform="none")
+    line_none = LyricsLine(segment=segment, screen_config=config_none)
+    result_none = line_none._create_ass_text(timedelta(seconds=10.0))
+    assert "Hello" in result_none
+    assert "WORLD" in result_none
+    assert "test" in result_none
+    
+    # Test default behavior (no transform specified)
+    config_default = ScreenConfig(line_height=60, video_height=1080)
+    line_default = LyricsLine(segment=segment, screen_config=config_default)
+    result_default = line_default._create_ass_text(timedelta(seconds=10.0))
+    assert "Hello" in result_default
+    assert "WORLD" in result_default
+    assert "test" in result_default

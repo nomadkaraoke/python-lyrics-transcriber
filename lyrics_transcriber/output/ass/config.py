@@ -16,6 +16,7 @@ class ScreenConfig:
         fade_in_ms: int = 200,
         fade_out_ms: int = 300,
         lead_in_color: str = "112, 112, 247",  # Default blue color in RGB format
+        text_case_transform: str = "none",  # Options: "none", "uppercase", "lowercase", "propercase"
     ):
         # Screen layout
         self.max_visible_lines = max_visible_lines
@@ -30,6 +31,8 @@ class ScreenConfig:
         self.fade_out_ms = fade_out_ms
         # Lead-in configuration
         self.lead_in_color = lead_in_color
+        # Text formatting configuration
+        self.text_case_transform = text_case_transform
 
     def get_lead_in_color_ass_format(self) -> str:
         """Convert RGB lead-in color to ASS format.
