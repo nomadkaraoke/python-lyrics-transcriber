@@ -244,6 +244,14 @@ class LyricsCorrector:
                     if word.id not in word_map:  # Don't overwrite transcribed words
                         word_map[word.id] = word
 
+        # Build a linear position map for words to support agentic proposals
+        linear_position_map = {}
+        _pos_idx = 0
+        for s in segments:
+            for w in s.words:
+                linear_position_map[w.id] = _pos_idx
+                _pos_idx += 1
+
         # Base handler data that all handlers need
         base_handler_data = {
             "word_map": word_map,
@@ -257,6 +265,57 @@ class LyricsCorrector:
             # Get the actual words for logging
             gap_words = [word_map[word_id] for word_id in gap.transcribed_word_ids]
             self.logger.debug(f"Gap text: '{' '.join(w.text for w in gap_words)}'")
+
+            # Optionally, attempt agentic correction first
+            try:
+                import os as _os
+                from lyrics_transcriber.correction.agentic.agent import AgenticCorrector as _AgenticCorrector
+                from lyrics_transcriber.correction.agentic.adapter import adapt_proposals_to_word_corrections as _adapt
+            except Exception:
+                _AgenticCorrector = None  # type: ignore
+                _adapt = None  # type: ignore
+
+            if _AgenticCorrector and _adapt and (_os.getenv("USE_AGENTIC_AI", "").lower() in {"1", "true", "yes"}):
+                try:
+                    # Simple prompt using gap text and optional reference text
+                    gap_text = " ".join(w.text for w in gap_words)
+                    ref_text = " ".join(next(iter(self.reference_lyrics.values())).get_full_text().split()[:50]) if self.reference_lyrics else ""
+                    prompt = (
+                        "You are correcting transcription errors in lyrics.\n"
+                        f"Transcribed gap: '{gap_text}'.\n"
+                        f"Reference context (optional): '{ref_text}'.\n"
+                        "Return a JSON list of proposals matching the CorrectionProposal schema."
+                    )
+                    model_id = _os.getenv("AGENTIC_AI_MODEL", "anthropic/claude-4-sonnet")
+                    _agent = _AgenticCorrector(model=model_id)
+                    _proposals = _agent.propose(prompt)
+                    _agentic_corrections = _adapt(_proposals, word_map, linear_position_map) if _proposals else []
+                    if _agentic_corrections:
+                        affected_word_ids = [w.id for w in self._get_affected_words(gap, segments)]
+                        affected_segment_ids = [s.id for s in self._get_affected_segments(gap, segments)]
+                        updated_segments = self._apply_corrections_to_segments(self._get_affected_segments(gap, segments), _agentic_corrections)
+                        for correction in _agentic_corrections:
+                            if correction.word_id and correction.corrected_word_id:
+                                word_id_map[correction.word_id] = correction.corrected_word_id
+                        for old_seg, new_seg in zip(self._get_affected_segments(gap, segments), updated_segments):
+                            segment_id_map[old_seg.id] = new_seg.id
+                        step = CorrectionStep(
+                            handler_name="AgenticCorrector",
+                            affected_word_ids=affected_word_ids,
+                            affected_segment_ids=affected_segment_ids,
+                            corrections=_agentic_corrections,
+                            segments_before=self._get_affected_segments(gap, segments),
+                            segments_after=updated_segments,
+                            created_word_ids=[w.id for w in self._get_new_words(updated_segments, affected_word_ids)],
+                            deleted_word_ids=[id for id in affected_word_ids if not self._word_exists(id, updated_segments)],
+                        )
+                        correction_steps.append(step)
+                        all_corrections.extend(_agentic_corrections)
+                        # Stop trying other handlers if agentic made corrections
+                        continue
+                except Exception:
+                    # Silent fallback to rule-based handlers
+                    pass
 
             # Try each handler in order
             for handler in self.handlers:
