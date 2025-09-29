@@ -142,6 +142,8 @@ class LyricsCorrector:
         metadata: Optional[Dict[str, Any]] = None,
     ) -> CorrectionResult:
         """Execute the correction process."""
+        # Optional agentic routing flag from environment; default off for safety
+        agentic_enabled = os.getenv("USE_AGENTIC_AI", "").lower() in {"1", "true", "yes"}
         if not transcription_results:
             self.logger.error("No transcription results available")
             raise ValueError("No primary transcription data available")
@@ -175,7 +177,7 @@ class LyricsCorrector:
         # Get the currently enabled handler IDs using the handler's name attribute if available
         enabled_handlers = [getattr(handler, "name", handler.__class__.__name__) for handler in self.handlers]
 
-        return CorrectionResult(
+        result = CorrectionResult(
             original_segments=primary_transcription.segments,
             corrected_segments=corrected_segments,
             corrections=corrections,
@@ -192,11 +194,13 @@ class LyricsCorrector:
                 "correction_ratio": correction_ratio,
                 "available_handlers": self.all_handlers,
                 "enabled_handlers": enabled_handlers,
+                "agentic_routing": "agentic" if agentic_enabled else "rule-based",
             },
             correction_steps=correction_steps,
             word_id_map=word_id_map,
             segment_id_map=segment_id_map,
         )
+        return result
 
     def _preserve_formatting(self, original: str, new_word: str) -> str:
         """Preserve original word's formatting when applying correction."""

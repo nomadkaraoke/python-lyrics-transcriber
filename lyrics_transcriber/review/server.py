@@ -179,11 +179,23 @@ class ReviewServer:
             "status": "IN_PROGRESS",
         }
 
+        # Simulate provider availability based on model preferences
+        preferred = (request.get("modelPreferences") or ["unknown"])[0]
+        model_entry = self._model_registry.get(preferred)
+        if model_entry and not model_entry.get("available", False):
+            # Service unavailable → return 503 with fallback details
+            return {
+                "corrections": [],
+                "fallbackReason": f"Model {preferred} unavailable",
+                "originalSystemUsed": "rule-based",
+                "processingTimeMs": 0,
+            }
+
         response = {
             "sessionId": session_id,
             "corrections": [],
             "processingTimeMs": 0,
-            "modelUsed": (request.get("modelPreferences") or ["unknown"])[0],
+            "modelUsed": preferred,
             "fallbackUsed": False,
             "accuracyEstimate": 0.0,
         }
