@@ -39608,7 +39608,7 @@ const theme = createTheme({
   spacing: (factor) => `${0.6 * factor}rem`
   // Further reduced from 0.8 * factor
 });
-const version = "0.70.0";
+const version = "0.71.0";
 const packageJson = {
   version
 };
@@ -39619,4 +39619,4 @@ ReactDOM$1.createRoot(document.getElementById("root")).render(
     /* @__PURE__ */ jsxRuntimeExports.jsx(App, {})
   ] })
 );
-//# sourceMappingURL=index-BV5ep1cr.js.map
+//# sourceMappingURL=index-BaSm3E0s.js.map
