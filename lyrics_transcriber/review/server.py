@@ -35,6 +35,11 @@ except Exception:
     def get_ollama_models():  # type: ignore
         return []
 
+try:
+    from lyrics_transcriber.correction.agentic.feedback.store import FeedbackStore
+except Exception:
+    FeedbackStore = None  # type: ignore
+
 
 class ReviewServer:
     """Handles the review process through a web interface."""
@@ -58,6 +63,12 @@ class ReviewServer:
         self._configure_cors()
         self._register_routes()
         self._mount_frontend()
+        # Initialize optional SQLite store for sessions/feedback
+        try:
+            default_db = os.path.join(self.output_config.cache_dir, "agentic_feedback.sqlite3")
+            self._store = FeedbackStore(default_db) if FeedbackStore else None
+        except Exception:
+            self._store = None
 
     def _configure_cors(self) -> None:
         """Configure CORS middleware."""
@@ -164,7 +175,7 @@ class ReviewServer:
             raise HTTPException(status_code=400, detail="Missing required fields: transcriptionData, audioFileHash")
 
         session_id = str(uuid.uuid4())
-        self._session_store[session_id] = {
+        session_record = {
             "id": session_id,
             "audioFileHash": request.get("audioFileHash"),
             "sessionType": "FULL_CORRECTION",
@@ -178,6 +189,12 @@ class ReviewServer:
             "completedAt": None,
             "status": "IN_PROGRESS",
         }
+        self._session_store[session_id] = session_record
+        if self._store:
+            try:
+                self._store.put_session(session_id, json.dumps(session_record))
+            except Exception:
+                pass
 
         # Simulate provider availability based on model preferences
         preferred = (request.get("modelPreferences") or ["unknown"])[0]
@@ -216,7 +233,13 @@ class ReviewServer:
             raise HTTPException(status_code=400, detail="Missing required feedback fields")
 
         feedback_id = str(uuid.uuid4())
-        self._feedback_store[feedback_id] = {**request, "id": feedback_id}
+        record = {**request, "id": feedback_id}
+        self._feedback_store[feedback_id] = record
+        if self._store:
+            try:
+                self._store.put_feedback(feedback_id, request.get("sessionId"), json.dumps(record))
+            except Exception:
+                pass
         return {"feedbackId": feedback_id, "recorded": True, "learningDataUpdated": False}
 
     async def get_models_v1(self):

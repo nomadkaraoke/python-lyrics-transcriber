@@ -93,8 +93,8 @@ Based on plan.md structure: Single Python project with agentic AI integration
 - [X] T033 Model routing and selection logic in lyrics_transcriber/correction/agentic/router.py
 
 ### Feedback Store
-- [ ] T069 Introduce SQLite or DuckDB store in lyrics_transcriber/correction/agentic/feedback/store.py
-- [ ] T070 [P] Migrate HumanFeedback writes from JSON to DB, keep JSON exports
+- [X] T069 Introduce SQLite or DuckDB store in lyrics_transcriber/correction/agentic/feedback/store.py
+- [X] T070 [P] Migrate HumanFeedback writes from JSON to DB, keep JSON exports
 - [ ] T071 [P] Implement 3-year retention cleanup job
 
 ## Phase 3.5: API Implementation & Integration
