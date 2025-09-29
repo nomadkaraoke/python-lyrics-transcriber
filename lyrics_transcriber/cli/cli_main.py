@@ -93,6 +93,18 @@ def create_arg_parser() -> argparse.ArgumentParser:
         "--video_resolution", choices=["4k", "1080p", "720p", "360p"], default="360p", help="Resolution of the karaoke video. Default: 360p"
     )
 
+    # Agentic AI flags
+    feature_group.add_argument(
+        "--use-agentic-ai",
+        action="store_true",
+        help="Enable experimental agentic AI correction (sets USE_AGENTIC_AI=1)",
+    )
+    feature_group.add_argument(
+        "--ai-model",
+        type=str,
+        help="Preferred AI model identifier (e.g., 'anthropic/claude-4-sonnet', 'gpt-5', 'gemini-2.5-pro')",
+    )
+
     return parser
 
 
@@ -104,6 +116,12 @@ def parse_args(parser: argparse.ArgumentParser, args_list: list[str] | None = No
     # Set default cache_dir if not provided
     if not hasattr(args, "cache_dir") or args.cache_dir is None:
         args.cache_dir = Path(os.getenv("LYRICS_TRANSCRIBER_CACHE_DIR", os.path.join(os.path.expanduser("~"), "lyrics-transcriber-cache")))
+
+    # Export agentic flags to environment for downstream usage
+    if getattr(args, "use_agentic_ai", False):
+        os.environ["USE_AGENTIC_AI"] = "1"
+    if getattr(args, "ai_model", None):
+        os.environ["AGENTIC_AI_MODEL"] = args.ai_model
 
     return args
 

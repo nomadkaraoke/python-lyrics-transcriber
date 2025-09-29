@@ -151,7 +151,7 @@ Based on plan.md structure: Single Python project with agentic AI integration
 - [ ] T074 [P] Document provider layer configuration and environment variables
 
 ### CLI Implementation
-- [ ] T064 CLI argument parsing implementation for --ai-model and --use-agentic-ai flags in lyrics_transcriber/cli/cli_main.py
+- [X] T064 CLI argument parsing implementation for --ai-model and --use-agentic-ai flags in lyrics_transcriber/cli/cli_main.py
 
 ### Quickstart Automation
 - [ ] T060 Automated quickstart scenario runner in tests/integration/quickstart_runner.py

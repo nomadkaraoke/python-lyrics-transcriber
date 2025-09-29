@@ -184,12 +184,13 @@ class ReviewServer:
         model_entry = self._model_registry.get(preferred)
         if model_entry and not model_entry.get("available", False):
             # Service unavailable → return 503 with fallback details
-            return {
+            from fastapi.responses import JSONResponse
+            return JSONResponse(status_code=503, content={
                 "corrections": [],
                 "fallbackReason": f"Model {preferred} unavailable",
                 "originalSystemUsed": "rule-based",
                 "processingTimeMs": 0,
-            }
+            })
 
         response = {
             "sessionId": session_id,
