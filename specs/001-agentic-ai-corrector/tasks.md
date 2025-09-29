@@ -70,10 +70,10 @@ Based on plan.md structure: Single Python project with agentic AI integration
 
 ### AI Model Interfaces
 - [X] T024 [P] Base AI provider interface in lyrics_transcriber/correction/agentic/providers/base.py
-- [ ] T025 [P] OpenAI provider implementation in lyrics_transcriber/correction/agentic/providers/openai.py
-- [ ] T026 [P] Anthropic provider implementation in lyrics_transcriber/correction/agentic/providers/anthropic.py
-- [ ] T027 [P] Google provider implementation in lyrics_transcriber/correction/agentic/providers/google.py
-- [ ] T028 [P] Ollama provider implementation in lyrics_transcriber/correction/agentic/providers/ollama.py
+- [X] T025 [P] OpenAI provider implementation in lyrics_transcriber/correction/agentic/providers/openai.py
+- [X] T026 [P] Anthropic provider implementation in lyrics_transcriber/correction/agentic/providers/anthropic.py
+- [X] T027 [P] Google provider implementation in lyrics_transcriber/correction/agentic/providers/google.py
+- [X] T028 [P] Ollama provider implementation in lyrics_transcriber/correction/agentic/providers/ollama.py
 
 ### Provider Abstraction Layer
 - [X] T065 Integrate LiteLLM or OpenRouter SDK for unified provider layer in lyrics_transcriber/correction/agentic/providers/bridge.py
