@@ -39,19 +39,19 @@ Based on plan.md structure: Single Python project with agentic AI integration
 **CRITICAL: These tests MUST be written and MUST FAIL before ANY implementation**
 
 ### Contract Tests [P]
-- [ ] T006 [P] Contract test POST /api/v1/correction/agentic in tests/contract/test_agentic_correction_api.py
-- [ ] T007 [P] Contract test GET /api/v1/correction/session/{id} in tests/contract/test_agentic_correction_api.py
-- [ ] T008 [P] Contract test POST /api/v1/feedback in tests/contract/test_agentic_correction_api.py
-- [ ] T009 [P] Contract test GET /api/v1/models in tests/contract/test_agentic_correction_api.py
-- [ ] T010 [P] Contract test PUT /api/v1/models in tests/contract/test_agentic_correction_api.py
-- [ ] T011 [P] Contract test GET /api/v1/metrics in tests/contract/test_agentic_correction_api.py
+- [X] T006 [P] Contract test POST /api/v1/correction/agentic in tests/contract/test_agentic_correction_api.py
+- [X] T007 [P] Contract test GET /api/v1/correction/session/{id} in tests/contract/test_agentic_correction_api.py
+- [X] T008 [P] Contract test POST /api/v1/feedback in tests/contract/test_agentic_correction_api.py
+- [X] T009 [P] Contract test GET /api/v1/models in tests/contract/test_agentic_correction_api.py
+- [X] T010 [P] Contract test PUT /api/v1/models in tests/contract/test_agentic_correction_api.py
+- [X] T011 [P] Contract test GET /api/v1/metrics in tests/contract/test_agentic_correction_api.py
 
 ### Integration Tests [P]
 - [X] T012 [P] Integration test Scenario 1: Basic AI correction workflow in tests/integration/test_basic_ai_workflow.py
-- [ ] T013 [P] Integration test Scenario 2: Human feedback loop in tests/integration/test_human_feedback_loop.py
-- [ ] T014 [P] Integration test Scenario 3: Multi-model comparison in tests/integration/test_multi_model_comparison.py
-- [ ] T015 [P] Integration test Scenario 4: Fallback reliability in tests/integration/test_fallback_reliability.py
-- [ ] T016 [P] Integration test Scenario 5: Performance observability in tests/integration/test_performance_observability.py
+- [X] T013 [P] Integration test Scenario 2: Human feedback loop in tests/integration/test_human_feedback_loop.py
+- [X] T014 [P] Integration test Scenario 3: Multi-model comparison in tests/integration/test_multi_model_comparison.py
+- [X] T015 [P] Integration test Scenario 4: Fallback reliability in tests/integration/test_fallback_reliability.py
+- [X] T016 [P] Integration test Scenario 5: Performance observability in tests/integration/test_performance_observability.py
 
 ## Phase 3.3: Core Data Models (ONLY after tests are failing)
 
