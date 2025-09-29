@@ -286,7 +286,15 @@ class LyricsCorrector:
                         f"Reference context (optional): '{ref_text}'.\n"
                         "Return a JSON list of proposals matching the CorrectionProposal schema."
                     )
-                    model_id = _os.getenv("AGENTIC_AI_MODEL", "anthropic/claude-4-sonnet")
+                    # Choose model via router if available
+                    try:
+                        from lyrics_transcriber.correction.agentic.router import ModelRouter as _ModelRouter
+                        _router = _ModelRouter()
+                        # naive uncertainty estimate: short gaps => low uncertainty
+                        uncertainty = 0.3 if len(gap_words) <= 2 else 0.7
+                        model_id = _router.choose_model("gap", uncertainty)
+                    except Exception:
+                        model_id = _os.getenv("AGENTIC_AI_MODEL", "anthropic/claude-4-sonnet")
                     _agent = _AgenticCorrector(model=model_id)
                     _proposals = _agent.propose(prompt)
                     _agentic_corrections = _adapt(_proposals, word_map, linear_position_map) if _proposals else []
