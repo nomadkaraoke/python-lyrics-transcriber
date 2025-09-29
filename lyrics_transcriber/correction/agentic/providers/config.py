@@ -19,6 +19,10 @@ class ProviderConfig:
 
     request_timeout_seconds: float = 4.0
     max_retries: int = 2
+    retry_backoff_base_seconds: float = 0.2
+    retry_backoff_factor: float = 2.0
+    circuit_breaker_failure_threshold: int = 3
+    circuit_breaker_open_seconds: int = 60
 
     @staticmethod
     def from_env() -> "ProviderConfig":

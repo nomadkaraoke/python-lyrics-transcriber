@@ -5,6 +5,13 @@ import tempfile
 from pathlib import Path
 from unittest.mock import patch, Mock
 from lyrics_transcriber.core.controller import TranscriberConfig, LyricsConfig, LyricsTranscriber
+import threading
+import time
+import requests
+
+from lyrics_transcriber.review.server import ReviewServer
+from lyrics_transcriber.output.generator import OutputGenerator
+from lyrics_transcriber.types import CorrectionResult, LyricsSegment, Word
 
 # Add the tests directory to Python path for imports
 tests_dir = Path(__file__).parent.parent
@@ -86,3 +93,54 @@ def transcriber(test_audio_file, mock_configs, mock_dropbox_handler, mock_video_
 
 def pytest_configure(config):
     config.addinivalue_line("markers", "integration: mark test as an integration test")
+
+
+@pytest.fixture(scope="session", autouse=True)
+def start_review_server_for_api_tests(tmp_path_factory):
+    """Start the FastAPI review server in background for API integration tests.
+
+    If frontend assets are unavailable, the server constructor raises; we
+    suppress startup in that case and let API tests skip gracefully.
+    """
+    # Create a minimal CorrectionResult to satisfy server init
+    try:
+        seg = LyricsSegment(id="s1", text="hello world", words=[Word(id="w1", text="hello", start_time=0.0, end_time=0.5), Word(id="w2", text="world", start_time=0.5, end_time=1.0)], start_time=0.0, end_time=1.0)
+        correction_result = CorrectionResult(
+            original_segments=[seg],
+            corrected_segments=[seg],
+            corrections=[],
+            corrections_made=0,
+            confidence=1.0,
+            reference_lyrics={},
+            anchor_sequences=[],
+            gap_sequences=[],
+            resized_segments=[],
+            metadata={},
+            correction_steps=[],
+            word_id_map={},
+            segment_id_map={},
+        )
+        # Minimal OutputConfig via helper
+        transcriber_config, lyrics_config, output_config = None, None, create_test_output_config(
+            output_dir=tmp_path_factory.mktemp("out"), cache_dir=tmp_path_factory.mktemp("cache"), render_video=False
+        )
+
+        server = ReviewServer(
+            correction_result=correction_result,
+            output_config=output_config,
+            audio_filepath="",
+            logger=None,
+        )
+
+        th = threading.Thread(target=lambda: __import__("uvicorn").run(server.app, host="127.0.0.1", port=8000, log_level="error"), daemon=True)
+        th.start()
+        # Wait briefly for server
+        time.sleep(0.5)
+        try:
+            requests.get("http://localhost:8000/api/ping", timeout=1)
+        except Exception:
+            pass
+        yield
+    except Exception:
+        # If server can't start (e.g., missing frontend assets), continue tests
+        yield
