@@ -11,8 +11,14 @@ def cleanup_expired(db_path: str, older_than_days: int = 365 * 3) -> int:
     Note: This placeholder assumes `data` JSON contains an ISO timestamp under
     key `createdAt`. For production, store timestamps as columns.
     """
-    threshold = datetime.utcnow() - timedelta(days=older_than_days)
-    # Minimal stub: no-op; schema upgrade needed for efficient cleanup
-    return 0
+    threshold = (datetime.utcnow() - timedelta(days=older_than_days)).isoformat()
+    with sqlite3.connect(db_path) as conn:
+        cur = conn.cursor()
+        # Delete sessions and feedback older than threshold by created_at
+        cur.execute("DELETE FROM sessions WHERE created_at < ?", (threshold,))
+        cur.execute("DELETE FROM feedback WHERE created_at < ?", (threshold,))
+        deleted = cur.rowcount
+        conn.commit()
+        return deleted
 
 

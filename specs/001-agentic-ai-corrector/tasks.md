@@ -95,7 +95,7 @@ Based on plan.md structure: Single Python project with agentic AI integration
 ### Feedback Store
 - [X] T069 Introduce SQLite or DuckDB store in lyrics_transcriber/correction/agentic/feedback/store.py
 - [X] T070 [P] Migrate HumanFeedback writes from JSON to DB, keep JSON exports
-- [ ] T071 [P] Implement 3-year retention cleanup job
+- [X] T071 [P] Implement 3-year retention cleanup job
 
 ## Phase 3.5: API Implementation & Integration
 
@@ -122,14 +122,14 @@ Based on plan.md structure: Single Python project with agentic AI integration
 ### Human Feedback Processing
 - [X] T045 Feedback collection and storage in lyrics_transcriber/correction/agentic/feedback/collector.py
 - [X] T046 Learning data aggregation in lyrics_transcriber/correction/agentic/feedback/aggregator.py
-- [ ] T047 3-year retention policy implementation in lyrics_transcriber/correction/agentic/feedback/retention.py
+- [X] T047 3-year retention policy implementation in lyrics_transcriber/correction/agentic/feedback/retention.py
 
 ## Phase 3.7: Frontend Enhancement
 
 ### Review UI Extensions
-- [ ] T048 AI feedback UI components in lyrics_transcriber/frontend/src/components/AIFeedbackModal.tsx
-- [ ] T049 Model selection interface in lyrics_transcriber/frontend/src/components/ModelSelector.tsx
-- [ ] T050 Performance metrics dashboard in lyrics_transcriber/frontend/src/components/MetricsDashboard.tsx
+- [X] T048 AI feedback UI components in lyrics_transcriber/frontend/src/components/AIFeedbackModal.tsx
+- [X] T049 Model selection interface in lyrics_transcriber/frontend/src/components/ModelSelector.tsx
+- [X] T050 Performance metrics dashboard in lyrics_transcriber/frontend/src/components/MetricsDashboard.tsx
 
 ## Phase 3.8: Polish & Validation
 
@@ -140,9 +140,9 @@ Based on plan.md structure: Single Python project with agentic AI integration
 - [ ] T054 [P] Unit tests for observability in tests/unit/correction/agentic/test_observability.py
 
 ### Performance Validation
-- [ ] T055 Performance benchmark tests (70% error reduction target) in tests/performance/test_accuracy_benchmarks.py
-- [ ] T056 Processing time validation (<10 seconds per song) in tests/performance/test_timing_benchmarks.py
-- [ ] T073 [P] WER/CER evaluation using jiwer across golden dataset in tests/performance/test_wer_cer.py
+- [X] T055 Performance benchmark tests (70% error reduction target) in tests/performance/test_accuracy_benchmarks.py
+- [X] T056 Processing time validation (<10 seconds per song) in tests/performance/test_timing_benchmarks.py
+- [X] T073 [P] WER/CER evaluation using jiwer across golden dataset in tests/performance/test_wer_cer.py
 
 ### Documentation & Configuration
 - [ ] T057 [P] CLI help text updates with --ai-model and --use-agentic-ai flags

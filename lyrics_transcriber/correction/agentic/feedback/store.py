@@ -4,6 +4,7 @@ import sqlite3
 from dataclasses import asdict
 from pathlib import Path
 from typing import Dict, Any, Iterable, Optional
+from datetime import datetime
 
 
 class FeedbackStore:
@@ -24,7 +25,8 @@ class FeedbackStore:
                 """
                 CREATE TABLE IF NOT EXISTS sessions (
                     id TEXT PRIMARY KEY,
-                    data TEXT NOT NULL
+                    data TEXT NOT NULL,
+                    created_at TEXT NOT NULL
                 )
                 """
             )
@@ -33,15 +35,28 @@ class FeedbackStore:
                 CREATE TABLE IF NOT EXISTS feedback (
                     id TEXT PRIMARY KEY,
                     session_id TEXT,
-                    data TEXT NOT NULL
+                    data TEXT NOT NULL,
+                    created_at TEXT NOT NULL
                 )
                 """
             )
+            # Attempt to add created_at if upgrading from older schema
+            try:
+                cur.execute("ALTER TABLE sessions ADD COLUMN created_at TEXT")
+            except Exception:
+                pass
+            try:
+                cur.execute("ALTER TABLE feedback ADD COLUMN created_at TEXT")
+            except Exception:
+                pass
             conn.commit()
 
     def put_session(self, session_id: str, data_json: str) -> None:
         with sqlite3.connect(self._db_path) as conn:
-            conn.execute("REPLACE INTO sessions (id, data) VALUES (?, ?)", (session_id, data_json))
+            conn.execute(
+                "REPLACE INTO sessions (id, data, created_at) VALUES (?, ?, ?)",
+                (session_id, data_json, datetime.utcnow().isoformat()),
+            )
             conn.commit()
 
     def get_session(self, session_id: str) -> Optional[str]:
@@ -53,8 +68,8 @@ class FeedbackStore:
     def put_feedback(self, feedback_id: str, session_id: Optional[str], data_json: str) -> None:
         with sqlite3.connect(self._db_path) as conn:
             conn.execute(
-                "REPLACE INTO feedback (id, session_id, data) VALUES (?, ?, ?)",
-                (feedback_id, session_id, data_json),
+                "REPLACE INTO feedback (id, session_id, data, created_at) VALUES (?, ?, ?, ?)",
+                (feedback_id, session_id, data_json, datetime.utcnow().isoformat()),
             )
             conn.commit()
 

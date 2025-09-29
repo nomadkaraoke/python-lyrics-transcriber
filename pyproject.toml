@@ -63,6 +63,7 @@ pytest-mock = ">=3.10"
 pytest-asyncio = ">=0.21.0"
 jiwer = ">=3.0.4"
 promptfoo = ">=0.46.0"
+numpy = ">=1.26.0"
 
 [tool.black]
 line-length = 140
