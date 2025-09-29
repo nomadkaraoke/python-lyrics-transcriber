@@ -100,16 +100,16 @@ Based on plan.md structure: Single Python project with agentic AI integration
 ## Phase 3.5: API Implementation & Integration
 
 ### FastAPI Endpoints
-- [ ] T034 POST /correction/agentic endpoint implementation in lyrics_transcriber/review/server.py
-- [ ] T035 GET /correction/session/{id} endpoint implementation in lyrics_transcriber/review/server.py
-- [ ] T036 POST /feedback endpoint implementation in lyrics_transcriber/review/server.py
-- [ ] T037 GET /models and PUT /models endpoint implementation in lyrics_transcriber/review/server.py
-- [ ] T038 GET /metrics endpoint implementation in lyrics_transcriber/review/server.py
+- [X] T034 POST /correction/agentic endpoint implementation in lyrics_transcriber/review/server.py
+- [X] T035 GET /correction/session/{id} endpoint implementation in lyrics_transcriber/review/server.py
+- [X] T036 POST /feedback endpoint implementation in lyrics_transcriber/review/server.py
+- [X] T037 GET /models and PUT /models endpoint implementation in lyrics_transcriber/review/server.py
+- [X] T038 GET /metrics endpoint implementation in lyrics_transcriber/review/server.py
 
 ### System Integration
 - [ ] T039 Integration with existing corrector.py (routing to agentic vs rule-based)
 - [ ] T040 Fallback mechanism implementation when AI services unavailable
-- [ ] T041 Existing review server API extension in lyrics_transcriber/review/server.py
+- [X] T041 Existing review server API extension in lyrics_transcriber/review/server.py
 
 ## Phase 3.6: Observability & Feedback
 

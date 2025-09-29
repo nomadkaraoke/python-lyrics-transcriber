@@ -20,6 +20,20 @@ from lyrics_transcriber.correction.corrector import LyricsCorrector
 from lyrics_transcriber.types import TranscriptionResult, TranscriptionData
 from lyrics_transcriber.lyrics.user_input_provider import UserInputProvider
 from lyrics_transcriber.correction.operations import CorrectionOperations
+import uuid
+
+try:
+    # Optional: used to introspect local models for /api/v1/models
+    from lyrics_transcriber.correction.agentic.providers.health import (
+        is_ollama_available,
+        get_ollama_models,
+    )
+except Exception:
+    def is_ollama_available() -> bool:  # type: ignore
+        return False
+
+    def get_ollama_models():  # type: ignore
+        return []
 
 
 class ReviewServer:
@@ -78,9 +92,157 @@ class ReviewServer:
         self.app.add_api_route("/api/handlers", self.update_handlers, methods=["POST"])
         self.app.add_api_route("/api/add-lyrics", self.add_lyrics, methods=["POST"])
 
+        # Agentic AI v1 endpoints (contract-compliant scaffolds)
+        self.app.add_api_route("/api/v1/correction/agentic", self.post_correction_agentic, methods=["POST"])
+        self.app.add_api_route("/api/v1/correction/session/{session_id}", self.get_correction_session_v1, methods=["GET"])
+        self.app.add_api_route("/api/v1/feedback", self.post_feedback_v1, methods=["POST"])
+        self.app.add_api_route("/api/v1/models", self.get_models_v1, methods=["GET"])
+        self.app.add_api_route("/api/v1/models", self.put_models_v1, methods=["PUT"])
+        self.app.add_api_route("/api/v1/metrics", self.get_metrics_v1, methods=["GET"])
+
     async def get_correction_data(self):
         """Get the correction data."""
         return self.correction_result.to_dict()
+
+    # ------------------------------
+    # API v1: Agentic AI scaffolds
+    # ------------------------------
+
+    @property
+    def _session_store(self) -> Dict[str, Dict[str, Any]]:
+        if not hasattr(self, "__session_store"):
+            self.__session_store = {}
+        return self.__session_store  # type: ignore[attr-defined]
+
+    @property
+    def _feedback_store(self) -> Dict[str, Dict[str, Any]]:
+        if not hasattr(self, "__feedback_store"):
+            self.__feedback_store = {}
+        return self.__feedback_store  # type: ignore[attr-defined]
+
+    @property
+    def _model_registry(self) -> Dict[str, Dict[str, Any]]:
+        if not hasattr(self, "__model_registry"):
+            # Seed with a few placeholders
+            models: Dict[str, Dict[str, Any]] = {}
+            # Local models via Ollama
+            if is_ollama_available():
+                for m in get_ollama_models():
+                    mid = m.get("model") or m.get("name") or "ollama-unknown"
+                    models[mid] = {
+                        "id": mid,
+                        "name": mid,
+                        "type": "local",
+                        "available": True,
+                        "responseTimeMs": 0,
+                        "costPerToken": 0.0,
+                        "accuracy": 0.0,
+                    }
+            # Cloud placeholders
+            for mid in ["anthropic/claude-4-sonnet", "gpt-5", "gemini-2.5-pro"]:
+                if mid not in models:
+                    models[mid] = {
+                        "id": mid,
+                        "name": mid,
+                        "type": "cloud",
+                        "available": False,
+                        "responseTimeMs": 0,
+                        "costPerToken": 0.0,
+                        "accuracy": 0.0,
+                    }
+            self.__model_registry = models
+        return self.__model_registry  # type: ignore[attr-defined]
+
+    async def post_correction_agentic(self, request: Dict[str, Any] = Body(...)):
+        """POST /api/v1/correction/agentic
+        Minimal scaffold: validates required fields and returns a stub response.
+        """
+        if not isinstance(request, dict):
+            raise HTTPException(status_code=400, detail="Invalid request body")
+
+        if "transcriptionData" not in request or "audioFileHash" not in request:
+            raise HTTPException(status_code=400, detail="Missing required fields: transcriptionData, audioFileHash")
+
+        session_id = str(uuid.uuid4())
+        self._session_store[session_id] = {
+            "id": session_id,
+            "audioFileHash": request.get("audioFileHash"),
+            "sessionType": "FULL_CORRECTION",
+            "aiModelConfig": {"model": (request.get("modelPreferences") or [None])[0]},
+            "totalCorrections": 0,
+            "acceptedCorrections": 0,
+            "humanModifications": 0,
+            "sessionDurationMs": 0,
+            "accuracyImprovement": 0.0,
+            "startedAt": None,
+            "completedAt": None,
+            "status": "IN_PROGRESS",
+        }
+
+        response = {
+            "sessionId": session_id,
+            "corrections": [],
+            "processingTimeMs": 0,
+            "modelUsed": (request.get("modelPreferences") or ["unknown"])[0],
+            "fallbackUsed": False,
+            "accuracyEstimate": 0.0,
+        }
+        return response
+
+    async def get_correction_session_v1(self, session_id: str):
+        data = self._session_store.get(session_id)
+        if not data:
+            raise HTTPException(status_code=404, detail="Session not found")
+        return data
+
+    async def post_feedback_v1(self, request: Dict[str, Any] = Body(...)):
+        if not isinstance(request, dict):
+            raise HTTPException(status_code=400, detail="Invalid request body")
+        required = ["aiCorrectionId", "reviewerAction", "reasonCategory"]
+        if any(k not in request for k in required):
+            raise HTTPException(status_code=400, detail="Missing required feedback fields")
+
+        feedback_id = str(uuid.uuid4())
+        self._feedback_store[feedback_id] = {**request, "id": feedback_id}
+        return {"feedbackId": feedback_id, "recorded": True, "learningDataUpdated": False}
+
+    async def get_models_v1(self):
+        return {"models": list(self._model_registry.values())}
+
+    async def put_models_v1(self, config: Dict[str, Any] = Body(...)):
+        if not isinstance(config, dict) or "modelId" not in config:
+            raise HTTPException(status_code=400, detail="Invalid model configuration")
+        mid = config["modelId"]
+        entry = self._model_registry.get(mid, {
+            "id": mid,
+            "name": mid,
+            "type": "cloud",
+            "available": False,
+            "responseTimeMs": 0,
+            "costPerToken": 0.0,
+            "accuracy": 0.0,
+        })
+        if "enabled" in config:
+            entry["available"] = bool(config["enabled"]) or entry.get("available", False)
+        if "priority" in config:
+            entry["priority"] = config["priority"]
+        if "configuration" in config and isinstance(config["configuration"], dict):
+            entry["configuration"] = config["configuration"]
+        self._model_registry[mid] = entry
+        return {"status": "ok"}
+
+    async def get_metrics_v1(self, timeRange: str = "day", sessionId: Optional[str] = None):
+        # Minimal placeholder metrics
+        return {
+            "timeRange": timeRange,
+            "totalSessions": len(self._session_store),
+            "averageAccuracy": 0.0,
+            "errorReduction": 0.0,
+            "averageProcessingTime": 0,
+            "modelPerformance": {},
+            "costSummary": {},
+            "userSatisfaction": 0.0,
+        }
 
     def _update_correction_result(self, base_result: CorrectionResult, updated_data: Dict[str, Any]) -> CorrectionResult:
         """Update a CorrectionResult with new correction data."""
