@@ -36,6 +36,11 @@ except Exception:
         return []
 
 try:
+    from lyrics_transcriber.correction.agentic.observability.metrics import MetricsAggregator
+except Exception:
+    MetricsAggregator = None  # type: ignore
+
+try:
     from lyrics_transcriber.correction.agentic.feedback.store import FeedbackStore
 except Exception:
     FeedbackStore = None  # type: ignore
@@ -69,6 +74,8 @@ class ReviewServer:
             self._store = FeedbackStore(default_db) if FeedbackStore else None
         except Exception:
             self._store = None
+        # Metrics aggregator
+        self._metrics = MetricsAggregator() if MetricsAggregator else None
 
     def _configure_cors(self) -> None:
         """Configure CORS middleware."""
@@ -202,6 +209,8 @@ class ReviewServer:
         if model_entry and not model_entry.get("available", False):
             # Service unavailable → return 503 with fallback details
             from fastapi.responses import JSONResponse
+            if self._metrics:
+                self._metrics.record_session(preferred, 0, fallback_used=True)
             return JSONResponse(status_code=503, content={
                 "corrections": [],
                 "fallbackReason": f"Model {preferred} unavailable",
@@ -217,6 +226,8 @@ class ReviewServer:
             "fallbackUsed": False,
             "accuracyEstimate": 0.0,
         }
+        if self._metrics:
+            self._metrics.record_session(preferred, response["processingTimeMs"], fallback_used=False)
         return response
 
     async def get_correction_session_v1(self, session_id: str):
@@ -240,6 +251,8 @@ class ReviewServer:
                 self._store.put_feedback(feedback_id, request.get("sessionId"), json.dumps(record))
             except Exception:
                 pass
+        if self._metrics:
+            self._metrics.record_feedback()
         return {"feedbackId": feedback_id, "recorded": True, "learningDataUpdated": False}
 
     async def get_models_v1(self):
@@ -268,17 +281,10 @@ class ReviewServer:
         return {"status": "ok"}
 
     async def get_metrics_v1(self, timeRange: str = "day", sessionId: Optional[str] = None):
-        # Minimal placeholder metrics
-        return {
-            "timeRange": timeRange,
-            "totalSessions": len(self._session_store),
-            "averageAccuracy": 0.0,
-            "errorReduction": 0.0,
-            "averageProcessingTime": 0,
-            "modelPerformance": {},
-            "costSummary": {},
-            "userSatisfaction": 0.0,
-        }
+        if self._metrics:
+            return self._metrics.snapshot(time_range=timeRange, session_id=sessionId)
+        # Fallback if metrics unavailable
+        return {"timeRange": timeRange, "totalSessions": len(self._session_store), "averageAccuracy": 0.0, "errorReduction": 0.0, "averageProcessingTime": 0, "modelPerformance": {}, "costSummary": {}, "userSatisfaction": 0.0}
 
     def _update_correction_result(self, base_result: CorrectionResult, updated_data: Dict[str, Any]) -> CorrectionResult:
         """Update a CorrectionResult with new correction data."""

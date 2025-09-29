@@ -86,7 +86,7 @@ Based on plan.md structure: Single Python project with agentic AI integration
 
 ### Structured Output Enforcement
 - [X] T067 [P] Define Pydantic schemas (CorrectionProposal) in lyrics_transcriber/correction/agentic/models/schemas.py
-- [ ] T068 [P] Integrate Instructor/pydantic-ai to enforce JSON outputs in workflows
+- [X] T068 [P] Integrate Instructor/pydantic-ai to enforce JSON outputs in workflows
 
 ### Agent Implementation
 - [X] T032 Main agentic corrector class in lyrics_transcriber/correction/agentic/agent.py
@@ -115,7 +115,7 @@ Based on plan.md structure: Single Python project with agentic AI integration
 
 ### LangFuse Integration
 - [ ] T042 [P] LangFuse tracing setup in lyrics_transcriber/correction/agentic/observability/langfuse_integration.py
-- [ ] T043 [P] Custom metrics collection in lyrics_transcriber/correction/agentic/observability/metrics.py
+- [X] T043 [P] Custom metrics collection in lyrics_transcriber/correction/agentic/observability/metrics.py
 - [ ] T044 [P] Performance monitoring in lyrics_transcriber/correction/agentic/observability/performance.py
 - [ ] T072 [P] Add custom metrics: acceptance_rate, gap_fix_rate, error_reduction, tokens, latency, cost
 
