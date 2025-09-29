@@ -69,14 +69,14 @@ Based on plan.md structure: Single Python project with agentic AI integration
 ## Phase 3.4: Agentic AI Core Implementation
 
 ### AI Model Interfaces
-- [ ] T024 [P] Base AI provider interface in lyrics_transcriber/correction/agentic/providers/base.py
+- [X] T024 [P] Base AI provider interface in lyrics_transcriber/correction/agentic/providers/base.py
 - [ ] T025 [P] OpenAI provider implementation in lyrics_transcriber/correction/agentic/providers/openai.py
 - [ ] T026 [P] Anthropic provider implementation in lyrics_transcriber/correction/agentic/providers/anthropic.py
 - [ ] T027 [P] Google provider implementation in lyrics_transcriber/correction/agentic/providers/google.py
 - [ ] T028 [P] Ollama provider implementation in lyrics_transcriber/correction/agentic/providers/ollama.py
 
 ### Provider Abstraction Layer
-- [ ] T065 Integrate LiteLLM or OpenRouter SDK for unified provider layer in lyrics_transcriber/correction/agentic/providers/bridge.py
+- [X] T065 Integrate LiteLLM or OpenRouter SDK for unified provider layer in lyrics_transcriber/correction/agentic/providers/bridge.py
 - [ ] T066 [P] Configure retries, timeouts, and circuit breakers with provider-wide settings
 
 ### LangGraph Workflows
@@ -85,12 +85,12 @@ Based on plan.md structure: Single Python project with agentic AI integration
 - [ ] T031 Human feedback processing workflow in lyrics_transcriber/correction/agentic/workflows/feedback_workflow.py
 
 ### Structured Output Enforcement
-- [ ] T067 [P] Define Pydantic schemas (CorrectionProposal) in lyrics_transcriber/correction/agentic/models/schemas.py
+- [X] T067 [P] Define Pydantic schemas (CorrectionProposal) in lyrics_transcriber/correction/agentic/models/schemas.py
 - [ ] T068 [P] Integrate Instructor/pydantic-ai to enforce JSON outputs in workflows
 
 ### Agent Implementation
-- [ ] T032 Main agentic corrector class in lyrics_transcriber/correction/agentic/agent.py
-- [ ] T033 Model routing and selection logic in lyrics_transcriber/correction/agentic/router.py
+- [X] T032 Main agentic corrector class in lyrics_transcriber/correction/agentic/agent.py
+- [X] T033 Model routing and selection logic in lyrics_transcriber/correction/agentic/router.py
 
 ### Feedback Store
 - [ ] T069 Introduce SQLite or DuckDB store in lyrics_transcriber/correction/agentic/feedback/store.py
