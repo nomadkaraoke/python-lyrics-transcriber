@@ -1,0 +1,454 @@
+openapi: 3.0.3
+info:
+  title: Agentic AI Correction API
+  description: API for agentic AI-powered lyrics transcription correction
+  version: 1.0.0
+  contact:
+    name: Lyrics Transcriber
+    url: https://github.com/nomadkaraoke/python-lyrics-transcriber
+
+servers:
+  - url: http://localhost:8000/api/v1
+    description: Development server
+
+paths:
+  /correction/agentic:
+    post:
+      summary: Process transcription with agentic AI correction
+      description: Submit transcription data for AI-powered correction processing
+      operationId: processAgenticCorrection
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CorrectionRequest'
+      responses:
+        '200':
+          description: Correction processed successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CorrectionResponse'
+        '400':
+          description: Invalid request data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '503':
+          description: AI service unavailable, fallback used
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FallbackResponse'
+
+  /correction/session/{sessionId}:
+    get:
+      summary: Get correction session details
+      description: Retrieve details about a specific correction session
+      operationId: getCorrectionSession
+      parameters:
+        - name: sessionId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Session details retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CorrectionSession'
+        '404':
+          description: Session not found
+
+  /feedback:
+    post:
+      summary: Submit human feedback on AI correction
+      description: Record human reviewer feedback for learning purposes
+      operationId: submitHumanFeedback
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FeedbackRequest'
+      responses:
+        '201':
+          description: Feedback recorded successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FeedbackResponse'
+        '400':
+          description: Invalid feedback data
+
+  /models:
+    get:
+      summary: List available AI models
+      description: Get list of available AI models with their status
+      operationId: listAvailableModels
+      responses:
+        '200':
+          description: Models list retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ModelsListResponse'
+
+    put:
+      summary: Update model configuration
+      description: Update configuration for AI models
+      operationId: updateModelConfig
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ModelConfigRequest'
+      responses:
+        '200':
+          description: Model configuration updated successfully
+        '400':
+          description: Invalid configuration data
+
+  /metrics:
+    get:
+      summary: Get correction performance metrics
+      description: Retrieve system performance and accuracy metrics
+      operationId: getCorrectionMetrics
+      parameters:
+        - name: timeRange
+          in: query
+          schema:
+            type: string
+            enum: [hour, day, week, month]
+            default: day
+        - name: sessionId
+          in: query
+          schema:
+            type: string
+          description: Filter metrics by specific session
+      responses:
+        '200':
+          description: Metrics retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MetricsResponse'
+
+components:
+  schemas:
+    CorrectionRequest:
+      type: object
+      required:
+        - transcriptionData
+        - audioFileHash
+      properties:
+        transcriptionData:
+          $ref: '#/components/schemas/TranscriptionData'
+        audioFileHash:
+          type: string
+          description: SHA-256 hash of source audio file
+        referenceText:
+          type: string
+          description: Optional reference lyrics text
+        modelPreferences:
+          type: array
+          items:
+            type: string
+          description: Preferred AI models in order of preference
+        correctionConfig:
+          $ref: '#/components/schemas/CorrectionConfig'
+
+    CorrectionResponse:
+      type: object
+      properties:
+        sessionId:
+          type: string
+        corrections:
+          type: array
+          items:
+            $ref: '#/components/schemas/AICorrection'
+        processingTimeMs:
+          type: integer
+        modelUsed:
+          type: string
+        fallbackUsed:
+          type: boolean
+        accuracyEstimate:
+          type: number
+          format: float
+          minimum: 0.0
+          maximum: 1.0
+
+    FeedbackRequest:
+      type: object
+      required:
+        - aiCorrectionId
+        - reviewerAction
+        - reasonCategory
+      properties:
+        aiCorrectionId:
+          type: string
+        reviewerAction:
+          type: string
+          enum: [ACCEPT, REJECT, MODIFY]
+        finalText:
+          type: string
+          description: Required when action is MODIFY
+        reasonCategory:
+          type: string
+          enum: [AI_CORRECT, AI_INCORRECT, AI_SUBOPTIMAL, CONTEXT_NEEDED, SUBJECTIVE_PREFERENCE]
+        reasonDetail:
+          type: string
+          description: Optional detailed explanation
+        reviewerConfidence:
+          type: number
+          format: float
+          minimum: 0.0
+          maximum: 1.0
+        reviewTimeMs:
+          type: integer
+          minimum: 0
+
+    FeedbackResponse:
+      type: object
+      properties:
+        feedbackId:
+          type: string
+        recorded:
+          type: boolean
+        learningDataUpdated:
+          type: boolean
+
+    TranscriptionData:
+      type: object
+      required:
+        - segments
+      properties:
+        segments:
+          type: array
+          items:
+            $ref: '#/components/schemas/TranscriptionSegment'
+
+    TranscriptionSegment:
+      type: object
+      required:
+        - id
+        - text
+        - words
+        - startTime
+        - endTime
+      properties:
+        id:
+          type: string
+        text:
+          type: string
+        words:
+          type: array
+          items:
+            $ref: '#/components/schemas/TranscriptionWord'
+        startTime:
+          type: number
+          format: float
+        endTime:
+          type: number
+          format: float
+
+    TranscriptionWord:
+      type: object
+      required:
+        - id
+        - text
+        - startTime
+        - endTime
+      properties:
+        id:
+          type: string
+        text:
+          type: string
+        startTime:
+          type: number
+          format: float
+        endTime:
+          type: number
+          format: float
+        confidence:
+          type: number
+          format: float
+          minimum: 0.0
+          maximum: 1.0
+
+    AICorrection:
+      type: object
+      properties:
+        id:
+          type: string
+        originalText:
+          type: string
+        correctedText:
+          type: string
+        confidenceScore:
+          type: number
+          format: float
+          minimum: 0.0
+          maximum: 1.0
+        reasoning:
+          type: string
+        modelUsed:
+          type: string
+        correctionType:
+          type: string
+          enum: [WORD_SUBSTITUTION, WORD_INSERTION, WORD_DELETION, PUNCTUATION, TIMING_ADJUSTMENT, LINGUISTIC_IMPROVEMENT]
+        processingTimeMs:
+          type: integer
+        tokensUsed:
+          type: integer
+        wordPosition:
+          type: integer
+        createdAt:
+          type: string
+          format: date-time
+
+    CorrectionSession:
+      type: object
+      properties:
+        id:
+          type: string
+        audioFileHash:
+          type: string
+        sessionType:
+          type: string
+          enum: [FULL_CORRECTION, PARTIAL_REVIEW, REPROCESSING]
+        aiModelConfig:
+          type: object
+        totalCorrections:
+          type: integer
+        acceptedCorrections:
+          type: integer
+        humanModifications:
+          type: integer
+        sessionDurationMs:
+          type: integer
+        accuracyImprovement:
+          type: number
+          format: float
+        startedAt:
+          type: string
+          format: date-time
+        completedAt:
+          type: string
+          format: date-time
+        status:
+          type: string
+          enum: [IN_PROGRESS, COMPLETED, FAILED]
+
+    CorrectionConfig:
+      type: object
+      properties:
+        aggressiveness:
+          type: string
+          enum: [conservative, balanced, aggressive]
+          default: balanced
+        enableFallback:
+          type: boolean
+          default: true
+        maxProcessingTimeMs:
+          type: integer
+          default: 10000
+        enableHumanReview:
+          type: boolean
+          default: true
+
+    ModelConfigRequest:
+      type: object
+      properties:
+        modelId:
+          type: string
+        enabled:
+          type: boolean
+        priority:
+          type: integer
+        configuration:
+          type: object
+
+    ModelsListResponse:
+      type: object
+      properties:
+        models:
+          type: array
+          items:
+            $ref: '#/components/schemas/ModelInfo'
+
+    ModelInfo:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        type:
+          type: string
+          enum: [cloud, local]
+        available:
+          type: boolean
+        responseTimeMs:
+          type: integer
+        costPerToken:
+          type: number
+          format: float
+        accuracy:
+          type: number
+          format: float
+
+    MetricsResponse:
+      type: object
+      properties:
+        timeRange:
+          type: string
+        totalSessions:
+          type: integer
+        averageAccuracy:
+          type: number
+          format: float
+        errorReduction:
+          type: number
+          format: float
+        averageProcessingTime:
+          type: integer
+        modelPerformance:
+          type: object
+        costSummary:
+          type: object
+        userSatisfaction:
+          type: number
+          format: float
+
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+        message:
+          type: string
+        details:
+          type: object
+
+    FallbackResponse:
+      type: object
+      properties:
+        corrections:
+          type: array
+          items:
+            $ref: '#/components/schemas/AICorrection'
+        fallbackReason:
+          type: string
+        originalSystemUsed:
+          type: string
+        processingTimeMs:
+          type: integer
+
+security: []
