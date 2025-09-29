@@ -34,4 +34,20 @@ class ProviderConfig:
             privacy_mode=os.getenv("PRIVACY_MODE", "false").lower() in {"1", "true", "yes"},
         )
 
+    def validate_environment(self, logger: Optional[object] = None) -> None:
+        """Log warnings if required keys are missing for non-privacy mode."""
+        def _log(msg: str) -> None:
+            try:
+                if logger is not None:
+                    logger.warning(msg)
+                else:
+                    print(msg)
+            except Exception:
+                pass
+
+        if self.privacy_mode:
+            return
+        if not any([self.openai_api_key, self.anthropic_api_key, self.google_api_key, self.openrouter_api_key]):
+            _log("No AI provider API keys configured; set PRIVACY_MODE=1 to avoid cloud usage or add provider keys.")
+
 

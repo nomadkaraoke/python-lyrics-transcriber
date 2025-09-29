@@ -145,10 +145,10 @@ Based on plan.md structure: Single Python project with agentic AI integration
 - [X] T073 [P] WER/CER evaluation using jiwer across golden dataset in tests/performance/test_wer_cer.py
 
 ### Documentation & Configuration
-- [ ] T057 [P] CLI help text updates with --ai-model and --use-agentic-ai flags
-- [ ] T058 [P] Configuration validation for AI model setup
+- [X] T057 [P] CLI help text updates with --ai-model and --use-agentic-ai flags
+- [X] T058 [P] Configuration validation for AI model setup
 - [ ] T059 [P] Error handling and user-friendly error messages
-- [ ] T074 [P] Document provider layer configuration and environment variables
+- [X] T074 [P] Document provider layer configuration and environment variables
 
 ### CLI Implementation
 - [X] T064 CLI argument parsing implementation for --ai-model and --use-agentic-ai flags in lyrics_transcriber/cli/cli_main.py

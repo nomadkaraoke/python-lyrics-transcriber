@@ -201,6 +201,24 @@ docker run --rm -v "$PWD/input":/input -v "$PWD/output":/output \
 - Run tests: `poetry run pytest`
 - Build frontend (if editing UI): `./scripts/build_frontend.sh`
 
+## Agentic AI (Experimental)
+
+### Enabling
+- CLI flags: `--use-agentic-ai` and `--ai-model <modelId>`
+- Or env: `USE_AGENTIC_AI=1`, `AGENTIC_AI_MODEL=anthropic/claude-4-sonnet`
+
+### Provider configuration
+- Cloud keys (set any): `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, `GOOGLE_API_KEY`, `OPENROUTER_API_KEY`
+- Local privacy-only mode: `PRIVACY_MODE=1` (Ollama where available)
+- Retries/backoff/circuit-breaker are preconfigured; adjust in code if needed
+
+### Observability
+- Optional LangFuse: `LANGFUSE_SECRET_KEY`, `LANGFUSE_PUBLIC_KEY`, `LANGFUSE_HOST`
+- Metrics: `GET /api/v1/metrics`
+
+### Feedback store
+- SQLite DB persisted in cache dir (sessions, feedback); retention cleanup enforces ~3 years
+
 ## License
 MIT. See `LICENSE`.
 
