@@ -29,10 +29,10 @@ Based on plan.md structure: Single Python project with agentic AI integration
 - `tests/integration/` - End-to-end integration tests
 
 ## Phase 3.1: Setup & Dependencies
-- [ ] T001 Install agentic AI dependencies in pyproject.toml (langchain, langgraph, langfuse, ollama)
-- [ ] T002 Create agentic correction module structure in lyrics_transcriber/correction/agentic/
-- [ ] T003 [P] Configure LangFuse observability environment variables and initialization
-- [ ] T004 [P] Configure Ollama local model server setup and health checks
+- [X] T001 Install agentic AI dependencies in pyproject.toml (langchain, langgraph, langfuse, ollama)
+- [X] T002 Create agentic correction module structure in lyrics_transcriber/correction/agentic/
+- [X] T003 [P] Configure LangFuse observability environment variables and initialization
+- [X] T004 [P] Configure Ollama local model server setup and health checks
 - [ ] T005 [P] Configure multi-provider AI model authentication (OpenAI, Anthropic, Google)
 
 ## Phase 3.2: Tests First (TDD) ⚠️ MUST COMPLETE BEFORE 3.3
@@ -47,7 +47,7 @@ Based on plan.md structure: Single Python project with agentic AI integration
 - [ ] T011 [P] Contract test GET /api/v1/metrics in tests/contract/test_agentic_correction_api.py
 
 ### Integration Tests [P]
-- [ ] T012 [P] Integration test Scenario 1: Basic AI correction workflow in tests/integration/test_basic_ai_workflow.py
+- [X] T012 [P] Integration test Scenario 1: Basic AI correction workflow in tests/integration/test_basic_ai_workflow.py
 - [ ] T013 [P] Integration test Scenario 2: Human feedback loop in tests/integration/test_human_feedback_loop.py
 - [ ] T014 [P] Integration test Scenario 3: Multi-model comparison in tests/integration/test_multi_model_comparison.py
 - [ ] T015 [P] Integration test Scenario 4: Fallback reliability in tests/integration/test_fallback_reliability.py
