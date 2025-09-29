@@ -82,7 +82,7 @@ Based on plan.md structure: Single Python project with agentic AI integration
 ### LangGraph Workflows
 - [X] T029 Core correction workflow graph in lyrics_transcriber/correction/agentic/workflows/correction_graph.py
 - [X] T030 Multi-model consensus workflow in lyrics_transcriber/correction/agentic/workflows/consensus_workflow.py
-- [ ] T031 Human feedback processing workflow in lyrics_transcriber/correction/agentic/workflows/feedback_workflow.py
+- [X] T031 Human feedback processing workflow in lyrics_transcriber/correction/agentic/workflows/feedback_workflow.py
 
 ### Structured Output Enforcement
 - [X] T067 [P] Define Pydantic schemas (CorrectionProposal) in lyrics_transcriber/correction/agentic/models/schemas.py
@@ -120,8 +120,8 @@ Based on plan.md structure: Single Python project with agentic AI integration
 - [ ] T072 [P] Add custom metrics: acceptance_rate, gap_fix_rate, error_reduction, tokens, latency, cost
 
 ### Human Feedback Processing
-- [ ] T045 Feedback collection and storage in lyrics_transcriber/correction/agentic/feedback/collector.py
-- [ ] T046 Learning data aggregation in lyrics_transcriber/correction/agentic/feedback/aggregator.py
+- [X] T045 Feedback collection and storage in lyrics_transcriber/correction/agentic/feedback/collector.py
+- [X] T046 Learning data aggregation in lyrics_transcriber/correction/agentic/feedback/aggregator.py
 - [ ] T047 3-year retention policy implementation in lyrics_transcriber/correction/agentic/feedback/retention.py
 
 ## Phase 3.7: Frontend Enhancement
