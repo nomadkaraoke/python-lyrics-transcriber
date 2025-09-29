@@ -41,6 +41,15 @@ except Exception:
     MetricsAggregator = None  # type: ignore
 
 try:
+    from lyrics_transcriber.correction.agentic.observability.langfuse_integration import (
+        setup_langfuse,
+        record_metrics as lf_record,
+    )
+except Exception:
+    setup_langfuse = lambda *args, **kwargs: None  # type: ignore
+    lf_record = lambda *args, **kwargs: None  # type: ignore
+
+try:
     from lyrics_transcriber.correction.agentic.feedback.store import FeedbackStore
 except Exception:
     FeedbackStore = None  # type: ignore
@@ -76,6 +85,11 @@ class ReviewServer:
             self._store = None
         # Metrics aggregator
         self._metrics = MetricsAggregator() if MetricsAggregator else None
+        # LangFuse (optional)
+        try:
+            self._langfuse = setup_langfuse("agentic-corrector")
+        except Exception:
+            self._langfuse = None
 
     def _configure_cors(self) -> None:
         """Configure CORS middleware."""
@@ -175,6 +189,7 @@ class ReviewServer:
         """POST /api/v1/correction/agentic
         Minimal scaffold: validates required fields and returns a stub response.
         """
+        start_time = time.time()
         if not isinstance(request, dict):
             raise HTTPException(status_code=400, detail="Invalid request body")
 
@@ -210,24 +225,27 @@ class ReviewServer:
             # Service unavailable → return 503 with fallback details
             from fastapi.responses import JSONResponse
             if self._metrics:
-                self._metrics.record_session(preferred, 0, fallback_used=True)
-            return JSONResponse(status_code=503, content={
+                self._metrics.record_session(preferred, int((time.time() - start_time) * 1000), fallback_used=True)
+            content = {
                 "corrections": [],
                 "fallbackReason": f"Model {preferred} unavailable",
                 "originalSystemUsed": "rule-based",
-                "processingTimeMs": 0,
-            })
+                "processingTimeMs": int((time.time() - start_time) * 1000),
+            }
+            lf_record(self._langfuse, "post_correction_agentic_fallback", {"model": preferred, **content})
+            return JSONResponse(status_code=503, content=content)
 
         response = {
             "sessionId": session_id,
             "corrections": [],
-            "processingTimeMs": 0,
+            "processingTimeMs": int((time.time() - start_time) * 1000),
             "modelUsed": preferred,
             "fallbackUsed": False,
             "accuracyEstimate": 0.0,
         }
         if self._metrics:
             self._metrics.record_session(preferred, response["processingTimeMs"], fallback_used=False)
+        lf_record(self._langfuse, "post_correction_agentic", {"model": preferred, **response})
         return response
 
     async def get_correction_session_v1(self, session_id: str):
