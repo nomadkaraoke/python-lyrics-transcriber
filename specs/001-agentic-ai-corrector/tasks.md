@@ -77,10 +77,10 @@ Based on plan.md structure: Single Python project with agentic AI integration
 
 ### Provider Abstraction Layer
 - [X] T065 Integrate LiteLLM or OpenRouter SDK for unified provider layer in lyrics_transcriber/correction/agentic/providers/bridge.py
-- [ ] T066 [P] Configure retries, timeouts, and circuit breakers with provider-wide settings
+- [X] T066 [P] Configure retries, timeouts, and circuit breakers with provider-wide settings
 
 ### LangGraph Workflows
-- [ ] T029 Core correction workflow graph in lyrics_transcriber/correction/agentic/workflows/correction_graph.py
+- [X] T029 Core correction workflow graph in lyrics_transcriber/correction/agentic/workflows/correction_graph.py
 - [ ] T030 Multi-model consensus workflow in lyrics_transcriber/correction/agentic/workflows/consensus_workflow.py
 - [ ] T031 Human feedback processing workflow in lyrics_transcriber/correction/agentic/workflows/feedback_workflow.py
 
@@ -161,7 +161,7 @@ Based on plan.md structure: Single Python project with agentic AI integration
 - [ ] T076 [P] Nightly regression script comparing models and routing strategies
 
 ### Reliability & Safeguards
-- [ ] T077 Implement circuit breakers and backoff policies at provider and workflow level
+- [X] T077 Implement circuit breakers and backoff policies at provider and workflow level
 
 ### Output Format Compatibility
 - [ ] T063 Output format compatibility validation (ASS, LRC, CDG, video) in tests/integration/test_output_format_compatibility.py

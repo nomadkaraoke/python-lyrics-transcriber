@@ -6,6 +6,7 @@ from .providers.bridge import LiteLLMBridge
 from .providers.config import ProviderConfig
 from .models.schemas import CorrectionProposal, CorrectionProposalList
 import os
+from .workflows.correction_graph import build_correction_graph
 
 
 class AgenticCorrector:
@@ -18,6 +19,7 @@ class AgenticCorrector:
     def __init__(self, model: str, config: ProviderConfig | None = None):
         self._config = config or ProviderConfig.from_env()
         self._provider = LiteLLMBridge(model=model, config=self._config)
+        self._graph = build_correction_graph()
 
     def propose(self, prompt: str) -> List[CorrectionProposal]:
         # If Instructor is available and enabled, use it to enforce schema
@@ -36,6 +38,13 @@ class AgenticCorrector:
                 return list(result.proposals)
             except Exception:
                 # Fall back to plain provider path
+                pass
+
+        # Optionally run a trivial graph pass
+        if self._graph:
+            try:
+                self._graph.invoke({"prompt": prompt})
+            except Exception:
                 pass
 
         data = self._provider.generate_correction_proposals(prompt, schema=CorrectionProposal.model_json_schema())
