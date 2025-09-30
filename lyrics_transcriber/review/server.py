@@ -8,7 +8,7 @@ import time
 import os
 import urllib.parse
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, JSONResponse
 import hashlib
 from lyrics_transcriber.core.config import OutputConfig
 import uvicorn
@@ -101,6 +101,14 @@ class ReviewServer:
             allow_methods=["*"],
             allow_headers=["*"],
         )
+        
+        @self.app.exception_handler(HTTPException)
+        async def _http_exception_handler(request, exc: HTTPException):
+            return JSONResponse(status_code=exc.status_code, content={"error": "HTTPException", "message": exc.detail, "details": {}})
+
+        @self.app.exception_handler(Exception)
+        async def _unhandled_exception_handler(request, exc: Exception):
+            return JSONResponse(status_code=500, content={"error": "InternalServerError", "message": str(exc), "details": {}})
 
     def _mount_frontend(self) -> None:
         """Mount the frontend static files."""
