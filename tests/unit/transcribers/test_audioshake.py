@@ -89,11 +89,14 @@ class TestAudioShakeAPI:
     @patch("requests.get")
     def test_wait_for_task_result_success(self, mock_get, api):
         mock_response = Mock()
-        mock_response.json.return_value = {
-            "id": "task123",
-            "targets": [{"model": "alignment", "status": "completed"}],
-            "data": "test"
-        }
+        # Return a list of tasks (as the /tasks endpoint does)
+        mock_response.json.return_value = [
+            {
+                "id": "task123",
+                "targets": [{"model": "alignment", "status": "completed"}],
+                "data": "test"
+            }
+        ]
         mock_get.return_value = mock_response
 
         result = api.wait_for_task_result("task123")
@@ -105,10 +108,12 @@ class TestAudioShakeAPI:
     @patch("requests.get")
     def test_wait_for_task_result_failure(self, mock_get, api):
         mock_response = Mock()
-        mock_response.json.return_value = {
-            "id": "task123",
-            "targets": [{"model": "alignment", "status": "failed", "error": "test error"}]
-        }
+        mock_response.json.return_value = [
+            {
+                "id": "task123",
+                "targets": [{"model": "alignment", "status": "failed", "error": "test error"}]
+            }
+        ]
         mock_get.return_value = mock_response
 
         with pytest.raises(Exception, match="Target alignment failed: test error"):
@@ -119,9 +124,9 @@ class TestAudioShakeAPI:
     def test_wait_for_task_result_polling(self, mock_sleep, mock_get, api):
         """Test polling behavior with in-progress status before completion"""
         mock_responses = [
-            Mock(json=lambda: {"id": "task123", "targets": [{"model": "alignment", "status": "processing"}]}),
-            Mock(json=lambda: {"id": "task123", "targets": [{"model": "alignment", "status": "processing"}]}),
-            Mock(json=lambda: {"id": "task123", "targets": [{"model": "alignment", "status": "completed"}], "data": "test"}),
+            Mock(json=lambda: [{"id": "task123", "targets": [{"model": "alignment", "status": "processing"}]}]),
+            Mock(json=lambda: [{"id": "task123", "targets": [{"model": "alignment", "status": "processing"}]}]),
+            Mock(json=lambda: [{"id": "task123", "targets": [{"model": "alignment", "status": "completed"}], "data": "test"}]),
         ]
         mock_get.side_effect = mock_responses
 
@@ -148,10 +153,12 @@ class TestAudioShakeAPI:
     def test_wait_for_task_result_timeout(self, mock_time, mock_get, api):
         """Test that task polling times out after configured duration"""
         mock_time.side_effect = [0, api.config.timeout_minutes * 60 + 1]  # Simulate timeout
-        mock_get.return_value = Mock(json=lambda: {
-            "id": "task123",
-            "targets": [{"model": "alignment", "status": "processing"}]
-        })
+        mock_get.return_value = Mock(json=lambda: [
+            {
+                "id": "task123",
+                "targets": [{"model": "alignment", "status": "processing"}]
+            }
+        ])
 
         with pytest.raises(TranscriptionError, match=f"Transcription timed out after {api.config.timeout_minutes} minutes"):
             api.wait_for_task_result("task123")
@@ -163,9 +170,9 @@ class TestAudioShakeAPI:
         """Test that task polling logs status periodically"""
         mock_time.side_effect = [0, 30, 61, 90]  # Simulate time passing
         mock_get.side_effect = [
-            Mock(json=lambda: {"id": "task123", "targets": [{"model": "alignment", "status": "processing"}]}),
-            Mock(json=lambda: {"id": "task123", "targets": [{"model": "alignment", "status": "processing"}]}),
-            Mock(json=lambda: {"id": "task123", "targets": [{"model": "alignment", "status": "completed"}], "data": "test"}),
+            Mock(json=lambda: [{"id": "task123", "targets": [{"model": "alignment", "status": "processing"}]}]),
+            Mock(json=lambda: [{"id": "task123", "targets": [{"model": "alignment", "status": "processing"}]}]),
+            Mock(json=lambda: [{"id": "task123", "targets": [{"model": "alignment", "status": "completed"}], "data": "test"}]),
         ]
 
         result = api.wait_for_task_result("task123")

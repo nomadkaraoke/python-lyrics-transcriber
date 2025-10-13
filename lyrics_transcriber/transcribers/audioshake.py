@@ -16,7 +16,7 @@ class AudioShakeConfig:
     api_token: Optional[str] = None
     base_url: str = "https://api.audioshake.ai"
     output_prefix: Optional[str] = None
-    timeout_minutes: int = 10  # Added timeout configuration
+    timeout_minutes: int = 20  # Added timeout configuration
 
 
 class AudioShakeAPI:
@@ -73,12 +73,13 @@ class AudioShakeAPI:
         """Poll for task completion and return results."""
         self.logger.info(f"Getting task result for task {task_id}")
 
-        url = f"{self.config.base_url}/tasks/{task_id}"
+        # Use the list endpoint which has fresh data, not the individual task endpoint which caches
+        url = f"{self.config.base_url}/tasks"
         start_time = time.time()
         last_status_log = start_time
         timeout_seconds = self.config.timeout_minutes * 60
         
-        # Add initial retry logic for 404 errors (task ID not yet available)
+        # Add initial retry logic for when task is not found yet
         initial_retry_count = 0
         max_initial_retries = 5
         initial_retry_delay = 2  # seconds
@@ -99,7 +100,24 @@ class AudioShakeAPI:
             try:
                 response = requests.get(url, headers=self._get_headers())
                 response.raise_for_status()
-                task_data = response.json()
+                tasks_list = response.json()
+                
+                # Find our specific task in the list
+                task_data = None
+                for task in tasks_list:
+                    if task.get("id") == task_id:
+                        task_data = task
+                        break
+                
+                if not task_data:
+                    # Task not found in list yet
+                    if initial_retry_count < max_initial_retries:
+                        initial_retry_count += 1
+                        self.logger.info(f"Task not found in list yet (attempt {initial_retry_count}/{max_initial_retries}), retrying in {initial_retry_delay} seconds...")
+                        time.sleep(initial_retry_delay)
+                        continue
+                    else:
+                        raise TranscriptionError(f"Task {task_id} not found in task list after {max_initial_retries} retries")
                 
                 # Log the full response for debugging
                 self.logger.debug(f"Task status response: {task_data}")
@@ -130,15 +148,7 @@ class AudioShakeAPI:
                 initial_retry_count = 0
                 
             except requests.exceptions.HTTPError as e:
-                if e.response.status_code == 404 and initial_retry_count < max_initial_retries:
-                    # Task ID not yet available, retry with delay
-                    initial_retry_count += 1
-                    self.logger.info(f"Task ID not yet available (attempt {initial_retry_count}/{max_initial_retries}), retrying in {initial_retry_delay} seconds...")
-                    time.sleep(initial_retry_delay)
-                    continue
-                else:
-                    # Re-raise the error if it's not a 404 or we've exceeded retries
-                    raise
+                raise
 
             time.sleep(30)  # Wait before next poll
 
