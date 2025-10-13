@@ -14,7 +14,7 @@ class AudioShakeConfig:
     """Configuration for AudioShake transcription service."""
 
     api_token: Optional[str] = None
-    base_url: str = "https://groovy.audioshake.ai"
+    base_url: str = "https://api.audioshake.ai"
     output_prefix: Optional[str] = None
     timeout_minutes: int = 10  # Added timeout configuration
 
@@ -57,7 +57,6 @@ class AudioShakeAPI:
         url = f"{self.config.base_url}/tasks"
         data = {
             "url": file_url,
-            "callbackUrl": "https://example.com/webhook/alignment",
             "targets": [
                 {
                     "model": "alignment",
@@ -101,11 +100,31 @@ class AudioShakeAPI:
                 response = requests.get(url, headers=self._get_headers())
                 response.raise_for_status()
                 task_data = response.json()
+                
+                # Log the full response for debugging
+                self.logger.debug(f"Task status response: {task_data}")
 
-                if task_data["status"] == "completed":
+                # Check status of targets (not the task itself)
+                targets = task_data.get("targets", [])
+                if not targets:
+                    raise TranscriptionError("No targets found in task response")
+                
+                # Check if all targets are completed or if any failed
+                all_completed = True
+                for target in targets:
+                    target_status = target.get("status")
+                    target_model = target.get("model")
+                    self.logger.debug(f"Target {target_model} status: {target_status}")
+                    
+                    if target_status == "failed":
+                        error_msg = target.get("error", "Unknown error")
+                        raise TranscriptionError(f"Target {target_model} failed: {error_msg}")
+                    elif target_status != "completed":
+                        all_completed = False
+                
+                if all_completed:
+                    self.logger.info("All targets completed successfully")
                     return task_data
-                elif task_data["status"] == "failed":
-                    raise TranscriptionError(f"Task failed: {task_data.get('error', 'Unknown error')}")
 
                 # Reset retry count on successful response
                 initial_retry_count = 0
@@ -121,7 +140,7 @@ class AudioShakeAPI:
                     # Re-raise the error if it's not a 404 or we've exceeded retries
                     raise
 
-            time.sleep(5)  # Wait before next poll
+            time.sleep(30)  # Wait before next poll
 
 
 class AudioShakeTranscriber(BaseTranscriber):
@@ -194,11 +213,11 @@ class AudioShakeTranscriber(BaseTranscriber):
             raise TranscriptionError("Required output not found in task results")
         
         # Get the output file URL
-        outputs = alignment_target.get("outputs", [])
-        if not outputs:
-            raise TranscriptionError("No outputs found in alignment target")
+        output = alignment_target.get("output", [])
+        if not output:
+            raise TranscriptionError("No output found in alignment target")
         
-        output_url = outputs[0].get("link")
+        output_url = output[0].get("link")
         if not output_url:
             raise TranscriptionError("Output link not found in alignment target")
 

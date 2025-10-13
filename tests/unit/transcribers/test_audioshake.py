@@ -25,7 +25,7 @@ class TestAudioShakeConfig:
     def test_default_config(self):
         config = AudioShakeConfig()
         assert config.api_token is None
-        assert config.base_url == "https://groovy.audioshake.ai"
+        assert config.base_url == "https://api.audioshake.ai"
         assert config.output_prefix is None
 
     def test_custom_config(self):
@@ -89,21 +89,29 @@ class TestAudioShakeAPI:
     @patch("requests.get")
     def test_wait_for_task_result_success(self, mock_get, api):
         mock_response = Mock()
-        mock_response.json.return_value = {"status": "completed", "data": "test"}
+        mock_response.json.return_value = {
+            "id": "task123",
+            "targets": [{"model": "alignment", "status": "completed"}],
+            "data": "test"
+        }
         mock_get.return_value = mock_response
 
         result = api.wait_for_task_result("task123")
 
-        assert result == {"status": "completed", "data": "test"}
+        assert result["id"] == "task123"
+        assert result["targets"][0]["status"] == "completed"
         mock_get.assert_called_once()
 
     @patch("requests.get")
     def test_wait_for_task_result_failure(self, mock_get, api):
         mock_response = Mock()
-        mock_response.json.return_value = {"status": "failed", "error": "test error"}
+        mock_response.json.return_value = {
+            "id": "task123",
+            "targets": [{"model": "alignment", "status": "failed", "error": "test error"}]
+        }
         mock_get.return_value = mock_response
 
-        with pytest.raises(Exception, match="Task failed: test error"):
+        with pytest.raises(Exception, match="Target alignment failed: test error"):
             api.wait_for_task_result("task123")
 
     @patch("requests.get")
@@ -111,15 +119,16 @@ class TestAudioShakeAPI:
     def test_wait_for_task_result_polling(self, mock_sleep, mock_get, api):
         """Test polling behavior with in-progress status before completion"""
         mock_responses = [
-            Mock(json=lambda: {"status": "in_progress"}),
-            Mock(json=lambda: {"status": "in_progress"}),
-            Mock(json=lambda: {"status": "completed", "data": "test"}),
+            Mock(json=lambda: {"id": "task123", "targets": [{"model": "alignment", "status": "processing"}]}),
+            Mock(json=lambda: {"id": "task123", "targets": [{"model": "alignment", "status": "processing"}]}),
+            Mock(json=lambda: {"id": "task123", "targets": [{"model": "alignment", "status": "completed"}], "data": "test"}),
         ]
         mock_get.side_effect = mock_responses
 
         result = api.wait_for_task_result("task123")
 
-        assert result == {"status": "completed", "data": "test"}
+        assert result["id"] == "task123"
+        assert result["targets"][0]["status"] == "completed"
         assert mock_get.call_count == 3
         assert mock_sleep.call_count == 2
         mock_sleep.assert_called_with(5)
@@ -139,7 +148,10 @@ class TestAudioShakeAPI:
     def test_wait_for_task_result_timeout(self, mock_time, mock_get, api):
         """Test that task polling times out after configured duration"""
         mock_time.side_effect = [0, api.config.timeout_minutes * 60 + 1]  # Simulate timeout
-        mock_get.return_value = Mock(json=lambda: {"status": "in_progress"})
+        mock_get.return_value = Mock(json=lambda: {
+            "id": "task123",
+            "targets": [{"model": "alignment", "status": "processing"}]
+        })
 
         with pytest.raises(TranscriptionError, match=f"Transcription timed out after {api.config.timeout_minutes} minutes"):
             api.wait_for_task_result("task123")
@@ -151,9 +163,9 @@ class TestAudioShakeAPI:
         """Test that task polling logs status periodically"""
         mock_time.side_effect = [0, 30, 61, 90]  # Simulate time passing
         mock_get.side_effect = [
-            Mock(json=lambda: {"status": "in_progress"}),
-            Mock(json=lambda: {"status": "in_progress"}),
-            Mock(json=lambda: {"status": "completed", "data": "test"}),
+            Mock(json=lambda: {"id": "task123", "targets": [{"model": "alignment", "status": "processing"}]}),
+            Mock(json=lambda: {"id": "task123", "targets": [{"model": "alignment", "status": "processing"}]}),
+            Mock(json=lambda: {"id": "task123", "targets": [{"model": "alignment", "status": "completed"}], "data": "test"}),
         ]
 
         result = api.wait_for_task_result("task123")
@@ -229,7 +241,7 @@ class TestAudioShakeTranscriber:
             "targets": [
                 {
                     "model": "alignment",
-                    "outputs": [{"link": "http://test.com/result"}]
+                    "output": [{"link": "http://test.com/result"}]
                 }
             ],
             "duration": 60.0,
@@ -258,7 +270,7 @@ class TestAudioShakeTranscriber:
 
     def test_convert_result_format_missing_asset(self, transcriber, mock_api):
         """Test that transcription fails when the required output asset is missing"""
-        task_data = {"id": "task123", "targets": [{"model": "vocals", "outputs": [{"link": "http://test.com/wrong"}]}]}
+        task_data = {"id": "task123", "targets": [{"model": "vocals", "output": [{"link": "http://test.com/wrong"}]}]}
 
         raw_data = {"task_data": task_data, "transcription": {"metadata": {"language": "en"}}}
 
@@ -289,7 +301,7 @@ class TestAudioShakeTranscriber:
             "targets": [
                 {
                     "model": "alignment",
-                    "outputs": [{"link": "http://test.com/result"}]
+                    "output": [{"link": "http://test.com/result"}]
                 }
             ],
         }
@@ -368,7 +380,7 @@ class TestAudioShakeTranscriber:
             "targets": [
                 {
                     "model": "alignment",
-                    "outputs": [{"link": "http://test.com/result"}]
+                    "output": [{"link": "http://test.com/result"}]
                 }
             ],
         }
@@ -414,7 +426,7 @@ class TestAudioShakeTranscriber:
         """Test get_transcription_result with missing output asset"""
         mock_api.wait_for_task_result.return_value = {
             "id": "task123",
-            "targets": [{"model": "vocals", "outputs": [{"link": "http://test.com/wrong"}]}],
+            "targets": [{"model": "vocals", "output": [{"link": "http://test.com/wrong"}]}],
         }
 
         with pytest.raises(TranscriptionError, match="Required output not found"):
@@ -428,7 +440,7 @@ class TestAudioShakeTranscriber:
             "targets": [
                 {
                     "model": "alignment",
-                    "outputs": [{"link": "http://test.com/result"}]
+                    "output": [{"link": "http://test.com/result"}]
                 }
             ],
         }
@@ -461,7 +473,7 @@ class TestAudioShakeTranscriber:
             "targets": [
                 {
                     "model": "alignment",
-                    "outputs": [{"link": "http://test.com/result"}]
+                    "output": [{"link": "http://test.com/result"}]
                 }
             ],
         }
