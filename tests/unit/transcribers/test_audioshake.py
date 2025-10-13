@@ -136,7 +136,7 @@ class TestAudioShakeAPI:
         assert result["targets"][0]["status"] == "completed"
         assert mock_get.call_count == 3
         assert mock_sleep.call_count == 2
-        mock_sleep.assert_called_with(5)
+        mock_sleep.assert_called_with(30)
 
     @patch("requests.get")
     def test_wait_for_task_result_with_retries(self, mock_get, api):
