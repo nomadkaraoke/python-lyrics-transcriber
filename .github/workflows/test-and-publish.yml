@@ -23,8 +23,11 @@ jobs:
         with:
           tool-cache: false
           android: true
-          dotnet: true
-          haskell: true
+          dotnet: false
+          haskell: false
+          large-packages: false
+          docker-images: false
+          swap-storage: false
 
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v4
