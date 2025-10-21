@@ -144,6 +144,7 @@ class LyricsCorrector:
         """Execute the correction process."""
         # Optional agentic routing flag from environment; default off for safety
         agentic_enabled = os.getenv("USE_AGENTIC_AI", "").lower() in {"1", "true", "yes"}
+        self.logger.info(f"🤖 AGENTIC MODE: {'ENABLED' if agentic_enabled else 'DISABLED'} (USE_AGENTIC_AI={os.getenv('USE_AGENTIC_AI', 'NOT_SET')})")
         if not transcription_results:
             self.logger.error("No transcription results available")
             raise ValueError("No primary transcription data available")
@@ -259,6 +260,24 @@ class LyricsCorrector:
             "audio_file_hash": metadata.get("audio_file_hash") if metadata else None,
         }
 
+        # Check if we're in agentic-only mode
+        use_agentic_env = os.getenv("USE_AGENTIC_AI", "").lower() in {"1", "true", "yes"}
+        
+        # Import agentic modules once if needed
+        _AgenticCorrector = None
+        _adapt = None
+        _ModelRouter = None
+        
+        if use_agentic_env:
+            try:
+                from lyrics_transcriber.correction.agentic.agent import AgenticCorrector as _AgenticCorrector
+                from lyrics_transcriber.correction.agentic.adapter import adapt_proposals_to_word_corrections as _adapt
+                from lyrics_transcriber.correction.agentic.router import ModelRouter as _ModelRouter
+                self.logger.info("🤖 Agentic modules imported successfully - running in AGENTIC-ONLY mode")
+            except Exception as e:
+                self.logger.error(f"🤖 Failed to import agentic modules but USE_AGENTIC_AI=1: {e}")
+                raise RuntimeError(f"Agentic AI correction is enabled but required modules could not be imported: {e}") from e
+
         for i, gap in enumerate(gap_sequences, 1):
             self.logger.info(f"Processing gap {i}/{len(gap_sequences)} at position {gap.transcription_position}")
 
@@ -266,39 +285,51 @@ class LyricsCorrector:
             gap_words = [word_map[word_id] for word_id in gap.transcribed_word_ids]
             self.logger.debug(f"Gap text: '{' '.join(w.text for w in gap_words)}'")
 
-            # Optionally, attempt agentic correction first
-            try:
-                import os as _os
-                from lyrics_transcriber.correction.agentic.agent import AgenticCorrector as _AgenticCorrector
-                from lyrics_transcriber.correction.agentic.adapter import adapt_proposals_to_word_corrections as _adapt
-            except Exception:
-                _AgenticCorrector = None  # type: ignore
-                _adapt = None  # type: ignore
-
-            if _AgenticCorrector and _adapt and (_os.getenv("USE_AGENTIC_AI", "").lower() in {"1", "true", "yes"}):
+            # AGENTIC-ONLY MODE: Use agentic correction exclusively
+            if use_agentic_env:
+                self.logger.info(f"🤖 Attempting agentic correction for gap {i}/{len(gap_sequences)}")
                 try:
                     # Simple prompt using gap text and optional reference text
                     gap_text = " ".join(w.text for w in gap_words)
                     ref_text = " ".join(next(iter(self.reference_lyrics.values())).get_full_text().split()[:50]) if self.reference_lyrics else ""
-                    prompt = (
-                        "You are correcting transcription errors in lyrics.\n"
-                        f"Transcribed gap: '{gap_text}'.\n"
-                        f"Reference context (optional): '{ref_text}'.\n"
-                        "Return a JSON list of proposals matching the CorrectionProposal schema."
-                    )
-                    # Choose model via router if available
-                    try:
-                        from lyrics_transcriber.correction.agentic.router import ModelRouter as _ModelRouter
-                        _router = _ModelRouter()
-                        # naive uncertainty estimate: short gaps => low uncertainty
-                        uncertainty = 0.3 if len(gap_words) <= 2 else 0.7
-                        model_id = _router.choose_model("gap", uncertainty)
-                    except Exception:
-                        model_id = _os.getenv("AGENTIC_AI_MODEL", "anthropic/claude-4-sonnet")
-                    _agent = _AgenticCorrector(model=model_id)
+                    
+                    # Build prompt with explicit schema
+                    prompt = f"""You are correcting transcription errors in lyrics.
+
+Transcribed gap (may contain errors): '{gap_text}'
+
+Reference lyrics context: '{ref_text}'
+
+Analyze the gap and return a JSON array of correction proposals. Each proposal must have:
+- action: "ReplaceWord" | "SplitWord" | "DeleteWord" | "AdjustTiming"
+- replacement_text: the corrected text (for ReplaceWord/SplitWord)
+- confidence: 0.0 to 1.0
+- reason: brief explanation
+
+Example:
+[
+  {{"action": "ReplaceWord", "replacement_text": "I'm", "confidence": 0.9, "reason": "Apostrophe missing"}}
+]
+
+Return ONLY the JSON array, no other text:"""
+                    
+                    # Choose model via router
+                    _router = _ModelRouter()
+                    # naive uncertainty estimate: short gaps => low uncertainty
+                    uncertainty = 0.3 if len(gap_words) <= 2 else 0.7
+                    model_id = _router.choose_model("gap", uncertainty)
+                    self.logger.debug(f"🤖 Router selected model: {model_id}")
+                    
+                    self.logger.debug(f"🤖 Creating AgenticCorrector with model: {model_id}")
+                    _agent = _AgenticCorrector.from_model(model=model_id)
+                    self.logger.debug(f"🤖 Calling agent.propose() with prompt length: {len(prompt)}")
                     _proposals = _agent.propose(prompt)
+                    self.logger.debug(f"🤖 Agent returned {len(_proposals) if _proposals else 0} proposals")
                     _agentic_corrections = _adapt(_proposals, word_map, linear_position_map) if _proposals else []
+                    self.logger.debug(f"🤖 Adapter returned {len(_agentic_corrections)} corrections")
+                    
                     if _agentic_corrections:
+                        self.logger.info(f"🤖 Applying {len(_agentic_corrections)} agentic corrections for gap {i}")
                         affected_word_ids = [w.id for w in self._get_affected_words(gap, segments)]
                         affected_segment_ids = [s.id for s in self._get_affected_segments(gap, segments)]
                         updated_segments = self._apply_corrections_to_segments(self._get_affected_segments(gap, segments), _agentic_corrections)
@@ -319,13 +350,24 @@ class LyricsCorrector:
                         )
                         correction_steps.append(step)
                         all_corrections.extend(_agentic_corrections)
-                        # Stop trying other handlers if agentic made corrections
-                        continue
-                except Exception:
-                    # Silent fallback to rule-based handlers
-                    pass
+                        # Log corrections made
+                        for correction in _agentic_corrections:
+                            self.logger.info(
+                                f"Made correction: '{correction.original_word}' -> '{correction.corrected_word}' "
+                                f"(confidence: {correction.confidence:.2f}, reason: {correction.reason})"
+                            )
+                    else:
+                        self.logger.info(f"🤖 No agentic corrections needed for gap {i}")
+                        
+                except Exception as e:
+                    # In agentic-only mode, fail fast instead of falling back
+                    self.logger.error(f"🤖 Agentic correction failed for gap {i}: {e}", exc_info=True)
+                    raise RuntimeError(f"Agentic AI correction failed for gap {i}: {e}") from e
+                
+                # Skip rule-based handlers completely in agentic mode
+                continue
 
-            # Try each handler in order
+            # RULE-BASED MODE: Try each handler in order
             for handler in self.handlers:
                 handler_name = handler.__class__.__name__
                 can_handle, handler_data = handler.can_handle(gap, base_handler_data)

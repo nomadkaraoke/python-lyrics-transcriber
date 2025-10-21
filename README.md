@@ -203,21 +203,48 @@ docker run --rm -v "$PWD/input":/input -v "$PWD/output":/output \
 
 ## Agentic AI (Experimental)
 
+Uses **LangChain + LangGraph** for AI-powered lyrics correction with automatic **Langfuse** observability.
+
 ### Enabling
-- CLI flags: `--use-agentic-ai` and `--ai-model <modelId>`
-- Or env: `USE_AGENTIC_AI=1`, `AGENTIC_AI_MODEL=anthropic/claude-4-sonnet`
+- CLI flags: `--use-agentic-ai` and `--ai-model provider/model`
+- Or env: `USE_AGENTIC_AI=1`, `AGENTIC_AI_MODEL=ollama/gpt-oss:latest`
 
-### Provider configuration
-- Cloud keys (set any): `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, `GOOGLE_API_KEY`, `OPENROUTER_API_KEY`
-- Local privacy-only mode: `PRIVACY_MODE=1` (Ollama where available)
-- Retries/backoff/circuit-breaker are preconfigured; adjust in code if needed
+### Model Format
+Models use `provider/model` format for LangChain:
+- **Ollama** (local): `ollama/gpt-oss:latest`, `ollama/llama3.2:latest`
+- **OpenAI**: `openai/gpt-4`, `openai/gpt-4-turbo`
+- **Anthropic**: `anthropic/claude-3-sonnet-20240229`, `anthropic/claude-3-opus-20240229`
 
-### Observability
-- Optional LangFuse: `LANGFUSE_SECRET_KEY`, `LANGFUSE_PUBLIC_KEY`, `LANGFUSE_HOST`
-- Metrics: `GET /api/v1/metrics`
+### Provider Configuration
+- **API Keys**: Set provider-specific keys:
+  - OpenAI: `OPENAI_API_KEY`
+  - Anthropic: `ANTHROPIC_API_KEY`
+- **Local/Privacy Mode**: `PRIVACY_MODE=1` (uses Ollama only)
+- **Timeouts/Retries**: `AGENTIC_TIMEOUT_SECONDS=30`, `AGENTIC_MAX_RETRIES=2`
+- **Circuit Breaker**: `AGENTIC_CIRCUIT_THRESHOLD=3`, `AGENTIC_CIRCUIT_OPEN_SECONDS=60`
 
-### Feedback store
-- SQLite DB persisted in cache dir (sessions, feedback); retention cleanup enforces ~3 years
+### Observability (Langfuse)
+Automatic tracing via LangChain callbacks - just set:
+```bash
+export LANGFUSE_PUBLIC_KEY="pk-lf-..."
+export LANGFUSE_SECRET_KEY="sk-lf-..."
+export LANGFUSE_HOST="https://us.cloud.langfuse.com"  # or https://cloud.langfuse.com for EU
+```
+
+Traces include:
+- Full prompts and responses
+- Token counts and latency
+- Cost estimates (for paid APIs)
+- Model performance metrics
+
+View metrics: `GET /api/v1/metrics`
+
+### Feedback Store
+- SQLite DB persisted in cache dir (sessions, feedback)
+- 3-year retention policy with automatic cleanup
+
+### Architecture
+See `LANGCHAIN_MIGRATION.md` for details on the LangChain/LangGraph implementation.
 
 ## License
 MIT. See `LICENSE`.

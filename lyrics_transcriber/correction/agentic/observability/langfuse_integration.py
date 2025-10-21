@@ -1,5 +1,6 @@
 from typing import Optional, Dict, Any
 import os
+import threading
 
 
 def setup_langfuse(client_name: str = "agentic-corrector") -> Optional[object]:
@@ -32,5 +33,3 @@ def record_metrics(client: Optional[object], name: str, metrics: Dict[str, Any])
     except Exception:
         # Swallow observability errors to never impact core flow
         pass
-
-

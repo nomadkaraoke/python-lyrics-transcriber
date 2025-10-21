@@ -3,13 +3,16 @@
 import pytest
 
 from lyrics_transcriber.correction.agentic.agent import AgenticCorrector
-from lyrics_transcriber.correction.agentic.providers.bridge import LiteLLMBridge
+from lyrics_transcriber.correction.agentic.providers.base import BaseAIProvider
 
 
-@pytest.mark.integration
-def test_basic_ai_correction_workflow(monkeypatch):
-    # Stub provider to avoid network calls; return a valid proposal list
-    def fake_generate(prompt, schema):
+class MockProvider(BaseAIProvider):
+    """Mock provider for testing."""
+    
+    def name(self) -> str:
+        return "mock_provider"
+    
+    def generate_correction_proposals(self, prompt, schema):
         return [{
             "word_id": "w1",
             "action": "ReplaceWord",
@@ -18,9 +21,15 @@ def test_basic_ai_correction_workflow(monkeypatch):
             "reason": "spelling correction"
         }]
 
-    monkeypatch.setattr(LiteLLMBridge, "generate_correction_proposals", lambda self, prompt, schema: fake_generate(prompt, schema))
 
-    agent = AgenticCorrector(model="dummy")
+@pytest.mark.integration
+def test_basic_ai_correction_workflow():
+    """Test basic AI correction workflow with mocked provider using dependency injection."""
+    # Create mock provider
+    mock_provider = MockProvider()
+    
+    # Inject mock provider (much cleaner than monkeypatching!)
+    agent = AgenticCorrector(provider=mock_provider)
     proposals = agent.propose("Fix spelling errors in 'wurld'.")
 
     assert proposals, "Expected at least one correction proposal"

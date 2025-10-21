@@ -1,61 +1,144 @@
 from __future__ import annotations
 
-from typing import Dict, Any, List
-
-from .providers.bridge import LiteLLMBridge
-from .providers.config import ProviderConfig
-from .models.schemas import CorrectionProposal, CorrectionProposalList
+import logging
 import os
+from typing import Dict, Any, List, Optional
+
+from .providers.base import BaseAIProvider
+from .providers.langchain_bridge import LangChainBridge
+from .providers.config import ProviderConfig
+from .models.schemas import CorrectionProposal
 from .workflows.correction_graph import build_correction_graph
+
+logger = logging.getLogger(__name__)
 
 
 class AgenticCorrector:
-    """Main entry for agentic AI correction; minimal scaffold.
+    """Main entry for agentic AI correction using LangChain + LangGraph.
 
-    Real logic will be implemented with LangGraph workflows; this class will
-    orchestrate provider calls and schema enforcement.
+    This orchestrates correction workflows using LangGraph for state management
+    and LangChain ChatModels for provider integration. Langfuse tracing is
+    automatic via LangChain callbacks.
+    
+    Uses dependency injection for better testability - you can inject a
+    mock provider for testing.
     """
 
-    def __init__(self, model: str, config: ProviderConfig | None = None):
-        self._config = config or ProviderConfig.from_env()
-        self._provider = LiteLLMBridge(model=model, config=self._config)
-        self._graph = build_correction_graph()
+    def __init__(
+        self, 
+        provider: BaseAIProvider,
+        graph: Optional[Any] = None,
+        langfuse_handler: Optional[Any] = None
+    ):
+        """Initialize with injected dependencies.
+        
+        Args:
+            provider: AI provider implementation (e.g., LangChainBridge)
+            graph: Optional LangGraph workflow (builds default if None)
+            langfuse_handler: Optional Langfuse callback handler (if None, will try to get from provider)
+        """
+        self._provider = provider
+        
+        # Get Langfuse handler from provider if available (avoids duplication)
+        self._langfuse_handler = langfuse_handler or self._get_provider_handler()
+        
+        # Build graph with Langfuse callback if available
+        self._graph = graph if graph is not None else build_correction_graph(
+            callbacks=[self._langfuse_handler] if self._langfuse_handler else None
+        )
+    
+    def _get_provider_handler(self) -> Optional[Any]:
+        """Get Langfuse handler from provider if it has one.
+        
+        This avoids duplicating Langfuse initialization - if the provider
+        (e.g., LangChainBridge) already has a handler, we reuse it.
+        
+        Returns:
+            CallbackHandler instance from provider, or None
+        """
+        # Check if provider is LangChainBridge and has a factory
+        if hasattr(self._provider, '_factory'):
+            factory = self._provider._factory
+            
+            # Force initialization of Langfuse if keys are present
+            # This ensures the handler is available when we need it
+            if hasattr(factory, '_langfuse_initialized'):
+                if not factory._langfuse_initialized:
+                    # Initialize by calling _create_callbacks (which triggers _initialize_langfuse)
+                    factory._create_callbacks(self._provider._model)
+            
+            # Now check if handler is available
+            if hasattr(factory, '_langfuse_handler'):
+                handler = factory._langfuse_handler
+                if handler:
+                    logger.debug("🤖 Reusing Langfuse handler from ModelFactory")
+                    return handler
+        
+        logger.debug("🤖 No Langfuse handler from provider")
+        return None
+    
+    @classmethod
+    def from_model(
+        cls, 
+        model: str, 
+        config: ProviderConfig | None = None
+    ) -> "AgenticCorrector":
+        """Factory method to create corrector from model specification.
+        
+        This is a convenience method for the common case where you want
+        to use LangChainBridge with a model spec string.
+        
+        Args:
+            model: Model identifier in format "provider/model"
+            config: Optional provider configuration
+            
+        Returns:
+            AgenticCorrector instance with LangChainBridge provider
+        """
+        config = config or ProviderConfig.from_env()
+        provider = LangChainBridge(model=model, config=config)
+        return cls(provider=provider)
 
     def propose(self, prompt: str) -> List[CorrectionProposal]:
-        # If Instructor is available and enabled, use it to enforce schema
-        use_instructor = os.getenv("USE_INSTRUCTOR", "").lower() in {"1", "true", "yes"}
-        if use_instructor:
-            try:
-                from instructor import from_litellm  # type: ignore
-                import litellm  # type: ignore
-
-                client = from_litellm(litellm)
-                result = client.chat.completions.create(
-                    model=self._provider._model,  # type: ignore[attr-defined]
-                    response_model=CorrectionProposalList,
-                    messages=[{"role": "user", "content": prompt}],
-                )
-                return list(result.proposals)
-            except Exception:
-                # Fall back to plain provider path
-                pass
-
-        # Optionally run a trivial graph pass
+        """Generate correction proposals using LangGraph + LangChain.
+        
+        Args:
+            prompt: The correction prompt with gap text and reference context
+            
+        Returns:
+            List of validated CorrectionProposal objects
+        """
+        # Run LangGraph workflow (with Langfuse tracing if configured)
         if self._graph:
             try:
-                self._graph.invoke({"prompt": prompt})
-            except Exception:
-                pass
+                self._graph.invoke(
+                    {"prompt": prompt, "proposals": []},
+                    config={"callbacks": [self._langfuse_handler]} if self._langfuse_handler else {}
+                )
+            except Exception as e:
+                logger.debug(f"🤖 LangGraph workflow invocation failed: {e}")
 
-        data = self._provider.generate_correction_proposals(prompt, schema=CorrectionProposal.model_json_schema())
+        # Get proposals from LangChain ChatModel (already has callbacks attached)
+        data = self._provider.generate_correction_proposals(
+            prompt, 
+            schema=CorrectionProposal.model_json_schema()
+        )
+        
         # Validate via Pydantic; invalid entries are dropped
         proposals: List[CorrectionProposal] = []
         for item in data:
+            # Check if this is an error response from the provider
+            if isinstance(item, dict) and "error" in item:
+                logger.warning(f"🤖 Provider returned error: {item}")
+                continue
+            
             try:
                 proposals.append(CorrectionProposal.model_validate(item))
-            except Exception:
-                # Skip invalid proposal; upstream observability can record
+            except Exception as e:
+                # Log validation errors for debugging
+                logger.debug(f"🤖 Failed to validate proposal: {e}, item: {item}")
                 continue
+                
         return proposals
 
 

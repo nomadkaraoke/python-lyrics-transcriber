@@ -17,7 +17,7 @@ class ProviderConfig:
     openrouter_api_key: Optional[str]
     privacy_mode: bool
 
-    request_timeout_seconds: float = 4.0
+    request_timeout_seconds: float = 30.0
     max_retries: int = 2
     retry_backoff_base_seconds: float = 0.2
     retry_backoff_factor: float = 2.0
@@ -32,6 +32,12 @@ class ProviderConfig:
             google_api_key=os.getenv("GOOGLE_API_KEY"),
             openrouter_api_key=os.getenv("OPENROUTER_API_KEY"),
             privacy_mode=os.getenv("PRIVACY_MODE", "false").lower() in {"1", "true", "yes"},
+            request_timeout_seconds=float(os.getenv("AGENTIC_TIMEOUT_SECONDS", "30.0")),
+            max_retries=int(os.getenv("AGENTIC_MAX_RETRIES", "2")),
+            retry_backoff_base_seconds=float(os.getenv("AGENTIC_BACKOFF_BASE_SECONDS", "0.2")),
+            retry_backoff_factor=float(os.getenv("AGENTIC_BACKOFF_FACTOR", "2.0")),
+            circuit_breaker_failure_threshold=int(os.getenv("AGENTIC_CIRCUIT_THRESHOLD", "3")),
+            circuit_breaker_open_seconds=int(os.getenv("AGENTIC_CIRCUIT_OPEN_SECONDS", "60")),
         )
 
     def validate_environment(self, logger: Optional[object] = None) -> None:
