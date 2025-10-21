@@ -16,10 +16,20 @@ class BaseAIProvider(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def generate_correction_proposals(self, prompt: str, schema: Dict[str, Any]) -> List[Dict[str, Any]]:
+    def generate_correction_proposals(
+        self, 
+        prompt: str, 
+        schema: Dict[str, Any],
+        session_id: str | None = None
+    ) -> List[Dict[str, Any]]:
         """Return a list of correction proposals as dictionaries matching `schema`.
 
         The schema is provided so implementations can guide structured outputs.
+        
+        Args:
+            prompt: The correction prompt
+            schema: JSON schema for the expected output structure
+            session_id: Optional Langfuse session ID for grouping traces
         """
         raise NotImplementedError
 

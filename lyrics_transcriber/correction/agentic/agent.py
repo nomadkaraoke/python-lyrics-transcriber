@@ -28,7 +28,8 @@ class AgenticCorrector:
         self, 
         provider: BaseAIProvider,
         graph: Optional[Any] = None,
-        langfuse_handler: Optional[Any] = None
+        langfuse_handler: Optional[Any] = None,
+        session_id: Optional[str] = None
     ):
         """Initialize with injected dependencies.
         
@@ -36,8 +37,10 @@ class AgenticCorrector:
             provider: AI provider implementation (e.g., LangChainBridge)
             graph: Optional LangGraph workflow (builds default if None)
             langfuse_handler: Optional Langfuse callback handler (if None, will try to get from provider)
+            session_id: Optional Langfuse session ID to group related traces
         """
         self._provider = provider
+        self._session_id = session_id
         
         # Get Langfuse handler from provider if available (avoids duplication)
         self._langfuse_handler = langfuse_handler or self._get_provider_handler()
@@ -81,7 +84,8 @@ class AgenticCorrector:
     def from_model(
         cls, 
         model: str, 
-        config: ProviderConfig | None = None
+        config: ProviderConfig | None = None,
+        session_id: Optional[str] = None
     ) -> "AgenticCorrector":
         """Factory method to create corrector from model specification.
         
@@ -91,13 +95,14 @@ class AgenticCorrector:
         Args:
             model: Model identifier in format "provider/model"
             config: Optional provider configuration
+            session_id: Optional Langfuse session ID to group related traces
             
         Returns:
             AgenticCorrector instance with LangChainBridge provider
         """
         config = config or ProviderConfig.from_env()
         provider = LangChainBridge(model=model, config=config)
-        return cls(provider=provider)
+        return cls(provider=provider, session_id=session_id)
 
     def propose(self, prompt: str) -> List[CorrectionProposal]:
         """Generate correction proposals using LangGraph + LangChain.
@@ -108,20 +113,30 @@ class AgenticCorrector:
         Returns:
             List of validated CorrectionProposal objects
         """
+        # Prepare config with session_id in metadata (Langfuse format)
+        config = {}
+        if self._langfuse_handler:
+            config["callbacks"] = [self._langfuse_handler]
+            if self._session_id:
+                config["metadata"] = {"langfuse_session_id": self._session_id}
+                logger.debug(f"🤖 Set Langfuse session_id in metadata: {self._session_id}")
+        
         # Run LangGraph workflow (with Langfuse tracing if configured)
         if self._graph:
             try:
                 self._graph.invoke(
                     {"prompt": prompt, "proposals": []},
-                    config={"callbacks": [self._langfuse_handler]} if self._langfuse_handler else {}
+                    config=config
                 )
             except Exception as e:
                 logger.debug(f"🤖 LangGraph workflow invocation failed: {e}")
 
-        # Get proposals from LangChain ChatModel (already has callbacks attached)
+        # Get proposals from LangChain ChatModel
+        # Pass the session_id via metadata to the provider
         data = self._provider.generate_correction_proposals(
             prompt, 
-            schema=CorrectionProposal.model_json_schema()
+            schema=CorrectionProposal.model_json_schema(),
+            session_id=self._session_id
         )
         
         # Validate via Pydantic; invalid entries are dropped

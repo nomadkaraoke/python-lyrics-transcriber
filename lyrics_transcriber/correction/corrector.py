@@ -3,6 +3,7 @@ import logging
 from pathlib import Path
 from copy import deepcopy
 import os
+import shortuuid
 
 from lyrics_transcriber.correction.handlers.levenshtein import LevenshteinHandler
 from lyrics_transcriber.correction.handlers.llm import LLMHandler
@@ -229,7 +230,11 @@ class LyricsCorrector:
         a) Finding and making corrections (gap-centric)
         b) Applying those corrections to the original text (segment-centric)
         """
-        self.logger.info(f"Starting correction process with {len(gap_sequences)} gaps")
+        # Generate a unique session ID for this correction task
+        # This groups all traces in Langfuse for easy debugging
+        session_id = f"lyrics-correction-{shortuuid.uuid()}"
+        self.logger.info(f"Starting correction process with {len(gap_sequences)} gaps (session: {session_id})")
+        
         correction_steps = []
         all_corrections = []
         word_id_map = {}
@@ -321,7 +326,7 @@ Return ONLY the JSON array, no other text:"""
                     self.logger.debug(f"🤖 Router selected model: {model_id}")
                     
                     self.logger.debug(f"🤖 Creating AgenticCorrector with model: {model_id}")
-                    _agent = _AgenticCorrector.from_model(model=model_id)
+                    _agent = _AgenticCorrector.from_model(model=model_id, session_id=session_id)
                     self.logger.debug(f"🤖 Calling agent.propose() with prompt length: {len(prompt)}")
                     _proposals = _agent.propose(prompt)
                     self.logger.debug(f"🤖 Agent returned {len(_proposals) if _proposals else 0} proposals")

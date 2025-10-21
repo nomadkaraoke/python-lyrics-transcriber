@@ -82,7 +82,8 @@ class LangChainBridge(BaseAIProvider):
     def generate_correction_proposals(
         self, 
         prompt: str, 
-        schema: Dict[str, Any]
+        schema: Dict[str, Any],
+        session_id: str | None = None
     ) -> List[Dict[str, Any]]:
         """Generate correction proposals using LangChain ChatModel.
         
@@ -92,10 +93,13 @@ class LangChainBridge(BaseAIProvider):
         Args:
             prompt: The correction prompt
             schema: Pydantic schema for structured output (for future use)
+            session_id: Optional Langfuse session ID for grouping traces
             
         Returns:
             List of correction proposal dictionaries, or error dicts on failure
         """
+        # Store session_id for use in _invoke_model
+        self._session_id = session_id
         # Step 1: Check circuit breaker
         if self._circuit_breaker.is_open(self._model):
             open_until = self._circuit_breaker.get_open_until(self._model)
@@ -164,6 +168,12 @@ class LangChainBridge(BaseAIProvider):
         """
         from langchain_core.messages import HumanMessage
         
-        response = self._chat_model.invoke([HumanMessage(content=prompt)])
+        # Prepare config with session_id in metadata (Langfuse format)
+        config = {}
+        if hasattr(self, '_session_id') and self._session_id:
+            config["metadata"] = {"langfuse_session_id": self._session_id}
+            logger.debug(f"🤖 [LangChain] Invoking with session_id: {self._session_id}")
+        
+        response = self._chat_model.invoke([HumanMessage(content=prompt)], config=config)
         return response.content
 

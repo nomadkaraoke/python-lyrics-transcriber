@@ -12,7 +12,7 @@ class MockProvider(BaseAIProvider):
     def name(self) -> str:
         return "mock_provider"
     
-    def generate_correction_proposals(self, prompt, schema):
+    def generate_correction_proposals(self, prompt, schema, session_id=None):
         return [{
             "word_id": "w1",
             "action": "ReplaceWord",
