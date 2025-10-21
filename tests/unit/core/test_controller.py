@@ -477,7 +477,8 @@ def test_initialize_lyrics_providers_with_genius_only(sample_audio_file):
     transcriber = LyricsTranscriber(audio_filepath=sample_audio_file, lyrics_config=lyrics_config, output_config=output_config)
 
     providers = transcriber.lyrics_providers
-    assert len(providers) == 1
+    assert len(providers) == 2  # LRCLIB + Genius
+    assert "lrclib" in providers  # LRCLIB is always enabled
     assert "genius" in providers
     assert isinstance(providers["genius"], GeniusProvider)
     assert "spotify" not in providers
@@ -500,7 +501,8 @@ def test_initialize_lyrics_providers_with_spotify_only(mock_spotify_api_class, m
     transcriber = LyricsTranscriber(audio_filepath=sample_audio_file, lyrics_config=lyrics_config, output_config=output_config)
 
     providers = transcriber.lyrics_providers
-    assert len(providers) == 1
+    assert len(providers) == 2  # LRCLIB + Spotify
+    assert "lrclib" in providers  # LRCLIB is always enabled
     assert "spotify" in providers
     assert providers["spotify"] == mock_spotify_provider
     assert "genius" not in providers
@@ -525,7 +527,8 @@ def test_initialize_lyrics_providers_with_rapidapi_config(sample_audio_file):
     transcriber = LyricsTranscriber(audio_filepath=sample_audio_file, lyrics_config=lyrics_config, output_config=output_config)
 
     providers = transcriber.lyrics_providers
-    assert len(providers) == 2  # Genius + Musixmatch
+    assert len(providers) == 3  # LRCLIB + Genius + Musixmatch
+    assert "lrclib" in providers  # LRCLIB is always enabled
     assert "genius" in providers
     assert "musixmatch" in providers
     assert isinstance(providers["genius"], GeniusProvider)
@@ -547,7 +550,8 @@ def test_initialize_lyrics_providers_with_both_configs(sample_audio_file):
     transcriber = LyricsTranscriber(audio_filepath=sample_audio_file, lyrics_config=lyrics_config, output_config=output_config)
 
     providers = transcriber.lyrics_providers
-    assert len(providers) == 3  # Genius + Musixmatch + Spotify
+    assert len(providers) == 4  # LRCLIB + Genius + Musixmatch + Spotify
+    assert "lrclib" in providers  # LRCLIB is always enabled
     assert "genius" in providers
     assert "musixmatch" in providers
     assert "spotify" in providers
