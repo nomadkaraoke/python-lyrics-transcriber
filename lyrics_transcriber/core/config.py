@@ -45,3 +45,6 @@ class OutputConfig:
     render_video: bool = True
     video_resolution: str = "360p"
     subtitle_offset_ms: int = 0
+    
+    # Countdown feature for songs that start too quickly
+    add_countdown: bool = True

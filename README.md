@@ -26,6 +26,11 @@ Create synchronized karaoke assets from an audio file with word‑level timing: 
   - Optional LLM handlers (Ollama local, or OpenRouter with `OPENROUTER_API_KEY`)
 - **Review UI** (FastAPI) at `http://localhost:8000`
   - Edit corrections, toggle handlers, add lyrics sources, generate preview video
+- **Countdown intro for karaoke** (enabled by default)
+  - Automatically adds 3-second intro with "3... 2... 1..." for songs that start within 3 seconds
+  - Pads audio with silence and shifts all timestamps accordingly
+  - Helps karaoke singers prepare before vocals begin
+  - Disable with `--skip_countdown`
 - **Rich outputs**
   - Plain text (original/corrected), corrections `JSON`, `*.lrc` (MidiCo), `*.ass` (karaoke), `*.cdg` with `*.mp3` and ZIP, and MP4/MKV video
   - Subtitle offset, line wrapping, styles via JSON
@@ -79,7 +84,7 @@ lyrics-transcriber /path/to/song.mp3 \
 - **Song identification**: `--artist`, `--title`, `--lyrics_file`
 - **APIs**: `--audioshake_api_token`, `--genius_api_token`, `--spotify_cookie`, `--runpod_api_key`, `--whisper_runpod_id`
 - **Output**: `--output_dir`, `--cache_dir`, `--output_styles_json`, `--subtitle_offset`
-- **Feature toggles**: `--skip_lyrics_fetch`, `--skip_transcription`, `--skip_correction`, `--skip_plain_text`, `--skip_lrc`, `--skip_cdg`, `--skip_video`, `--video_resolution {4k,1080p,720p,360p}`
+- **Feature toggles**: `--skip_lyrics_fetch`, `--skip_transcription`, `--skip_correction`, `--skip_plain_text`, `--skip_lrc`, `--skip_cdg`, `--skip_video`, `--skip_countdown`, `--video_resolution {4k,1080p,720p,360p}`
 
 Run `lyrics-transcriber --help` for full usage.
 
@@ -177,12 +182,19 @@ transcriber = LyricsTranscriber(
     output_config=OutputConfig(
         output_dir="./out", cache_dir="~/lyrics-transcriber-cache",
         output_styles_json="/path/to/styles.json",  # required for CDG/video
-        video_resolution="1080p", subtitle_offset_ms=0
+        video_resolution="1080p", subtitle_offset_ms=0,
+        add_countdown=True  # enable countdown for songs starting within 3s (default: True)
     ),
 )
 
 result = transcriber.process()
 print(result.ass_filepath, result.lrc_filepath, result.video_filepath)
+
+# Check if countdown padding was added (useful for syncing other audio files)
+if result.countdown_padding_added:
+    print(f"Countdown padding added: {result.countdown_padding_seconds}s")
+    print(f"Padded audio filepath: {result.padded_audio_filepath}")
+    # You can use this info to apply the same padding to instrumental tracks
 ```
 
 ## Docker
