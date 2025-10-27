@@ -7,7 +7,8 @@ import {
     InteractionMode,
     LyricsSegment,
     ReferenceSource,
-    WordCorrection
+    WordCorrection,
+    CorrectionAnnotation
 } from '../types'
 import { Box, Button, Grid, useMediaQuery, useTheme } from '@mui/material'
 import { ApiClient } from '../api'
@@ -17,6 +18,7 @@ import { WordClickInfo, FlashType } from './shared/types'
 import EditModal from './EditModal'
 import ReviewChangesModal from './ReviewChangesModal'
 import ReplaceAllLyricsModal from './ReplaceAllLyricsModal'
+import CorrectionAnnotationModal from './CorrectionAnnotationModal'
 import {
     addSegmentBefore,
     splitSegment,
@@ -282,6 +284,23 @@ export default function LyricsAnalyzer({ data: initialData, onFileLoad, apiClien
     const [isFindReplaceModalOpen, setIsFindReplaceModalOpen] = useState(false)
     const [isTimingOffsetModalOpen, setIsTimingOffsetModalOpen] = useState(false)
     const [timingOffsetMs, setTimingOffsetMs] = useState(0)
+    
+    // Annotation collection state
+    const [annotations, setAnnotations] = useState<Omit<CorrectionAnnotation, 'annotation_id' | 'timestamp'>[]>([])
+    const [isAnnotationModalOpen, setIsAnnotationModalOpen] = useState(false)
+    const [pendingAnnotation, setPendingAnnotation] = useState<{
+        originalText: string
+        correctedText: string
+        wordIdsAffected: string[]
+        gapId?: string
+    } | null>(null)
+    const [annotationsEnabled] = useState(() => {
+        // Check localStorage for user preference
+        const saved = localStorage.getItem('annotationsEnabled')
+        return saved !== null ? saved === 'true' : true // Default: enabled
+        // TODO: Add UI toggle to enable/disable via setAnnotationsEnabled
+    })
+    
     const theme = useTheme()
     const isMobile = useMediaQuery(theme.breakpoints.down('md'))
 
@@ -566,6 +585,35 @@ export default function LyricsAnalyzer({ data: initialData, onFileLoad, apiClien
             }
         }
     }, [data, effectiveMode, setModalContent, handleFlash, deleteWord, updateDataWithHistory]);
+    
+    // Annotation handlers (declared early for use in other callbacks)
+    const handleSaveAnnotation = useCallback((annotation: Omit<CorrectionAnnotation, 'annotation_id' | 'timestamp'>) => {
+        setAnnotations(prev => [...prev, annotation])
+        console.log('Annotation saved:', annotation)
+    }, [])
+    
+    const handleSkipAnnotation = useCallback(() => {
+        console.log('Annotation skipped')
+    }, [])
+    
+    const triggerAnnotationModal = useCallback((
+        originalText: string,
+        correctedText: string,
+        wordIdsAffected: string[],
+        gapId?: string
+    ) => {
+        if (!annotationsEnabled || isReadOnly) {
+            return
+        }
+        
+        setPendingAnnotation({
+            originalText,
+            correctedText,
+            wordIdsAffected,
+            gapId
+        })
+        setIsAnnotationModalOpen(true)
+    }, [annotationsEnabled, isReadOnly])
 
     const handleUpdateSegment = useCallback((updatedSegment: LyricsSegment) => {
         if (!editModalSegment) return
@@ -599,8 +647,21 @@ export default function LyricsAnalyzer({ data: initialData, onFileLoad, apiClien
                 newHistoryLength: history.length - historyIndex === 1 ? history.length + 1 : historyIndex + 2
             });
         }
+        
+        // Trigger annotation modal if enabled and text changed
+        const originalSegment = editModalSegment.originalSegment || editModalSegment.segment
+        if (originalSegment && originalSegment.text !== updatedSegment.text) {
+            // Get word IDs that were affected
+            const wordIds = updatedSegment.words.map(w => w.id)
+            triggerAnnotationModal(
+                originalSegment.text,
+                updatedSegment.text,
+                wordIds
+            )
+        }
+        
         setEditModalSegment(null)
-    }, [history, historyIndex, editModalSegment, updateDataWithHistory])
+    }, [history, historyIndex, editModalSegment, updateDataWithHistory, triggerAnnotationModal])
 
     const handleDeleteSegment = useCallback((segmentIndex: number) => {
         const newData = deleteSegment(data, segmentIndex)
@@ -641,6 +702,18 @@ export default function LyricsAnalyzer({ data: initialData, onFileLoad, apiClien
             }
                 
             await apiClient.submitCorrections(dataToSubmit)
+            
+            // Submit annotations if any were collected
+            if (annotations.length > 0) {
+                console.log(`Submitting ${annotations.length} annotations...`)
+                try {
+                    await apiClient.submitAnnotations(annotations)
+                    console.log('Annotations submitted successfully')
+                } catch (error) {
+                    console.error('Failed to submit annotations:', error)
+                    // Don't block the main submission if annotations fail
+                }
+            }
 
             setIsReviewComplete(true)
             setIsReviewModalOpen(false)
@@ -651,7 +724,7 @@ export default function LyricsAnalyzer({ data: initialData, onFileLoad, apiClien
             console.error('Failed to submit corrections:', error)
             alert('Failed to submit corrections. Please try again.')
         }
-    }, [apiClient, data, timingOffsetMs])
+    }, [apiClient, data, timingOffsetMs, annotations])
 
     // Update play segment handler
     const handlePlaySegment = useCallback((startTime: number) => {
@@ -1089,6 +1162,28 @@ export default function LyricsAnalyzer({ data: initialData, onFileLoad, apiClien
                 currentTime={currentAudioTime}
                 setModalSpacebarHandler={handleSetModalSpacebarHandler}
             />
+            
+            {pendingAnnotation && (
+                <CorrectionAnnotationModal
+                    open={isAnnotationModalOpen}
+                    onClose={() => {
+                        setIsAnnotationModalOpen(false)
+                        setPendingAnnotation(null)
+                    }}
+                    onSave={handleSaveAnnotation}
+                    onSkip={handleSkipAnnotation}
+                    originalText={pendingAnnotation.originalText}
+                    correctedText={pendingAnnotation.correctedText}
+                    wordIdsAffected={pendingAnnotation.wordIdsAffected}
+                    agenticProposal={undefined} // TODO: Pass agentic proposal if available
+                    referenceSources={Object.keys(data.reference_lyrics || {})}
+                    audioHash={audioHash}
+                    artist={data.metadata?.audio_filepath?.split('/').pop()?.split('.')[0] || 'Unknown'}
+                    title={data.metadata?.audio_filepath?.split('/').pop()?.split('.')[0] || 'Unknown'}
+                    sessionId={audioHash} // Use audio hash as session ID for now
+                    gapId={pendingAnnotation.gapId}
+                />
+            )}
         </Box>
     )
 } 

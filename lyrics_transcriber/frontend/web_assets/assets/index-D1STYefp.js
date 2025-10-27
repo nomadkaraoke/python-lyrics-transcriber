@@ -13646,7 +13646,7 @@ function getSvgIconUtilityClass(slot) {
   return generateUtilityClass("MuiSvgIcon", slot);
 }
 generateUtilityClasses("MuiSvgIcon", ["root", "colorPrimary", "colorSecondary", "colorAction", "colorError", "colorDisabled", "fontSizeInherit", "fontSizeSmall", "fontSizeMedium", "fontSizeLarge"]);
-const useUtilityClasses$I = (ownerState) => {
+const useUtilityClasses$K = (ownerState) => {
   const {
     color: color2,
     fontSize,
@@ -13791,7 +13791,7 @@ const SvgIcon = /* @__PURE__ */ reactExports.forwardRef(function SvgIcon2(inProp
   if (!inheritViewBox) {
     more.viewBox = viewBox;
   }
-  const classes = useUtilityClasses$I(ownerState);
+  const classes = useUtilityClasses$K(ownerState);
   return /* @__PURE__ */ jsxRuntimeExports.jsxs(SvgIconRoot, {
     as: component,
     className: clsx(classes.root, className),
@@ -14298,7 +14298,7 @@ function getPaperUtilityClass(slot) {
   return generateUtilityClass("MuiPaper", slot);
 }
 generateUtilityClasses("MuiPaper", ["root", "rounded", "outlined", "elevation", "elevation0", "elevation1", "elevation2", "elevation3", "elevation4", "elevation5", "elevation6", "elevation7", "elevation8", "elevation9", "elevation10", "elevation11", "elevation12", "elevation13", "elevation14", "elevation15", "elevation16", "elevation17", "elevation18", "elevation19", "elevation20", "elevation21", "elevation22", "elevation23", "elevation24"]);
-const useUtilityClasses$H = (ownerState) => {
+const useUtilityClasses$J = (ownerState) => {
   const {
     square,
     elevation,
@@ -14371,7 +14371,7 @@ const Paper = /* @__PURE__ */ reactExports.forwardRef(function Paper2(inProps, r
     square,
     variant
   };
-  const classes = useUtilityClasses$H(ownerState);
+  const classes = useUtilityClasses$J(ownerState);
   return /* @__PURE__ */ jsxRuntimeExports.jsx(PaperRoot, {
     as: component,
     ownerState,
@@ -14832,7 +14832,7 @@ function getButtonBaseUtilityClass(slot) {
   return generateUtilityClass("MuiButtonBase", slot);
 }
 const buttonBaseClasses = generateUtilityClasses("MuiButtonBase", ["root", "disabled", "focusVisible"]);
-const useUtilityClasses$G = (ownerState) => {
+const useUtilityClasses$I = (ownerState) => {
   const {
     disabled,
     focusVisible,
@@ -15049,7 +15049,7 @@ const ButtonBase = /* @__PURE__ */ reactExports.forwardRef(function ButtonBase2(
     tabIndex,
     focusVisible
   };
-  const classes = useUtilityClasses$G(ownerState);
+  const classes = useUtilityClasses$I(ownerState);
   return /* @__PURE__ */ jsxRuntimeExports.jsxs(ButtonBaseRoot, {
     as: ComponentProp,
     className: clsx(classes.root, className),
@@ -15147,7 +15147,7 @@ const rotateAnimation = typeof circularRotateKeyframe !== "string" ? css`
 const dashAnimation = typeof circularDashKeyframe !== "string" ? css`
         animation: ${circularDashKeyframe} 1.4s ease-in-out infinite;
       ` : null;
-const useUtilityClasses$F = (ownerState) => {
+const useUtilityClasses$H = (ownerState) => {
   const {
     classes,
     variant,
@@ -15270,7 +15270,7 @@ const CircularProgress = /* @__PURE__ */ reactExports.forwardRef(function Circul
     value,
     variant
   };
-  const classes = useUtilityClasses$F(ownerState);
+  const classes = useUtilityClasses$H(ownerState);
   const circleStyle = {};
   const rootStyle = {};
   const rootProps = {};
@@ -15315,7 +15315,7 @@ function getIconButtonUtilityClass(slot) {
   return generateUtilityClass("MuiIconButton", slot);
 }
 const iconButtonClasses = generateUtilityClasses("MuiIconButton", ["root", "disabled", "colorInherit", "colorPrimary", "colorSecondary", "colorError", "colorInfo", "colorSuccess", "colorWarning", "edgeStart", "edgeEnd", "sizeSmall", "sizeMedium", "sizeLarge", "loading", "loadingIndicator", "loadingWrapper"]);
-const useUtilityClasses$E = (ownerState) => {
+const useUtilityClasses$G = (ownerState) => {
   const {
     classes,
     disabled,
@@ -15501,7 +15501,7 @@ const IconButton = /* @__PURE__ */ reactExports.forwardRef(function IconButton2(
     loadingIndicator,
     size
   };
-  const classes = useUtilityClasses$E(ownerState);
+  const classes = useUtilityClasses$G(ownerState);
   return /* @__PURE__ */ jsxRuntimeExports.jsxs(IconButtonRoot, {
     id,
     className: clsx(classes.root, className),
@@ -15540,7 +15540,7 @@ const InfoOutlinedIcon = createSvgIcon(/* @__PURE__ */ jsxRuntimeExports.jsx("pa
 const ClearIcon = createSvgIcon(/* @__PURE__ */ jsxRuntimeExports.jsx("path", {
   d: "M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"
 }), "Close");
-const useUtilityClasses$D = (ownerState) => {
+const useUtilityClasses$F = (ownerState) => {
   const {
     variant,
     color: color2,
@@ -15695,7 +15695,7 @@ const Alert = /* @__PURE__ */ reactExports.forwardRef(function Alert2(inProps, r
     variant,
     colorSeverity: color2 || severity
   };
-  const classes = useUtilityClasses$D(ownerState);
+  const classes = useUtilityClasses$F(ownerState);
   const externalForwardedProps = {
     slots: {
       closeButton: components.CloseButton,
@@ -15794,7 +15794,7 @@ const v6Colors = {
   textDisabled: true
 };
 const extendSxProp = internal_createExtendSxProp();
-const useUtilityClasses$C = (ownerState) => {
+const useUtilityClasses$E = (ownerState) => {
   const {
     align,
     gutterBottom,
@@ -15937,7 +15937,7 @@ const Typography = /* @__PURE__ */ reactExports.forwardRef(function Typography2(
     variantMapping
   };
   const Component = component || (paragraph ? "p" : variantMapping[variant] || defaultVariantMapping[variant]) || "span";
-  const classes = useUtilityClasses$C(ownerState);
+  const classes = useUtilityClasses$E(ownerState);
   return /* @__PURE__ */ jsxRuntimeExports.jsx(TypographyRoot, {
     as: Component,
     ref,
@@ -17361,7 +17361,7 @@ function resolveAnchorEl$1(anchorEl) {
 function isHTMLElement(element) {
   return element.nodeType !== void 0;
 }
-const useUtilityClasses$B = (ownerState) => {
+const useUtilityClasses$D = (ownerState) => {
   const {
     classes
   } = ownerState;
@@ -17462,7 +17462,7 @@ const PopperTooltip = /* @__PURE__ */ reactExports.forwardRef(function PopperToo
   if (TransitionProps !== null) {
     childProps.TransitionProps = TransitionProps;
   }
-  const classes = useUtilityClasses$B(props);
+  const classes = useUtilityClasses$D(props);
   const Root = slots.root ?? "div";
   const rootProps = useSlotProps({
     elementType: Root,
@@ -17604,6 +17604,453 @@ const Popper = /* @__PURE__ */ reactExports.forwardRef(function Popper22(inProps
     slotProps: slotProps ?? componentsProps,
     ...otherProps,
     ref
+  });
+});
+const CancelIcon$1 = createSvgIcon(/* @__PURE__ */ jsxRuntimeExports.jsx("path", {
+  d: "M12 2C6.47 2 2 6.47 2 12s4.47 10 10 10 10-4.47 10-10S17.53 2 12 2zm5 13.59L15.59 17 12 13.41 8.41 17 7 15.59 10.59 12 7 8.41 8.41 7 12 10.59 15.59 7 17 8.41 13.41 12 17 15.59z"
+}), "Cancel");
+function getChipUtilityClass(slot) {
+  return generateUtilityClass("MuiChip", slot);
+}
+const chipClasses = generateUtilityClasses("MuiChip", ["root", "sizeSmall", "sizeMedium", "colorDefault", "colorError", "colorInfo", "colorPrimary", "colorSecondary", "colorSuccess", "colorWarning", "disabled", "clickable", "clickableColorPrimary", "clickableColorSecondary", "deletable", "deletableColorPrimary", "deletableColorSecondary", "outlined", "filled", "outlinedPrimary", "outlinedSecondary", "filledPrimary", "filledSecondary", "avatar", "avatarSmall", "avatarMedium", "avatarColorPrimary", "avatarColorSecondary", "icon", "iconSmall", "iconMedium", "iconColorPrimary", "iconColorSecondary", "label", "labelSmall", "labelMedium", "deleteIcon", "deleteIconSmall", "deleteIconMedium", "deleteIconColorPrimary", "deleteIconColorSecondary", "deleteIconOutlinedColorPrimary", "deleteIconOutlinedColorSecondary", "deleteIconFilledColorPrimary", "deleteIconFilledColorSecondary", "focusVisible"]);
+const useUtilityClasses$C = (ownerState) => {
+  const {
+    classes,
+    disabled,
+    size,
+    color: color2,
+    iconColor,
+    onDelete,
+    clickable,
+    variant
+  } = ownerState;
+  const slots = {
+    root: ["root", variant, disabled && "disabled", `size${capitalize(size)}`, `color${capitalize(color2)}`, clickable && "clickable", clickable && `clickableColor${capitalize(color2)}`, onDelete && "deletable", onDelete && `deletableColor${capitalize(color2)}`, `${variant}${capitalize(color2)}`],
+    label: ["label", `label${capitalize(size)}`],
+    avatar: ["avatar", `avatar${capitalize(size)}`, `avatarColor${capitalize(color2)}`],
+    icon: ["icon", `icon${capitalize(size)}`, `iconColor${capitalize(iconColor)}`],
+    deleteIcon: ["deleteIcon", `deleteIcon${capitalize(size)}`, `deleteIconColor${capitalize(color2)}`, `deleteIcon${capitalize(variant)}Color${capitalize(color2)}`]
+  };
+  return composeClasses(slots, getChipUtilityClass, classes);
+};
+const ChipRoot = styled("div", {
+  name: "MuiChip",
+  slot: "Root",
+  overridesResolver: (props, styles2) => {
+    const {
+      ownerState
+    } = props;
+    const {
+      color: color2,
+      iconColor,
+      clickable,
+      onDelete,
+      size,
+      variant
+    } = ownerState;
+    return [{
+      [`& .${chipClasses.avatar}`]: styles2.avatar
+    }, {
+      [`& .${chipClasses.avatar}`]: styles2[`avatar${capitalize(size)}`]
+    }, {
+      [`& .${chipClasses.avatar}`]: styles2[`avatarColor${capitalize(color2)}`]
+    }, {
+      [`& .${chipClasses.icon}`]: styles2.icon
+    }, {
+      [`& .${chipClasses.icon}`]: styles2[`icon${capitalize(size)}`]
+    }, {
+      [`& .${chipClasses.icon}`]: styles2[`iconColor${capitalize(iconColor)}`]
+    }, {
+      [`& .${chipClasses.deleteIcon}`]: styles2.deleteIcon
+    }, {
+      [`& .${chipClasses.deleteIcon}`]: styles2[`deleteIcon${capitalize(size)}`]
+    }, {
+      [`& .${chipClasses.deleteIcon}`]: styles2[`deleteIconColor${capitalize(color2)}`]
+    }, {
+      [`& .${chipClasses.deleteIcon}`]: styles2[`deleteIcon${capitalize(variant)}Color${capitalize(color2)}`]
+    }, styles2.root, styles2[`size${capitalize(size)}`], styles2[`color${capitalize(color2)}`], clickable && styles2.clickable, clickable && color2 !== "default" && styles2[`clickableColor${capitalize(color2)})`], onDelete && styles2.deletable, onDelete && color2 !== "default" && styles2[`deletableColor${capitalize(color2)}`], styles2[variant], styles2[`${variant}${capitalize(color2)}`]];
+  }
+})(memoTheme(({
+  theme: theme2
+}) => {
+  const textColor = theme2.palette.mode === "light" ? theme2.palette.grey[700] : theme2.palette.grey[300];
+  return {
+    maxWidth: "100%",
+    fontFamily: theme2.typography.fontFamily,
+    fontSize: theme2.typography.pxToRem(13),
+    display: "inline-flex",
+    alignItems: "center",
+    justifyContent: "center",
+    height: 32,
+    color: (theme2.vars || theme2).palette.text.primary,
+    backgroundColor: (theme2.vars || theme2).palette.action.selected,
+    borderRadius: 32 / 2,
+    whiteSpace: "nowrap",
+    transition: theme2.transitions.create(["background-color", "box-shadow"]),
+    // reset cursor explicitly in case ButtonBase is used
+    cursor: "unset",
+    // We disable the focus ring for mouse, touch and keyboard users.
+    outline: 0,
+    textDecoration: "none",
+    border: 0,
+    // Remove `button` border
+    padding: 0,
+    // Remove `button` padding
+    verticalAlign: "middle",
+    boxSizing: "border-box",
+    [`&.${chipClasses.disabled}`]: {
+      opacity: (theme2.vars || theme2).palette.action.disabledOpacity,
+      pointerEvents: "none"
+    },
+    [`& .${chipClasses.avatar}`]: {
+      marginLeft: 5,
+      marginRight: -6,
+      width: 24,
+      height: 24,
+      color: theme2.vars ? theme2.vars.palette.Chip.defaultAvatarColor : textColor,
+      fontSize: theme2.typography.pxToRem(12)
+    },
+    [`& .${chipClasses.avatarColorPrimary}`]: {
+      color: (theme2.vars || theme2).palette.primary.contrastText,
+      backgroundColor: (theme2.vars || theme2).palette.primary.dark
+    },
+    [`& .${chipClasses.avatarColorSecondary}`]: {
+      color: (theme2.vars || theme2).palette.secondary.contrastText,
+      backgroundColor: (theme2.vars || theme2).palette.secondary.dark
+    },
+    [`& .${chipClasses.avatarSmall}`]: {
+      marginLeft: 4,
+      marginRight: -4,
+      width: 18,
+      height: 18,
+      fontSize: theme2.typography.pxToRem(10)
+    },
+    [`& .${chipClasses.icon}`]: {
+      marginLeft: 5,
+      marginRight: -6
+    },
+    [`& .${chipClasses.deleteIcon}`]: {
+      WebkitTapHighlightColor: "transparent",
+      color: theme2.vars ? `rgba(${theme2.vars.palette.text.primaryChannel} / 0.26)` : alpha(theme2.palette.text.primary, 0.26),
+      fontSize: 22,
+      cursor: "pointer",
+      margin: "0 5px 0 -6px",
+      "&:hover": {
+        color: theme2.vars ? `rgba(${theme2.vars.palette.text.primaryChannel} / 0.4)` : alpha(theme2.palette.text.primary, 0.4)
+      }
+    },
+    variants: [{
+      props: {
+        size: "small"
+      },
+      style: {
+        height: 24,
+        [`& .${chipClasses.icon}`]: {
+          fontSize: 18,
+          marginLeft: 4,
+          marginRight: -4
+        },
+        [`& .${chipClasses.deleteIcon}`]: {
+          fontSize: 16,
+          marginRight: 4,
+          marginLeft: -4
+        }
+      }
+    }, ...Object.entries(theme2.palette).filter(createSimplePaletteValueFilter(["contrastText"])).map(([color2]) => {
+      return {
+        props: {
+          color: color2
+        },
+        style: {
+          backgroundColor: (theme2.vars || theme2).palette[color2].main,
+          color: (theme2.vars || theme2).palette[color2].contrastText,
+          [`& .${chipClasses.deleteIcon}`]: {
+            color: theme2.vars ? `rgba(${theme2.vars.palette[color2].contrastTextChannel} / 0.7)` : alpha(theme2.palette[color2].contrastText, 0.7),
+            "&:hover, &:active": {
+              color: (theme2.vars || theme2).palette[color2].contrastText
+            }
+          }
+        }
+      };
+    }), {
+      props: (props) => props.iconColor === props.color,
+      style: {
+        [`& .${chipClasses.icon}`]: {
+          color: theme2.vars ? theme2.vars.palette.Chip.defaultIconColor : textColor
+        }
+      }
+    }, {
+      props: (props) => props.iconColor === props.color && props.color !== "default",
+      style: {
+        [`& .${chipClasses.icon}`]: {
+          color: "inherit"
+        }
+      }
+    }, {
+      props: {
+        onDelete: true
+      },
+      style: {
+        [`&.${chipClasses.focusVisible}`]: {
+          backgroundColor: theme2.vars ? `rgba(${theme2.vars.palette.action.selectedChannel} / calc(${theme2.vars.palette.action.selectedOpacity} + ${theme2.vars.palette.action.focusOpacity}))` : alpha(theme2.palette.action.selected, theme2.palette.action.selectedOpacity + theme2.palette.action.focusOpacity)
+        }
+      }
+    }, ...Object.entries(theme2.palette).filter(createSimplePaletteValueFilter(["dark"])).map(([color2]) => {
+      return {
+        props: {
+          color: color2,
+          onDelete: true
+        },
+        style: {
+          [`&.${chipClasses.focusVisible}`]: {
+            background: (theme2.vars || theme2).palette[color2].dark
+          }
+        }
+      };
+    }), {
+      props: {
+        clickable: true
+      },
+      style: {
+        userSelect: "none",
+        WebkitTapHighlightColor: "transparent",
+        cursor: "pointer",
+        "&:hover": {
+          backgroundColor: theme2.vars ? `rgba(${theme2.vars.palette.action.selectedChannel} / calc(${theme2.vars.palette.action.selectedOpacity} + ${theme2.vars.palette.action.hoverOpacity}))` : alpha(theme2.palette.action.selected, theme2.palette.action.selectedOpacity + theme2.palette.action.hoverOpacity)
+        },
+        [`&.${chipClasses.focusVisible}`]: {
+          backgroundColor: theme2.vars ? `rgba(${theme2.vars.palette.action.selectedChannel} / calc(${theme2.vars.palette.action.selectedOpacity} + ${theme2.vars.palette.action.focusOpacity}))` : alpha(theme2.palette.action.selected, theme2.palette.action.selectedOpacity + theme2.palette.action.focusOpacity)
+        },
+        "&:active": {
+          boxShadow: (theme2.vars || theme2).shadows[1]
+        }
+      }
+    }, ...Object.entries(theme2.palette).filter(createSimplePaletteValueFilter(["dark"])).map(([color2]) => ({
+      props: {
+        color: color2,
+        clickable: true
+      },
+      style: {
+        [`&:hover, &.${chipClasses.focusVisible}`]: {
+          backgroundColor: (theme2.vars || theme2).palette[color2].dark
+        }
+      }
+    })), {
+      props: {
+        variant: "outlined"
+      },
+      style: {
+        backgroundColor: "transparent",
+        border: theme2.vars ? `1px solid ${theme2.vars.palette.Chip.defaultBorder}` : `1px solid ${theme2.palette.mode === "light" ? theme2.palette.grey[400] : theme2.palette.grey[700]}`,
+        [`&.${chipClasses.clickable}:hover`]: {
+          backgroundColor: (theme2.vars || theme2).palette.action.hover
+        },
+        [`&.${chipClasses.focusVisible}`]: {
+          backgroundColor: (theme2.vars || theme2).palette.action.focus
+        },
+        [`& .${chipClasses.avatar}`]: {
+          marginLeft: 4
+        },
+        [`& .${chipClasses.avatarSmall}`]: {
+          marginLeft: 2
+        },
+        [`& .${chipClasses.icon}`]: {
+          marginLeft: 4
+        },
+        [`& .${chipClasses.iconSmall}`]: {
+          marginLeft: 2
+        },
+        [`& .${chipClasses.deleteIcon}`]: {
+          marginRight: 5
+        },
+        [`& .${chipClasses.deleteIconSmall}`]: {
+          marginRight: 3
+        }
+      }
+    }, ...Object.entries(theme2.palette).filter(createSimplePaletteValueFilter()).map(([color2]) => ({
+      props: {
+        variant: "outlined",
+        color: color2
+      },
+      style: {
+        color: (theme2.vars || theme2).palette[color2].main,
+        border: `1px solid ${theme2.vars ? `rgba(${theme2.vars.palette[color2].mainChannel} / 0.7)` : alpha(theme2.palette[color2].main, 0.7)}`,
+        [`&.${chipClasses.clickable}:hover`]: {
+          backgroundColor: theme2.vars ? `rgba(${theme2.vars.palette[color2].mainChannel} / ${theme2.vars.palette.action.hoverOpacity})` : alpha(theme2.palette[color2].main, theme2.palette.action.hoverOpacity)
+        },
+        [`&.${chipClasses.focusVisible}`]: {
+          backgroundColor: theme2.vars ? `rgba(${theme2.vars.palette[color2].mainChannel} / ${theme2.vars.palette.action.focusOpacity})` : alpha(theme2.palette[color2].main, theme2.palette.action.focusOpacity)
+        },
+        [`& .${chipClasses.deleteIcon}`]: {
+          color: theme2.vars ? `rgba(${theme2.vars.palette[color2].mainChannel} / 0.7)` : alpha(theme2.palette[color2].main, 0.7),
+          "&:hover, &:active": {
+            color: (theme2.vars || theme2).palette[color2].main
+          }
+        }
+      }
+    }))]
+  };
+}));
+const ChipLabel = styled("span", {
+  name: "MuiChip",
+  slot: "Label",
+  overridesResolver: (props, styles2) => {
+    const {
+      ownerState
+    } = props;
+    const {
+      size
+    } = ownerState;
+    return [styles2.label, styles2[`label${capitalize(size)}`]];
+  }
+})({
+  overflow: "hidden",
+  textOverflow: "ellipsis",
+  paddingLeft: 12,
+  paddingRight: 12,
+  whiteSpace: "nowrap",
+  variants: [{
+    props: {
+      variant: "outlined"
+    },
+    style: {
+      paddingLeft: 11,
+      paddingRight: 11
+    }
+  }, {
+    props: {
+      size: "small"
+    },
+    style: {
+      paddingLeft: 8,
+      paddingRight: 8
+    }
+  }, {
+    props: {
+      size: "small",
+      variant: "outlined"
+    },
+    style: {
+      paddingLeft: 7,
+      paddingRight: 7
+    }
+  }]
+});
+function isDeleteKeyboardEvent(keyboardEvent) {
+  return keyboardEvent.key === "Backspace" || keyboardEvent.key === "Delete";
+}
+const Chip = /* @__PURE__ */ reactExports.forwardRef(function Chip2(inProps, ref) {
+  const props = useDefaultProps({
+    props: inProps,
+    name: "MuiChip"
+  });
+  const {
+    avatar: avatarProp,
+    className,
+    clickable: clickableProp,
+    color: color2 = "default",
+    component: ComponentProp,
+    deleteIcon: deleteIconProp,
+    disabled = false,
+    icon: iconProp,
+    label,
+    onClick,
+    onDelete,
+    onKeyDown,
+    onKeyUp,
+    size = "medium",
+    variant = "filled",
+    tabIndex,
+    skipFocusWhenDisabled = false,
+    // TODO v6: Rename to `focusableWhenDisabled`.
+    ...other
+  } = props;
+  const chipRef = reactExports.useRef(null);
+  const handleRef = useForkRef(chipRef, ref);
+  const handleDeleteIconClick = (event) => {
+    event.stopPropagation();
+    if (onDelete) {
+      onDelete(event);
+    }
+  };
+  const handleKeyDown = (event) => {
+    if (event.currentTarget === event.target && isDeleteKeyboardEvent(event)) {
+      event.preventDefault();
+    }
+    if (onKeyDown) {
+      onKeyDown(event);
+    }
+  };
+  const handleKeyUp = (event) => {
+    if (event.currentTarget === event.target) {
+      if (onDelete && isDeleteKeyboardEvent(event)) {
+        onDelete(event);
+      }
+    }
+    if (onKeyUp) {
+      onKeyUp(event);
+    }
+  };
+  const clickable = clickableProp !== false && onClick ? true : clickableProp;
+  const component = clickable || onDelete ? ButtonBase : ComponentProp || "div";
+  const ownerState = {
+    ...props,
+    component,
+    disabled,
+    size,
+    color: color2,
+    iconColor: /* @__PURE__ */ reactExports.isValidElement(iconProp) ? iconProp.props.color || color2 : color2,
+    onDelete: !!onDelete,
+    clickable,
+    variant
+  };
+  const classes = useUtilityClasses$C(ownerState);
+  const moreProps = component === ButtonBase ? {
+    component: ComponentProp || "div",
+    focusVisibleClassName: classes.focusVisible,
+    ...onDelete && {
+      disableRipple: true
+    }
+  } : {};
+  let deleteIcon = null;
+  if (onDelete) {
+    deleteIcon = deleteIconProp && /* @__PURE__ */ reactExports.isValidElement(deleteIconProp) ? /* @__PURE__ */ reactExports.cloneElement(deleteIconProp, {
+      className: clsx(deleteIconProp.props.className, classes.deleteIcon),
+      onClick: handleDeleteIconClick
+    }) : /* @__PURE__ */ jsxRuntimeExports.jsx(CancelIcon$1, {
+      className: clsx(classes.deleteIcon),
+      onClick: handleDeleteIconClick
+    });
+  }
+  let avatar = null;
+  if (avatarProp && /* @__PURE__ */ reactExports.isValidElement(avatarProp)) {
+    avatar = /* @__PURE__ */ reactExports.cloneElement(avatarProp, {
+      className: clsx(classes.avatar, avatarProp.props.className)
+    });
+  }
+  let icon = null;
+  if (iconProp && /* @__PURE__ */ reactExports.isValidElement(iconProp)) {
+    icon = /* @__PURE__ */ reactExports.cloneElement(iconProp, {
+      className: clsx(classes.icon, iconProp.props.className)
+    });
+  }
+  return /* @__PURE__ */ jsxRuntimeExports.jsxs(ChipRoot, {
+    as: component,
+    className: clsx(classes.root, className),
+    disabled: clickable && disabled ? true : void 0,
+    onClick,
+    onKeyDown: handleKeyDown,
+    onKeyUp: handleKeyUp,
+    ref: handleRef,
+    tabIndex: skipFocusWhenDisabled && disabled ? -1 : tabIndex,
+    ownerState,
+    ...moreProps,
+    ...other,
+    children: [avatar || icon, /* @__PURE__ */ jsxRuntimeExports.jsx(ChipLabel, {
+      className: clsx(classes.label),
+      ownerState,
+      children: label
+    }), deleteIcon]
   });
 });
 function getStyleValue(value) {
@@ -17814,7 +18261,7 @@ const inputOverridesResolver = (props, styles2) => {
   } = props;
   return [styles2.input, ownerState.size === "small" && styles2.inputSizeSmall, ownerState.multiline && styles2.inputMultiline, ownerState.type === "search" && styles2.inputTypeSearch, ownerState.startAdornment && styles2.inputAdornedStart, ownerState.endAdornment && styles2.inputAdornedEnd, ownerState.hiddenLabel && styles2.inputHiddenLabel];
 };
-const useUtilityClasses$A = (ownerState) => {
+const useUtilityClasses$B = (ownerState) => {
   const {
     classes,
     color: color2,
@@ -18200,7 +18647,7 @@ const InputBase = /* @__PURE__ */ reactExports.forwardRef(function InputBase2(in
     startAdornment,
     type
   };
-  const classes = useUtilityClasses$A(ownerState);
+  const classes = useUtilityClasses$B(ownerState);
   const Root = slots.root || components.Root || InputBaseRoot;
   const rootProps = slotProps.root || componentsProps.root || {};
   const Input3 = slots.input || components.Input || InputBaseInput;
@@ -18405,7 +18852,7 @@ function getBackdropUtilityClass(slot) {
   return generateUtilityClass("MuiBackdrop", slot);
 }
 generateUtilityClasses("MuiBackdrop", ["root", "invisible"]);
-const useUtilityClasses$z = (ownerState) => {
+const useUtilityClasses$A = (ownerState) => {
   const {
     classes,
     invisible
@@ -18468,7 +18915,7 @@ const Backdrop = /* @__PURE__ */ reactExports.forwardRef(function Backdrop2(inPr
     component,
     invisible
   };
-  const classes = useUtilityClasses$z(ownerState);
+  const classes = useUtilityClasses$A(ownerState);
   const backwardCompatibleSlots = {
     transition: TransitionComponentProp,
     root: components.Root,
@@ -18521,7 +18968,7 @@ function getButtonUtilityClass(slot) {
 const buttonClasses = generateUtilityClasses("MuiButton", ["root", "text", "textInherit", "textPrimary", "textSecondary", "textSuccess", "textError", "textInfo", "textWarning", "outlined", "outlinedInherit", "outlinedPrimary", "outlinedSecondary", "outlinedSuccess", "outlinedError", "outlinedInfo", "outlinedWarning", "contained", "containedInherit", "containedPrimary", "containedSecondary", "containedSuccess", "containedError", "containedInfo", "containedWarning", "disableElevation", "focusVisible", "disabled", "colorInherit", "colorPrimary", "colorSecondary", "colorSuccess", "colorError", "colorInfo", "colorWarning", "textSizeSmall", "textSizeMedium", "textSizeLarge", "outlinedSizeSmall", "outlinedSizeMedium", "outlinedSizeLarge", "containedSizeSmall", "containedSizeMedium", "containedSizeLarge", "sizeMedium", "sizeSmall", "sizeLarge", "fullWidth", "startIcon", "endIcon", "icon", "iconSizeSmall", "iconSizeMedium", "iconSizeLarge", "loading", "loadingWrapper", "loadingIconPlaceholder", "loadingIndicator", "loadingPositionCenter", "loadingPositionStart", "loadingPositionEnd"]);
 const ButtonGroupContext = /* @__PURE__ */ reactExports.createContext({});
 const ButtonGroupButtonContext = /* @__PURE__ */ reactExports.createContext(void 0);
-const useUtilityClasses$y = (ownerState) => {
+const useUtilityClasses$z = (ownerState) => {
   const {
     color: color2,
     disableElevation,
@@ -19023,7 +19470,7 @@ const Button = /* @__PURE__ */ reactExports.forwardRef(function Button2(inProps,
     type,
     variant
   };
-  const classes = useUtilityClasses$y(ownerState);
+  const classes = useUtilityClasses$z(ownerState);
   const startIcon = (startIconProp || loading && loadingPosition === "start") && /* @__PURE__ */ jsxRuntimeExports.jsx(ButtonStartIcon, {
     className: classes.startIcon,
     ownerState,
@@ -19074,7 +19521,7 @@ function getButtonGroupUtilityClass(slot) {
   return generateUtilityClass("MuiButtonGroup", slot);
 }
 const buttonGroupClasses = generateUtilityClasses("MuiButtonGroup", ["root", "contained", "outlined", "text", "disableElevation", "disabled", "firstButton", "fullWidth", "horizontal", "vertical", "colorPrimary", "colorSecondary", "grouped", "groupedHorizontal", "groupedVertical", "groupedText", "groupedTextHorizontal", "groupedTextVertical", "groupedTextPrimary", "groupedTextSecondary", "groupedOutlined", "groupedOutlinedHorizontal", "groupedOutlinedVertical", "groupedOutlinedPrimary", "groupedOutlinedSecondary", "groupedContained", "groupedContainedHorizontal", "groupedContainedVertical", "groupedContainedPrimary", "groupedContainedSecondary", "lastButton", "middleButton"]);
-const overridesResolver$2 = (props, styles2) => {
+const overridesResolver$3 = (props, styles2) => {
   const {
     ownerState
   } = props;
@@ -19096,7 +19543,7 @@ const overridesResolver$2 = (props, styles2) => {
     [`& .${buttonGroupClasses.middleButton}`]: styles2.middleButton
   }, styles2.root, styles2[ownerState.variant], ownerState.disableElevation === true && styles2.disableElevation, ownerState.fullWidth && styles2.fullWidth, ownerState.orientation === "vertical" && styles2.vertical];
 };
-const useUtilityClasses$x = (ownerState) => {
+const useUtilityClasses$y = (ownerState) => {
   const {
     classes,
     color: color2,
@@ -19118,7 +19565,7 @@ const useUtilityClasses$x = (ownerState) => {
 const ButtonGroupRoot = styled("div", {
   name: "MuiButtonGroup",
   slot: "Root",
-  overridesResolver: overridesResolver$2
+  overridesResolver: overridesResolver$3
 })(memoTheme(({
   theme: theme2
 }) => ({
@@ -19325,7 +19772,7 @@ const ButtonGroup = /* @__PURE__ */ reactExports.forwardRef(function ButtonGroup
     size,
     variant
   };
-  const classes = useUtilityClasses$x(ownerState);
+  const classes = useUtilityClasses$y(ownerState);
   const context = reactExports.useMemo(() => ({
     className: classes.grouped,
     color: color2,
@@ -19375,7 +19822,7 @@ function getSwitchBaseUtilityClass(slot) {
   return generateUtilityClass("PrivateSwitchBase", slot);
 }
 generateUtilityClasses("PrivateSwitchBase", ["root", "checked", "disabled", "input", "edgeStart", "edgeEnd"]);
-const useUtilityClasses$w = (ownerState) => {
+const useUtilityClasses$x = (ownerState) => {
   const {
     classes,
     checked,
@@ -19511,7 +19958,7 @@ const SwitchBase = /* @__PURE__ */ reactExports.forwardRef(function SwitchBase2(
     disableFocusRipple,
     edge
   };
-  const classes = useUtilityClasses$w(ownerState);
+  const classes = useUtilityClasses$x(ownerState);
   return /* @__PURE__ */ jsxRuntimeExports.jsxs(SwitchBaseRoot, {
     component: "span",
     className: clsx(classes.root, className),
@@ -20106,7 +20553,7 @@ function getModalUtilityClass(slot) {
   return generateUtilityClass("MuiModal", slot);
 }
 generateUtilityClasses("MuiModal", ["root", "hidden", "backdrop"]);
-const useUtilityClasses$v = (ownerState) => {
+const useUtilityClasses$w = (ownerState) => {
   const {
     open,
     exited,
@@ -20217,7 +20664,7 @@ const Modal = /* @__PURE__ */ reactExports.forwardRef(function Modal2(inProps, r
     ...propsWithDefaults,
     exited
   };
-  const classes = useUtilityClasses$v(ownerState);
+  const classes = useUtilityClasses$w(ownerState);
   const childProps = {};
   if (children.props.tabIndex === void 0) {
     childProps.tabIndex = "-1";
@@ -20310,7 +20757,7 @@ const DialogBackdrop = styled(Backdrop, {
   // Improve scrollable dialog support.
   zIndex: -1
 });
-const useUtilityClasses$u = (ownerState) => {
+const useUtilityClasses$v = (ownerState) => {
   const {
     classes,
     scroll,
@@ -20515,7 +20962,7 @@ const Dialog = /* @__PURE__ */ reactExports.forwardRef(function Dialog2(inProps,
     maxWidth: maxWidth2,
     scroll
   };
-  const classes = useUtilityClasses$u(ownerState);
+  const classes = useUtilityClasses$v(ownerState);
   const backdropClick = reactExports.useRef();
   const handleMouseDown = (event) => {
     backdropClick.current = event.target === event.currentTarget;
@@ -20637,7 +21084,7 @@ function getDialogActionsUtilityClass(slot) {
   return generateUtilityClass("MuiDialogActions", slot);
 }
 generateUtilityClasses("MuiDialogActions", ["root", "spacing"]);
-const useUtilityClasses$t = (ownerState) => {
+const useUtilityClasses$u = (ownerState) => {
   const {
     classes,
     disableSpacing
@@ -20687,7 +21134,7 @@ const DialogActions = /* @__PURE__ */ reactExports.forwardRef(function DialogAct
     ...props,
     disableSpacing
   };
-  const classes = useUtilityClasses$t(ownerState);
+  const classes = useUtilityClasses$u(ownerState);
   return /* @__PURE__ */ jsxRuntimeExports.jsx(DialogActionsRoot, {
     className: clsx(classes.root, className),
     ownerState,
@@ -20703,7 +21150,7 @@ function getDialogTitleUtilityClass(slot) {
   return generateUtilityClass("MuiDialogTitle", slot);
 }
 const dialogTitleClasses = generateUtilityClasses("MuiDialogTitle", ["root"]);
-const useUtilityClasses$s = (ownerState) => {
+const useUtilityClasses$t = (ownerState) => {
   const {
     classes,
     dividers
@@ -20764,7 +21211,7 @@ const DialogContent = /* @__PURE__ */ reactExports.forwardRef(function DialogCon
     ...props,
     dividers
   };
-  const classes = useUtilityClasses$s(ownerState);
+  const classes = useUtilityClasses$t(ownerState);
   return /* @__PURE__ */ jsxRuntimeExports.jsx(DialogContentRoot, {
     className: clsx(classes.root, className),
     ownerState,
@@ -20772,7 +21219,7 @@ const DialogContent = /* @__PURE__ */ reactExports.forwardRef(function DialogCon
     ...other
   });
 });
-const useUtilityClasses$r = (ownerState) => {
+const useUtilityClasses$s = (ownerState) => {
   const {
     classes
   } = ownerState;
@@ -20800,7 +21247,7 @@ const DialogTitle = /* @__PURE__ */ reactExports.forwardRef(function DialogTitle
     ...other
   } = props;
   const ownerState = props;
-  const classes = useUtilityClasses$r(ownerState);
+  const classes = useUtilityClasses$s(ownerState);
   const {
     titleId = idProp
   } = reactExports.useContext(DialogContext);
@@ -20817,8 +21264,8 @@ const DialogTitle = /* @__PURE__ */ reactExports.forwardRef(function DialogTitle
 function getDividerUtilityClass(slot) {
   return generateUtilityClass("MuiDivider", slot);
 }
-generateUtilityClasses("MuiDivider", ["root", "absolute", "fullWidth", "inset", "middle", "flexItem", "light", "vertical", "withChildren", "withChildrenVertical", "textAlignRight", "textAlignLeft", "wrapper", "wrapperVertical"]);
-const useUtilityClasses$q = (ownerState) => {
+const dividerClasses = generateUtilityClasses("MuiDivider", ["root", "absolute", "fullWidth", "inset", "middle", "flexItem", "light", "vertical", "withChildren", "withChildrenVertical", "textAlignRight", "textAlignLeft", "wrapper", "wrapperVertical"]);
+const useUtilityClasses$r = (ownerState) => {
   const {
     absolute,
     children,
@@ -21032,7 +21479,7 @@ const Divider = /* @__PURE__ */ reactExports.forwardRef(function Divider2(inProp
     textAlign,
     variant
   };
-  const classes = useUtilityClasses$q(ownerState);
+  const classes = useUtilityClasses$r(ownerState);
   return /* @__PURE__ */ jsxRuntimeExports.jsx(DividerRoot, {
     as: component,
     className: clsx(classes.root, className),
@@ -21051,7 +21498,7 @@ const Divider = /* @__PURE__ */ reactExports.forwardRef(function Divider2(inProp
 if (Divider) {
   Divider.muiSkipListHighlight = true;
 }
-const useUtilityClasses$p = (ownerState) => {
+const useUtilityClasses$q = (ownerState) => {
   const {
     classes,
     disableUnderline,
@@ -21333,7 +21780,7 @@ const FilledInput = /* @__PURE__ */ reactExports.forwardRef(function FilledInput
     multiline,
     type
   };
-  const classes = useUtilityClasses$p(props);
+  const classes = useUtilityClasses$q(props);
   const filledInputComponentsProps = {
     root: {
       ownerState
@@ -21365,7 +21812,7 @@ function getFormControlUtilityClasses(slot) {
   return generateUtilityClass("MuiFormControl", slot);
 }
 generateUtilityClasses("MuiFormControl", ["root", "marginNone", "marginNormal", "marginDense", "fullWidth", "disabled"]);
-const useUtilityClasses$o = (ownerState) => {
+const useUtilityClasses$p = (ownerState) => {
   const {
     classes,
     margin: margin2,
@@ -21455,7 +21902,7 @@ const FormControl = /* @__PURE__ */ reactExports.forwardRef(function FormControl
     size,
     variant
   };
-  const classes = useUtilityClasses$o(ownerState);
+  const classes = useUtilityClasses$p(ownerState);
   const [adornedStart, setAdornedStart] = reactExports.useState(() => {
     let initialAdornedStart = false;
     if (children) {
@@ -21539,7 +21986,7 @@ function getFormControlLabelUtilityClasses(slot) {
   return generateUtilityClass("MuiFormControlLabel", slot);
 }
 const formControlLabelClasses = generateUtilityClasses("MuiFormControlLabel", ["root", "labelPlacementStart", "labelPlacementTop", "labelPlacementBottom", "disabled", "label", "error", "required", "asterisk"]);
-const useUtilityClasses$n = (ownerState) => {
+const useUtilityClasses$o = (ownerState) => {
   const {
     classes,
     disabled,
@@ -21675,7 +22122,7 @@ const FormControlLabel = /* @__PURE__ */ reactExports.forwardRef(function FormCo
     required,
     error: fcs.error
   };
-  const classes = useUtilityClasses$n(ownerState);
+  const classes = useUtilityClasses$o(ownerState);
   const externalForwardedProps = {
     slots,
     slotProps: {
@@ -21717,7 +22164,7 @@ function getFormHelperTextUtilityClasses(slot) {
 }
 const formHelperTextClasses = generateUtilityClasses("MuiFormHelperText", ["root", "error", "disabled", "sizeSmall", "sizeMedium", "contained", "focused", "filled", "required"]);
 var _span$2;
-const useUtilityClasses$m = (ownerState) => {
+const useUtilityClasses$n = (ownerState) => {
   const {
     classes,
     contained,
@@ -21812,7 +22259,7 @@ const FormHelperText = /* @__PURE__ */ reactExports.forwardRef(function FormHelp
     required: fcs.required
   };
   delete ownerState.ownerState;
-  const classes = useUtilityClasses$m(ownerState);
+  const classes = useUtilityClasses$n(ownerState);
   return /* @__PURE__ */ jsxRuntimeExports.jsx(FormHelperTextRoot, {
     as: component,
     className: clsx(classes.root, className),
@@ -21833,7 +22280,7 @@ function getFormLabelUtilityClasses(slot) {
   return generateUtilityClass("MuiFormLabel", slot);
 }
 const formLabelClasses = generateUtilityClasses("MuiFormLabel", ["root", "colorSecondary", "focused", "disabled", "error", "filled", "required", "asterisk"]);
-const useUtilityClasses$l = (ownerState) => {
+const useUtilityClasses$m = (ownerState) => {
   const {
     classes,
     color: color2,
@@ -21931,7 +22378,7 @@ const FormLabel = /* @__PURE__ */ reactExports.forwardRef(function FormLabel2(in
     focused: fcs.focused,
     required: fcs.required
   };
-  const classes = useUtilityClasses$l(ownerState);
+  const classes = useUtilityClasses$m(ownerState);
   return /* @__PURE__ */ jsxRuntimeExports.jsxs(FormLabelRoot, {
     as: component,
     ownerState,
@@ -22259,7 +22706,7 @@ function resolveSpacingClasses(spacing, breakpoints) {
   });
   return classes;
 }
-const useUtilityClasses$k = (ownerState) => {
+const useUtilityClasses$l = (ownerState) => {
   const {
     classes,
     container,
@@ -22337,7 +22784,7 @@ const Grid = /* @__PURE__ */ reactExports.forwardRef(function Grid2(inProps, ref
     ...breakpointsValues,
     breakpoints: breakpoints.keys
   };
-  const classes = useUtilityClasses$k(ownerState);
+  const classes = useUtilityClasses$l(ownerState);
   return /* @__PURE__ */ jsxRuntimeExports.jsx(GridContext.Provider, {
     value: columns,
     children: /* @__PURE__ */ jsxRuntimeExports.jsx(GridRoot, {
@@ -22512,7 +22959,7 @@ if (Grow) {
 const useMediaQuery = unstable_createUseMediaQuery({
   themeId: THEME_ID
 });
-const useUtilityClasses$j = (ownerState) => {
+const useUtilityClasses$k = (ownerState) => {
   const {
     classes,
     disableUnderline
@@ -22645,7 +23092,7 @@ const Input = /* @__PURE__ */ reactExports.forwardRef(function Input2(inProps, r
     type = "text",
     ...other
   } = props;
-  const classes = useUtilityClasses$j(props);
+  const classes = useUtilityClasses$k(props);
   const ownerState = {
     disableUnderline
   };
@@ -22677,7 +23124,7 @@ function getInputLabelUtilityClasses(slot) {
   return generateUtilityClass("MuiInputLabel", slot);
 }
 generateUtilityClasses("MuiInputLabel", ["root", "focused", "disabled", "error", "required", "asterisk", "formControl", "sizeSmall", "shrink", "animated", "standard", "filled", "outlined"]);
-const useUtilityClasses$i = (ownerState) => {
+const useUtilityClasses$j = (ownerState) => {
   const {
     classes,
     formControl,
@@ -22866,7 +23313,7 @@ const InputLabel = /* @__PURE__ */ reactExports.forwardRef(function InputLabel2(
     required: fcs.required,
     focused: fcs.focused
   };
-  const classes = useUtilityClasses$i(ownerState);
+  const classes = useUtilityClasses$j(ownerState);
   return /* @__PURE__ */ jsxRuntimeExports.jsx(InputLabelRoot, {
     "data-shrink": shrink,
     ref,
@@ -22881,7 +23328,7 @@ function getListUtilityClass(slot) {
   return generateUtilityClass("MuiList", slot);
 }
 generateUtilityClasses("MuiList", ["root", "padding", "dense", "subheader"]);
-const useUtilityClasses$h = (ownerState) => {
+const useUtilityClasses$i = (ownerState) => {
   const {
     classes,
     disablePadding,
@@ -22947,7 +23394,7 @@ const List = /* @__PURE__ */ reactExports.forwardRef(function List2(inProps, ref
     dense,
     disablePadding
   };
-  const classes = useUtilityClasses$h(ownerState);
+  const classes = useUtilityClasses$i(ownerState);
   return /* @__PURE__ */ jsxRuntimeExports.jsx(ListContext.Provider, {
     value: context,
     children: /* @__PURE__ */ jsxRuntimeExports.jsxs(ListRoot, {
@@ -22969,7 +23416,7 @@ function getListItemSecondaryActionClassesUtilityClass(slot) {
   return generateUtilityClass("MuiListItemSecondaryAction", slot);
 }
 generateUtilityClasses("MuiListItemSecondaryAction", ["root", "disableGutters"]);
-const useUtilityClasses$g = (ownerState) => {
+const useUtilityClasses$h = (ownerState) => {
   const {
     disableGutters,
     classes
@@ -23016,7 +23463,7 @@ const ListItemSecondaryAction = /* @__PURE__ */ reactExports.forwardRef(function
     ...props,
     disableGutters: context.disableGutters
   };
-  const classes = useUtilityClasses$g(ownerState);
+  const classes = useUtilityClasses$h(ownerState);
   return /* @__PURE__ */ jsxRuntimeExports.jsx(ListItemSecondaryActionRoot, {
     className: clsx(classes.root, className),
     ownerState,
@@ -23025,13 +23472,13 @@ const ListItemSecondaryAction = /* @__PURE__ */ reactExports.forwardRef(function
   });
 });
 ListItemSecondaryAction.muiName = "ListItemSecondaryAction";
-const overridesResolver$1 = (props, styles2) => {
+const overridesResolver$2 = (props, styles2) => {
   const {
     ownerState
   } = props;
   return [styles2.root, ownerState.dense && styles2.dense, ownerState.alignItems === "flex-start" && styles2.alignItemsFlexStart, ownerState.divider && styles2.divider, !ownerState.disableGutters && styles2.gutters, !ownerState.disablePadding && styles2.padding, ownerState.hasSecondaryAction && styles2.secondaryAction];
 };
-const useUtilityClasses$f = (ownerState) => {
+const useUtilityClasses$g = (ownerState) => {
   const {
     alignItems,
     classes,
@@ -23050,7 +23497,7 @@ const useUtilityClasses$f = (ownerState) => {
 const ListItemRoot = styled("div", {
   name: "MuiListItem",
   slot: "Root",
-  overridesResolver: overridesResolver$1
+  overridesResolver: overridesResolver$2
 })(memoTheme(({
   theme: theme2
 }) => ({
@@ -23198,7 +23645,7 @@ const ListItem = /* @__PURE__ */ reactExports.forwardRef(function ListItem2(inPr
     divider,
     hasSecondaryAction
   };
-  const classes = useUtilityClasses$f(ownerState);
+  const classes = useUtilityClasses$g(ownerState);
   const handleRef = useForkRef(listItemRef, ref);
   const Root = slots.root || components.Root || ListItemRoot;
   const rootProps = slotProps.root || componentsProps.root || {};
@@ -23258,11 +23705,12 @@ const ListItem = /* @__PURE__ */ reactExports.forwardRef(function ListItem2(inPr
     })
   });
 });
+const listItemIconClasses = generateUtilityClasses("MuiListItemIcon", ["root", "alignItemsFlexStart"]);
 function getListItemTextUtilityClass(slot) {
   return generateUtilityClass("MuiListItemText", slot);
 }
 const listItemTextClasses = generateUtilityClasses("MuiListItemText", ["root", "multiline", "dense", "inset", "primary", "secondary"]);
-const useUtilityClasses$e = (ownerState) => {
+const useUtilityClasses$f = (ownerState) => {
   const {
     classes,
     inset,
@@ -23349,7 +23797,7 @@ const ListItemText = /* @__PURE__ */ reactExports.forwardRef(function ListItemTe
     secondary: !!secondary,
     dense
   };
-  const classes = useUtilityClasses$e(ownerState);
+  const classes = useUtilityClasses$f(ownerState);
   const externalForwardedProps = {
     slots,
     slotProps: {
@@ -23619,7 +24067,7 @@ function getTransformOriginValue(transformOrigin) {
 function resolveAnchorEl(anchorEl) {
   return typeof anchorEl === "function" ? anchorEl() : anchorEl;
 }
-const useUtilityClasses$d = (ownerState) => {
+const useUtilityClasses$e = (ownerState) => {
   const {
     classes
   } = ownerState;
@@ -23701,7 +24149,7 @@ const Popover = /* @__PURE__ */ reactExports.forwardRef(function Popover2(inProp
     transitionDuration: transitionDurationProp,
     TransitionProps
   };
-  const classes = useUtilityClasses$d(ownerState);
+  const classes = useUtilityClasses$e(ownerState);
   const getAnchorOffset = reactExports.useCallback(() => {
     if (anchorReference === "anchorPosition") {
       return anchorPosition;
@@ -23899,7 +24347,7 @@ const LTR_ORIGIN = {
   vertical: "top",
   horizontal: "left"
 };
-const useUtilityClasses$c = (ownerState) => {
+const useUtilityClasses$d = (ownerState) => {
   const {
     classes
   } = ownerState;
@@ -23973,7 +24421,7 @@ const Menu = /* @__PURE__ */ reactExports.forwardRef(function Menu2(inProps, ref
     TransitionProps,
     variant
   };
-  const classes = useUtilityClasses$c(ownerState);
+  const classes = useUtilityClasses$d(ownerState);
   const autoFocusItem = autoFocus && !disableAutoFocusItem && open;
   const menuListActionsRef = reactExports.useRef(null);
   const handleEntering = (element, isAppearing) => {
@@ -24055,6 +24503,195 @@ const Menu = /* @__PURE__ */ reactExports.forwardRef(function Menu2(inProps, ref
       ...MenuListProps,
       className: clsx(classes.list, MenuListProps.className),
       children
+    })
+  });
+});
+function getMenuItemUtilityClass(slot) {
+  return generateUtilityClass("MuiMenuItem", slot);
+}
+const menuItemClasses = generateUtilityClasses("MuiMenuItem", ["root", "focusVisible", "dense", "disabled", "divider", "gutters", "selected"]);
+const overridesResolver$1 = (props, styles2) => {
+  const {
+    ownerState
+  } = props;
+  return [styles2.root, ownerState.dense && styles2.dense, ownerState.divider && styles2.divider, !ownerState.disableGutters && styles2.gutters];
+};
+const useUtilityClasses$c = (ownerState) => {
+  const {
+    disabled,
+    dense,
+    divider,
+    disableGutters,
+    selected,
+    classes
+  } = ownerState;
+  const slots = {
+    root: ["root", dense && "dense", disabled && "disabled", !disableGutters && "gutters", divider && "divider", selected && "selected"]
+  };
+  const composedClasses = composeClasses(slots, getMenuItemUtilityClass, classes);
+  return {
+    ...classes,
+    ...composedClasses
+  };
+};
+const MenuItemRoot = styled(ButtonBase, {
+  shouldForwardProp: (prop) => rootShouldForwardProp(prop) || prop === "classes",
+  name: "MuiMenuItem",
+  slot: "Root",
+  overridesResolver: overridesResolver$1
+})(memoTheme(({
+  theme: theme2
+}) => ({
+  ...theme2.typography.body1,
+  display: "flex",
+  justifyContent: "flex-start",
+  alignItems: "center",
+  position: "relative",
+  textDecoration: "none",
+  minHeight: 48,
+  paddingTop: 6,
+  paddingBottom: 6,
+  boxSizing: "border-box",
+  whiteSpace: "nowrap",
+  "&:hover": {
+    textDecoration: "none",
+    backgroundColor: (theme2.vars || theme2).palette.action.hover,
+    // Reset on touch devices, it doesn't add specificity
+    "@media (hover: none)": {
+      backgroundColor: "transparent"
+    }
+  },
+  [`&.${menuItemClasses.selected}`]: {
+    backgroundColor: theme2.vars ? `rgba(${theme2.vars.palette.primary.mainChannel} / ${theme2.vars.palette.action.selectedOpacity})` : alpha(theme2.palette.primary.main, theme2.palette.action.selectedOpacity),
+    [`&.${menuItemClasses.focusVisible}`]: {
+      backgroundColor: theme2.vars ? `rgba(${theme2.vars.palette.primary.mainChannel} / calc(${theme2.vars.palette.action.selectedOpacity} + ${theme2.vars.palette.action.focusOpacity}))` : alpha(theme2.palette.primary.main, theme2.palette.action.selectedOpacity + theme2.palette.action.focusOpacity)
+    }
+  },
+  [`&.${menuItemClasses.selected}:hover`]: {
+    backgroundColor: theme2.vars ? `rgba(${theme2.vars.palette.primary.mainChannel} / calc(${theme2.vars.palette.action.selectedOpacity} + ${theme2.vars.palette.action.hoverOpacity}))` : alpha(theme2.palette.primary.main, theme2.palette.action.selectedOpacity + theme2.palette.action.hoverOpacity),
+    // Reset on touch devices, it doesn't add specificity
+    "@media (hover: none)": {
+      backgroundColor: theme2.vars ? `rgba(${theme2.vars.palette.primary.mainChannel} / ${theme2.vars.palette.action.selectedOpacity})` : alpha(theme2.palette.primary.main, theme2.palette.action.selectedOpacity)
+    }
+  },
+  [`&.${menuItemClasses.focusVisible}`]: {
+    backgroundColor: (theme2.vars || theme2).palette.action.focus
+  },
+  [`&.${menuItemClasses.disabled}`]: {
+    opacity: (theme2.vars || theme2).palette.action.disabledOpacity
+  },
+  [`& + .${dividerClasses.root}`]: {
+    marginTop: theme2.spacing(1),
+    marginBottom: theme2.spacing(1)
+  },
+  [`& + .${dividerClasses.inset}`]: {
+    marginLeft: 52
+  },
+  [`& .${listItemTextClasses.root}`]: {
+    marginTop: 0,
+    marginBottom: 0
+  },
+  [`& .${listItemTextClasses.inset}`]: {
+    paddingLeft: 36
+  },
+  [`& .${listItemIconClasses.root}`]: {
+    minWidth: 36
+  },
+  variants: [{
+    props: ({
+      ownerState
+    }) => !ownerState.disableGutters,
+    style: {
+      paddingLeft: 16,
+      paddingRight: 16
+    }
+  }, {
+    props: ({
+      ownerState
+    }) => ownerState.divider,
+    style: {
+      borderBottom: `1px solid ${(theme2.vars || theme2).palette.divider}`,
+      backgroundClip: "padding-box"
+    }
+  }, {
+    props: ({
+      ownerState
+    }) => !ownerState.dense,
+    style: {
+      [theme2.breakpoints.up("sm")]: {
+        minHeight: "auto"
+      }
+    }
+  }, {
+    props: ({
+      ownerState
+    }) => ownerState.dense,
+    style: {
+      minHeight: 32,
+      // https://m2.material.io/components/menus#specs > Dense
+      paddingTop: 4,
+      paddingBottom: 4,
+      ...theme2.typography.body2,
+      [`& .${listItemIconClasses.root} svg`]: {
+        fontSize: "1.25rem"
+      }
+    }
+  }]
+})));
+const MenuItem = /* @__PURE__ */ reactExports.forwardRef(function MenuItem2(inProps, ref) {
+  const props = useDefaultProps({
+    props: inProps,
+    name: "MuiMenuItem"
+  });
+  const {
+    autoFocus = false,
+    component = "li",
+    dense = false,
+    divider = false,
+    disableGutters = false,
+    focusVisibleClassName,
+    role = "menuitem",
+    tabIndex: tabIndexProp,
+    className,
+    ...other
+  } = props;
+  const context = reactExports.useContext(ListContext);
+  const childContext = reactExports.useMemo(() => ({
+    dense: dense || context.dense || false,
+    disableGutters
+  }), [context.dense, dense, disableGutters]);
+  const menuItemRef = reactExports.useRef(null);
+  useEnhancedEffect(() => {
+    if (autoFocus) {
+      if (menuItemRef.current) {
+        menuItemRef.current.focus();
+      }
+    }
+  }, [autoFocus]);
+  const ownerState = {
+    ...props,
+    dense: childContext.dense,
+    divider,
+    disableGutters
+  };
+  const classes = useUtilityClasses$c(props);
+  const handleRef = useForkRef(menuItemRef, ref);
+  let tabIndex;
+  if (!props.disabled) {
+    tabIndex = tabIndexProp !== void 0 ? tabIndexProp : -1;
+  }
+  return /* @__PURE__ */ jsxRuntimeExports.jsx(ListContext.Provider, {
+    value: childContext,
+    children: /* @__PURE__ */ jsxRuntimeExports.jsx(MenuItemRoot, {
+      ref: handleRef,
+      role,
+      tabIndex,
+      component,
+      focusVisibleClassName: clsx(classes.focusVisible, focusVisibleClassName),
+      className: clsx(classes.root, className),
+      ...other,
+      ownerState,
+      classes
     })
   });
 });
@@ -32936,6 +33573,27 @@ class LiveApiClient {
     }
     return validateCorrectionData(data.data);
   }
+  async submitAnnotations(annotations) {
+    for (const annotation of annotations) {
+      const response = await fetch(`${this.baseUrl}/v1/annotations`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify(annotation)
+      });
+      if (!response.ok) {
+        console.error(`Failed to submit annotation:`, annotation);
+      }
+    }
+  }
+  async getAnnotationStats() {
+    const response = await fetch(`${this.baseUrl}/v1/annotations/stats`);
+    if (!response.ok) {
+      throw new Error(`API error: ${response.statusText}`);
+    }
+    return await response.json();
+  }
 }
 class FileOnlyClient {
   async getCorrectionData() {
@@ -32961,6 +33619,13 @@ class FileOnlyClient {
     throw new Error("Not supported in file-only mode");
   }
   async addLyrics() {
+    throw new Error("Not supported in file-only mode");
+  }
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  async submitAnnotations(_annotations) {
+    throw new Error("Not supported in file-only mode");
+  }
+  async getAnnotationStats() {
     throw new Error("Not supported in file-only mode");
   }
 }
@@ -33255,7 +33920,21 @@ const WordComponent = React.memo(function Word({
       /* @__PURE__ */ jsxRuntimeExports.jsx("br", {}),
       /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: "Source:" }),
       " ",
-      correction.source
+      correction.source,
+      /* @__PURE__ */ jsxRuntimeExports.jsx("br", {}),
+      correction.reason && /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: "Reason:" }),
+        " ",
+        correction.reason,
+        /* @__PURE__ */ jsxRuntimeExports.jsx("br", {})
+      ] }),
+      correction.confidence !== void 0 && correction.confidence > 0 && /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: "Confidence:" }),
+        " ",
+        (correction.confidence * 100).toFixed(0),
+        "%",
+        /* @__PURE__ */ jsxRuntimeExports.jsx("br", {})
+      ] })
     ] });
     return /* @__PURE__ */ jsxRuntimeExports.jsx(Tooltip, { title: tooltipContent, arrow: true, placement: "top", children: wordElement });
   }
@@ -33520,7 +34199,8 @@ function HighlightedText({
                 originalWord: correction.original_word,
                 handler: correction.handler,
                 confidence: correction.confidence,
-                source: correction.source
+                source: correction.source,
+                reason: correction.reason
               } : null;
             })()
           },
@@ -33550,7 +34230,8 @@ function HighlightedText({
           originalWord: correction.original_word,
           handler: correction.handler,
           confidence: correction.confidence,
-          source: correction.source
+          source: correction.source,
+          reason: correction.reason
         } : null;
         return /* @__PURE__ */ jsxRuntimeExports.jsxs(React.Fragment, { children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -37419,6 +38100,272 @@ const SegmentProgressPanel = reactExports.memo(({
     }) })
   ] });
 });
+const ANNOTATION_TYPES = [
+  {
+    value: "SOUND_ALIKE",
+    label: "Sound-Alike Error",
+    description: 'Homophones or similar-sounding words (e.g., "out" vs "now")'
+  },
+  {
+    value: "BACKGROUND_VOCALS",
+    label: "Background Vocals",
+    description: "Backing vocals that should be removed from karaoke"
+  },
+  {
+    value: "EXTRA_WORDS",
+    label: "Extra Filler Words",
+    description: 'Transcription added words like "And", "But", "Well"'
+  },
+  {
+    value: "PUNCTUATION_ONLY",
+    label: "Punctuation/Style Only",
+    description: "Only punctuation or capitalization differences"
+  },
+  {
+    value: "REPEATED_SECTION",
+    label: "Repeated Section",
+    description: "Chorus or verse repetition not in condensed references"
+  },
+  {
+    value: "COMPLEX_MULTI_ERROR",
+    label: "Complex Multi-Error",
+    description: "Multiple different error types in one section"
+  },
+  {
+    value: "AMBIGUOUS",
+    label: "Ambiguous",
+    description: "Unclear without listening to audio"
+  },
+  {
+    value: "NO_ERROR",
+    label: "No Error",
+    description: "Transcription matches at least one reference source"
+  },
+  {
+    value: "MANUAL_EDIT",
+    label: "Manual Edit",
+    description: "Human-initiated correction not from detected gap"
+  }
+];
+const CONFIDENCE_LABELS = {
+  1: "1 - Very Uncertain",
+  2: "2 - Somewhat Uncertain",
+  3: "3 - Neutral",
+  4: "4 - Fairly Confident",
+  5: "5 - Very Confident"
+};
+function CorrectionAnnotationModal({
+  open,
+  onClose,
+  onSave,
+  onSkip,
+  originalText,
+  correctedText,
+  wordIdsAffected,
+  agenticProposal,
+  referenceSources,
+  audioHash,
+  artist,
+  title,
+  sessionId,
+  gapId
+}) {
+  const [annotationType, setAnnotationType] = reactExports.useState("MANUAL_EDIT");
+  const [actionTaken, setActionTaken] = reactExports.useState("REPLACE");
+  const [confidence, setConfidence] = reactExports.useState(3);
+  const [reasoning, setReasoning] = reactExports.useState("");
+  const [agenticAgreed, setAgenticAgreed] = reactExports.useState(false);
+  const [error, setError] = reactExports.useState("");
+  reactExports.useEffect(() => {
+    if (agenticProposal && agenticProposal.gap_category) {
+      setAnnotationType(agenticProposal.gap_category);
+      const agreed = agenticProposal.replacement_text ? correctedText.toLowerCase().includes(agenticProposal.replacement_text.toLowerCase()) : false;
+      setAgenticAgreed(agreed);
+    }
+  }, [agenticProposal, correctedText]);
+  reactExports.useEffect(() => {
+    if (originalText === correctedText) {
+      setActionTaken("NO_ACTION");
+    } else if (correctedText === "") {
+      setActionTaken("DELETE");
+    } else if (originalText === "") {
+      setActionTaken("INSERT");
+    } else {
+      setActionTaken("REPLACE");
+    }
+  }, [originalText, correctedText]);
+  const handleSave = () => {
+    if (reasoning.length < 10) {
+      setError("Reasoning must be at least 10 characters");
+      return;
+    }
+    const annotation = {
+      audio_hash: audioHash,
+      gap_id: gapId || null,
+      annotation_type: annotationType,
+      action_taken: actionTaken,
+      original_text: originalText,
+      corrected_text: correctedText,
+      confidence,
+      reasoning,
+      word_ids_affected: wordIdsAffected,
+      agentic_proposal: agenticProposal || null,
+      agentic_category: (agenticProposal == null ? void 0 : agenticProposal.gap_category) || null,
+      agentic_agreed: agenticAgreed,
+      reference_sources_consulted: referenceSources,
+      artist,
+      title,
+      session_id: sessionId
+    };
+    onSave(annotation);
+    handleClose();
+  };
+  const handleClose = () => {
+    setAnnotationType("MANUAL_EDIT");
+    setConfidence(3);
+    setReasoning("");
+    setError("");
+    setAgenticAgreed(false);
+    onClose();
+  };
+  const handleSkipAndClose = () => {
+    handleClose();
+    onSkip();
+  };
+  return /* @__PURE__ */ jsxRuntimeExports.jsxs(
+    Dialog,
+    {
+      open,
+      onClose: handleClose,
+      maxWidth: "md",
+      fullWidth: true,
+      children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs(DialogTitle, { children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx(Typography, { variant: "h6", children: "Annotate Your Correction" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(Typography, { variant: "caption", color: "text.secondary", children: "Help improve the AI by explaining your correction" })
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs(DialogContent, { dividers: true, children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs(Paper, { elevation: 0, sx: { p: 2, mb: 3, bgcolor: "grey.50" }, children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx(Typography, { variant: "subtitle2", gutterBottom: true, children: "Your Correction:" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs(Box, { sx: { display: "flex", gap: 2, alignItems: "center" }, children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsxs(Box, { sx: { flex: 1 }, children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx(Typography, { variant: "caption", color: "error", children: "Original:" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  Typography,
+                  {
+                    sx: {
+                      textDecoration: "line-through",
+                      color: "error.main",
+                      fontFamily: "monospace"
+                    },
+                    children: originalText || "(empty)"
+                  }
+                )
+              ] }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx(Typography, { variant: "h6", children: "→" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs(Box, { sx: { flex: 1 }, children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx(Typography, { variant: "caption", color: "success.main", children: "Corrected:" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  Typography,
+                  {
+                    sx: {
+                      color: "success.main",
+                      fontWeight: "bold",
+                      fontFamily: "monospace"
+                    },
+                    children: correctedText || "(empty)"
+                  }
+                )
+              ] })
+            ] })
+          ] }),
+          agenticProposal && /* @__PURE__ */ jsxRuntimeExports.jsxs(
+            Alert,
+            {
+              severity: agenticAgreed ? "success" : "info",
+              sx: { mb: 3 },
+              children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx(Typography, { variant: "subtitle2", gutterBottom: true, children: "AI Suggestion:" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsxs(Typography, { variant: "body2", children: [
+                  "Category: ",
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: agenticProposal.gap_category })
+                ] }),
+                /* @__PURE__ */ jsxRuntimeExports.jsxs(Typography, { variant: "body2", children: [
+                  "Action: ",
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: agenticProposal.action }),
+                  agenticProposal.replacement_text && ` → "${agenticProposal.replacement_text}"`
+                ] }),
+                /* @__PURE__ */ jsxRuntimeExports.jsxs(Typography, { variant: "body2", children: [
+                  "Reason: ",
+                  agenticProposal.reason
+                ] }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx(Typography, { variant: "body2", sx: { mt: 1 }, children: agenticAgreed ? "✓ Your correction matches the AI suggestion" : "✗ Your correction differs from the AI suggestion" })
+              ]
+            }
+          ),
+          referenceSources.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsxs(Box, { sx: { mb: 3 }, children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx(Typography, { variant: "subtitle2", gutterBottom: true, children: "Reference Sources Consulted:" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(Box, { sx: { display: "flex", gap: 1, flexWrap: "wrap" }, children: referenceSources.map((source) => /* @__PURE__ */ jsxRuntimeExports.jsx(Chip, { label: source, size: "small" }, source)) })
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs(FormControl, { fullWidth: true, sx: { mb: 3 }, children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx(InputLabel, { children: "Correction Type *" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              Select,
+              {
+                value: annotationType,
+                label: "Correction Type *",
+                onChange: (e) => setAnnotationType(e.target.value),
+                children: ANNOTATION_TYPES.map((type) => /* @__PURE__ */ jsxRuntimeExports.jsx(MenuItem, { value: type.value, children: /* @__PURE__ */ jsxRuntimeExports.jsxs(Box, { children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx(Typography, { variant: "body1", children: type.label }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx(Typography, { variant: "caption", color: "text.secondary", children: type.description })
+                ] }) }, type.value))
+              }
+            )
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs(Box, { sx: { mb: 3 }, children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx(Typography, { variant: "subtitle2", gutterBottom: true, children: "Confidence in Your Correction *" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              Slider,
+              {
+                value: confidence,
+                onChange: (_, newValue) => setConfidence(newValue),
+                min: 1,
+                max: 5,
+                step: 1,
+                marks: true,
+                valueLabelDisplay: "auto",
+                valueLabelFormat: (value) => CONFIDENCE_LABELS[value]
+              }
+            ),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(Typography, { variant: "caption", color: "text.secondary", children: CONFIDENCE_LABELS[confidence] })
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            TextField,
+            {
+              fullWidth: true,
+              multiline: true,
+              rows: 4,
+              label: "Reasoning *",
+              placeholder: "Explain why this correction is needed (minimum 10 characters)...",
+              value: reasoning,
+              onChange: (e) => {
+                setReasoning(e.target.value);
+                setError("");
+              },
+              error: !!error,
+              helperText: error || `${reasoning.length}/10 minimum characters`,
+              required: true
+            }
+          )
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs(DialogActions, { children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx(Button, { onClick: handleSkipAndClose, color: "inherit", children: "Skip" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(Button, { onClick: handleSave, variant: "contained", color: "primary", children: "Save & Continue" })
+        ] })
+      ]
+    }
+  );
+}
 const generateStorageKey = (data) => {
   var _a;
   const text = ((_a = data.original_segments[0]) == null ? void 0 : _a.text) || "";
@@ -38671,6 +39618,7 @@ const MemoizedHeader = reactExports.memo(function MemoizedHeader2({
   );
 });
 function LyricsAnalyzer({ data: initialData, onFileLoad, apiClient, isReadOnly, audioHash }) {
+  var _a, _b, _c, _d, _e, _f;
   const [modalContent, setModalContent] = reactExports.useState(null);
   const [flashingType, setFlashingType] = reactExports.useState(null);
   const [highlightInfo, setHighlightInfo] = reactExports.useState(null);
@@ -38698,6 +39646,13 @@ function LyricsAnalyzer({ data: initialData, onFileLoad, apiClient, isReadOnly, 
   const [isFindReplaceModalOpen, setIsFindReplaceModalOpen] = reactExports.useState(false);
   const [isTimingOffsetModalOpen, setIsTimingOffsetModalOpen] = reactExports.useState(false);
   const [timingOffsetMs, setTimingOffsetMs] = reactExports.useState(0);
+  const [annotations, setAnnotations] = reactExports.useState([]);
+  const [isAnnotationModalOpen, setIsAnnotationModalOpen] = reactExports.useState(false);
+  const [pendingAnnotation, setPendingAnnotation] = reactExports.useState(null);
+  const [annotationsEnabled] = reactExports.useState(() => {
+    const saved = localStorage.getItem("annotationsEnabled");
+    return saved !== null ? saved === "true" : true;
+  });
   const theme2 = useTheme();
   const isMobile = useMediaQuery(theme2.breakpoints.down("md"));
   const [history, setHistory] = reactExports.useState([initialData]);
@@ -38770,7 +39725,7 @@ function LyricsAnalyzer({ data: initialData, onFileLoad, apiClient, isReadOnly, 
     });
   }, []);
   const handleWordClick = reactExports.useCallback((info) => {
-    var _a, _b, _c, _d, _e, _f, _g;
+    var _a2, _b2, _c2, _d2, _e2, _f2, _g;
     if (effectiveMode === "delete_word") {
       const newData = deleteWord(data, info.word_id);
       updateDataWithHistory(newData, "delete word");
@@ -38778,7 +39733,7 @@ function LyricsAnalyzer({ data: initialData, onFileLoad, apiClient, isReadOnly, 
       return;
     }
     if (effectiveMode === "highlight") {
-      const correction = (_a = data.corrections) == null ? void 0 : _a.find(
+      const correction = (_a2 = data.corrections) == null ? void 0 : _a2.find(
         (c) => c.corrected_word_id === info.word_id || c.word_id === info.word_id
       );
       if (correction) {
@@ -38791,7 +39746,7 @@ function LyricsAnalyzer({ data: initialData, onFileLoad, apiClient, isReadOnly, 
         setFlashingType("word");
         return;
       }
-      const anchor = (_b = data.anchor_sequences) == null ? void 0 : _b.find(
+      const anchor = (_b2 = data.anchor_sequences) == null ? void 0 : _b2.find(
         (a) => a.transcribed_word_ids.includes(info.word_id) || Object.values(a.reference_word_ids).some(
           (ids) => ids.includes(info.word_id)
         )
@@ -38802,8 +39757,8 @@ function LyricsAnalyzer({ data: initialData, onFileLoad, apiClient, isReadOnly, 
           id: "temp",
           words: allWords,
           text: allWords.map((w) => w.text).join(" "),
-          start_time: ((_c = allWords[0]) == null ? void 0 : _c.start_time) ?? null,
-          end_time: ((_d = allWords[allWords.length - 1]) == null ? void 0 : _d.end_time) ?? null
+          start_time: ((_c2 = allWords[0]) == null ? void 0 : _c2.start_time) ?? null,
+          end_time: ((_d2 = allWords[allWords.length - 1]) == null ? void 0 : _d2.end_time) ?? null
         };
         const transcribedWords = getWordsFromIds(
           [tempSegment],
@@ -38811,14 +39766,14 @@ function LyricsAnalyzer({ data: initialData, onFileLoad, apiClient, isReadOnly, 
         );
         const referenceWords = Object.fromEntries(
           Object.entries(anchor.reference_word_ids).map(([source, ids]) => {
-            var _a2, _b2;
+            var _a3, _b3;
             const sourceWords = data.reference_lyrics[source].segments.flatMap((s) => s.words);
             const tempSourceSegment = {
               id: `temp-${source}`,
               words: sourceWords,
               text: sourceWords.map((w) => w.text).join(" "),
-              start_time: ((_a2 = sourceWords[0]) == null ? void 0 : _a2.start_time) ?? null,
-              end_time: ((_b2 = sourceWords[sourceWords.length - 1]) == null ? void 0 : _b2.end_time) ?? null
+              start_time: ((_a3 = sourceWords[0]) == null ? void 0 : _a3.start_time) ?? null,
+              end_time: ((_b3 = sourceWords[sourceWords.length - 1]) == null ? void 0 : _b3.end_time) ?? null
             };
             return [source, getWordsFromIds([tempSourceSegment], ids)];
           })
@@ -38832,7 +39787,7 @@ function LyricsAnalyzer({ data: initialData, onFileLoad, apiClient, isReadOnly, 
         setFlashingType("word");
         return;
       }
-      const gap2 = (_e = data.gap_sequences) == null ? void 0 : _e.find(
+      const gap2 = (_e2 = data.gap_sequences) == null ? void 0 : _e2.find(
         (g) => g.transcribed_word_ids.includes(info.word_id)
       );
       if (gap2) {
@@ -38841,7 +39796,7 @@ function LyricsAnalyzer({ data: initialData, onFileLoad, apiClient, isReadOnly, 
           id: "temp",
           words: allWords,
           text: allWords.map((w) => w.text).join(" "),
-          start_time: ((_f = allWords[0]) == null ? void 0 : _f.start_time) ?? null,
+          start_time: ((_f2 = allWords[0]) == null ? void 0 : _f2.start_time) ?? null,
           end_time: ((_g = allWords[allWords.length - 1]) == null ? void 0 : _g.end_time) ?? null
         };
         const transcribedWords = getWordsFromIds(
@@ -38850,14 +39805,14 @@ function LyricsAnalyzer({ data: initialData, onFileLoad, apiClient, isReadOnly, 
         );
         const referenceWords = Object.fromEntries(
           Object.entries(gap2.reference_word_ids).map(([source, ids]) => {
-            var _a2, _b2;
+            var _a3, _b3;
             const sourceWords = data.reference_lyrics[source].segments.flatMap((s) => s.words);
             const tempSourceSegment = {
               id: `temp-${source}`,
               words: sourceWords,
               text: sourceWords.map((w) => w.text).join(" "),
-              start_time: ((_a2 = sourceWords[0]) == null ? void 0 : _a2.start_time) ?? null,
-              end_time: ((_b2 = sourceWords[sourceWords.length - 1]) == null ? void 0 : _b2.end_time) ?? null
+              start_time: ((_a3 = sourceWords[0]) == null ? void 0 : _a3.start_time) ?? null,
+              end_time: ((_b3 = sourceWords[sourceWords.length - 1]) == null ? void 0 : _b3.end_time) ?? null
             };
             return [source, getWordsFromIds([tempSourceSegment], ids)];
           })
@@ -38885,6 +39840,25 @@ function LyricsAnalyzer({ data: initialData, onFileLoad, apiClient, isReadOnly, 
       }
     }
   }, [data, effectiveMode, setModalContent, handleFlash, deleteWord, updateDataWithHistory]);
+  const handleSaveAnnotation = reactExports.useCallback((annotation) => {
+    setAnnotations((prev2) => [...prev2, annotation]);
+    console.log("Annotation saved:", annotation);
+  }, []);
+  const handleSkipAnnotation = reactExports.useCallback(() => {
+    console.log("Annotation skipped");
+  }, []);
+  const triggerAnnotationModal = reactExports.useCallback((originalText, correctedText, wordIdsAffected, gapId) => {
+    if (!annotationsEnabled || isReadOnly) {
+      return;
+    }
+    setPendingAnnotation({
+      originalText,
+      correctedText,
+      wordIdsAffected,
+      gapId
+    });
+    setIsAnnotationModalOpen(true);
+  }, [annotationsEnabled, isReadOnly]);
   const handleUpdateSegment = reactExports.useCallback((updatedSegment) => {
     if (!editModalSegment) return;
     const currentData = history[historyIndex];
@@ -38896,8 +39870,17 @@ function LyricsAnalyzer({ data: initialData, onFileLoad, apiClient, isReadOnly, 
       corrected_segments: newSegments
     };
     updateDataWithHistory(newDataImmutable, "update segment");
+    const originalSegment = editModalSegment.originalSegment || editModalSegment.segment;
+    if (originalSegment && originalSegment.text !== updatedSegment.text) {
+      const wordIds = updatedSegment.words.map((w) => w.id);
+      triggerAnnotationModal(
+        originalSegment.text,
+        updatedSegment.text,
+        wordIds
+      );
+    }
     setEditModalSegment(null);
-  }, [history, historyIndex, editModalSegment, updateDataWithHistory]);
+  }, [history, historyIndex, editModalSegment, updateDataWithHistory, triggerAnnotationModal]);
   const handleDeleteSegment = reactExports.useCallback((segmentIndex) => {
     const newData = deleteSegment(data, segmentIndex);
     updateDataWithHistory(newData, "delete segment");
@@ -38922,6 +39905,15 @@ function LyricsAnalyzer({ data: initialData, onFileLoad, apiClient, isReadOnly, 
         }
       }
       await apiClient.submitCorrections(dataToSubmit);
+      if (annotations.length > 0) {
+        console.log(`Submitting ${annotations.length} annotations...`);
+        try {
+          await apiClient.submitAnnotations(annotations);
+          console.log("Annotations submitted successfully");
+        } catch (error) {
+          console.error("Failed to submit annotations:", error);
+        }
+      }
       setIsReviewComplete(true);
       setIsReviewModalOpen(false);
       window.close();
@@ -38929,7 +39921,7 @@ function LyricsAnalyzer({ data: initialData, onFileLoad, apiClient, isReadOnly, 
       console.error("Failed to submit corrections:", error);
       alert("Failed to submit corrections. Please try again.");
     }
-  }, [apiClient, data, timingOffsetMs]);
+  }, [apiClient, data, timingOffsetMs, annotations]);
   const handlePlaySegment = reactExports.useCallback((startTime) => {
     if (window.seekAndPlayAudio) {
       const adjustedStartTime = timingOffsetMs !== 0 ? startTime + timingOffsetMs / 1e3 : startTime;
@@ -39258,6 +40250,28 @@ function LyricsAnalyzer({ data: initialData, onFileLoad, apiClient, isReadOnly, 
         onPlaySegment: handlePlaySegment,
         currentTime: currentAudioTime,
         setModalSpacebarHandler: handleSetModalSpacebarHandler
+      }
+    ),
+    pendingAnnotation && /* @__PURE__ */ jsxRuntimeExports.jsx(
+      CorrectionAnnotationModal,
+      {
+        open: isAnnotationModalOpen,
+        onClose: () => {
+          setIsAnnotationModalOpen(false);
+          setPendingAnnotation(null);
+        },
+        onSave: handleSaveAnnotation,
+        onSkip: handleSkipAnnotation,
+        originalText: pendingAnnotation.originalText,
+        correctedText: pendingAnnotation.correctedText,
+        wordIdsAffected: pendingAnnotation.wordIdsAffected,
+        agenticProposal: void 0,
+        referenceSources: Object.keys(data.reference_lyrics || {}),
+        audioHash,
+        artist: ((_c = (_b = (_a = data.metadata) == null ? void 0 : _a.audio_filepath) == null ? void 0 : _b.split("/").pop()) == null ? void 0 : _c.split(".")[0]) || "Unknown",
+        title: ((_f = (_e = (_d = data.metadata) == null ? void 0 : _d.audio_filepath) == null ? void 0 : _e.split("/").pop()) == null ? void 0 : _f.split(".")[0]) || "Unknown",
+        sessionId: audioHash,
+        gapId: pendingAnnotation.gapId
       }
     )
   ] });
@@ -39608,7 +40622,7 @@ const theme = createTheme({
   spacing: (factor) => `${0.6 * factor}rem`
   // Further reduced from 0.8 * factor
 });
-const version = "0.71.0";
+const version = "0.80.0";
 const packageJson = {
   version
 };
@@ -39619,4 +40633,4 @@ ReactDOM$1.createRoot(document.getElementById("root")).render(
     /* @__PURE__ */ jsxRuntimeExports.jsx(App, {})
   ] })
 );
-//# sourceMappingURL=index-BaSm3E0s.js.map
+//# sourceMappingURL=index-D1STYefp.js.map

@@ -121,6 +121,16 @@ class LyricsCorrector:
             }
             for handler_id, handler in all_handlers
         ]
+        
+        # Add AgenticCorrector if agentic AI is enabled
+        use_agentic_env = os.getenv("USE_AGENTIC_AI", "0").lower() in {"1", "true", "yes"}
+        if use_agentic_env:
+            self.all_handlers.append({
+                "id": "AgenticCorrector",
+                "name": "Agentic AI Corrector",
+                "description": "AI-powered classification and correction of lyric gaps using LLM reasoning",
+                "enabled": True,
+            })
 
         if handlers:
             self.handlers = handlers
@@ -283,6 +293,171 @@ class LyricsCorrector:
                 self.logger.error(f"🤖 Failed to import agentic modules but USE_AGENTIC_AI=1: {e}")
                 raise RuntimeError(f"Agentic AI correction is enabled but required modules could not be imported: {e}") from e
 
+        # === TEMPORARY: Gap extraction for manual review ===
+        if os.getenv("DUMP_GAPS") == "1":
+            import yaml
+            
+            # Build a flat list of all transcribed words for context
+            all_transcribed_words = []
+            for seg in segments:
+                all_transcribed_words.extend(seg.words)
+            
+            # Create word position map
+            word_position = {w.id: idx for idx, w in enumerate(all_transcribed_words)}
+            
+            gaps_data = []
+            for i, gap in enumerate(gap_sequences, 1):
+                gap_words = []
+                gap_positions = []
+                
+                for word_id in gap.transcribed_word_ids:
+                    if word_id in word_map:
+                        word = word_map[word_id]
+                        gap_words.append({
+                            "id": word_id,
+                            "text": word.text,
+                            "start_time": round(getattr(word, 'start_time', 0), 3),
+                            "end_time": round(getattr(word, 'end_time', 0), 3)
+                        })
+                        if word_id in word_position:
+                            gap_positions.append(word_position[word_id])
+                
+                # Get context words (10 before and 10 after)
+                preceding_words_list = []
+                following_words_list = []
+                
+                if gap_positions:
+                    first_gap_pos = min(gap_positions)
+                    last_gap_pos = max(gap_positions)
+                    
+                    # Get 10 words before the gap
+                    start_pos = max(0, first_gap_pos - 10)
+                    if start_pos == 0:
+                        preceding_words_list.append("<song_start>")
+                    for idx in range(start_pos, first_gap_pos):
+                        if idx < len(all_transcribed_words):
+                            preceding_words_list.append(all_transcribed_words[idx].text)
+                    
+                    # Get 10 words after the gap
+                    end_pos = min(len(all_transcribed_words), last_gap_pos + 11)
+                    for idx in range(last_gap_pos + 1, end_pos):
+                        if idx < len(all_transcribed_words):
+                            following_words_list.append(all_transcribed_words[idx].text)
+                    if end_pos == len(all_transcribed_words):
+                        following_words_list.append("<song_end>")
+                
+                # Convert to strings
+                preceding_words = " ".join(preceding_words_list)
+                following_words = " ".join(following_words_list)
+                
+                # Get reference context from all sources using anchor sequences
+                reference_contexts = {}
+                
+                # Find which anchor sequence this gap belongs to
+                parent_anchor = None
+                for anchor in self._anchor_sequences:
+                    if hasattr(anchor, 'gaps') and gap in anchor.gaps:
+                        parent_anchor = anchor
+                        break
+                
+                for source, lyrics_data in self.reference_lyrics.items():
+                    if lyrics_data and lyrics_data.segments:
+                        # Get all reference words
+                        ref_words = []
+                        for seg in lyrics_data.segments:
+                            ref_words.extend([w.text for w in seg.words])
+                        
+                        if parent_anchor and hasattr(parent_anchor, 'reference_word_ids'):
+                            # Use anchor's reference word IDs to find the correct position
+                            # Get the reference words from this anchor's context
+                            anchor_ref_word_ids = parent_anchor.reference_word_ids.get(source, [])
+                            
+                            if anchor_ref_word_ids:
+                                # Find position of anchor's reference words
+                                ref_word_map = {w.id: idx for idx, w in enumerate(
+                                    [w for seg in lyrics_data.segments for w in seg.words]
+                                )}
+                                
+                                # Get indices of anchor words in reference
+                                anchor_indices = [ref_word_map[wid] for wid in anchor_ref_word_ids if wid in ref_word_map]
+                                
+                                if anchor_indices:
+                                    # Use the anchor position to get context
+                                    anchor_start = min(anchor_indices)
+                                    anchor_end = max(anchor_indices)
+                                    
+                                    # Get 20 words before and after the anchor region
+                                    context_start = max(0, anchor_start - 20)
+                                    context_end = min(len(ref_words), anchor_end + 21)
+                                    
+                                    context_words = ref_words[context_start:context_end]
+                                    reference_contexts[source] = " ".join([w.text if hasattr(w, 'text') else str(w) for w in context_words])
+                                    continue
+                        
+                        # Fallback: estimate position by time percentage
+                        if gap_words and gap_words[0].get('start_time'):
+                            # Try to get song duration from segments
+                            last_word_time = 0
+                            for seg in segments:
+                                if seg.words:
+                                    last_word_time = max(last_word_time, seg.words[-1].end_time)
+                            
+                            if last_word_time > 0:
+                                gap_time = gap_words[0]['start_time']
+                                time_percentage = gap_time / last_word_time
+                                
+                                # Use percentage to estimate position in reference
+                                estimated_idx = int(len(ref_words) * time_percentage)
+                                context_start = max(0, estimated_idx - 20)
+                                context_end = min(len(ref_words), estimated_idx + 21)
+                                
+                                context_words = ref_words[context_start:context_end]
+                                reference_contexts[source] = " ".join([w.text if hasattr(w, 'text') else str(w) for w in context_words])
+                            else:
+                                # Ultimate fallback: entire reference lyrics
+                                reference_contexts[source] = " ".join([w.text if hasattr(w, 'text') else str(w) for w in ref_words])
+                        else:
+                            # No time info, use entire reference lyrics
+                            reference_contexts[source] = " ".join([w.text if hasattr(w, 'text') else str(w) for w in ref_words])
+                
+                gap_text = " ".join([w["text"] for w in gap_words])
+                
+                gaps_data.append({
+                    "gap_id": i,
+                    "position": gap.transcription_position,
+                    "preceding_words": preceding_words,
+                    "gap_text": gap_text,
+                    "following_words": following_words,
+                    "transcribed_words": gap_words,
+                    "reference_contexts": reference_contexts,
+                    "word_count": len(gap_words),
+                    "annotations": {
+                        "your_decision": "",
+                        "action_type": "# NO_ACTION | REPLACE | DELETE | INSERT | MERGE | SPLIT",
+                        "target_word_ids": [],
+                        "replacement_text": "",
+                        "notes": ""
+                    }
+                })
+            
+            with open("gaps_review.yaml", 'w') as f:
+                f.write("# Gap Review Data for Manual Annotation\n")
+                f.write(f"# Total gaps: {len(gaps_data)}\n")
+                f.write("#\n")
+                f.write("# For each gap, fill in the annotations section:\n")
+                f.write("#   your_decision: Brief description of what should happen\n")
+                f.write("#   action_type: NO_ACTION | REPLACE | DELETE | INSERT | MERGE | SPLIT\n")
+                f.write("#   target_word_ids: Which word IDs to operate on (from transcribed_words)\n")
+                f.write("#   replacement_text: The corrected text (if applicable)\n")
+                f.write("#   notes: Any additional reasoning or context\n")
+                f.write("#\n\n")
+                yaml.dump({"gaps": gaps_data}, f, default_flow_style=False, allow_unicode=True, width=120, sort_keys=False)
+            
+            self.logger.info(f"📝 Dumped {len(gaps_data)} gaps to gaps_review.yaml - review and annotate!")
+            import sys
+            sys.exit(0)
+        # === END TEMPORARY CODE ===
+
         for i, gap in enumerate(gap_sequences, 1):
             self.logger.info(f"Processing gap {i}/{len(gap_sequences)} at position {gap.transcription_position}")
 
@@ -294,41 +469,81 @@ class LyricsCorrector:
             if use_agentic_env:
                 self.logger.info(f"🤖 Attempting agentic correction for gap {i}/{len(gap_sequences)}")
                 try:
-                    # Simple prompt using gap text and optional reference text
-                    gap_text = " ".join(w.text for w in gap_words)
-                    ref_text = " ".join(next(iter(self.reference_lyrics.values())).get_full_text().split()[:50]) if self.reference_lyrics else ""
+                    # Prepare gap data for classification-first workflow
+                    gap_words_data = []
+                    for word_id in gap.transcribed_word_ids:
+                        if word_id in word_map:
+                            word = word_map[word_id]
+                            gap_words_data.append({
+                                "id": word_id,
+                                "text": word.text,
+                                "start_time": getattr(word, 'start_time', 0),
+                                "end_time": getattr(word, 'end_time', 0)
+                            })
                     
-                    # Build prompt with explicit schema
-                    prompt = f"""You are correcting transcription errors in lyrics.
-
-Transcribed gap (may contain errors): '{gap_text}'
-
-Reference lyrics context: '{ref_text}'
-
-Analyze the gap and return a JSON array of correction proposals. Each proposal must have:
-- action: "ReplaceWord" | "SplitWord" | "DeleteWord" | "AdjustTiming"
-- replacement_text: the corrected text (for ReplaceWord/SplitWord)
-- confidence: 0.0 to 1.0
-- reason: brief explanation
-
-Example:
-[
-  {{"action": "ReplaceWord", "replacement_text": "I'm", "confidence": 0.9, "reason": "Apostrophe missing"}}
-]
-
-Return ONLY the JSON array, no other text:"""
+                    # Get context words
+                    all_transcribed_words = []
+                    for seg in segments:
+                        all_transcribed_words.extend(seg.words)
+                    word_position = {w.id: idx for idx, w in enumerate(all_transcribed_words)}
+                    
+                    gap_positions = [word_position[wid] for wid in gap.transcribed_word_ids if wid in word_position]
+                    preceding_words = ""
+                    following_words = ""
+                    
+                    if gap_positions:
+                        first_gap_pos = min(gap_positions)
+                        last_gap_pos = max(gap_positions)
+                        
+                        # Get 10 words before
+                        start_pos = max(0, first_gap_pos - 10)
+                        preceding_list = [all_transcribed_words[idx].text for idx in range(start_pos, first_gap_pos) if idx < len(all_transcribed_words)]
+                        preceding_words = " ".join(preceding_list)
+                        
+                        # Get 10 words after
+                        end_pos = min(len(all_transcribed_words), last_gap_pos + 11)
+                        following_list = [all_transcribed_words[idx].text for idx in range(last_gap_pos + 1, end_pos) if idx < len(all_transcribed_words)]
+                        following_words = " ".join(following_list)
+                    
+                    # Get reference contexts from all sources
+                    reference_contexts = {}
+                    for source, lyrics_data in self.reference_lyrics.items():
+                        if lyrics_data and lyrics_data.segments:
+                            ref_words = []
+                            for seg in lyrics_data.segments:
+                                ref_words.extend([w.text for w in seg.words])
+                            # For now, use full text (handlers will extract relevant portions)
+                            reference_contexts[source] = " ".join(ref_words)
+                    
+                    # Get artist and title from metadata
+                    artist = metadata.get("artist") if metadata else None
+                    title = metadata.get("title") if metadata else None
                     
                     # Choose model via router
                     _router = _ModelRouter()
-                    # naive uncertainty estimate: short gaps => low uncertainty
-                    uncertainty = 0.3 if len(gap_words) <= 2 else 0.7
+                    uncertainty = 0.3 if len(gap_words_data) <= 2 else 0.7
                     model_id = _router.choose_model("gap", uncertainty)
                     self.logger.debug(f"🤖 Router selected model: {model_id}")
                     
+                    # Create agent and use new classification-first workflow
                     self.logger.debug(f"🤖 Creating AgenticCorrector with model: {model_id}")
-                    _agent = _AgenticCorrector.from_model(model=model_id, session_id=session_id)
-                    self.logger.debug(f"🤖 Calling agent.propose() with prompt length: {len(prompt)}")
-                    _proposals = _agent.propose(prompt)
+                    _agent = _AgenticCorrector.from_model(
+                        model=model_id,
+                        session_id=session_id,
+                        cache_dir=str(self._cache_dir)
+                    )
+                    
+                    # Use new propose_for_gap method
+                    self.logger.debug(f"🤖 Calling agent.propose_for_gap() for gap {i}")
+                    _proposals = _agent.propose_for_gap(
+                        gap_id=f"gap_{i}",
+                        gap_words=gap_words_data,
+                        preceding_words=preceding_words,
+                        following_words=following_words,
+                        reference_contexts=reference_contexts,
+                        artist=artist,
+                        title=title
+                    )
                     self.logger.debug(f"🤖 Agent returned {len(_proposals) if _proposals else 0} proposals")
                     _agentic_corrections = _adapt(_proposals, word_map, linear_position_map) if _proposals else []
                     self.logger.debug(f"🤖 Adapter returned {len(_agentic_corrections)} corrections")

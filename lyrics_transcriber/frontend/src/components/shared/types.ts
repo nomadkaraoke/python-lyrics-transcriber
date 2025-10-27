@@ -63,6 +63,7 @@ export interface WordProps {
         handler: string
         confidence: number
         source: string
+        reason?: string
     } | null
 }
 

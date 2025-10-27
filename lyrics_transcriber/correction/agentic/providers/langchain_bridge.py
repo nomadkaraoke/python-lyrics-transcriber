@@ -5,13 +5,16 @@ This is a much cleaner version that delegates to specialized components:
 - CircuitBreaker: Manages failure state
 - ResponseParser: Parses responses
 - RetryExecutor: Handles retry logic
+- ResponseCache: Caches LLM responses to avoid redundant calls
 
 Each component has a single responsibility and is independently testable.
 """
 from __future__ import annotations
 
 import logging
+import os
 from typing import List, Dict, Any, Optional
+from datetime import datetime
 
 from .base import BaseAIProvider
 from .config import ProviderConfig
@@ -19,6 +22,7 @@ from .model_factory import ModelFactory
 from .circuit_breaker import CircuitBreaker
 from .response_parser import ResponseParser
 from .retry_executor import RetryExecutor
+from .response_cache import ResponseCache
 from .constants import (
     PROMPT_LOG_LENGTH,
     RESPONSE_LOG_LENGTH,
@@ -52,6 +56,7 @@ class LangChainBridge(BaseAIProvider):
         circuit_breaker: CircuitBreaker | None = None,
         response_parser: ResponseParser | None = None,
         retry_executor: RetryExecutor | None = None,
+        response_cache: ResponseCache | None = None,
     ):
         """Initialize the bridge with components (dependency injection).
         
@@ -62,6 +67,7 @@ class LangChainBridge(BaseAIProvider):
             circuit_breaker: Circuit breaker instance (creates default if None)
             response_parser: Response parser instance (creates default if None)
             retry_executor: Retry executor instance (creates default if None)
+            response_cache: Response cache instance (creates default if None)
         """
         self._model = model
         self._config = config or ProviderConfig.from_env()
@@ -71,6 +77,13 @@ class LangChainBridge(BaseAIProvider):
         self._circuit_breaker = circuit_breaker or CircuitBreaker(self._config)
         self._parser = response_parser or ResponseParser()
         self._executor = retry_executor or RetryExecutor(self._config)
+        
+        # Initialize cache (enabled by default, can be disabled via DISABLE_LLM_CACHE=1)
+        cache_enabled = os.getenv("DISABLE_LLM_CACHE", "0").lower() not in {"1", "true", "yes"}
+        self._cache = response_cache or ResponseCache(
+            cache_dir=self._config.cache_dir,
+            enabled=cache_enabled
+        )
         
         # Lazy-initialized chat model
         self._chat_model: Optional[Any] = None
@@ -100,6 +113,15 @@ class LangChainBridge(BaseAIProvider):
         """
         # Store session_id for use in _invoke_model
         self._session_id = session_id
+        
+        # Step 0: Check cache first
+        cached_response = self._cache.get(prompt, self._model)
+        if cached_response:
+            # Parse cached response and return
+            parsed = self._parser.parse(cached_response)
+            logger.debug(f"🎯 Using cached response ({len(parsed)} items)")
+            return parsed
+        
         # Step 1: Check circuit breaker
         if self._circuit_breaker.is_open(self._model):
             open_until = self._circuit_breaker.get_open_until(self._model)
@@ -143,7 +165,18 @@ class LangChainBridge(BaseAIProvider):
                 f"{result.value[:RESPONSE_LOG_LENGTH]}..."
             )
             
-            # Step 5: Parse response
+            # Step 5: Cache the raw response for future use
+            self._cache.set(
+                prompt=prompt,
+                model=self._model,
+                response=result.value,
+                metadata={
+                    "session_id": session_id,
+                    "timestamp": datetime.utcnow().isoformat()
+                }
+            )
+            
+            # Step 6: Parse response
             return self._parser.parse(result.value)
         else:
             self._circuit_breaker.record_failure(self._model)

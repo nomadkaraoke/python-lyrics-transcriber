@@ -54,6 +54,13 @@ try:
 except Exception:
     FeedbackStore = None  # type: ignore
 
+try:
+    from lyrics_transcriber.correction.feedback.store import FeedbackStore as NewFeedbackStore
+    from lyrics_transcriber.correction.feedback.schemas import CorrectionAnnotation
+except Exception:
+    NewFeedbackStore = None  # type: ignore
+    CorrectionAnnotation = None  # type: ignore
+
 
 class ReviewServer:
     """Handles the review process through a web interface."""
@@ -77,12 +84,18 @@ class ReviewServer:
         self._configure_cors()
         self._register_routes()
         self._mount_frontend()
-        # Initialize optional SQLite store for sessions/feedback
+        # Initialize optional SQLite store for sessions/feedback (legacy)
         try:
             default_db = os.path.join(self.output_config.cache_dir, "agentic_feedback.sqlite3")
             self._store = FeedbackStore(default_db) if FeedbackStore else None
         except Exception:
             self._store = None
+        
+        # Initialize new annotation store
+        try:
+            self._annotation_store = NewFeedbackStore(storage_dir=self.output_config.cache_dir) if NewFeedbackStore else None
+        except Exception:
+            self._annotation_store = None
         # Metrics aggregator
         self._metrics = MetricsAggregator() if MetricsAggregator else None
         # LangFuse (optional)
@@ -139,6 +152,11 @@ class ReviewServer:
         self.app.add_api_route("/api/v1/models", self.get_models_v1, methods=["GET"])
         self.app.add_api_route("/api/v1/models", self.put_models_v1, methods=["PUT"])
         self.app.add_api_route("/api/v1/metrics", self.get_metrics_v1, methods=["GET"])
+        
+        # Annotation endpoints
+        self.app.add_api_route("/api/v1/annotations", self.post_annotation, methods=["POST"])
+        self.app.add_api_route("/api/v1/annotations/{audio_hash}", self.get_annotations_by_song, methods=["GET"])
+        self.app.add_api_route("/api/v1/annotations/stats", self.get_annotation_stats, methods=["GET"])
 
     async def get_correction_data(self):
         """Get the correction data."""
@@ -311,6 +329,59 @@ class ReviewServer:
             return self._metrics.snapshot(time_range=timeRange, session_id=sessionId)
         # Fallback if metrics unavailable
         return {"timeRange": timeRange, "totalSessions": len(self._session_store), "averageAccuracy": 0.0, "errorReduction": 0.0, "averageProcessingTime": 0, "modelPerformance": {}, "costSummary": {}, "userSatisfaction": 0.0}
+    
+    # ------------------------------
+    # Annotation endpoints
+    # ------------------------------
+    
+    async def post_annotation(self, annotation_data: Dict[str, Any] = Body(...)):
+        """Save a correction annotation."""
+        if not self._annotation_store or not CorrectionAnnotation:
+            raise HTTPException(status_code=501, detail="Annotation system not available")
+        
+        try:
+            # Validate and create annotation
+            annotation = CorrectionAnnotation.model_validate(annotation_data)
+            
+            # Save to store
+            success = self._annotation_store.save_annotation(annotation)
+            
+            if success:
+                return {"status": "success", "annotation_id": annotation.annotation_id}
+            else:
+                raise HTTPException(status_code=500, detail="Failed to save annotation")
+                
+        except Exception as e:
+            self.logger.error(f"Failed to save annotation: {e}")
+            raise HTTPException(status_code=400, detail=str(e))
+    
+    async def get_annotations_by_song(self, audio_hash: str):
+        """Get all annotations for a specific song."""
+        if not self._annotation_store:
+            raise HTTPException(status_code=501, detail="Annotation system not available")
+        
+        try:
+            annotations = self._annotation_store.get_annotations_by_song(audio_hash)
+            return {
+                "audio_hash": audio_hash,
+                "count": len(annotations),
+                "annotations": [a.model_dump() for a in annotations]
+            }
+        except Exception as e:
+            self.logger.error(f"Failed to get annotations: {e}")
+            raise HTTPException(status_code=500, detail=str(e))
+    
+    async def get_annotation_stats(self):
+        """Get aggregated statistics from all annotations."""
+        if not self._annotation_store:
+            raise HTTPException(status_code=501, detail="Annotation system not available")
+        
+        try:
+            stats = self._annotation_store.get_statistics()
+            return stats.model_dump()
+        except Exception as e:
+            self.logger.error(f"Failed to get annotation statistics: {e}")
+            raise HTTPException(status_code=500, detail=str(e))
 
     def _update_correction_result(self, base_result: CorrectionResult, updated_data: Dict[str, Any]) -> CorrectionResult:
         """Update a CorrectionResult with new correction data."""

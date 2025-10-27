@@ -16,6 +16,7 @@ class ProviderConfig:
     google_api_key: Optional[str]
     openrouter_api_key: Optional[str]
     privacy_mode: bool
+    cache_dir: str
 
     request_timeout_seconds: float = 30.0
     max_retries: int = 2
@@ -25,13 +26,26 @@ class ProviderConfig:
     circuit_breaker_open_seconds: int = 60
 
     @staticmethod
-    def from_env() -> "ProviderConfig":
+    def from_env(cache_dir: Optional[str] = None) -> "ProviderConfig":
+        """Create config from environment variables.
+        
+        Args:
+            cache_dir: Cache directory path. If None, uses LYRICS_TRANSCRIBER_CACHE_DIR
+                      env var or defaults to ~/lyrics-transcriber-cache
+        """
+        if cache_dir is None:
+            cache_dir = os.getenv(
+                "LYRICS_TRANSCRIBER_CACHE_DIR",
+                os.path.join(os.path.expanduser("~"), "lyrics-transcriber-cache")
+            )
+        
         return ProviderConfig(
             openai_api_key=os.getenv("OPENAI_API_KEY"),
             anthropic_api_key=os.getenv("ANTHROPIC_API_KEY"),
             google_api_key=os.getenv("GOOGLE_API_KEY"),
             openrouter_api_key=os.getenv("OPENROUTER_API_KEY"),
             privacy_mode=os.getenv("PRIVACY_MODE", "false").lower() in {"1", "true", "yes"},
+            cache_dir=cache_dir,
             request_timeout_seconds=float(os.getenv("AGENTIC_TIMEOUT_SECONDS", "30.0")),
             max_retries=int(os.getenv("AGENTIC_MAX_RETRIES", "2")),
             retry_backoff_base_seconds=float(os.getenv("AGENTIC_BACKOFF_BASE_SECONDS", "0.2")),

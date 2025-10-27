@@ -20,8 +20,8 @@ class ResponseParser:
     def parse(self, content: str) -> List[Dict[str, Any]]:
         """Parse response content into proposal dictionaries.
         
-        Attempts to parse as JSON first. If that fails, returns the
-        raw content wrapped in a dict for logging/debugging.
+        Attempts to parse as JSON first. If that fails, tries to fix
+        common JSON issues and retries. Falls back to raw content.
         
         Args:
             content: Raw response content from LLM
@@ -36,7 +36,38 @@ class ResponseParser:
             return self._normalize_json_response(data)
         except json.JSONDecodeError as e:
             logger.debug(f"🤖 Response is not valid JSON: {e}")
+            
+            # Try to fix common issues
+            fixed_content = self._attempt_json_fix(content)
+            if fixed_content != content:
+                try:
+                    data = json.loads(fixed_content)
+                    logger.debug("🤖 Successfully parsed after JSON fix")
+                    return self._normalize_json_response(data)
+                except json.JSONDecodeError:
+                    pass  # Fall through to raw handling
+            
             return self._handle_raw_response(content)
+    
+    def _attempt_json_fix(self, content: str) -> str:
+        """Attempt to fix common JSON formatting issues.
+        
+        Args:
+            content: Raw JSON string
+            
+        Returns:
+            Fixed JSON string (or original if no fixes applied)
+        """
+        # Fix 1: Replace invalid escape sequences like \' with '
+        # (JSON only allows \", \\, \/, \b, \f, \n, \r, \t)
+        fixed = content.replace("\\'", "'")
+        
+        # Fix 2: Remove any trailing commas before } or ]
+        import re
+        fixed = re.sub(r',\s*}', '}', fixed)
+        fixed = re.sub(r',\s*]', ']', fixed)
+        
+        return fixed
     
     def _normalize_json_response(self, data: Any) -> List[Dict[str, Any]]:
         """Normalize JSON data into a list of dictionaries.
