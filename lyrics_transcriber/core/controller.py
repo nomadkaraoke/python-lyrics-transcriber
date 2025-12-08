@@ -39,6 +39,11 @@ class LyricsControllerResult:
     original_txt: Optional[str] = None
     corrected_txt: Optional[str] = None
     corrections_json: Optional[str] = None
+    
+    # Countdown padding info (for applying same padding to other audio files)
+    countdown_padding_added: bool = False
+    countdown_padding_seconds: float = 0.0
+    padded_audio_filepath: Optional[str] = None
 
 
 class LyricsTranscriber:
@@ -455,6 +460,37 @@ class LyricsTranscriber:
 
             self.logger.info("Human review completed, updated transcription_corrected with reviewed_data")
             self.results.transcription_corrected = reviewed_data
+
+        # Add countdown intro if enabled and needed (after review, before output generation)
+        if self.output_config.add_countdown and self.results.transcription_corrected:
+            from lyrics_transcriber.output.countdown_processor import CountdownProcessor
+
+            self.logger.info("Processing countdown intro (if needed)")
+            countdown_processor = CountdownProcessor(
+                cache_dir=self.output_config.cache_dir,
+                logger=self.logger,
+            )
+
+            # Process and potentially modify the correction result and audio filepath
+            (
+                self.results.transcription_corrected,
+                self.audio_filepath,
+                padding_added,
+                padding_seconds,
+            ) = countdown_processor.process(
+                correction_result=self.results.transcription_corrected,
+                audio_filepath=self.audio_filepath,
+            )
+            
+            # Store padding information in results for parent code to use
+            self.results.countdown_padding_added = padding_added
+            self.results.countdown_padding_seconds = padding_seconds
+            if padding_added:
+                self.results.padded_audio_filepath = self.audio_filepath
+                self.logger.info(
+                    f"Countdown padding applied: {padding_seconds}s added to audio. "
+                    f"Padded audio: {self.audio_filepath}"
+                )
 
     def generate_outputs(self) -> None:
         """Generate output files based on enabled features and available data."""

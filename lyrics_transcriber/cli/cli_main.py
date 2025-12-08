@@ -92,6 +92,9 @@ def create_arg_parser() -> argparse.ArgumentParser:
     feature_group.add_argument(
         "--video_resolution", choices=["4k", "1080p", "720p", "360p"], default="360p", help="Resolution of the karaoke video. Default: 360p"
     )
+    feature_group.add_argument(
+        "--skip_countdown", action="store_true", help="Skip adding countdown intro for songs that start within 3 seconds"
+    )
 
     # Agentic AI flags
     feature_group.add_argument(
@@ -182,6 +185,7 @@ def create_configs(args: argparse.Namespace, env_config: Dict[str, str]) -> tupl
         generate_lrc=not args.skip_lrc,
         generate_cdg=not args.skip_cdg,
         render_video=not args.skip_video,
+        add_countdown=not args.skip_countdown,
     )
 
     return transcriber_config, lyrics_config, output_config

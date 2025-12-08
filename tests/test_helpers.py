@@ -314,7 +314,8 @@ def create_test_output_config(
     output_styles_json: Optional[str] = None,
     render_video: bool = False,
     generate_cdg: bool = False,
-    enable_review: bool = False
+    enable_review: bool = False,
+    add_countdown: bool = False
 ) -> OutputConfig:
     """
     Create a test OutputConfig with temporary directories and styles file.
@@ -357,7 +358,8 @@ def create_test_output_config(
         video_resolution="360p",
         render_video=render_video,
         generate_cdg=generate_cdg,
-        enable_review=enable_review
+        enable_review=enable_review,
+        add_countdown=add_countdown
     )
 
 
