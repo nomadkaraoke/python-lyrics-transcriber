@@ -185,3 +185,15 @@ export interface CorrectionAnnotation {
     session_id: string
     timestamp?: string
 }
+
+export interface CorrectionActionEvent {
+    type: 'revert' | 'edit' | 'accept' | 'reject'
+    correctionId: string
+    wordId: string
+}
+
+export interface GapCategoryMetric {
+    category: string
+    count: number
+    avgConfidence: number
+}

@@ -9,6 +9,7 @@ import TimerIcon from '@mui/icons-material/Timer'
 import RestoreIcon from '@mui/icons-material/Restore'
 import { CorrectionData, InteractionMode } from '../types'
 import CorrectionMetrics from './CorrectionMetrics'
+import AgenticCorrectionMetrics from './AgenticCorrectionMetrics'
 import ModeSelector from './ModeSelector'
 import AudioPlayer from './AudioPlayer'
 import { ApiClient } from '../api'
@@ -77,6 +78,9 @@ export default function Header({
     // Get available handlers from metadata
     const availableHandlers = data.metadata.available_handlers || []
     const enabledHandlers = new Set(data.metadata.enabled_handlers || [])
+    
+    // Check if agentic mode is active
+    const isAgenticMode = availableHandlers.some((h: { id: string }) => h.id === 'AgenticCorrector')
 
     // Create a map of gap IDs to their corrections
     const gapCorrections = data.corrections.reduce((map: Record<string, number>, correction) => {
@@ -156,6 +160,19 @@ export default function Header({
                     position: 'relative',
                     height: '100%'
                 }}>
+                    {isAgenticMode ? (
+                        <AgenticCorrectionMetrics
+                            corrections={data.corrections || []}
+                            onCategoryClick={(category) => {
+                                // TODO: Implement category filtering/highlighting
+                                console.log('Filter by category:', category)
+                            }}
+                            onConfidenceFilterClick={(filter) => {
+                                // TODO: Implement confidence filtering
+                                console.log('Filter by confidence:', filter)
+                            }}
+                        />
+                    ) : (
                     <Paper sx={{
                         p: 0.8,
                         height: '100%',
@@ -212,6 +229,7 @@ export default function Header({
                             ))}
                         </Box>
                     </Paper>
+                    )}
                 </Box>
                 <Box sx={{ flex: 1, height: '100%' }}>
                     <CorrectionMetrics

@@ -19,6 +19,7 @@ import EditModal from './EditModal'
 import ReviewChangesModal from './ReviewChangesModal'
 import ReplaceAllLyricsModal from './ReplaceAllLyricsModal'
 import CorrectionAnnotationModal from './CorrectionAnnotationModal'
+import CorrectionDetailCard from './CorrectionDetailCard'
 import {
     addSegmentBefore,
     splitSegment,
@@ -301,6 +302,19 @@ export default function LyricsAnalyzer({ data: initialData, onFileLoad, apiClien
         // TODO: Add UI toggle to enable/disable via setAnnotationsEnabled
     })
     
+    // Correction detail card state
+    const [correctionDetailOpen, setCorrectionDetailOpen] = useState(false)
+    const [selectedCorrection, setSelectedCorrection] = useState<{
+        wordId: string
+        originalWord: string
+        correctedWord: string
+        category: string | null
+        confidence: number
+        reason: string
+        handler: string
+        source: string
+    } | null>(null)
+    
     const theme = useTheme()
     const isMobile = useMediaQuery(theme.breakpoints.down('md'))
 
@@ -468,6 +482,12 @@ export default function LyricsAnalyzer({ data: initialData, onFileLoad, apiClien
             );
 
             if (correction) {
+                // For agentic corrections, show the detail card instead of just highlighting
+                if (correction.handler === 'AgenticCorrector') {
+                    handleShowCorrectionDetail(info.word_id)
+                    return
+                }
+                
                 setHighlightInfo({
                     type: 'correction',
                     transcribed_words: [], // Required by type but not used for corrections
@@ -667,6 +687,138 @@ export default function LyricsAnalyzer({ data: initialData, onFileLoad, apiClien
         const newData = deleteSegment(data, segmentIndex)
         updateDataWithHistory(newData, 'delete segment')
     }, [data, updateDataWithHistory])
+
+    // Correction action handlers
+    const handleRevertCorrection = useCallback((wordId: string) => {
+        // Find the correction for this word
+        const correction = data.corrections?.find(c => 
+            c.corrected_word_id === wordId || c.word_id === wordId
+        )
+        
+        if (!correction) {
+            console.error('Correction not found for word:', wordId)
+            return
+        }
+
+        // Find the segment containing the corrected word
+        const segmentIndex = data.corrected_segments.findIndex(segment =>
+            segment.words.some(w => w.id === wordId)
+        )
+
+        if (segmentIndex === -1) {
+            console.error('Segment not found for word:', wordId)
+            return
+        }
+
+        const segment = data.corrected_segments[segmentIndex]
+        
+        // Replace the corrected word with the original
+        const newWords = segment.words.map(word => {
+            if (word.id === wordId) {
+                return {
+                    ...word,
+                    text: correction.original_word,
+                    id: correction.word_id // Restore original word ID
+                }
+            }
+            return word
+        })
+
+        // Rebuild segment text
+        const newText = newWords.map(w => w.text).join(' ')
+
+        const newSegment = {
+            ...segment,
+            words: newWords,
+            text: newText
+        }
+
+        // Update data
+        const newSegments = data.corrected_segments.map((seg, idx) =>
+            idx === segmentIndex ? newSegment : seg
+        )
+
+        // Remove the correction from the corrections list
+        const newCorrections = data.corrections?.filter(c =>
+            c.corrected_word_id !== wordId && c.word_id !== wordId
+        )
+
+        const newData: CorrectionData = {
+            ...data,
+            corrected_segments: newSegments,
+            corrections: newCorrections || []
+        }
+
+        updateDataWithHistory(newData, 'revert correction')
+        
+        console.log('Reverted correction:', {
+            originalWord: correction.original_word,
+            correctedWord: correction.corrected_word,
+            wordId
+        })
+    }, [data, updateDataWithHistory])
+
+    const handleEditCorrection = useCallback((wordId: string) => {
+        // Find the segment containing this word
+        const segmentIndex = data.corrected_segments.findIndex(segment =>
+            segment.words.some(w => w.id === wordId)
+        )
+
+        if (segmentIndex === -1) {
+            console.error('Segment not found for word:', wordId)
+            return
+        }
+
+        // Open edit modal for this segment
+        const segment = data.corrected_segments[segmentIndex]
+        setEditModalSegment({
+            segment: segment,
+            index: segmentIndex,
+            originalSegment: segment
+        })
+    }, [data])
+
+    const handleAcceptCorrection = useCallback((wordId: string) => {
+        // For now, just log acceptance
+        // In the future, this could be tracked in the annotation system
+        console.log('Accepted correction for word:', wordId)
+        
+        // TODO: Track acceptance in annotation system
+        // This could be used to build confidence in the AI's corrections over time
+    }, [])
+
+    const handleShowCorrectionDetail = useCallback((wordId: string) => {
+        // Find the correction for this word
+        const correction = data.corrections?.find(c => 
+            c.corrected_word_id === wordId || c.word_id === wordId
+        )
+        
+        if (!correction) {
+            console.error('Correction not found for word:', wordId)
+            return
+        }
+
+        // Extract category from reason (format: "reason [CATEGORY] (confidence: XX%)")
+        const categoryMatch = correction.reason?.match(/\[([A-Z_]+)\]/)
+        const category = categoryMatch ? categoryMatch[1] : null
+
+        // Find the corrected word text
+        const correctedWord = data.corrected_segments
+            .flatMap(s => s.words)
+            .find(w => w.id === wordId)?.text || correction.corrected_word
+
+        setSelectedCorrection({
+            wordId,
+            originalWord: correction.original_word,
+            correctedWord: correctedWord,
+            category,
+            confidence: correction.confidence,
+            reason: correction.reason,
+            handler: correction.handler,
+            source: correction.source
+        })
+        setCorrectionDetailOpen(true)
+    }, [data])
 
     const handleFinishReview = useCallback(() => {
         console.log(`[TIMING] handleFinishReview - Current timing offset: ${timingOffsetMs}ms`);
@@ -1182,6 +1334,38 @@ export default function LyricsAnalyzer({ data: initialData, onFileLoad, apiClien
                     title={data.metadata?.audio_filepath?.split('/').pop()?.split('.')[0] || 'Unknown'}
                     sessionId={audioHash} // Use audio hash as session ID for now
                     gapId={pendingAnnotation.gapId}
+                />
+            )}
+            
+            {selectedCorrection && (
+                <CorrectionDetailCard
+                    open={correctionDetailOpen}
+                    onClose={() => {
+                        setCorrectionDetailOpen(false)
+                        setSelectedCorrection(null)
+                    }}
+                    originalWord={selectedCorrection.originalWord}
+                    correctedWord={selectedCorrection.correctedWord}
+                    category={selectedCorrection.category}
+                    confidence={selectedCorrection.confidence}
+                    reason={selectedCorrection.reason}
+                    handler={selectedCorrection.handler}
+                    source={selectedCorrection.source}
+                    onRevert={() => {
+                        handleRevertCorrection(selectedCorrection.wordId)
+                        setCorrectionDetailOpen(false)
+                        setSelectedCorrection(null)
+                    }}
+                    onEdit={() => {
+                        handleEditCorrection(selectedCorrection.wordId)
+                        setCorrectionDetailOpen(false)
+                        setSelectedCorrection(null)
+                    }}
+                    onAccept={() => {
+                        handleAcceptCorrection(selectedCorrection.wordId)
+                        setCorrectionDetailOpen(false)
+                        setSelectedCorrection(null)
+                    }}
                 />
             )}
         </Box>
