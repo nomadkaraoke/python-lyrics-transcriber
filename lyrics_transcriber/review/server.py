@@ -8,7 +8,7 @@ import time
 import os
 import urllib.parse
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, JSONResponse
 import hashlib
 from lyrics_transcriber.core.config import OutputConfig
 import uvicorn
@@ -20,6 +20,46 @@ from lyrics_transcriber.correction.corrector import LyricsCorrector
 from lyrics_transcriber.types import TranscriptionResult, TranscriptionData
 from lyrics_transcriber.lyrics.user_input_provider import UserInputProvider
 from lyrics_transcriber.correction.operations import CorrectionOperations
+import uuid
+
+try:
+    # Optional: used to introspect local models for /api/v1/models
+    from lyrics_transcriber.correction.agentic.providers.health import (
+        is_ollama_available,
+        get_ollama_models,
+    )
+except Exception:
+    def is_ollama_available() -> bool:  # type: ignore
+        return False
+
+    def get_ollama_models():  # type: ignore
+        return []
+
+try:
+    from lyrics_transcriber.correction.agentic.observability.metrics import MetricsAggregator
+except Exception:
+    MetricsAggregator = None  # type: ignore
+
+try:
+    from lyrics_transcriber.correction.agentic.observability.langfuse_integration import (
+        setup_langfuse,
+        record_metrics as lf_record,
+    )
+except Exception:
+    setup_langfuse = lambda *args, **kwargs: None  # type: ignore
+    lf_record = lambda *args, **kwargs: None  # type: ignore
+
+try:
+    from lyrics_transcriber.correction.agentic.feedback.store import FeedbackStore
+except Exception:
+    FeedbackStore = None  # type: ignore
+
+try:
+    from lyrics_transcriber.correction.feedback.store import FeedbackStore as NewFeedbackStore
+    from lyrics_transcriber.correction.feedback.schemas import CorrectionAnnotation
+except Exception:
+    NewFeedbackStore = None  # type: ignore
+    CorrectionAnnotation = None  # type: ignore
 
 
 class ReviewServer:
@@ -44,6 +84,25 @@ class ReviewServer:
         self._configure_cors()
         self._register_routes()
         self._mount_frontend()
+        # Initialize optional SQLite store for sessions/feedback (legacy)
+        try:
+            default_db = os.path.join(self.output_config.cache_dir, "agentic_feedback.sqlite3")
+            self._store = FeedbackStore(default_db) if FeedbackStore else None
+        except Exception:
+            self._store = None
+        
+        # Initialize new annotation store
+        try:
+            self._annotation_store = NewFeedbackStore(storage_dir=self.output_config.cache_dir) if NewFeedbackStore else None
+        except Exception:
+            self._annotation_store = None
+        # Metrics aggregator
+        self._metrics = MetricsAggregator() if MetricsAggregator else None
+        # LangFuse (optional)
+        try:
+            self._langfuse = setup_langfuse("agentic-corrector")
+        except Exception:
+            self._langfuse = None
 
     def _configure_cors(self) -> None:
         """Configure CORS middleware."""
@@ -55,6 +114,14 @@ class ReviewServer:
             allow_methods=["*"],
             allow_headers=["*"],
         )
+        
+        @self.app.exception_handler(HTTPException)
+        async def _http_exception_handler(request, exc: HTTPException):
+            return JSONResponse(status_code=exc.status_code, content={"error": "HTTPException", "message": exc.detail, "details": {}})
+
+        @self.app.exception_handler(Exception)
+        async def _unhandled_exception_handler(request, exc: Exception):
+            return JSONResponse(status_code=500, content={"error": "InternalServerError", "message": str(exc), "details": {}})
 
     def _mount_frontend(self) -> None:
         """Mount the frontend static files."""
@@ -78,9 +145,243 @@ class ReviewServer:
         self.app.add_api_route("/api/handlers", self.update_handlers, methods=["POST"])
         self.app.add_api_route("/api/add-lyrics", self.add_lyrics, methods=["POST"])
 
+        # Agentic AI v1 endpoints (contract-compliant scaffolds)
+        self.app.add_api_route("/api/v1/correction/agentic", self.post_correction_agentic, methods=["POST"])
+        self.app.add_api_route("/api/v1/correction/session/{session_id}", self.get_correction_session_v1, methods=["GET"])
+        self.app.add_api_route("/api/v1/feedback", self.post_feedback_v1, methods=["POST"])
+        self.app.add_api_route("/api/v1/models", self.get_models_v1, methods=["GET"])
+        self.app.add_api_route("/api/v1/models", self.put_models_v1, methods=["PUT"])
+        self.app.add_api_route("/api/v1/metrics", self.get_metrics_v1, methods=["GET"])
+        
+        # Annotation endpoints
+        self.app.add_api_route("/api/v1/annotations", self.post_annotation, methods=["POST"])
+        self.app.add_api_route("/api/v1/annotations/{audio_hash}", self.get_annotations_by_song, methods=["GET"])
+        self.app.add_api_route("/api/v1/annotations/stats", self.get_annotation_stats, methods=["GET"])
+
     async def get_correction_data(self):
         """Get the correction data."""
         return self.correction_result.to_dict()
+
+    # ------------------------------
+    # API v1: Agentic AI scaffolds
+    # ------------------------------
+
+    @property
+    def _session_store(self) -> Dict[str, Dict[str, Any]]:
+        if not hasattr(self, "__session_store"):
+            self.__session_store = {}
+        return self.__session_store  # type: ignore[attr-defined]
+
+    @property
+    def _feedback_store(self) -> Dict[str, Dict[str, Any]]:
+        if not hasattr(self, "__feedback_store"):
+            self.__feedback_store = {}
+        return self.__feedback_store  # type: ignore[attr-defined]
+
+    @property
+    def _model_registry(self) -> Dict[str, Dict[str, Any]]:
+        if not hasattr(self, "__model_registry"):
+            # Seed with a few placeholders
+            models: Dict[str, Dict[str, Any]] = {}
+            # Local models via Ollama
+            if is_ollama_available():
+                for m in get_ollama_models():
+                    mid = m.get("model") or m.get("name") or "ollama-unknown"
+                    models[mid] = {
+                        "id": mid,
+                        "name": mid,
+                        "type": "local",
+                        "available": True,
+                        "responseTimeMs": 0,
+                        "costPerToken": 0.0,
+                        "accuracy": 0.0,
+                    }
+            # Cloud placeholders
+            for mid in ["anthropic/claude-4-sonnet", "gpt-5", "gemini-2.5-pro"]:
+                if mid not in models:
+                    models[mid] = {
+                        "id": mid,
+                        "name": mid,
+                        "type": "cloud",
+                        "available": False,
+                        "responseTimeMs": 0,
+                        "costPerToken": 0.0,
+                        "accuracy": 0.0,
+                    }
+            self.__model_registry = models
+        return self.__model_registry  # type: ignore[attr-defined]
+
+    async def post_correction_agentic(self, request: Dict[str, Any] = Body(...)):
+        """POST /api/v1/correction/agentic
+        Minimal scaffold: validates required fields and returns a stub response.
+        """
+        start_time = time.time()
+        if not isinstance(request, dict):
+            raise HTTPException(status_code=400, detail="Invalid request body")
+
+        if "transcriptionData" not in request or "audioFileHash" not in request:
+            raise HTTPException(status_code=400, detail="Missing required fields: transcriptionData, audioFileHash")
+
+        session_id = str(uuid.uuid4())
+        session_record = {
+            "id": session_id,
+            "audioFileHash": request.get("audioFileHash"),
+            "sessionType": "FULL_CORRECTION",
+            "aiModelConfig": {"model": (request.get("modelPreferences") or [None])[0]},
+            "totalCorrections": 0,
+            "acceptedCorrections": 0,
+            "humanModifications": 0,
+            "sessionDurationMs": 0,
+            "accuracyImprovement": 0.0,
+            "startedAt": None,
+            "completedAt": None,
+            "status": "IN_PROGRESS",
+        }
+        self._session_store[session_id] = session_record
+        if self._store:
+            try:
+                self._store.put_session(session_id, json.dumps(session_record))
+            except Exception:
+                pass
+
+        # Simulate provider availability based on model preferences
+        preferred = (request.get("modelPreferences") or ["unknown"])[0]
+        model_entry = self._model_registry.get(preferred)
+        if model_entry and not model_entry.get("available", False):
+            # Service unavailable → return 503 with fallback details
+            from fastapi.responses import JSONResponse
+            if self._metrics:
+                self._metrics.record_session(preferred, int((time.time() - start_time) * 1000), fallback_used=True)
+            content = {
+                "corrections": [],
+                "fallbackReason": f"Model {preferred} unavailable",
+                "originalSystemUsed": "rule-based",
+                "processingTimeMs": int((time.time() - start_time) * 1000),
+            }
+            lf_record(self._langfuse, "post_correction_agentic_fallback", {"model": preferred, **content})
+            return JSONResponse(status_code=503, content=content)
+
+        response = {
+            "sessionId": session_id,
+            "corrections": [],
+            "processingTimeMs": int((time.time() - start_time) * 1000),
+            "modelUsed": preferred,
+            "fallbackUsed": False,
+            "accuracyEstimate": 0.0,
+        }
+        if self._metrics:
+            self._metrics.record_session(preferred, response["processingTimeMs"], fallback_used=False)
+        lf_record(self._langfuse, "post_correction_agentic", {"model": preferred, **response})
+        return response
+
+    async def get_correction_session_v1(self, session_id: str):
+        data = self._session_store.get(session_id)
+        if not data:
+            raise HTTPException(status_code=404, detail="Session not found")
+        return data
+
+    async def post_feedback_v1(self, request: Dict[str, Any] = Body(...)):
+        if not isinstance(request, dict):
+            raise HTTPException(status_code=400, detail="Invalid request body")
+        required = ["aiCorrectionId", "reviewerAction", "reasonCategory"]
+        if any(k not in request for k in required):
+            raise HTTPException(status_code=400, detail="Missing required feedback fields")
+
+        feedback_id = str(uuid.uuid4())
+        record = {**request, "id": feedback_id}
+        self._feedback_store[feedback_id] = record
+        if self._store:
+            try:
+                self._store.put_feedback(feedback_id, request.get("sessionId"), json.dumps(record))
+            except Exception:
+                pass
+        if self._metrics:
+            self._metrics.record_feedback()
+        return {"feedbackId": feedback_id, "recorded": True, "learningDataUpdated": False}
+
+    async def get_models_v1(self):
+        return {"models": list(self._model_registry.values())}
+
+    async def put_models_v1(self, config: Dict[str, Any] = Body(...)):
+        if not isinstance(config, dict) or "modelId" not in config:
+            raise HTTPException(status_code=400, detail="Invalid model configuration")
+        mid = config["modelId"]
+        entry = self._model_registry.get(mid, {
+            "id": mid,
+            "name": mid,
+            "type": "cloud",
+            "available": False,
+            "responseTimeMs": 0,
+            "costPerToken": 0.0,
+            "accuracy": 0.0,
+        })
+        if "enabled" in config:
+            entry["available"] = bool(config["enabled"]) or entry.get("available", False)
+        if "priority" in config:
+            entry["priority"] = config["priority"]
+        if "configuration" in config and isinstance(config["configuration"], dict):
+            entry["configuration"] = config["configuration"]
+        self._model_registry[mid] = entry
+        return {"status": "ok"}
+
+    async def get_metrics_v1(self, timeRange: str = "day", sessionId: Optional[str] = None):
+        if self._metrics:
+            return self._metrics.snapshot(time_range=timeRange, session_id=sessionId)
+        # Fallback if metrics unavailable
+        return {"timeRange": timeRange, "totalSessions": len(self._session_store), "averageAccuracy": 0.0, "errorReduction": 0.0, "averageProcessingTime": 0, "modelPerformance": {}, "costSummary": {}, "userSatisfaction": 0.0}
+    
+    # ------------------------------
+    # Annotation endpoints
+    # ------------------------------
+    
+    async def post_annotation(self, annotation_data: Dict[str, Any] = Body(...)):
+        """Save a correction annotation."""
+        if not self._annotation_store or not CorrectionAnnotation:
+            raise HTTPException(status_code=501, detail="Annotation system not available")
+        
+        try:
+            # Validate and create annotation
+            annotation = CorrectionAnnotation.model_validate(annotation_data)
+            
+            # Save to store
+            success = self._annotation_store.save_annotation(annotation)
+            
+            if success:
+                return {"status": "success", "annotation_id": annotation.annotation_id}
+            else:
+                raise HTTPException(status_code=500, detail="Failed to save annotation")
+                
+        except Exception as e:
+            self.logger.error(f"Failed to save annotation: {e}")
+            raise HTTPException(status_code=400, detail=str(e))
+    
+    async def get_annotations_by_song(self, audio_hash: str):
+        """Get all annotations for a specific song."""
+        if not self._annotation_store:
+            raise HTTPException(status_code=501, detail="Annotation system not available")
+        
+        try:
+            annotations = self._annotation_store.get_annotations_by_song(audio_hash)
+            return {
+                "audio_hash": audio_hash,
+                "count": len(annotations),
+                "annotations": [a.model_dump() for a in annotations]
+            }
+        except Exception as e:
+            self.logger.error(f"Failed to get annotations: {e}")
+            raise HTTPException(status_code=500, detail=str(e))
+    
+    async def get_annotation_stats(self):
+        """Get aggregated statistics from all annotations."""
+        if not self._annotation_store:
+            raise HTTPException(status_code=501, detail="Annotation system not available")
+        
+        try:
+            stats = self._annotation_store.get_statistics()
+            return stats.model_dump()
+        except Exception as e:
+            self.logger.error(f"Failed to get annotation statistics: {e}")
+            raise HTTPException(status_code=500, detail=str(e))
 
     def _update_correction_result(self, base_result: CorrectionResult, updated_data: Dict[str, Any]) -> CorrectionResult:
         """Update a CorrectionResult with new correction data."""

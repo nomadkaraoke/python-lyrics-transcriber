@@ -1,4 +1,4 @@
-import { CorrectionData } from './types';
+import { CorrectionData, CorrectionAnnotation } from './types';
 import { validateCorrectionData } from './validation';
 
 // New file to handle API communication
@@ -11,6 +11,8 @@ export interface ApiClient {
     updateHandlers: (enabledHandlers: string[]) => Promise<CorrectionData>;
     isUpdatingHandlers?: boolean;
     addLyrics: (source: string, lyrics: string) => Promise<CorrectionData>;
+    submitAnnotations: (annotations: Omit<CorrectionAnnotation, 'annotation_id' | 'timestamp'>[]) => Promise<void>;
+    getAnnotationStats: () => Promise<any>;
 }
 
 // Add new interface for the minimal update payload
@@ -164,6 +166,32 @@ export class LiveApiClient implements ApiClient {
 
         return validateCorrectionData(data.data);
     }
+
+    async submitAnnotations(annotations: Omit<CorrectionAnnotation, 'annotation_id' | 'timestamp'>[]): Promise<void> {
+        // Submit each annotation to the backend
+        for (const annotation of annotations) {
+            const response = await fetch(`${this.baseUrl}/v1/annotations`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(annotation)
+            });
+
+            if (!response.ok) {
+                console.error(`Failed to submit annotation:`, annotation);
+                // Continue with other annotations even if one fails
+            }
+        }
+    }
+
+    async getAnnotationStats(): Promise<any> {
+        const response = await fetch(`${this.baseUrl}/v1/annotations/stats`);
+        if (!response.ok) {
+            throw new Error(`API error: ${response.statusText}`);
+        }
+        return await response.json();
+    }
 }
 
 export class FileOnlyClient implements ApiClient {
@@ -196,6 +224,15 @@ export class FileOnlyClient implements ApiClient {
     }
 
     async addLyrics(): Promise<CorrectionData> {
+        throw new Error('Not supported in file-only mode');
+    }
+
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    async submitAnnotations(_annotations: Omit<CorrectionAnnotation, 'annotation_id' | 'timestamp'>[]): Promise<void> {
+        throw new Error('Not supported in file-only mode');
+    }
+
+    async getAnnotationStats(): Promise<any> {
         throw new Error('Not supported in file-only mode');
     }
 }

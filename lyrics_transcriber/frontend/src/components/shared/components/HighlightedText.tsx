@@ -182,7 +182,8 @@ export function HighlightedText({
                                 originalWord: correction.original_word,
                                 handler: correction.handler,
                                 confidence: correction.confidence,
-                                source: correction.source
+                                source: correction.source,
+                                reason: correction.reason
                             } : null;
                         })()}
                     />
@@ -221,7 +222,8 @@ export function HighlightedText({
                                 originalWord: correction.original_word,
                                 handler: correction.handler,
                                 confidence: correction.confidence,
-                                source: correction.source
+                                source: correction.source,
+                                reason: correction.reason
                             } : null;
 
                             return (

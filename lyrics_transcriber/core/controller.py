@@ -11,6 +11,7 @@ from lyrics_transcriber.lyrics.base_lyrics_provider import BaseLyricsProvider, L
 from lyrics_transcriber.lyrics.genius import GeniusProvider
 from lyrics_transcriber.lyrics.spotify import SpotifyProvider
 from lyrics_transcriber.lyrics.musixmatch import MusixmatchProvider
+from lyrics_transcriber.lyrics.lrclib import LRCLIBProvider
 from lyrics_transcriber.output.generator import OutputGenerator
 from lyrics_transcriber.correction.corrector import LyricsCorrector
 from lyrics_transcriber.core.config import TranscriberConfig, LyricsConfig, OutputConfig
@@ -230,6 +231,10 @@ class LyricsTranscriber:
             self.logger.debug(f"Initializing File lyrics provider with file: {provider_config.lyrics_file}")
             providers["file"] = FileProvider(config=provider_config, logger=self.logger)
             return providers
+
+        # LRCLIB - always enabled (no API key required)
+        self.logger.debug("Initializing LRCLIB lyrics provider")
+        providers["lrclib"] = LRCLIBProvider(config=provider_config, logger=self.logger)
 
         if provider_config.genius_api_token:
             self.logger.debug("Initializing Genius lyrics provider")

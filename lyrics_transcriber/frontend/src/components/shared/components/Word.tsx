@@ -62,7 +62,17 @@ export const WordComponent = React.memo(function Word({
             <>
                 <strong>Original:</strong> "{correction.originalWord}"<br />
                 <strong>Corrected by:</strong> {correction.handler}<br />
-                <strong>Source:</strong> {correction.source}
+                <strong>Source:</strong> {correction.source}<br />
+                {correction.reason && (
+                    <>
+                        <strong>Reason:</strong> {correction.reason}<br />
+                    </>
+                )}
+                {correction.confidence !== undefined && correction.confidence > 0 && (
+                    <>
+                        <strong>Confidence:</strong> {(correction.confidence * 100).toFixed(0)}%<br />
+                    </>
+                )}
             </>
         )
         

@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Paper, Typography, Box, IconButton } from '@mui/material'
+import { Paper, Typography, Box, IconButton, ToggleButton, ToggleButtonGroup } from '@mui/material'
 import { TranscriptionViewProps } from './shared/types'
 import { HighlightedText } from './shared/components/HighlightedText'
 import { styled } from '@mui/material/styles'
@@ -7,7 +7,10 @@ import SegmentDetailsModal from './SegmentDetailsModal'
 import { TranscriptionWordPosition } from './shared/types'
 import PlayCircleOutlineIcon from '@mui/icons-material/PlayCircleOutline'
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline'
+import TextFieldsIcon from '@mui/icons-material/TextFields'
+import TimelineIcon from '@mui/icons-material/Timeline'
 import { deleteSegment } from './shared/utils/segmentOperations'
+import DurationTimelineView from './DurationTimelineView'
 
 const SegmentIndex = styled(Typography)(({ theme }) => ({
     color: theme.palette.text.secondary,
@@ -54,6 +57,7 @@ export default function TranscriptionView({
     onDataChange
 }: TranscriptionViewProps) {
     const [selectedSegmentIndex, setSelectedSegmentIndex] = useState<number | null>(null)
+    const [viewMode, setViewMode] = useState<'text' | 'duration'>('text')
 
     const handleDeleteSegment = (segmentIndex: number) => {
         if (onDataChange) {
@@ -68,7 +72,60 @@ export default function TranscriptionView({
                 <Typography variant="h6" sx={{ fontSize: '0.9rem', mb: 0 }}>
                     Corrected Transcription
                 </Typography>
+                <ToggleButtonGroup
+                    value={viewMode}
+                    exclusive
+                    onChange={(_, newMode) => newMode && setViewMode(newMode)}
+                    size="small"
+                    aria-label="view mode"
+                    sx={{
+                        '& .MuiToggleButton-root': {
+                            px: 1.5,
+                            py: 0.5,
+                            fontSize: '0.75rem'
+                        },
+                        '& .MuiToggleButton-root.Mui-selected': {
+                            backgroundColor: 'primary.main',
+                            color: 'white',
+                            '&:hover': {
+                                backgroundColor: 'primary.dark'
+                            }
+                        }
+                    }}
+                >
+                    <ToggleButton value="text" aria-label="text view">
+                        <TextFieldsIcon fontSize="small" sx={{ mr: 0.5 }} />
+                        <span>Text</span>
+                    </ToggleButton>
+                    <ToggleButton value="duration" aria-label="duration view">
+                        <TimelineIcon fontSize="small" sx={{ mr: 0.5 }} />
+                        <span>Timeline</span>
+                    </ToggleButton>
+                </ToggleButtonGroup>
             </Box>
+            {viewMode === 'duration' ? (
+                <DurationTimelineView
+                    segments={data.corrected_segments}
+                    corrections={data.corrections || []}
+                    anchors={data.anchor_sequences || []}
+                    gaps={data.gap_sequences || []}
+                    onWordClick={(wordId) => {
+                        // Find word in segments
+                        for (const segment of data.corrected_segments) {
+                            const word = segment.words.find(w => w.id === wordId)
+                            if (word) {
+                                onWordClick?.({
+                                    word_id: wordId,
+                                    type: 'other',
+                                    anchor: undefined,
+                                    gap: undefined
+                                })
+                                break
+                            }
+                        }
+                    }}
+                />
+            ) : (
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.2 }}>
                 {data.corrected_segments.map((segment, segmentIndex) => {
                     const segmentWords: TranscriptionWordPosition[] = segment.words.map(word => {
@@ -186,6 +243,7 @@ export default function TranscriptionView({
                     )
                 })}
             </Box>
+            )}
 
             <SegmentDetailsModal
                 open={selectedSegmentIndex !== null}

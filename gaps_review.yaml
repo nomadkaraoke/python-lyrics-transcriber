@@ -1,0 +1,1642 @@
+# Gap Review Data for Manual Annotation
+# Total gaps: 23
+#
+# For each gap, fill in the annotations section:
+#   your_decision: Brief description of what should happen
+#   action_type: NO_ACTION | REPLACE | DELETE | INSERT | MERGE | SPLIT
+#   target_word_ids: Which word IDs to operate on (from transcribed_words)
+#   replacement_text: The corrected text (if applicable)
+#   notes: Any additional reasoning or context
+#
+
+gaps:
+- gap_id: 1
+  position: 7
+  preceding_words: "<song_start> Oh no, was it worth it?\n\n Starting"
+  gap_text: "out, I'm starting over\n I'm"
+  following_words: "gonna sleep\n With the next person I meet\n\n Starting out,"
+  transcribed_words:
+  - id: 7r7unm
+    text: out,
+    start_time: 17.58
+    end_time: 17.98
+  - id: cnbg67
+    text: I'm
+    start_time: 18.06
+    end_time: 18.761
+  - id: kwrlod
+    text: starting
+    start_time: 18.861
+    end_time: 19.361
+  - id: ct4j6c
+    text: 'over
+
+      '
+    start_time: 19.421
+    end_time: 20.001
+  - id: axfivk
+    text: I'm
+    start_time: 20.941
+    end_time: 21.401
+  reference_contexts:
+    lrclib: Oh no, was it worth it? Starting now I'm starting over I'm gonna sleep With the next person I meet Starting now
+      I'm starting over You swore "together forever" Now you're telling me lies Tell me
+    genius: it? Starting now I'm starting over I'm gonna sleep With the next person I meet Starting now I'm starting over
+      You swore "together forever" Now you're telling lies Tell me your words have got No concept of time [Chorus 1] Tick
+    spotify: Oh no, was it worth it? Starting now I'm starting over I'm gonna sleep with the next person I meet Starting now
+      I'm starting over You swore "together forever" Now you're telling me lies Tell me
+  word_count: 5
+  annotations:
+    your_decision: 'Replace the word "out" with "now"'
+    action_type: 'REPLACE'
+    target_word_ids: ['7r7unm']
+    replacement_text: 'now'
+    notes: 'Since the rest of the words in the gap match the reference lyrics, and "out" sounds similar to "now", this was likely just a simple/common transcription error.'
+
+- gap_id: 2
+  position: 21
+  preceding_words: "I'm gonna sleep\n With the next person I meet\n\n Starting"
+  gap_text: out, I'm
+  following_words: "starting over\n You swore together forever\n Now you're telling lies\n"
+  transcribed_words:
+  - id: 4kej9x
+    text: out,
+    start_time: 32.141
+    end_time: 32.521
+  - id: 2fa6he
+    text: I'm
+    start_time: 32.581
+    end_time: 33.041
+  reference_contexts:
+    lrclib: I'm starting over I'm gonna sleep With the next person I meet Starting now I'm starting over You swore "together
+      forever" Now you're telling me lies Tell me your words have got No concept of time Tick tock, you're not a
+    genius: swore "together forever" Now you're telling lies Tell me your words have got No concept of time [Chorus 1] Tick
+      tock, you're not a clock You're a time bomb baby Tick tock, you're not a clock You're a time bomb baby
+    spotify: I'm starting over I'm gonna sleep with the next person I meet Starting now I'm starting over You swore "together
+      forever" Now you're telling me lies Tell me your words have got no concept of time Tick tock, you're not a
+  word_count: 2
+  annotations:
+    your_decision: 'Replace the word "out" with "now"'
+    action_type: 'REPLACE'
+    target_word_ids: ['4kej9x']
+    replacement_text: 'now'
+    notes: 'Since the rest of the words in the gap match the reference lyrics, and "out" sounds similar to "now", this was likely just a simple/common transcription error.'
+
+- gap_id: 3
+  position: 30
+  preceding_words: "Starting out, I'm starting over\n You swore together forever\n Now"
+  gap_text: "you're telling lies\n Well,"
+  following_words: "tell me your words\n They got no, they got no"
+  transcribed_words:
+  - id: 4ko5wa
+    text: you're
+    start_time: 38.261
+    end_time: 38.621
+  - id: 3aaucs
+    text: telling
+    start_time: 38.681
+    end_time: 39.121
+  - id: t3hsyb
+    text: 'lies
+
+      '
+    start_time: 39.161
+    end_time: 40.021
+  - id: hz8ca1
+    text: Well,
+    start_time: 40.501
+    end_time: 40.681
+  reference_contexts:
+    lrclib: With the next person I meet Starting now I'm starting over You swore "together forever" Now you're telling me
+      lies Tell me your words have got No concept of time Tick tock, you're not a clock You're a time bomb baby
+    genius: your words have got No concept of time [Chorus 1] Tick tock, you're not a clock You're a time bomb baby Tick tock,
+      you're not a clock You're a time bomb baby Oh no, was it worth it? Was it worth
+    spotify: with the next person I meet Starting now I'm starting over You swore "together forever" Now you're telling me
+      lies Tell me your words have got no concept of time Tick tock, you're not a clock You're a time bomb baby
+  word_count: 4
+  annotations:
+    your_decision: 'No action needed - this gap is already correct'
+    action_type: 'NO_ACTION'
+    target_word_ids: []
+    replacement_text: ''
+    notes: 'The second reference lyrics source shows the lyrics as "Now youre telling lies" without the extra word "me", so this is just one of many examples where the internet lyrics are imperfect and different lyrics sources contradict each other. If any one of the reference lyrics sources matches the transcription for a given gap, we can assume the gap is correct.'
+
+- gap_id: 4
+  position: 38
+  preceding_words: "forever\n Now you're telling lies\n Well, tell me your words\n"
+  gap_text: They got no, they
+  following_words: "got no concept of time\n\n Tick- tock, you're not a"
+  transcribed_words:
+  - id: 6ovhpd
+    text: They
+    start_time: 42.541
+    end_time: 42.761
+  - id: ujuoy1
+    text: got
+    start_time: 42.801
+    end_time: 43.161
+  - id: do53h2
+    text: no,
+    start_time: 43.241
+    end_time: 43.721
+  - id: xibt1c
+    text: they
+    start_time: 44.121
+    end_time: 44.341
+  reference_contexts:
+    lrclib: I meet Starting now I'm starting over You swore "together forever" Now you're telling me lies Tell me your words
+      have got No concept of time Tick tock, you're not a clock You're a time bomb baby Oh no, was it
+    genius: of time [Chorus 1] Tick tock, you're not a clock You're a time bomb baby Tick tock, you're not a clock You're
+      a time bomb baby Oh no, was it worth it? Was it worth what you did to big business?
+    spotify: I meet Starting now I'm starting over You swore "together forever" Now you're telling me lies Tell me your words
+      have got no concept of time Tick tock, you're not a clock You're a time bomb baby Oh no, was it
+  word_count: 4
+  annotations:
+    your_decision: 'No action needed - this gap is already correct'
+    action_type: 'NO_ACTION'
+    target_word_ids: []
+    replacement_text: ''
+    notes: 'The second reference lyrics source includes the lyrics "They got no, they got no concept of time", so this is just one of many examples where the internet lyrics are imperfect and different lyrics sources contradict each other. If any one of the reference lyrics sources matches the transcription for a given gap, we can assume the gap is correct.'
+
+- gap_id: 5
+  position: 47
+  preceding_words: "words\n They got no, they got no concept of time\n\n"
+  gap_text: Tick- tock, you're
+  following_words: "not a clock\n You're a time bomb, baby\n You're a"
+  transcribed_words:
+  - id: nfl37c
+    text: Tick-
+    start_time: 46.641
+    end_time: 46.981
+  - id: 8z4jmb
+    text: tock,
+    start_time: 47.061
+    end_time: 47.501
+  - id: vwsgw8
+    text: you're
+    start_time: 47.541
+    end_time: 47.761
+  reference_contexts:
+    lrclib: I'm starting over You swore "together forever" Now you're telling me lies Tell me your words have got No concept
+      of time Tick tock, you're not a clock You're a time bomb baby Oh no, was it worth it? Was it
+    genius: you're not a clock You're a time bomb baby Tick tock, you're not a clock You're a time bomb baby Oh no, was it
+      worth it? Was it worth what you did to big business? Was it worth what your friends
+    spotify: I'm starting over You swore "together forever" Now you're telling me lies Tell me your words have got no concept
+      of time Tick tock, you're not a clock You're a time bomb baby Oh no, was it worth it? Was it
+  word_count: 3
+  annotations:
+    your_decision: 'No action needed - this gap is already correct'
+    action_type: 'NO_ACTION'
+    target_word_ids: []
+    replacement_text: ''
+    notes: 'This is just a stylistic difference between the transcription which included a hyphen in "Tick- tock" and the reference lyrics which did not. We should ignore punctuation / symbols when comparing transcription vs. reference lyrics.'
+
+- gap_id: 6
+  position: 53
+  preceding_words: "no concept of time\n\n Tick- tock, you're not a clock\n"
+  gap_text: "You're a time bomb, baby\n You're"
+  following_words: "a time bomb, baby, oh\n Tick- tock, you're not a"
+  transcribed_words:
+  - id: cr0hhc
+    text: You're
+    start_time: 48.681
+    end_time: 48.901
+  - id: rkr4s1
+    text: a
+    start_time: 48.961
+    end_time: 49.061
+  - id: rb940p
+    text: time
+    start_time: 49.121
+    end_time: 49.481
+  - id: r51lk8
+    text: bomb,
+    start_time: 49.801
+    end_time: 50.101
+  - id: 7qs0de
+    text: 'baby
+
+      '
+    start_time: 50.281
+    end_time: 50.701
+  - id: 7hui4k
+    text: You're
+    start_time: 50.741
+    end_time: 50.901
+  reference_contexts:
+    lrclib: starting over You swore "together forever" Now you're telling me lies Tell me your words have got No concept of
+      time Tick tock, you're not a clock You're a time bomb baby Oh no, was it worth it? Was it worth
+    genius: clock You're a time bomb baby Tick tock, you're not a clock You're a time bomb baby Oh no, was it worth it? Was
+      it worth what you did to big business? Was it worth what your friends put up their
+    spotify: starting over You swore "together forever" Now you're telling me lies Tell me your words have got no concept
+      of time Tick tock, you're not a clock You're a time bomb baby Oh no, was it worth it? Was it worth
+  word_count: 6
+  annotations:
+    your_decision: 'Flag for human review via the UI'
+    action_type: 'FLAG'
+    target_word_ids: []
+    replacement_text: ''
+    notes: The reference lyrics don't include a repeat of "You're a time bomb, baby" but we can't say for sure if it's correct or not without listening to the song audio. Mark this segment for human review.
+
+- gap_id: 7
+  position: 64
+  preceding_words: "a time bomb, baby\n You're a time bomb, baby, oh\n"
+  gap_text: "Tick- tock, you're not a clock\n You're a time bomb, baby\n You're a time, uh, uh, uh\n\n"
+  following_words: "Oh no, was it worth it?\n\n Was it worth it?"
+  transcribed_words:
+  - id: 1756d5
+    text: Tick-
+    start_time: 53.481
+    end_time: 53.841
+  - id: zej6ul
+    text: tock,
+    start_time: 54.141
+    end_time: 54.462
+  - id: 82idcj
+    text: you're
+    start_time: 54.802
+    end_time: 55.022
+  - id: 6banxj
+    text: not
+    start_time: 55.062
+    end_time: 55.322
+  - id: txb1ym
+    text: a
+    start_time: 55.342
+    end_time: 55.422
+  - id: 3uptib
+    text: 'clock
+
+      '
+    start_time: 55.482
+    end_time: 55.882
+  - id: anfhv5
+    text: You're
+    start_time: 55.962
+    end_time: 56.202
+  - id: 7i4649
+    text: a
+    start_time: 56.262
+    end_time: 56.362
+  - id: m5bzuw
+    text: time
+    start_time: 56.402
+    end_time: 56.762
+  - id: to24ok
+    text: bomb,
+    start_time: 57.082
+    end_time: 57.502
+  - id: wwn9we
+    text: 'baby
+
+      '
+    start_time: 57.542
+    end_time: 58.002
+  - id: wcjjbe
+    text: You're
+    start_time: 58.042
+    end_time: 58.162
+  - id: a7b7sl
+    text: a
+    start_time: 58.182
+    end_time: 58.202
+  - id: 8m37q9
+    text: time,
+    start_time: 58.222
+    end_time: 58.642
+  - id: 30vfav
+    text: uh,
+    start_time: 58.942
+    end_time: 59.162
+  - id: vi62mc
+    text: uh,
+    start_time: 59.382
+    end_time: 59.602
+  - id: x0rj49
+    text: 'uh
+
+
+      '
+    start_time: 59.842
+    end_time: 60.062
+  reference_contexts:
+    lrclib: forever" Now you're telling me lies Tell me your words have got No concept of time Tick tock, you're not a clock
+      You're a time bomb baby Oh no, was it worth it? Was it worth what you did to big
+    genius: Tick tock, you're not a clock You're a time bomb baby Oh no, was it worth it? Was it worth what you did to big
+      business? Was it worth what your friends put up their noses? Starting now I'm starting over
+    spotify: forever" Now you're telling me lies Tell me your words have got no concept of time Tick tock, you're not a clock
+      You're a time bomb baby Oh no, was it worth it? Was it worth what you did to big
+  word_count: 17
+  annotations:
+    your_decision: 'Flag for human review via the UI'
+    action_type: 'FLAG'
+    target_word_ids: []
+    replacement_text: ''
+    notes: The reference lyrics don't include a repeat of "You're a time" but we can't say for sure if it's correct or not without listening to the song audio. Mark this segment for human review.
+
+- gap_id: 8
+  position: 90
+  preceding_words: "uh\n\n Oh no, was it worth it?\n\n Was it worth"
+  gap_text: 'it? (Big business)
+
+    '
+  following_words: "Was it worth it? (Was it worth it?)\n Was it"
+  transcribed_words:
+  - id: c889w5
+    text: it?
+    start_time: 70.082
+    end_time: 70.502
+  - id: ahxj8s
+    text: (Big
+    start_time: 70.702
+    end_time: 70.922
+  - id: tsm3zf
+    text: 'business)
+
+      '
+    start_time: 70.962
+    end_time: 71.622
+  reference_contexts:
+    lrclib: time Tick tock, you're not a clock You're a time bomb baby Oh no, was it worth it? Was it worth what you did to
+      big business? Was it worth what your friends Put up their noses? Starting now I'm starting
+    genius: big business? Was it worth what your friends put up their noses? Starting now I'm starting over (stop it) Tell
+      the new wave kids their make-up kits Can find me where self pity gets A breath of fresh air [Chorus 1]
+    spotify: time Tick tock, you're not a clock You're a time bomb baby Oh no, was it worth it? Was it worth what you did
+      to big business? Was it worth what your friends put up their noses? Starting now I'm starting
+  word_count: 3
+  annotations:
+    your_decision: 'Remove the words in parentheses (Big business)'
+    action_type: 'DELETE'
+    target_word_ids: [ahxj8s, tsm3zf]
+    replacement_text: ''
+    notes: The words in parentheses are not in the reference lyrics, and it's common for the transcription to include background vocals in parentheses. For our karaoke use case, it's almost always best to just remove those backing vocals from the transcribed lyrics.
+
+- gap_id: 9
+  position: 97
+  preceding_words: "Was it worth it? (Big business)\n Was it worth it?"
+  gap_text: "(Was it worth it?)\n Was"
+  following_words: "it worth it? (Your friends)\n Put up their noses\n\n So"
+  transcribed_words:
+  - id: 822m7n
+    text: (Was
+    start_time: 72.262
+    end_time: 72.602
+  - id: 0dtaiz
+    text: it
+    start_time: 72.642
+    end_time: 72.882
+  - id: zcs9tq
+    text: worth
+    start_time: 72.942
+    end_time: 73.482
+  - id: ipp5bj
+    text: 'it?)
+
+      '
+    start_time: 73.862
+    end_time: 73.982
+  - id: 5lctsr
+    text: Was
+    start_time: 74.082
+    end_time: 74.362
+  reference_contexts:
+    lrclib: tock, you're not a clock You're a time bomb baby Oh no, was it worth it? Was it worth what you did to big business?
+      Was it worth what your friends Put up their noses? Starting now I'm starting over Tell
+    genius: worth what your friends put up their noses? Starting now I'm starting over (stop it) Tell the new wave kids their
+      make-up kits Can find me where self pity gets A breath of fresh air [Chorus 1] Tick tock, you're not
+    spotify: tock, you're not a clock You're a time bomb baby Oh no, was it worth it? Was it worth what you did to big business?
+      Was it worth what your friends put up their noses? Starting now I'm starting over Tell
+  word_count: 5
+  annotations:
+    your_decision: 'Remove the words in parentheses (Was it worth it?)'
+    action_type: 'DELETE'
+    target_word_ids: [822m7n, 0dtaiz, zcs9tq, ipp5bj]
+    replacement_text: ''
+    notes: The words in parentheses are not in the reference lyrics, and it's common for the transcription to include background vocals in parentheses. For our karaoke use case, it's almost always best to just remove those backing vocals from the transcribed lyrics.
+
+- gap_id: 10
+  position: 105
+  preceding_words: "worth it? (Was it worth it?)\n Was it worth it?"
+  gap_text: '(Your friends)
+
+    '
+  following_words: "Put up their noses\n\n So starting out, starting over (stop"
+  transcribed_words:
+  - id: le2n4a
+    text: (Your
+    start_time: 76.302
+    end_time: 76.482
+  - id: nu1ajp
+    text: 'friends)
+
+      '
+    start_time: 76.602
+    end_time: 77.262
+  reference_contexts:
+    lrclib: a clock You're a time bomb baby Oh no, was it worth it? Was it worth what you did to big business? Was it worth
+      what your friends Put up their noses? Starting now I'm starting over Tell the new wave
+    genius: up their noses? Starting now I'm starting over (stop it) Tell the new wave kids their make-up kits Can find me
+      where self pity gets A breath of fresh air [Chorus 1] Tick tock, you're not a clock You're a time
+    spotify: a clock You're a time bomb baby Oh no, was it worth it? Was it worth what you did to big business? Was it worth
+      what your friends put up their noses? Starting now I'm starting over Tell the new wave
+  word_count: 2
+  annotations:
+    your_decision: 'Rewrite the segment to match the second reference lyrics source'
+    action_type: 'REPLACE'
+    target_word_ids: ['??? the word it? in the preceding words',le2n4a, nu1ajp]
+    replacement_text: 'what your friends'
+    notes: This is a tricky case, where the transcription confuses part of the primary lyrics for backing vocals, putting them in parentheses. The reference lyrics include the full phrase "Was it worth what your friends put up their noses?", which I believe should replace this portion of the transcription: "Was it worth it? (Your friends) Put up their noses".
+
+- gap_id: 11
+  position: 111
+  preceding_words: "Was it worth it? (Your friends)\n Put up their noses\n\n"
+  gap_text: "So starting out, starting over (stop it)\n Well, tell the new- ed kids\n Their makeup kid"
+  following_words: "can find me where\n Self- pity gets a breath of"
+  transcribed_words:
+  - id: 594irc
+    text: So
+    start_time: 81.802
+    end_time: 81.962
+  - id: i2b5gx
+    text: starting
+    start_time: 82.002
+    end_time: 82.502
+  - id: oznjzu
+    text: out,
+    start_time: 82.582
+    end_time: 82.902
+  - id: 4mdmdk
+    text: starting
+    start_time: 82.942
+    end_time: 83.442
+  - id: j2grjo
+    text: over
+    start_time: 83.502
+    end_time: 84.222
+  - id: equoe5
+    text: (stop
+    start_time: 84.262
+    end_time: 84.482
+  - id: qtg1uy
+    text: 'it)
+
+      '
+    start_time: 84.502
+    end_time: 84.582
+  - id: 59a0lv
+    text: Well,
+    start_time: 84.622
+    end_time: 84.802
+  - id: c2a7jl
+    text: tell
+    start_time: 84.822
+    end_time: 85.082
+  - id: b0zt2i
+    text: the
+    start_time: 85.102
+    end_time: 85.402
+  - id: 045uc5
+    text: new-
+    start_time: 85.522
+    end_time: 85.962
+  - id: fzqol5
+    text: ed
+    start_time: 86.022
+    end_time: 86.342
+  - id: t0pm2x
+    text: 'kids
+
+      '
+    start_time: 86.422
+    end_time: 86.822
+  - id: vjt8s5
+    text: Their
+    start_time: 86.882
+    end_time: 87.262
+  - id: pfdpny
+    text: makeup
+    start_time: 87.322
+    end_time: 88.142
+  - id: 7p8pvo
+    text: kid
+    start_time: 88.242
+    end_time: 88.502
+  reference_contexts:
+    lrclib: bomb baby Oh no, was it worth it? Was it worth what you did to big business? Was it worth what your friends Put
+      up their noses? Starting now I'm starting over Tell the new wave kids their make-up kits Can
+    genius: (stop it) Tell the new wave kids their make-up kits Can find me where self pity gets A breath of fresh air [Chorus
+      1] Tick tock, you're not a clock You're a time bomb baby Tick tock, you're not a clock
+    spotify: bomb baby Oh no, was it worth it? Was it worth what you did to big business? Was it worth what your friends put
+      up their noses? Starting now I'm starting over Tell the new wave kids their make-up kits can
+  word_count: 16
+  annotations:
+    your_decision: 'Delete the words in parentheses (stop it), replace "ed" with "wave" and replace "kid" with "kits"'
+    action_type: 'DELETE (equoe5, qtg1uy) and REPLACE (fzqol5, 7p8pvo)'
+    target_word_ids: [equoe5, qtg1uy, fzqol5, 7p8pvo]
+    replacement_text: 'wave, kits'
+    notes: The reference lyrics say "Starting now I'm starting over Tell the new wave kids their make-up kits". This is a case where the transcription has some background vocal lyrics in parentheses, which we should remove, but it also has some simple mis-heard words which we need to correct with replacements.
+
+- gap_id: 12
+  position: 131
+  preceding_words: "new- ed kids\n Their makeup kid can find me where\n"
+  gap_text: Self-
+  following_words: "pity gets a breath of fresh air\n\n Tick- tock, you're"
+  transcribed_words:
+  - id: 6kr6mv
+    text: Self-
+    start_time: 91.583
+    end_time: 92.023
+  reference_contexts:
+    lrclib: it worth what you did to big business? Was it worth what your friends Put up their noses? Starting now I'm starting
+      over Tell the new wave kids their make-up kits Can find me where self pity gets A breath of
+    genius: self pity gets A breath of fresh air [Chorus 1] Tick tock, you're not a clock You're a time bomb baby Tick tock,
+      you're not a clock You're a time bomb baby [Chorus 2] You set the watch You're just in
+    spotify: it worth what you did to big business? Was it worth what your friends put up their noses? Starting now I'm starting
+      over Tell the new wave kids their make-up kits can find me where self pity gets a breath of
+  word_count: 1
+  annotations:
+    your_decision: 'No action needed - this gap is already correct'
+    action_type: 'NO_ACTION'
+    target_word_ids: []
+    replacement_text: ''
+    notes: 'This is just a stylistic difference between the transcription which included a hyphen in "Self- pity" and the reference lyrics which did not. We should ignore punctuation / symbols when comparing transcription vs. reference lyrics.'
+
+- gap_id: 13
+  position: 139
+  preceding_words: "me where\n Self- pity gets a breath of fresh air\n\n"
+  gap_text: "Tick- tock, you're not a clock\n You're a time bomb, baby\n You're a"
+  following_words: "time bomb, baby, oh\n Tick- tock, you're not a clock\n"
+  transcribed_words:
+  - id: 03skcm
+    text: Tick-
+    start_time: 98.943
+    end_time: 99.343
+  - id: 5k3cwt
+    text: tock,
+    start_time: 99.383
+    end_time: 99.723
+  - id: 6zwyou
+    text: you're
+    start_time: 100.283
+    end_time: 100.503
+  - id: jgtmd3
+    text: not
+    start_time: 100.543
+    end_time: 100.783
+  - id: ons3tb
+    text: a
+    start_time: 100.823
+    end_time: 100.863
+  - id: 4fkegu
+    text: 'clock
+
+      '
+    start_time: 100.923
+    end_time: 101.323
+  - id: euxsv2
+    text: You're
+    start_time: 101.443
+    end_time: 101.663
+  - id: t8mt7p
+    text: a
+    start_time: 101.703
+    end_time: 101.803
+  - id: e9y9ff
+    text: time
+    start_time: 101.883
+    end_time: 102.243
+  - id: sk9bru
+    text: bomb,
+    start_time: 102.563
+    end_time: 102.843
+  - id: d2xrdm
+    text: 'baby
+
+      '
+    start_time: 103.043
+    end_time: 103.403
+  - id: vpmd02
+    text: You're
+    start_time: 103.463
+    end_time: 103.623
+  - id: xpliqw
+    text: a
+    start_time: 103.643
+    end_time: 103.663
+  reference_contexts:
+    lrclib: business? Was it worth what your friends Put up their noses? Starting now I'm starting over Tell the new wave
+      kids their make-up kits Can find me where self pity gets A breath of fresh air Tick tock, you're not a
+    genius: tock, you're not a clock You're a time bomb baby Tick tock, you're not a clock You're a time bomb baby [Chorus
+      2] You set the watch You're just in time To wreck my life To bring back what I left
+    spotify: business? Was it worth what your friends put up their noses? Starting now I'm starting over Tell the new wave
+      kids their make-up kits can find me where self pity gets a breath of fresh air Tick tock, you're not a
+  word_count: 13
+  annotations:
+    your_decision: 'Flag for human review via the UI'
+    action_type: 'FLAG'
+    target_word_ids: []
+    replacement_text: ''
+    notes: The reference lyrics don't include a repeat of "You're a time" but we can't say for sure if it's correct or not without listening to the song audio. Mark this segment for human review.
+
+- gap_id: 14
+  position: 156
+  preceding_words: "a time bomb, baby\n You're a time bomb, baby, oh\n"
+  gap_text: "Tick- tock, you're not a clock\n You're a time bomb, baby\n You're a time, uh, uh, uh\n\n And you said to watch\
+    \ it"
+  following_words: "just in time\n But to wreck my life\n To bring"
+  transcribed_words:
+  - id: kwaicw
+    text: Tick-
+    start_time: 106.183
+    end_time: 106.783
+  - id: hek1vd
+    text: tock,
+    start_time: 106.843
+    end_time: 107.163
+  - id: 30wanm
+    text: you're
+    start_time: 107.523
+    end_time: 107.763
+  - id: ix6ooj
+    text: not
+    start_time: 107.783
+    end_time: 108.023
+  - id: 6rpy7m
+    text: a
+    start_time: 108.063
+    end_time: 108.123
+  - id: ekv1ij
+    text: 'clock
+
+      '
+    start_time: 108.203
+    end_time: 108.643
+  - id: febhru
+    text: You're
+    start_time: 108.683
+    end_time: 109.043
+  - id: hks2q6
+    text: a
+    start_time: 109.063
+    end_time: 109.083
+  - id: 45bb12
+    text: time
+    start_time: 109.123
+    end_time: 109.503
+  - id: yropaw
+    text: bomb,
+    start_time: 109.823
+    end_time: 110.103
+  - id: jzdjs1
+    text: 'baby
+
+      '
+    start_time: 110.283
+    end_time: 110.663
+  - id: jorl58
+    text: You're
+    start_time: 110.723
+    end_time: 110.863
+  - id: ujflng
+    text: a
+    start_time: 110.883
+    end_time: 110.903
+  - id: 35ja8l
+    text: time,
+    start_time: 110.923
+    end_time: 111.323
+  - id: ovcqrg
+    text: uh,
+    start_time: 111.663
+    end_time: 111.883
+  - id: p1hp9j
+    text: uh,
+    start_time: 112.103
+    end_time: 112.323
+  - id: 5tpmn1
+    text: 'uh
+
+
+      '
+    start_time: 112.563
+    end_time: 112.803
+  - id: doersg
+    text: And
+    start_time: 113.103
+    end_time: 113.183
+  - id: x3ud8k
+    text: you
+    start_time: 113.203
+    end_time: 113.363
+  - id: l98foj
+    text: said
+    start_time: 113.423
+    end_time: 113.643
+  - id: qw5ryy
+    text: to
+    start_time: 113.683
+    end_time: 113.843
+  - id: otmqpf
+    text: watch
+    start_time: 113.883
+    end_time: 114.343
+  - id: 4uzknd
+    text: it
+    start_time: 114.403
+    end_time: 114.563
+  reference_contexts:
+    lrclib: friends Put up their noses? Starting now I'm starting over Tell the new wave kids their make-up kits Can find
+      me where self pity gets A breath of fresh air Tick tock, you're not a clock You're a time bomb baby
+    genius: Tick tock, you're not a clock You're a time bomb baby [Chorus 2] You set the watch You're just in time To wreck
+      my life To bring back what I left behind [Chorus 1] Tick tock, you're not a clock You're
+    spotify: friends put up their noses? Starting now I'm starting over Tell the new wave kids their make-up kits can find
+      me where self pity gets a breath of fresh air Tick tock, you're not a clock You're a time bomb baby
+  word_count: 23
+  annotations:
+    your_decision: Replace "And you said to watch it" with "You set the watch You're
+    action_type: 'REPLACE'
+    target_word_ids: [doersg, x3ud8k, l98foj, qw5ryy, otmqpf, 4uzknd]
+    replacement_text: You set the watch You're
+    notes: The transcription heard "And you said to watch it just in time" but the reference lyrics say "You set the watch You're just in time" which makes more sense given the context of the song. This is another simple transcription error that we can correct with a replacement. Also the transcription is quite prone to adding the word "And" at the start of sentences when it's not needed, so the word "And" here should just be removed.
+
+- gap_id: 15
+  position: 182
+  preceding_words: "uh\n\n And you said to watch it just in time\n"
+  gap_text: But
+  following_words: "to wreck my life\n To bring back what I left"
+  transcribed_words:
+  - id: 2klcn5
+    text: But
+    start_time: 115.963
+    end_time: 116.143
+  reference_contexts:
+    lrclib: over Tell the new wave kids their make-up kits Can find me where self pity gets A breath of fresh air Tick tock,
+      you're not a clock You're a time bomb baby You set the watch You're just in time To
+    genius: set the watch You're just in time To wreck my life To bring back what I left behind [Chorus 1] Tick tock, you're
+      not a clock You're a time bomb baby Tick tock, you're not a clock You're a time bomb
+    spotify: over Tell the new wave kids their make-up kits can find me where self pity gets a breath of fresh air Tick tock,
+      you're not a clock You're a time bomb baby You set the watch You're just in time to
+  word_count: 1
+  annotations:
+    your_decision: 'Delete "But"'
+    action_type: 'DELETE'
+    target_word_ids: [2klcn5]
+    replacement_text: ''
+    notes: The transcription includes the word "But" at the start of the sentence but the reference lyrics do not. The transcription is quite prone to adding common short words like "And" or "But" at the start of sentences so when the discrepancy is just an additional common word like this which is missing from the reference lyrics, we should just remove it.
+
+- gap_id: 16
+  position: 194
+  preceding_words: "wreck my life\n To bring back what I left behind\n\n"
+  gap_text: "Tick- tock, you're not a clock\n You're a time bomb, baby\n You're a time bomb, baby\n You're a time bomb, baby\n\
+    \ You're a time, uh, uh, uh\n\n Right here, did you dance for later?\n That's what you said?\n Well, here's an answer\n\
+    \ You're out in life\n\n You have to try"
+  following_words: "to take your life\n So starting now, starting over\n I"
+  transcribed_words:
+  - id: idzo29
+    text: Tick-
+    start_time: 120.703
+    end_time: 121.063
+  - id: zjid5y
+    text: tock,
+    start_time: 121.383
+    end_time: 121.703
+  - id: zl45zi
+    text: you're
+    start_time: 122.083
+    end_time: 122.303
+  - id: uyt8v3
+    text: not
+    start_time: 122.343
+    end_time: 122.603
+  - id: km8hn3
+    text: a
+    start_time: 122.643
+    end_time: 122.683
+  - id: 67m1kh
+    text: 'clock
+
+      '
+    start_time: 122.743
+    end_time: 123.163
+  - id: mrja97
+    text: You're
+    start_time: 123.243
+    end_time: 123.463
+  - id: f0jpql
+    text: a
+    start_time: 123.543
+    end_time: 123.643
+  - id: xb6rjo
+    text: time
+    start_time: 123.683
+    end_time: 124.023
+  - id: r0qrwj
+    text: bomb,
+    start_time: 124.343
+    end_time: 124.623
+  - id: ngpebw
+    text: 'baby
+
+      '
+    start_time: 124.843
+    end_time: 125.303
+  - id: t3labw
+    text: You're
+    start_time: 125.323
+    end_time: 125.443
+  - id: jjdsd7
+    text: a
+    start_time: 125.463
+    end_time: 125.483
+  - id: mer7h0
+    text: time
+    start_time: 125.503
+    end_time: 125.843
+  - id: 24zxm7
+    text: bomb,
+    start_time: 126.163
+    end_time: 126.443
+  - id: mciyay
+    text: 'baby
+
+      '
+    start_time: 126.644
+    end_time: 127.084
+  - id: c1vlx7
+    text: You're
+    start_time: 127.124
+    end_time: 127.244
+  - id: wqf8qn
+    text: a
+    start_time: 127.264
+    end_time: 127.284
+  - id: vfclfx
+    text: time
+    start_time: 127.304
+    end_time: 127.644
+  - id: ug9ug9
+    text: bomb,
+    start_time: 128.004
+    end_time: 128.284
+  - id: 09se25
+    text: 'baby
+
+      '
+    start_time: 128.484
+    end_time: 128.764
+  - id: ntuvxh
+    text: You're
+    start_time: 128.784
+    end_time: 128.924
+  - id: mdsv1x
+    text: a
+    start_time: 128.984
+    end_time: 129.084
+  - id: u4zigm
+    text: time,
+    start_time: 129.124
+    end_time: 129.524
+  - id: 4pkefu
+    text: uh,
+    start_time: 129.824
+    end_time: 130.124
+  - id: b9btyn
+    text: uh,
+    start_time: 130.284
+    end_time: 130.584
+  - id: 4qxblp
+    text: 'uh
+
+
+      '
+    start_time: 130.744
+    end_time: 131.084
+  - id: gp9uqr
+    text: Right
+    start_time: 131.664
+    end_time: 132.064
+  - id: clzq6j
+    text: here,
+    start_time: 132.124
+    end_time: 132.364
+  - id: thffhp
+    text: did
+    start_time: 132.404
+    end_time: 132.564
+  - id: 58oy4b
+    text: you
+    start_time: 132.604
+    end_time: 132.764
+  - id: fmm2ch
+    text: dance
+    start_time: 132.804
+    end_time: 132.964
+  - id: 123mnt
+    text: for
+    start_time: 133.004
+    end_time: 133.484
+  - id: mda6bk
+    text: 'later?
+
+      '
+    start_time: 133.524
+    end_time: 133.984
+  - id: ymiw5n
+    text: That's
+    start_time: 134.144
+    end_time: 134.404
+  - id: qc4amu
+    text: what
+    start_time: 135.024
+    end_time: 135.244
+  - id: ey3uy9
+    text: you
+    start_time: 135.284
+    end_time: 135.744
+  - id: frr0d4
+    text: 'said?
+
+      '
+    start_time: 135.784
+    end_time: 136.204
+  - id: t01zvb
+    text: Well,
+    start_time: 136.864
+    end_time: 137.044
+  - id: j0oaye
+    text: here's
+    start_time: 137.084
+    end_time: 137.544
+  - id: h32kit
+    text: an
+    start_time: 137.664
+    end_time: 137.844
+  - id: ognyzu
+    text: 'answer
+
+      '
+    start_time: 137.924
+    end_time: 138.464
+  - id: zk4fbb
+    text: You're
+    start_time: 139.264
+    end_time: 140.284
+  - id: 8rssnt
+    text: out
+    start_time: 140.364
+    end_time: 141.144
+  - id: ufcumd
+    text: in
+    start_time: 141.224
+    end_time: 142.064
+  - id: agon5v
+    text: 'life
+
+
+      '
+    start_time: 142.124
+    end_time: 143.484
+  - id: fnnw3u
+    text: You
+    start_time: 143.524
+    end_time: 143.704
+  - id: 687qyq
+    text: have
+    start_time: 143.764
+    end_time: 143.944
+  - id: 7uvo0e
+    text: to
+    start_time: 143.964
+    end_time: 144.124
+  - id: xxhkml
+    text: try
+    start_time: 144.144
+    end_time: 144.524
+  reference_contexts:
+    lrclib: wave kids their make-up kits Can find me where self pity gets A breath of fresh air Tick tock, you're not a clock
+      You're a time bomb baby You set the watch You're just in time To wreck my life To
+    genius: To wreck my life To bring back what I left behind [Chorus 1] Tick tock, you're not a clock You're a time bomb
+      baby Tick tock, you're not a clock You're a time bomb baby Five years and you fell for
+    spotify: wave kids their make-up kits can find me where self pity gets a breath of fresh air Tick tock, you're not a clock
+      You're a time bomb baby You set the watch You're just in time to wreck my life to
+  word_count: 50
+  annotations:
+    your_decision: 'Flag for human review via the UI'
+    action_type: 'FLAG'
+    target_word_ids: []
+    replacement_text: ''
+    notes: This gap is a larger and more complex one, there are two things going on here. One is a common challenge where repeated sections of lyrics (e.g. chorus) are transcribed in full but may only show up once in the reference lyrics. So, this part of the gap is most likely correct (but should still be flagged for human review) "Tick- tock, you're not a clock\n You're a time bomb, baby\n You're a time bomb, baby\n You're a time bomb, baby\n\
+    \ You're a time, uh, uh, uh". Then, the second part of the gap has several transcription errors, which ideally we would want to try and correct with replacements from the reference lyrics. For example, this part of the transcription: "Right here, did you dance for later?\n That's what you said?\n Well, here's an answer\n\
+    \ You're out in life\n\n You have to try" is actually "Five years and you fell for a waiter\n I'm sure he says he's an actor\n You're acting like". There's several sound-alikes there but it's definitely a tricky one and I think if we have a gap like this it's probably best to just flag it for human review. Maybe we can figure out a better way to handle complex gaps like this in future.
+
+- gap_id: 17
+  position: 251
+  preceding_words: "have to try to take your life\n So starting now,"
+  gap_text: "starting over\n I throw a bottle shot, I take a shot\n I'm"
+  following_words: "going to sleep\n I'm going to sleep\n\n So starting now,"
+  transcribed_words:
+  - id: sjxejb
+    text: starting
+    start_time: 147.924
+    end_time: 148.724
+  - id: 9xs140
+    text: 'over
+
+      '
+    start_time: 148.764
+    end_time: 149.364
+  - id: ez9s7u
+    text: I
+    start_time: 149.584
+    end_time: 149.744
+  - id: qmj3pl
+    text: throw
+    start_time: 149.784
+    end_time: 150.104
+  - id: l34z54
+    text: a
+    start_time: 150.164
+    end_time: 150.204
+  - id: 1p1dru
+    text: bottle
+    start_time: 150.264
+    end_time: 150.724
+  - id: xhj9w3
+    text: shot,
+    start_time: 150.764
+    end_time: 151.144
+  - id: 2uo7ue
+    text: I
+    start_time: 151.424
+    end_time: 151.624
+  - id: drfjm9
+    text: take
+    start_time: 151.664
+    end_time: 151.864
+  - id: 80u3c3
+    text: a
+    start_time: 151.924
+    end_time: 152.084
+  - id: vb3mds
+    text: 'shot
+
+      '
+    start_time: 152.104
+    end_time: 152.844
+  - id: ibyri1
+    text: I'm
+    start_time: 153.844
+    end_time: 154.804
+  reference_contexts:
+    lrclib: time bomb baby You set the watch You're just in time To wreck my life To bring back what I left behind Five years
+      and you fell for a waiter I'm sure he says he's an actor So you're acting like
+    genius: fell for a waiter I'm sure he says he's an actor So you're acting like (you never tried to take your life) So
+      starting now I'm starting over I'm throwing bottles I'm taking showers I'm going to sleep I'm going to
+    spotify: time bomb baby You set the watch You're just in time to wreck my life to bring back what I left behind Five years
+      and you fell for a waiter I'm sure he says he's an actor So you're acting like
+  word_count: 12
+  annotations:
+    your_decision: Replace "I throw a bottle shot, I take a shot" with "I'm throwing bottles, I'm taking showers"
+    action_type: 'REPLACE'
+    target_word_ids: []
+    replacement_text: I'm throwing bottles, I'm taking showers
+    notes: The transcription has a few sound-alike errors here, with replacements which should hopefully be clear from the reference lyrics.
+
+- gap_id: 18
+  position: 266
+  preceding_words: "bottle shot, I take a shot\n I'm going to sleep\n"
+  gap_text: 'I''m going to sleep
+
+
+    '
+  following_words: "So starting now, starting over (stop it)\n Well, starting now,"
+  transcribed_words:
+  - id: shuyyn
+    text: I'm
+    start_time: 161.104
+    end_time: 162.084
+  - id: ssn1ma
+    text: going
+    start_time: 162.124
+    end_time: 163.365
+  - id: v8ubyh
+    text: to
+    start_time: 163.445
+    end_time: 163.925
+  - id: r6otoh
+    text: 'sleep
+
+
+      '
+    start_time: 164.525
+    end_time: 167.545
+  reference_contexts:
+    lrclib: wreck my life To bring back what I left behind Five years and you fell for a waiter I'm sure he says he's an actor
+      So you're acting like You never tried to take your life So starting now I'm starting
+    genius: take your life) So starting now I'm starting over I'm throwing bottles I'm taking showers I'm going to sleep I'm
+      going to sleep Starting now I'm starting over (stop it) Starting now I'm starting over (stop it) To play the game
+    spotify: wreck my life to bring back what I left behind Five years and you fell for a waiter I'm sure he says he's an
+      actor So you're acting like you never tried to take your life So starting now I'm starting
+  word_count: 4
+  annotations:
+    your_decision: 'No action needed - this gap is already correct'
+    action_type: 'NO_ACTION'
+    target_word_ids: []
+    replacement_text: ''
+    notes: Not really sure why this was a gap in the first place, the reference lyrics include "I'm going to sleep I'm
+      going to sleep" already.
+
+- gap_id: 19
+  position: 273
+  preceding_words: "going to sleep\n I'm going to sleep\n\n So starting now,"
+  gap_text: "starting over (stop it)\n Well, starting now, starting over (stop it)\n"
+  following_words: "To play the game\n Get even, half my age\n\n Tick-"
+  transcribed_words:
+  - id: ytol45
+    text: starting
+    start_time: 179.285
+    end_time: 179.825
+  - id: 31jzbb
+    text: over
+    start_time: 179.865
+    end_time: 180.645
+  - id: ou7h3e
+    text: (stop
+    start_time: 180.705
+    end_time: 181.085
+  - id: hjaeu7
+    text: 'it)
+
+      '
+    start_time: 181.145
+    end_time: 181.365
+  - id: ya3img
+    text: Well,
+    start_time: 181.845
+    end_time: 182.025
+  - id: yf4p3c
+    text: starting
+    start_time: 182.045
+    end_time: 182.505
+  - id: 01ta4e
+    text: now,
+    start_time: 182.565
+    end_time: 182.885
+  - id: fkeegz
+    text: starting
+    start_time: 182.945
+    end_time: 183.445
+  - id: o1ul1y
+    text: over
+    start_time: 183.505
+    end_time: 184.285
+  - id: ihg030
+    text: (stop
+    start_time: 184.345
+    end_time: 184.705
+  - id: a23ksp
+    text: 'it)
+
+      '
+    start_time: 184.765
+    end_time: 185.225
+  reference_contexts:
+    lrclib: a waiter I'm sure he says he's an actor So you're acting like You never tried to take your life So starting now
+      I'm starting over I'm throwing bottles I'm taking showers I'm going to sleep Starting now I'm starting over
+    genius: over (stop it) Starting now I'm starting over (stop it) To play the game Get even Act my age [Chorus 1] Tick tock,
+      you're not a clock You're a time bomb baby Tick tock, you're not a clock You're a time
+    spotify: a waiter I'm sure he says he's an actor So you're acting like you never tried to take your life So starting now
+      I'm starting over I'm throwing bottles I'm taking showers I'm going to sleep Starting now I'm starting over
+  word_count: 11
+  annotations:
+    your_decision: 'Remove the words in parentheses (stop it)'
+    action_type: 'DELETE'
+    target_word_ids: [ihg030, a23ksp]
+    replacement_text: ''
+    notes: The transcription often includes backing vocals in parentheses, we should remove them when they aren't in the reference lyrics.
+
+- gap_id: 20
+  position: 290
+  preceding_words: "starting over (stop it)\n To play the game\n Get even,"
+  gap_text: "half my age\n\n Tick- tock, you're not a clock\n You're a time bomb, baby\n You're a time"
+  following_words: "bomb, baby, oh\n Tick- tock, you're not a clock\n You're"
+  transcribed_words:
+  - id: oaee1j
+    text: half
+    start_time: 189.125
+    end_time: 189.565
+  - id: ss7zkz
+    text: my
+    start_time: 189.605
+    end_time: 189.965
+  - id: 441rmo
+    text: 'age
+
+
+      '
+    start_time: 190.085
+    end_time: 191.005
+  - id: mjzf2o
+    text: Tick-
+    start_time: 193.465
+    end_time: 193.845
+  - id: 42wsiz
+    text: tock,
+    start_time: 193.905
+    end_time: 194.265
+  - id: 4f5n14
+    text: you're
+    start_time: 194.825
+    end_time: 195.025
+  - id: oqfwwg
+    text: not
+    start_time: 195.065
+    end_time: 195.325
+  - id: ibt9sz
+    text: a
+    start_time: 195.365
+    end_time: 195.425
+  - id: lvvfu4
+    text: 'clock
+
+      '
+    start_time: 195.485
+    end_time: 195.965
+  - id: w4msxv
+    text: You're
+    start_time: 196.005
+    end_time: 196.285
+  - id: 242rj4
+    text: a
+    start_time: 196.305
+    end_time: 196.325
+  - id: c8yqea
+    text: time
+    start_time: 196.425
+    end_time: 196.785
+  - id: piveop
+    text: bomb,
+    start_time: 197.105
+    end_time: 197.385
+  - id: pt6dx4
+    text: 'baby
+
+      '
+    start_time: 197.585
+    end_time: 198.005
+  - id: q1zkux
+    text: You're
+    start_time: 198.025
+    end_time: 198.145
+  - id: 2ynpp7
+    text: a
+    start_time: 198.165
+    end_time: 198.185
+  - id: n49jqq
+    text: time
+    start_time: 198.205
+    end_time: 198.585
+  reference_contexts:
+    lrclib: So you're acting like You never tried to take your life So starting now I'm starting over I'm throwing bottles
+      I'm taking showers I'm going to sleep Starting now I'm starting over (stop it) Starting now I'm starting over (stop
+      it)
+    genius: Get even Act my age [Chorus 1] Tick tock, you're not a clock You're a time bomb baby Tick tock, you're not a clock
+      You're a time bomb baby [Chorus 2] You set the watch You're just in time To wreck
+    spotify: So you're acting like you never tried to take your life So starting now I'm starting over I'm throwing bottles
+      I'm taking showers I'm going to sleep Starting now I'm starting over (stop it) Starting now I'm starting over (stop
+      it)
+  word_count: 17
+  annotations:
+    your_decision: Replace "half my age" with "Act my age"
+    action_type: 'REPLACE'
+    target_word_ids: [oaee1j, ss7zkz, 441rmo]
+    replacement_text: Act my age
+    notes: The reference lyrics confirm this is just a transcription error, "half my age" should be "Act my age"
+
+- gap_id: 21
+  position: 310
+  preceding_words: "a time bomb, baby\n You're a time bomb, baby, oh\n"
+  gap_text: "Tick- tock, you're not a clock\n You're a time bomb, baby\n You're a time, uh, uh, uh\n\n You said to watch it\
+    \ just in time\n But to"
+  following_words: "wreck my life\n To bring back what I left behind\n\n"
+  transcribed_words:
+  - id: ye93pi
+    text: Tick-
+    start_time: 200.726
+    end_time: 201.066
+  - id: 2wy2fx
+    text: tock,
+    start_time: 201.406
+    end_time: 201.706
+  - id: p89a9f
+    text: you're
+    start_time: 202.086
+    end_time: 202.306
+  - id: xq978o
+    text: not
+    start_time: 202.366
+    end_time: 202.586
+  - id: 4o0yw2
+    text: a
+    start_time: 202.646
+    end_time: 202.686
+  - id: daeebb
+    text: 'clock
+
+      '
+    start_time: 202.766
+    end_time: 203.186
+  - id: 5qo8qu
+    text: You're
+    start_time: 203.246
+    end_time: 203.466
+  - id: t2oc12
+    text: a
+    start_time: 203.526
+    end_time: 203.626
+  - id: j127qb
+    text: time
+    start_time: 203.686
+    end_time: 204.026
+  - id: czx0k6
+    text: bomb,
+    start_time: 204.366
+    end_time: 204.726
+  - id: jn9gw4
+    text: 'baby
+
+      '
+    start_time: 204.846
+    end_time: 205.266
+  - id: xmip23
+    text: You're
+    start_time: 205.286
+    end_time: 205.406
+  - id: n81p0p
+    text: a
+    start_time: 205.426
+    end_time: 205.446
+  - id: jm6n8w
+    text: time,
+    start_time: 205.466
+    end_time: 205.846
+  - id: wt0pny
+    text: uh,
+    start_time: 206.206
+    end_time: 206.446
+  - id: y7c12k
+    text: uh,
+    start_time: 206.646
+    end_time: 206.886
+  - id: zd4mfd
+    text: 'uh
+
+
+      '
+    start_time: 207.126
+    end_time: 207.406
+  - id: vbzwsw
+    text: You
+    start_time: 207.746
+    end_time: 207.926
+  - id: apre91
+    text: said
+    start_time: 207.966
+    end_time: 208.186
+  - id: kt18xi
+    text: to
+    start_time: 208.246
+    end_time: 208.406
+  - id: vea2k1
+    text: watch
+    start_time: 208.446
+    end_time: 208.886
+  - id: 02tt7p
+    text: it
+    start_time: 208.946
+    end_time: 209.106
+  - id: 7v4ngw
+    text: just
+    start_time: 209.146
+    end_time: 209.406
+  - id: dto5in
+    text: in
+    start_time: 209.466
+    end_time: 209.586
+  - id: wa76gw
+    text: 'time
+
+      '
+    start_time: 209.646
+    end_time: 210.446
+  - id: 558ski
+    text: But
+    start_time: 210.486
+    end_time: 210.686
+  - id: qf6vsq
+    text: to
+    start_time: 210.726
+    end_time: 210.926
+  reference_contexts:
+    lrclib: life So starting now I'm starting over I'm throwing bottles I'm taking showers I'm going to sleep Starting now
+      I'm starting over (stop it) Starting now I'm starting over (stop it) To play the game Get even Act my age Oh
+    genius: bomb baby Tick tock, you're not a clock You're a time bomb baby [Chorus 2] You set the watch You're just in time
+      To wreck my life To bring back what I left behind [Chorus 1] Tick tock, you're not a
+    spotify: life So starting now I'm starting over I'm throwing bottles I'm taking showers I'm going to sleep Starting now
+      I'm starting over (stop it) Starting now I'm starting over (stop it) To play the game Get even Act my age Oh
+  word_count: 27
+  annotations:
+    your_decision: Replace "You said to watch it" with "You set the watch You're
+    action_type: 'REPLACE'
+    target_word_ids: [vbzwsw, ..., wa76gw]
+    replacement_text: You set the watch You're
+    notes: The transcription heard "You said to watch it just in time" but the reference lyrics say "You set the watch You're just in time" which makes more sense given the context of the song. This is another simple transcription error that we can correct with a replacement. Also the transcription is quite prone to adding the word "And" at the start of sentences when it's not needed, so the word "And" here should just be removed.
+
+- gap_id: 22
+  position: 347
+  preceding_words: "wreck my life\n To bring back what I left behind\n\n"
+  gap_text: "Tick- tock, you're not a clock\n You're a time bomb, baby\n You're a time bomb, baby\n You're a time bomb, baby\n\
+    \ You're a time, uh, uh, uh\n\n Oh, I don't know\n"
+  following_words: "Was it worth it?\n Was it worth what you did"
+  transcribed_words:
+  - id: egzega
+    text: Tick-
+    start_time: 215.286
+    end_time: 215.926
+  - id: c859ko
+    text: tock,
+    start_time: 215.966
+    end_time: 216.286
+  - id: e16rya
+    text: you're
+    start_time: 216.606
+    end_time: 216.846
+  - id: 4jj6sz
+    text: not
+    start_time: 216.906
+    end_time: 217.126
+  - id: h87whb
+    text: a
+    start_time: 217.186
+    end_time: 217.246
+  - id: 0drr7h
+    text: 'clock
+
+      '
+    start_time: 217.306
+    end_time: 217.726
+  - id: sj49dr
+    text: You're
+    start_time: 217.786
+    end_time: 218.006
+  - id: o0kkjh
+    text: a
+    start_time: 218.066
+    end_time: 218.166
+  - id: z3vp0m
+    text: time
+    start_time: 218.226
+    end_time: 218.586
+  - id: wz9z08
+    text: bomb,
+    start_time: 218.906
+    end_time: 219.346
+  - id: ehl6jm
+    text: 'baby
+
+      '
+    start_time: 219.386
+    end_time: 219.826
+  - id: qfeibr
+    text: You're
+    start_time: 219.846
+    end_time: 219.986
+  - id: qe6dtq
+    text: a
+    start_time: 220.006
+    end_time: 220.026
+  - id: 61j94g
+    text: time
+    start_time: 220.046
+    end_time: 220.406
+  - id: aku9ct
+    text: bomb,
+    start_time: 220.726
+    end_time: 221.026
+  - id: kz207v
+    text: 'baby
+
+      '
+    start_time: 221.226
+    end_time: 221.646
+  - id: ozpu85
+    text: You're
+    start_time: 221.666
+    end_time: 221.806
+  - id: beeavq
+    text: a
+    start_time: 221.826
+    end_time: 221.846
+  - id: teat15
+    text: time
+    start_time: 221.866
+    end_time: 222.206
+  - id: nu8pxm
+    text: bomb,
+    start_time: 222.546
+    end_time: 222.966
+  - id: y44322
+    text: 'baby
+
+      '
+    start_time: 223.006
+    end_time: 223.466
+  - id: bbooc4
+    text: You're
+    start_time: 223.486
+    end_time: 223.626
+  - id: 6ywarf
+    text: a
+    start_time: 223.646
+    end_time: 223.666
+  - id: wo03xn
+    text: time,
+    start_time: 223.686
+    end_time: 224.066
+  - id: y8x907
+    text: uh,
+    start_time: 224.366
+    end_time: 224.626
+  - id: e35x66
+    text: uh,
+    start_time: 224.826
+    end_time: 225.066
+  - id: b7psxq
+    text: 'uh
+
+
+      '
+    start_time: 225.266
+    end_time: 225.606
+  - id: xu52t3
+    text: Oh,
+    start_time: 225.726
+    end_time: 227.106
+  - id: 1l8zeh
+    text: I
+    start_time: 227.146
+    end_time: 227.266
+  - id: 318def
+    text: don't
+    start_time: 227.306
+    end_time: 227.506
+  - id: w5dzbm
+    text: 'know
+
+      '
+    start_time: 227.546
+    end_time: 228.906
+  reference_contexts:
+    lrclib: going to sleep Starting now I'm starting over (stop it) Starting now I'm starting over (stop it) To play the game
+      Get even Act my age Oh no was it worth what you Did to your wrists?
+    genius: in time To wreck my life To bring back what I left behind [Chorus 1] Tick tock, you're not a clock You're a time
+      bomb baby Tick tock, you're not a clock You're a time bomb baby Oh no, was it
+    spotify: going to sleep Starting now I'm starting over (stop it) Starting now I'm starting over (stop it) To play the
+      game Get even Act my age Oh no was it worth what you did to your wrists?
+  word_count: 31
+  annotations:
+    your_decision: Replace "Oh, I don't know" with "Oh, no"
+    action_type: 'REPLACE'
+    target_word_ids: [xu52t3, 1l8zeh, 318def, w5dzbm]
+    replacement_text: 'Oh, no'
+    notes: The reference lyrics, and previous segments, confirm the repeated section as "Oh, no, was it worth it?" whereas the transcription heard "Oh, I don't know, was it worth it?"
+
+- gap_id: 23
+  position: 389
+  preceding_words: "it worth it?\n Was it worth what you did to"
+  gap_text: 'your wrist?
+
+    '
+  following_words: <song_end>
+  transcribed_words:
+  - id: z7w5tl
+    text: your
+    start_time: 232.806
+    end_time: 233.006
+  - id: 8ezrhs
+    text: 'wrist?
+
+      '
+    start_time: 233.046
+    end_time: 234.146
+  reference_contexts:
+    lrclib: (stop it) To play the game Get even Act my age Oh no was it worth what you Did to your wrists?
+    genius: Tick tock, you're not a clock You're a time bomb baby Oh no, was it worth what you Did to your wrists?
+    spotify: (stop it) To play the game Get even Act my age Oh no was it worth what you did to your wrists?
+  word_count: 2
+  annotations:
+    your_decision: Replace "wrist" with "wrists"
+    action_type: 'REPLACE'
+    target_word_ids: [8ezrhs]
+    replacement_text: 'wrists?'
+    notes: The reference lyrics all show "wrists" plural whereas the transcription heard "wrist" singular.

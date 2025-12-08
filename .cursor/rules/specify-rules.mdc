@@ -1,0 +1,25 @@
+# lyrics_transcriber_local Development Guidelines
+
+Auto-generated from all feature plans. Last updated: 2025-09-28
+
+## Active Technologies
+- Python 3.10-3.13 (existing codebase compatibility) + FastAPI (existing review server), LangChain/LangGraph (new agentic framework), LangFuse (observability), Ollama (local models), OpenAI/Anthropic/Google APIs (cloud models) (001-agentic-ai-corrector)
+
+## Project Structure
+```
+backend/
+frontend/
+tests/
+```
+
+## Commands
+cd src [ONLY COMMANDS FOR ACTIVE TECHNOLOGIES][ONLY COMMANDS FOR ACTIVE TECHNOLOGIES] pytest [ONLY COMMANDS FOR ACTIVE TECHNOLOGIES][ONLY COMMANDS FOR ACTIVE TECHNOLOGIES] ruff check .
+
+## Code Style
+Python 3.10-3.13 (existing codebase compatibility): Follow standard conventions
+
+## Recent Changes
+- 001-agentic-ai-corrector: Added Python 3.10-3.13 (existing codebase compatibility) + FastAPI (existing review server), LangChain/LangGraph (new agentic framework), LangFuse (observability), Ollama (local models), OpenAI/Anthropic/Google APIs (cloud models)
+
+<!-- MANUAL ADDITIONS START -->
+<!-- MANUAL ADDITIONS END -->

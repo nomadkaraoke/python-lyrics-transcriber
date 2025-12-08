@@ -47,7 +47,35 @@
 ## Constitution Check
 *GATE: Must pass before Phase 0 research. Re-check after Phase 1 design.*
 
-[Gates determined based on constitution file]
+**Test-Driven Development (NON-NEGOTIABLE)**:
+- [ ] All tests will be written before implementation code
+- [ ] Contract tests planned for all API endpoints
+- [ ] Integration tests planned for all user workflows
+- [ ] Minimum 90% code coverage target set
+
+**Code Quality & Maintainability**:
+- [ ] Type hints planned for all function signatures
+- [ ] Comprehensive docstrings planned for public APIs
+- [ ] Linting and static analysis configured
+- [ ] No code duplication >15 lines without justification
+
+**User Experience Consistency**:
+- [ ] CLI follows Unix conventions
+- [ ] Error messages are actionable with clear next steps
+- [ ] UI changes meet accessibility standards (if applicable)
+- [ ] Consistent interaction patterns across interfaces
+
+**Performance & Reliability**:
+- [ ] Performance budgets defined for critical operations
+- [ ] External API retry logic with exponential backoff planned
+- [ ] Proper resource cleanup and memory management planned
+- [ ] Graceful failure handling designed
+
+**Observability & Monitoring**:
+- [ ] Structured logging planned with consistent formatting
+- [ ] Performance metrics collection designed
+- [ ] External service interactions instrumented
+- [ ] Health checks planned for services and dependencies
 
 ## Project Structure
 
@@ -216,4 +244,4 @@ directories captured above]
 - [ ] Complexity deviations documented
 
 ---
-*Based on Constitution v2.1.1 - See `/memory/constitution.md`*
+*Based on Constitution v1.0.0 - See `.specify/memory/constitution.md`*

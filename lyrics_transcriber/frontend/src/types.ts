@@ -137,3 +137,63 @@ export interface HighlightInfo {
 }
 
 export type InteractionMode = 'highlight' | 'edit' | 'delete_word'
+
+// Correction Annotation Types
+export type CorrectionAnnotationType = 
+    | 'PUNCTUATION_ONLY'
+    | 'SOUND_ALIKE'
+    | 'BACKGROUND_VOCALS'
+    | 'EXTRA_WORDS'
+    | 'REPEATED_SECTION'
+    | 'COMPLEX_MULTI_ERROR'
+    | 'AMBIGUOUS'
+    | 'NO_ERROR'
+    | 'MANUAL_EDIT'
+
+export type CorrectionAction = 
+    | 'NO_ACTION'
+    | 'REPLACE'
+    | 'DELETE'
+    | 'INSERT'
+    | 'MERGE'
+    | 'SPLIT'
+    | 'FLAG'
+
+export interface CorrectionAnnotation {
+    annotation_id: string
+    audio_hash: string
+    gap_id: string | null
+    annotation_type: CorrectionAnnotationType
+    action_taken: CorrectionAction
+    original_text: string
+    corrected_text: string
+    confidence: number  // 1-5 scale
+    reasoning: string
+    word_ids_affected: string[]
+    agentic_proposal: {
+        action: string
+        replacement_text?: string
+        confidence: number
+        reason: string
+        gap_category?: string
+    } | null
+    agentic_category: string | null
+    agentic_agreed: boolean
+    reference_sources_consulted: string[]
+    artist: string
+    title: string
+    session_id: string
+    timestamp?: string
+}
+
+export interface CorrectionActionEvent {
+    type: 'revert' | 'edit' | 'accept' | 'reject'
+    correctionId: string
+    wordId: string
+}
+
+export interface GapCategoryMetric {
+    category: string
+    count: number
+    avgConfidence: number
+}

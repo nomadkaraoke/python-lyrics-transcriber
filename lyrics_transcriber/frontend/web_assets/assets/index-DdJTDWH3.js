@@ -13646,7 +13646,7 @@ function getSvgIconUtilityClass(slot) {
   return generateUtilityClass("MuiSvgIcon", slot);
 }
 generateUtilityClasses("MuiSvgIcon", ["root", "colorPrimary", "colorSecondary", "colorAction", "colorError", "colorDisabled", "fontSizeInherit", "fontSizeSmall", "fontSizeMedium", "fontSizeLarge"]);
-const useUtilityClasses$I = (ownerState) => {
+const useUtilityClasses$L = (ownerState) => {
   const {
     color: color2,
     fontSize,
@@ -13791,7 +13791,7 @@ const SvgIcon = /* @__PURE__ */ reactExports.forwardRef(function SvgIcon2(inProp
   if (!inheritViewBox) {
     more.viewBox = viewBox;
   }
-  const classes = useUtilityClasses$I(ownerState);
+  const classes = useUtilityClasses$L(ownerState);
   return /* @__PURE__ */ jsxRuntimeExports.jsxs(SvgIconRoot, {
     as: component,
     className: clsx(classes.root, className),
@@ -13856,9 +13856,9 @@ var EXITED = "exited";
 var ENTERING = "entering";
 var ENTERED = "entered";
 var EXITING = "exiting";
-var Transition = /* @__PURE__ */ function(_React$Component) {
-  _inheritsLoose(Transition2, _React$Component);
-  function Transition2(props, context) {
+var Transition$1 = /* @__PURE__ */ function(_React$Component) {
+  _inheritsLoose(Transition22, _React$Component);
+  function Transition22(props, context) {
     var _this;
     _this = _React$Component.call(this, props, context) || this;
     var parentGroup = context;
@@ -13885,7 +13885,7 @@ var Transition = /* @__PURE__ */ function(_React$Component) {
     _this.nextCallback = null;
     return _this;
   }
-  Transition2.getDerivedStateFromProps = function getDerivedStateFromProps(_ref, prevState) {
+  Transition22.getDerivedStateFromProps = function getDerivedStateFromProps(_ref, prevState) {
     var nextIn = _ref.in;
     if (nextIn && prevState.status === UNMOUNTED) {
       return {
@@ -13894,7 +13894,7 @@ var Transition = /* @__PURE__ */ function(_React$Component) {
     }
     return null;
   };
-  var _proto = Transition2.prototype;
+  var _proto = Transition22.prototype;
   _proto.componentDidMount = function componentDidMount() {
     this.updateStatus(true, this.appearStatus);
   };
@@ -14079,13 +14079,13 @@ var Transition = /* @__PURE__ */ function(_React$Component) {
       }, typeof children === "function" ? children(status, childProps) : React.cloneElement(React.Children.only(children), childProps))
     );
   };
-  return Transition2;
+  return Transition22;
 }(React.Component);
-Transition.contextType = TransitionGroupContext;
-Transition.propTypes = {};
+Transition$1.contextType = TransitionGroupContext;
+Transition$1.propTypes = {};
 function noop$1() {
 }
-Transition.defaultProps = {
+Transition$1.defaultProps = {
   in: false,
   mountOnEnter: false,
   unmountOnExit: false,
@@ -14099,11 +14099,11 @@ Transition.defaultProps = {
   onExiting: noop$1,
   onExited: noop$1
 };
-Transition.UNMOUNTED = UNMOUNTED;
-Transition.EXITED = EXITED;
-Transition.ENTERING = ENTERING;
-Transition.ENTERED = ENTERED;
-Transition.EXITING = EXITING;
+Transition$1.UNMOUNTED = UNMOUNTED;
+Transition$1.EXITED = EXITED;
+Transition$1.ENTERING = ENTERING;
+Transition$1.ENTERED = ENTERED;
+Transition$1.EXITING = EXITING;
 function _assertThisInitialized(e) {
   if (void 0 === e) throw new ReferenceError("this hasn't been initialised - super() hasn't been called");
   return e;
@@ -14298,7 +14298,7 @@ function getPaperUtilityClass(slot) {
   return generateUtilityClass("MuiPaper", slot);
 }
 generateUtilityClasses("MuiPaper", ["root", "rounded", "outlined", "elevation", "elevation0", "elevation1", "elevation2", "elevation3", "elevation4", "elevation5", "elevation6", "elevation7", "elevation8", "elevation9", "elevation10", "elevation11", "elevation12", "elevation13", "elevation14", "elevation15", "elevation16", "elevation17", "elevation18", "elevation19", "elevation20", "elevation21", "elevation22", "elevation23", "elevation24"]);
-const useUtilityClasses$H = (ownerState) => {
+const useUtilityClasses$K = (ownerState) => {
   const {
     square,
     elevation,
@@ -14371,7 +14371,7 @@ const Paper = /* @__PURE__ */ reactExports.forwardRef(function Paper2(inProps, r
     square,
     variant
   };
-  const classes = useUtilityClasses$H(ownerState);
+  const classes = useUtilityClasses$K(ownerState);
   return /* @__PURE__ */ jsxRuntimeExports.jsx(PaperRoot, {
     as: component,
     ownerState,
@@ -14832,7 +14832,7 @@ function getButtonBaseUtilityClass(slot) {
   return generateUtilityClass("MuiButtonBase", slot);
 }
 const buttonBaseClasses = generateUtilityClasses("MuiButtonBase", ["root", "disabled", "focusVisible"]);
-const useUtilityClasses$G = (ownerState) => {
+const useUtilityClasses$J = (ownerState) => {
   const {
     disabled,
     focusVisible,
@@ -15049,7 +15049,7 @@ const ButtonBase = /* @__PURE__ */ reactExports.forwardRef(function ButtonBase2(
     tabIndex,
     focusVisible
   };
-  const classes = useUtilityClasses$G(ownerState);
+  const classes = useUtilityClasses$J(ownerState);
   return /* @__PURE__ */ jsxRuntimeExports.jsxs(ButtonBaseRoot, {
     as: ComponentProp,
     className: clsx(classes.root, className),
@@ -15147,7 +15147,7 @@ const rotateAnimation = typeof circularRotateKeyframe !== "string" ? css`
 const dashAnimation = typeof circularDashKeyframe !== "string" ? css`
         animation: ${circularDashKeyframe} 1.4s ease-in-out infinite;
       ` : null;
-const useUtilityClasses$F = (ownerState) => {
+const useUtilityClasses$I = (ownerState) => {
   const {
     classes,
     variant,
@@ -15270,7 +15270,7 @@ const CircularProgress = /* @__PURE__ */ reactExports.forwardRef(function Circul
     value,
     variant
   };
-  const classes = useUtilityClasses$F(ownerState);
+  const classes = useUtilityClasses$I(ownerState);
   const circleStyle = {};
   const rootStyle = {};
   const rootProps = {};
@@ -15315,7 +15315,7 @@ function getIconButtonUtilityClass(slot) {
   return generateUtilityClass("MuiIconButton", slot);
 }
 const iconButtonClasses = generateUtilityClasses("MuiIconButton", ["root", "disabled", "colorInherit", "colorPrimary", "colorSecondary", "colorError", "colorInfo", "colorSuccess", "colorWarning", "edgeStart", "edgeEnd", "sizeSmall", "sizeMedium", "sizeLarge", "loading", "loadingIndicator", "loadingWrapper"]);
-const useUtilityClasses$E = (ownerState) => {
+const useUtilityClasses$H = (ownerState) => {
   const {
     classes,
     disabled,
@@ -15501,7 +15501,7 @@ const IconButton = /* @__PURE__ */ reactExports.forwardRef(function IconButton2(
     loadingIndicator,
     size
   };
-  const classes = useUtilityClasses$E(ownerState);
+  const classes = useUtilityClasses$H(ownerState);
   return /* @__PURE__ */ jsxRuntimeExports.jsxs(IconButtonRoot, {
     id,
     className: clsx(classes.root, className),
@@ -15540,7 +15540,7 @@ const InfoOutlinedIcon = createSvgIcon(/* @__PURE__ */ jsxRuntimeExports.jsx("pa
 const ClearIcon = createSvgIcon(/* @__PURE__ */ jsxRuntimeExports.jsx("path", {
   d: "M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"
 }), "Close");
-const useUtilityClasses$D = (ownerState) => {
+const useUtilityClasses$G = (ownerState) => {
   const {
     variant,
     color: color2,
@@ -15695,7 +15695,7 @@ const Alert = /* @__PURE__ */ reactExports.forwardRef(function Alert2(inProps, r
     variant,
     colorSeverity: color2 || severity
   };
-  const classes = useUtilityClasses$D(ownerState);
+  const classes = useUtilityClasses$G(ownerState);
   const externalForwardedProps = {
     slots: {
       closeButton: components.CloseButton,
@@ -15794,7 +15794,7 @@ const v6Colors = {
   textDisabled: true
 };
 const extendSxProp = internal_createExtendSxProp();
-const useUtilityClasses$C = (ownerState) => {
+const useUtilityClasses$F = (ownerState) => {
   const {
     align,
     gutterBottom,
@@ -15937,7 +15937,7 @@ const Typography = /* @__PURE__ */ reactExports.forwardRef(function Typography2(
     variantMapping
   };
   const Component = component || (paragraph ? "p" : variantMapping[variant] || defaultVariantMapping[variant]) || "span";
-  const classes = useUtilityClasses$C(ownerState);
+  const classes = useUtilityClasses$F(ownerState);
   return /* @__PURE__ */ jsxRuntimeExports.jsx(TypographyRoot, {
     as: Component,
     ref,
@@ -17361,7 +17361,7 @@ function resolveAnchorEl$1(anchorEl) {
 function isHTMLElement(element) {
   return element.nodeType !== void 0;
 }
-const useUtilityClasses$B = (ownerState) => {
+const useUtilityClasses$E = (ownerState) => {
   const {
     classes
   } = ownerState;
@@ -17462,7 +17462,7 @@ const PopperTooltip = /* @__PURE__ */ reactExports.forwardRef(function PopperToo
   if (TransitionProps !== null) {
     childProps.TransitionProps = TransitionProps;
   }
-  const classes = useUtilityClasses$B(props);
+  const classes = useUtilityClasses$E(props);
   const Root = slots.root ?? "div";
   const rootProps = useSlotProps({
     elementType: Root,
@@ -17604,6 +17604,453 @@ const Popper = /* @__PURE__ */ reactExports.forwardRef(function Popper22(inProps
     slotProps: slotProps ?? componentsProps,
     ...otherProps,
     ref
+  });
+});
+const CancelIcon$1 = createSvgIcon(/* @__PURE__ */ jsxRuntimeExports.jsx("path", {
+  d: "M12 2C6.47 2 2 6.47 2 12s4.47 10 10 10 10-4.47 10-10S17.53 2 12 2zm5 13.59L15.59 17 12 13.41 8.41 17 7 15.59 10.59 12 7 8.41 8.41 7 12 10.59 15.59 7 17 8.41 13.41 12 17 15.59z"
+}), "Cancel");
+function getChipUtilityClass(slot) {
+  return generateUtilityClass("MuiChip", slot);
+}
+const chipClasses = generateUtilityClasses("MuiChip", ["root", "sizeSmall", "sizeMedium", "colorDefault", "colorError", "colorInfo", "colorPrimary", "colorSecondary", "colorSuccess", "colorWarning", "disabled", "clickable", "clickableColorPrimary", "clickableColorSecondary", "deletable", "deletableColorPrimary", "deletableColorSecondary", "outlined", "filled", "outlinedPrimary", "outlinedSecondary", "filledPrimary", "filledSecondary", "avatar", "avatarSmall", "avatarMedium", "avatarColorPrimary", "avatarColorSecondary", "icon", "iconSmall", "iconMedium", "iconColorPrimary", "iconColorSecondary", "label", "labelSmall", "labelMedium", "deleteIcon", "deleteIconSmall", "deleteIconMedium", "deleteIconColorPrimary", "deleteIconColorSecondary", "deleteIconOutlinedColorPrimary", "deleteIconOutlinedColorSecondary", "deleteIconFilledColorPrimary", "deleteIconFilledColorSecondary", "focusVisible"]);
+const useUtilityClasses$D = (ownerState) => {
+  const {
+    classes,
+    disabled,
+    size,
+    color: color2,
+    iconColor,
+    onDelete,
+    clickable,
+    variant
+  } = ownerState;
+  const slots = {
+    root: ["root", variant, disabled && "disabled", `size${capitalize(size)}`, `color${capitalize(color2)}`, clickable && "clickable", clickable && `clickableColor${capitalize(color2)}`, onDelete && "deletable", onDelete && `deletableColor${capitalize(color2)}`, `${variant}${capitalize(color2)}`],
+    label: ["label", `label${capitalize(size)}`],
+    avatar: ["avatar", `avatar${capitalize(size)}`, `avatarColor${capitalize(color2)}`],
+    icon: ["icon", `icon${capitalize(size)}`, `iconColor${capitalize(iconColor)}`],
+    deleteIcon: ["deleteIcon", `deleteIcon${capitalize(size)}`, `deleteIconColor${capitalize(color2)}`, `deleteIcon${capitalize(variant)}Color${capitalize(color2)}`]
+  };
+  return composeClasses(slots, getChipUtilityClass, classes);
+};
+const ChipRoot = styled("div", {
+  name: "MuiChip",
+  slot: "Root",
+  overridesResolver: (props, styles2) => {
+    const {
+      ownerState
+    } = props;
+    const {
+      color: color2,
+      iconColor,
+      clickable,
+      onDelete,
+      size,
+      variant
+    } = ownerState;
+    return [{
+      [`& .${chipClasses.avatar}`]: styles2.avatar
+    }, {
+      [`& .${chipClasses.avatar}`]: styles2[`avatar${capitalize(size)}`]
+    }, {
+      [`& .${chipClasses.avatar}`]: styles2[`avatarColor${capitalize(color2)}`]
+    }, {
+      [`& .${chipClasses.icon}`]: styles2.icon
+    }, {
+      [`& .${chipClasses.icon}`]: styles2[`icon${capitalize(size)}`]
+    }, {
+      [`& .${chipClasses.icon}`]: styles2[`iconColor${capitalize(iconColor)}`]
+    }, {
+      [`& .${chipClasses.deleteIcon}`]: styles2.deleteIcon
+    }, {
+      [`& .${chipClasses.deleteIcon}`]: styles2[`deleteIcon${capitalize(size)}`]
+    }, {
+      [`& .${chipClasses.deleteIcon}`]: styles2[`deleteIconColor${capitalize(color2)}`]
+    }, {
+      [`& .${chipClasses.deleteIcon}`]: styles2[`deleteIcon${capitalize(variant)}Color${capitalize(color2)}`]
+    }, styles2.root, styles2[`size${capitalize(size)}`], styles2[`color${capitalize(color2)}`], clickable && styles2.clickable, clickable && color2 !== "default" && styles2[`clickableColor${capitalize(color2)})`], onDelete && styles2.deletable, onDelete && color2 !== "default" && styles2[`deletableColor${capitalize(color2)}`], styles2[variant], styles2[`${variant}${capitalize(color2)}`]];
+  }
+})(memoTheme(({
+  theme: theme2
+}) => {
+  const textColor = theme2.palette.mode === "light" ? theme2.palette.grey[700] : theme2.palette.grey[300];
+  return {
+    maxWidth: "100%",
+    fontFamily: theme2.typography.fontFamily,
+    fontSize: theme2.typography.pxToRem(13),
+    display: "inline-flex",
+    alignItems: "center",
+    justifyContent: "center",
+    height: 32,
+    color: (theme2.vars || theme2).palette.text.primary,
+    backgroundColor: (theme2.vars || theme2).palette.action.selected,
+    borderRadius: 32 / 2,
+    whiteSpace: "nowrap",
+    transition: theme2.transitions.create(["background-color", "box-shadow"]),
+    // reset cursor explicitly in case ButtonBase is used
+    cursor: "unset",
+    // We disable the focus ring for mouse, touch and keyboard users.
+    outline: 0,
+    textDecoration: "none",
+    border: 0,
+    // Remove `button` border
+    padding: 0,
+    // Remove `button` padding
+    verticalAlign: "middle",
+    boxSizing: "border-box",
+    [`&.${chipClasses.disabled}`]: {
+      opacity: (theme2.vars || theme2).palette.action.disabledOpacity,
+      pointerEvents: "none"
+    },
+    [`& .${chipClasses.avatar}`]: {
+      marginLeft: 5,
+      marginRight: -6,
+      width: 24,
+      height: 24,
+      color: theme2.vars ? theme2.vars.palette.Chip.defaultAvatarColor : textColor,
+      fontSize: theme2.typography.pxToRem(12)
+    },
+    [`& .${chipClasses.avatarColorPrimary}`]: {
+      color: (theme2.vars || theme2).palette.primary.contrastText,
+      backgroundColor: (theme2.vars || theme2).palette.primary.dark
+    },
+    [`& .${chipClasses.avatarColorSecondary}`]: {
+      color: (theme2.vars || theme2).palette.secondary.contrastText,
+      backgroundColor: (theme2.vars || theme2).palette.secondary.dark
+    },
+    [`& .${chipClasses.avatarSmall}`]: {
+      marginLeft: 4,
+      marginRight: -4,
+      width: 18,
+      height: 18,
+      fontSize: theme2.typography.pxToRem(10)
+    },
+    [`& .${chipClasses.icon}`]: {
+      marginLeft: 5,
+      marginRight: -6
+    },
+    [`& .${chipClasses.deleteIcon}`]: {
+      WebkitTapHighlightColor: "transparent",
+      color: theme2.vars ? `rgba(${theme2.vars.palette.text.primaryChannel} / 0.26)` : alpha(theme2.palette.text.primary, 0.26),
+      fontSize: 22,
+      cursor: "pointer",
+      margin: "0 5px 0 -6px",
+      "&:hover": {
+        color: theme2.vars ? `rgba(${theme2.vars.palette.text.primaryChannel} / 0.4)` : alpha(theme2.palette.text.primary, 0.4)
+      }
+    },
+    variants: [{
+      props: {
+        size: "small"
+      },
+      style: {
+        height: 24,
+        [`& .${chipClasses.icon}`]: {
+          fontSize: 18,
+          marginLeft: 4,
+          marginRight: -4
+        },
+        [`& .${chipClasses.deleteIcon}`]: {
+          fontSize: 16,
+          marginRight: 4,
+          marginLeft: -4
+        }
+      }
+    }, ...Object.entries(theme2.palette).filter(createSimplePaletteValueFilter(["contrastText"])).map(([color2]) => {
+      return {
+        props: {
+          color: color2
+        },
+        style: {
+          backgroundColor: (theme2.vars || theme2).palette[color2].main,
+          color: (theme2.vars || theme2).palette[color2].contrastText,
+          [`& .${chipClasses.deleteIcon}`]: {
+            color: theme2.vars ? `rgba(${theme2.vars.palette[color2].contrastTextChannel} / 0.7)` : alpha(theme2.palette[color2].contrastText, 0.7),
+            "&:hover, &:active": {
+              color: (theme2.vars || theme2).palette[color2].contrastText
+            }
+          }
+        }
+      };
+    }), {
+      props: (props) => props.iconColor === props.color,
+      style: {
+        [`& .${chipClasses.icon}`]: {
+          color: theme2.vars ? theme2.vars.palette.Chip.defaultIconColor : textColor
+        }
+      }
+    }, {
+      props: (props) => props.iconColor === props.color && props.color !== "default",
+      style: {
+        [`& .${chipClasses.icon}`]: {
+          color: "inherit"
+        }
+      }
+    }, {
+      props: {
+        onDelete: true
+      },
+      style: {
+        [`&.${chipClasses.focusVisible}`]: {
+          backgroundColor: theme2.vars ? `rgba(${theme2.vars.palette.action.selectedChannel} / calc(${theme2.vars.palette.action.selectedOpacity} + ${theme2.vars.palette.action.focusOpacity}))` : alpha(theme2.palette.action.selected, theme2.palette.action.selectedOpacity + theme2.palette.action.focusOpacity)
+        }
+      }
+    }, ...Object.entries(theme2.palette).filter(createSimplePaletteValueFilter(["dark"])).map(([color2]) => {
+      return {
+        props: {
+          color: color2,
+          onDelete: true
+        },
+        style: {
+          [`&.${chipClasses.focusVisible}`]: {
+            background: (theme2.vars || theme2).palette[color2].dark
+          }
+        }
+      };
+    }), {
+      props: {
+        clickable: true
+      },
+      style: {
+        userSelect: "none",
+        WebkitTapHighlightColor: "transparent",
+        cursor: "pointer",
+        "&:hover": {
+          backgroundColor: theme2.vars ? `rgba(${theme2.vars.palette.action.selectedChannel} / calc(${theme2.vars.palette.action.selectedOpacity} + ${theme2.vars.palette.action.hoverOpacity}))` : alpha(theme2.palette.action.selected, theme2.palette.action.selectedOpacity + theme2.palette.action.hoverOpacity)
+        },
+        [`&.${chipClasses.focusVisible}`]: {
+          backgroundColor: theme2.vars ? `rgba(${theme2.vars.palette.action.selectedChannel} / calc(${theme2.vars.palette.action.selectedOpacity} + ${theme2.vars.palette.action.focusOpacity}))` : alpha(theme2.palette.action.selected, theme2.palette.action.selectedOpacity + theme2.palette.action.focusOpacity)
+        },
+        "&:active": {
+          boxShadow: (theme2.vars || theme2).shadows[1]
+        }
+      }
+    }, ...Object.entries(theme2.palette).filter(createSimplePaletteValueFilter(["dark"])).map(([color2]) => ({
+      props: {
+        color: color2,
+        clickable: true
+      },
+      style: {
+        [`&:hover, &.${chipClasses.focusVisible}`]: {
+          backgroundColor: (theme2.vars || theme2).palette[color2].dark
+        }
+      }
+    })), {
+      props: {
+        variant: "outlined"
+      },
+      style: {
+        backgroundColor: "transparent",
+        border: theme2.vars ? `1px solid ${theme2.vars.palette.Chip.defaultBorder}` : `1px solid ${theme2.palette.mode === "light" ? theme2.palette.grey[400] : theme2.palette.grey[700]}`,
+        [`&.${chipClasses.clickable}:hover`]: {
+          backgroundColor: (theme2.vars || theme2).palette.action.hover
+        },
+        [`&.${chipClasses.focusVisible}`]: {
+          backgroundColor: (theme2.vars || theme2).palette.action.focus
+        },
+        [`& .${chipClasses.avatar}`]: {
+          marginLeft: 4
+        },
+        [`& .${chipClasses.avatarSmall}`]: {
+          marginLeft: 2
+        },
+        [`& .${chipClasses.icon}`]: {
+          marginLeft: 4
+        },
+        [`& .${chipClasses.iconSmall}`]: {
+          marginLeft: 2
+        },
+        [`& .${chipClasses.deleteIcon}`]: {
+          marginRight: 5
+        },
+        [`& .${chipClasses.deleteIconSmall}`]: {
+          marginRight: 3
+        }
+      }
+    }, ...Object.entries(theme2.palette).filter(createSimplePaletteValueFilter()).map(([color2]) => ({
+      props: {
+        variant: "outlined",
+        color: color2
+      },
+      style: {
+        color: (theme2.vars || theme2).palette[color2].main,
+        border: `1px solid ${theme2.vars ? `rgba(${theme2.vars.palette[color2].mainChannel} / 0.7)` : alpha(theme2.palette[color2].main, 0.7)}`,
+        [`&.${chipClasses.clickable}:hover`]: {
+          backgroundColor: theme2.vars ? `rgba(${theme2.vars.palette[color2].mainChannel} / ${theme2.vars.palette.action.hoverOpacity})` : alpha(theme2.palette[color2].main, theme2.palette.action.hoverOpacity)
+        },
+        [`&.${chipClasses.focusVisible}`]: {
+          backgroundColor: theme2.vars ? `rgba(${theme2.vars.palette[color2].mainChannel} / ${theme2.vars.palette.action.focusOpacity})` : alpha(theme2.palette[color2].main, theme2.palette.action.focusOpacity)
+        },
+        [`& .${chipClasses.deleteIcon}`]: {
+          color: theme2.vars ? `rgba(${theme2.vars.palette[color2].mainChannel} / 0.7)` : alpha(theme2.palette[color2].main, 0.7),
+          "&:hover, &:active": {
+            color: (theme2.vars || theme2).palette[color2].main
+          }
+        }
+      }
+    }))]
+  };
+}));
+const ChipLabel = styled("span", {
+  name: "MuiChip",
+  slot: "Label",
+  overridesResolver: (props, styles2) => {
+    const {
+      ownerState
+    } = props;
+    const {
+      size
+    } = ownerState;
+    return [styles2.label, styles2[`label${capitalize(size)}`]];
+  }
+})({
+  overflow: "hidden",
+  textOverflow: "ellipsis",
+  paddingLeft: 12,
+  paddingRight: 12,
+  whiteSpace: "nowrap",
+  variants: [{
+    props: {
+      variant: "outlined"
+    },
+    style: {
+      paddingLeft: 11,
+      paddingRight: 11
+    }
+  }, {
+    props: {
+      size: "small"
+    },
+    style: {
+      paddingLeft: 8,
+      paddingRight: 8
+    }
+  }, {
+    props: {
+      size: "small",
+      variant: "outlined"
+    },
+    style: {
+      paddingLeft: 7,
+      paddingRight: 7
+    }
+  }]
+});
+function isDeleteKeyboardEvent(keyboardEvent) {
+  return keyboardEvent.key === "Backspace" || keyboardEvent.key === "Delete";
+}
+const Chip = /* @__PURE__ */ reactExports.forwardRef(function Chip2(inProps, ref) {
+  const props = useDefaultProps({
+    props: inProps,
+    name: "MuiChip"
+  });
+  const {
+    avatar: avatarProp,
+    className,
+    clickable: clickableProp,
+    color: color2 = "default",
+    component: ComponentProp,
+    deleteIcon: deleteIconProp,
+    disabled = false,
+    icon: iconProp,
+    label,
+    onClick,
+    onDelete,
+    onKeyDown,
+    onKeyUp,
+    size = "medium",
+    variant = "filled",
+    tabIndex,
+    skipFocusWhenDisabled = false,
+    // TODO v6: Rename to `focusableWhenDisabled`.
+    ...other
+  } = props;
+  const chipRef = reactExports.useRef(null);
+  const handleRef = useForkRef(chipRef, ref);
+  const handleDeleteIconClick = (event) => {
+    event.stopPropagation();
+    if (onDelete) {
+      onDelete(event);
+    }
+  };
+  const handleKeyDown = (event) => {
+    if (event.currentTarget === event.target && isDeleteKeyboardEvent(event)) {
+      event.preventDefault();
+    }
+    if (onKeyDown) {
+      onKeyDown(event);
+    }
+  };
+  const handleKeyUp = (event) => {
+    if (event.currentTarget === event.target) {
+      if (onDelete && isDeleteKeyboardEvent(event)) {
+        onDelete(event);
+      }
+    }
+    if (onKeyUp) {
+      onKeyUp(event);
+    }
+  };
+  const clickable = clickableProp !== false && onClick ? true : clickableProp;
+  const component = clickable || onDelete ? ButtonBase : ComponentProp || "div";
+  const ownerState = {
+    ...props,
+    component,
+    disabled,
+    size,
+    color: color2,
+    iconColor: /* @__PURE__ */ reactExports.isValidElement(iconProp) ? iconProp.props.color || color2 : color2,
+    onDelete: !!onDelete,
+    clickable,
+    variant
+  };
+  const classes = useUtilityClasses$D(ownerState);
+  const moreProps = component === ButtonBase ? {
+    component: ComponentProp || "div",
+    focusVisibleClassName: classes.focusVisible,
+    ...onDelete && {
+      disableRipple: true
+    }
+  } : {};
+  let deleteIcon = null;
+  if (onDelete) {
+    deleteIcon = deleteIconProp && /* @__PURE__ */ reactExports.isValidElement(deleteIconProp) ? /* @__PURE__ */ reactExports.cloneElement(deleteIconProp, {
+      className: clsx(deleteIconProp.props.className, classes.deleteIcon),
+      onClick: handleDeleteIconClick
+    }) : /* @__PURE__ */ jsxRuntimeExports.jsx(CancelIcon$1, {
+      className: clsx(classes.deleteIcon),
+      onClick: handleDeleteIconClick
+    });
+  }
+  let avatar = null;
+  if (avatarProp && /* @__PURE__ */ reactExports.isValidElement(avatarProp)) {
+    avatar = /* @__PURE__ */ reactExports.cloneElement(avatarProp, {
+      className: clsx(classes.avatar, avatarProp.props.className)
+    });
+  }
+  let icon = null;
+  if (iconProp && /* @__PURE__ */ reactExports.isValidElement(iconProp)) {
+    icon = /* @__PURE__ */ reactExports.cloneElement(iconProp, {
+      className: clsx(classes.icon, iconProp.props.className)
+    });
+  }
+  return /* @__PURE__ */ jsxRuntimeExports.jsxs(ChipRoot, {
+    as: component,
+    className: clsx(classes.root, className),
+    disabled: clickable && disabled ? true : void 0,
+    onClick,
+    onKeyDown: handleKeyDown,
+    onKeyUp: handleKeyUp,
+    ref: handleRef,
+    tabIndex: skipFocusWhenDisabled && disabled ? -1 : tabIndex,
+    ownerState,
+    ...moreProps,
+    ...other,
+    children: [avatar || icon, /* @__PURE__ */ jsxRuntimeExports.jsx(ChipLabel, {
+      className: clsx(classes.label),
+      ownerState,
+      children: label
+    }), deleteIcon]
   });
 });
 function getStyleValue(value) {
@@ -17814,7 +18261,7 @@ const inputOverridesResolver = (props, styles2) => {
   } = props;
   return [styles2.input, ownerState.size === "small" && styles2.inputSizeSmall, ownerState.multiline && styles2.inputMultiline, ownerState.type === "search" && styles2.inputTypeSearch, ownerState.startAdornment && styles2.inputAdornedStart, ownerState.endAdornment && styles2.inputAdornedEnd, ownerState.hiddenLabel && styles2.inputHiddenLabel];
 };
-const useUtilityClasses$A = (ownerState) => {
+const useUtilityClasses$C = (ownerState) => {
   const {
     classes,
     color: color2,
@@ -18200,7 +18647,7 @@ const InputBase = /* @__PURE__ */ reactExports.forwardRef(function InputBase2(in
     startAdornment,
     type
   };
-  const classes = useUtilityClasses$A(ownerState);
+  const classes = useUtilityClasses$C(ownerState);
   const Root = slots.root || components.Root || InputBaseRoot;
   const rootProps = slotProps.root || componentsProps.root || {};
   const Input3 = slots.input || components.Input || InputBaseInput;
@@ -18317,7 +18764,7 @@ const Fade = /* @__PURE__ */ reactExports.forwardRef(function Fade2(props, ref) 
     style: style2,
     timeout = defaultTimeout,
     // eslint-disable-next-line react/prop-types
-    TransitionComponent = Transition,
+    TransitionComponent = Transition$1,
     ...other
   } = props;
   const nodeRef = reactExports.useRef(null);
@@ -18405,7 +18852,7 @@ function getBackdropUtilityClass(slot) {
   return generateUtilityClass("MuiBackdrop", slot);
 }
 generateUtilityClasses("MuiBackdrop", ["root", "invisible"]);
-const useUtilityClasses$z = (ownerState) => {
+const useUtilityClasses$B = (ownerState) => {
   const {
     classes,
     invisible
@@ -18468,7 +18915,7 @@ const Backdrop = /* @__PURE__ */ reactExports.forwardRef(function Backdrop2(inPr
     component,
     invisible
   };
-  const classes = useUtilityClasses$z(ownerState);
+  const classes = useUtilityClasses$B(ownerState);
   const backwardCompatibleSlots = {
     transition: TransitionComponentProp,
     root: components.Root,
@@ -18521,7 +18968,7 @@ function getButtonUtilityClass(slot) {
 const buttonClasses = generateUtilityClasses("MuiButton", ["root", "text", "textInherit", "textPrimary", "textSecondary", "textSuccess", "textError", "textInfo", "textWarning", "outlined", "outlinedInherit", "outlinedPrimary", "outlinedSecondary", "outlinedSuccess", "outlinedError", "outlinedInfo", "outlinedWarning", "contained", "containedInherit", "containedPrimary", "containedSecondary", "containedSuccess", "containedError", "containedInfo", "containedWarning", "disableElevation", "focusVisible", "disabled", "colorInherit", "colorPrimary", "colorSecondary", "colorSuccess", "colorError", "colorInfo", "colorWarning", "textSizeSmall", "textSizeMedium", "textSizeLarge", "outlinedSizeSmall", "outlinedSizeMedium", "outlinedSizeLarge", "containedSizeSmall", "containedSizeMedium", "containedSizeLarge", "sizeMedium", "sizeSmall", "sizeLarge", "fullWidth", "startIcon", "endIcon", "icon", "iconSizeSmall", "iconSizeMedium", "iconSizeLarge", "loading", "loadingWrapper", "loadingIconPlaceholder", "loadingIndicator", "loadingPositionCenter", "loadingPositionStart", "loadingPositionEnd"]);
 const ButtonGroupContext = /* @__PURE__ */ reactExports.createContext({});
 const ButtonGroupButtonContext = /* @__PURE__ */ reactExports.createContext(void 0);
-const useUtilityClasses$y = (ownerState) => {
+const useUtilityClasses$A = (ownerState) => {
   const {
     color: color2,
     disableElevation,
@@ -19023,7 +19470,7 @@ const Button = /* @__PURE__ */ reactExports.forwardRef(function Button2(inProps,
     type,
     variant
   };
-  const classes = useUtilityClasses$y(ownerState);
+  const classes = useUtilityClasses$A(ownerState);
   const startIcon = (startIconProp || loading && loadingPosition === "start") && /* @__PURE__ */ jsxRuntimeExports.jsx(ButtonStartIcon, {
     className: classes.startIcon,
     ownerState,
@@ -19074,7 +19521,7 @@ function getButtonGroupUtilityClass(slot) {
   return generateUtilityClass("MuiButtonGroup", slot);
 }
 const buttonGroupClasses = generateUtilityClasses("MuiButtonGroup", ["root", "contained", "outlined", "text", "disableElevation", "disabled", "firstButton", "fullWidth", "horizontal", "vertical", "colorPrimary", "colorSecondary", "grouped", "groupedHorizontal", "groupedVertical", "groupedText", "groupedTextHorizontal", "groupedTextVertical", "groupedTextPrimary", "groupedTextSecondary", "groupedOutlined", "groupedOutlinedHorizontal", "groupedOutlinedVertical", "groupedOutlinedPrimary", "groupedOutlinedSecondary", "groupedContained", "groupedContainedHorizontal", "groupedContainedVertical", "groupedContainedPrimary", "groupedContainedSecondary", "lastButton", "middleButton"]);
-const overridesResolver$2 = (props, styles2) => {
+const overridesResolver$3 = (props, styles2) => {
   const {
     ownerState
   } = props;
@@ -19096,7 +19543,7 @@ const overridesResolver$2 = (props, styles2) => {
     [`& .${buttonGroupClasses.middleButton}`]: styles2.middleButton
   }, styles2.root, styles2[ownerState.variant], ownerState.disableElevation === true && styles2.disableElevation, ownerState.fullWidth && styles2.fullWidth, ownerState.orientation === "vertical" && styles2.vertical];
 };
-const useUtilityClasses$x = (ownerState) => {
+const useUtilityClasses$z = (ownerState) => {
   const {
     classes,
     color: color2,
@@ -19118,7 +19565,7 @@ const useUtilityClasses$x = (ownerState) => {
 const ButtonGroupRoot = styled("div", {
   name: "MuiButtonGroup",
   slot: "Root",
-  overridesResolver: overridesResolver$2
+  overridesResolver: overridesResolver$3
 })(memoTheme(({
   theme: theme2
 }) => ({
@@ -19325,7 +19772,7 @@ const ButtonGroup = /* @__PURE__ */ reactExports.forwardRef(function ButtonGroup
     size,
     variant
   };
-  const classes = useUtilityClasses$x(ownerState);
+  const classes = useUtilityClasses$z(ownerState);
   const context = reactExports.useMemo(() => ({
     className: classes.grouped,
     color: color2,
@@ -19375,7 +19822,7 @@ function getSwitchBaseUtilityClass(slot) {
   return generateUtilityClass("PrivateSwitchBase", slot);
 }
 generateUtilityClasses("PrivateSwitchBase", ["root", "checked", "disabled", "input", "edgeStart", "edgeEnd"]);
-const useUtilityClasses$w = (ownerState) => {
+const useUtilityClasses$y = (ownerState) => {
   const {
     classes,
     checked,
@@ -19511,7 +19958,7 @@ const SwitchBase = /* @__PURE__ */ reactExports.forwardRef(function SwitchBase2(
     disableFocusRipple,
     edge
   };
-  const classes = useUtilityClasses$w(ownerState);
+  const classes = useUtilityClasses$y(ownerState);
   return /* @__PURE__ */ jsxRuntimeExports.jsxs(SwitchBaseRoot, {
     component: "span",
     className: clsx(classes.root, className),
@@ -20106,7 +20553,7 @@ function getModalUtilityClass(slot) {
   return generateUtilityClass("MuiModal", slot);
 }
 generateUtilityClasses("MuiModal", ["root", "hidden", "backdrop"]);
-const useUtilityClasses$v = (ownerState) => {
+const useUtilityClasses$x = (ownerState) => {
   const {
     open,
     exited,
@@ -20217,7 +20664,7 @@ const Modal = /* @__PURE__ */ reactExports.forwardRef(function Modal2(inProps, r
     ...propsWithDefaults,
     exited
   };
-  const classes = useUtilityClasses$v(ownerState);
+  const classes = useUtilityClasses$x(ownerState);
   const childProps = {};
   if (children.props.tabIndex === void 0) {
     childProps.tabIndex = "-1";
@@ -20310,7 +20757,7 @@ const DialogBackdrop = styled(Backdrop, {
   // Improve scrollable dialog support.
   zIndex: -1
 });
-const useUtilityClasses$u = (ownerState) => {
+const useUtilityClasses$w = (ownerState) => {
   const {
     classes,
     scroll,
@@ -20515,7 +20962,7 @@ const Dialog = /* @__PURE__ */ reactExports.forwardRef(function Dialog2(inProps,
     maxWidth: maxWidth2,
     scroll
   };
-  const classes = useUtilityClasses$u(ownerState);
+  const classes = useUtilityClasses$w(ownerState);
   const backdropClick = reactExports.useRef();
   const handleMouseDown = (event) => {
     backdropClick.current = event.target === event.currentTarget;
@@ -20637,7 +21084,7 @@ function getDialogActionsUtilityClass(slot) {
   return generateUtilityClass("MuiDialogActions", slot);
 }
 generateUtilityClasses("MuiDialogActions", ["root", "spacing"]);
-const useUtilityClasses$t = (ownerState) => {
+const useUtilityClasses$v = (ownerState) => {
   const {
     classes,
     disableSpacing
@@ -20687,7 +21134,7 @@ const DialogActions = /* @__PURE__ */ reactExports.forwardRef(function DialogAct
     ...props,
     disableSpacing
   };
-  const classes = useUtilityClasses$t(ownerState);
+  const classes = useUtilityClasses$v(ownerState);
   return /* @__PURE__ */ jsxRuntimeExports.jsx(DialogActionsRoot, {
     className: clsx(classes.root, className),
     ownerState,
@@ -20703,7 +21150,7 @@ function getDialogTitleUtilityClass(slot) {
   return generateUtilityClass("MuiDialogTitle", slot);
 }
 const dialogTitleClasses = generateUtilityClasses("MuiDialogTitle", ["root"]);
-const useUtilityClasses$s = (ownerState) => {
+const useUtilityClasses$u = (ownerState) => {
   const {
     classes,
     dividers
@@ -20764,7 +21211,7 @@ const DialogContent = /* @__PURE__ */ reactExports.forwardRef(function DialogCon
     ...props,
     dividers
   };
-  const classes = useUtilityClasses$s(ownerState);
+  const classes = useUtilityClasses$u(ownerState);
   return /* @__PURE__ */ jsxRuntimeExports.jsx(DialogContentRoot, {
     className: clsx(classes.root, className),
     ownerState,
@@ -20772,7 +21219,7 @@ const DialogContent = /* @__PURE__ */ reactExports.forwardRef(function DialogCon
     ...other
   });
 });
-const useUtilityClasses$r = (ownerState) => {
+const useUtilityClasses$t = (ownerState) => {
   const {
     classes
   } = ownerState;
@@ -20800,7 +21247,7 @@ const DialogTitle = /* @__PURE__ */ reactExports.forwardRef(function DialogTitle
     ...other
   } = props;
   const ownerState = props;
-  const classes = useUtilityClasses$r(ownerState);
+  const classes = useUtilityClasses$t(ownerState);
   const {
     titleId = idProp
   } = reactExports.useContext(DialogContext);
@@ -20817,8 +21264,8 @@ const DialogTitle = /* @__PURE__ */ reactExports.forwardRef(function DialogTitle
 function getDividerUtilityClass(slot) {
   return generateUtilityClass("MuiDivider", slot);
 }
-generateUtilityClasses("MuiDivider", ["root", "absolute", "fullWidth", "inset", "middle", "flexItem", "light", "vertical", "withChildren", "withChildrenVertical", "textAlignRight", "textAlignLeft", "wrapper", "wrapperVertical"]);
-const useUtilityClasses$q = (ownerState) => {
+const dividerClasses = generateUtilityClasses("MuiDivider", ["root", "absolute", "fullWidth", "inset", "middle", "flexItem", "light", "vertical", "withChildren", "withChildrenVertical", "textAlignRight", "textAlignLeft", "wrapper", "wrapperVertical"]);
+const useUtilityClasses$s = (ownerState) => {
   const {
     absolute,
     children,
@@ -21032,7 +21479,7 @@ const Divider = /* @__PURE__ */ reactExports.forwardRef(function Divider2(inProp
     textAlign,
     variant
   };
-  const classes = useUtilityClasses$q(ownerState);
+  const classes = useUtilityClasses$s(ownerState);
   return /* @__PURE__ */ jsxRuntimeExports.jsx(DividerRoot, {
     as: component,
     className: clsx(classes.root, className),
@@ -21051,7 +21498,211 @@ const Divider = /* @__PURE__ */ reactExports.forwardRef(function Divider2(inProp
 if (Divider) {
   Divider.muiSkipListHighlight = true;
 }
-const useUtilityClasses$p = (ownerState) => {
+function getTranslateValue(direction, node2, resolvedContainer) {
+  const rect = node2.getBoundingClientRect();
+  const containerRect = resolvedContainer && resolvedContainer.getBoundingClientRect();
+  const containerWindow = ownerWindow(node2);
+  let transform;
+  if (node2.fakeTransform) {
+    transform = node2.fakeTransform;
+  } else {
+    const computedStyle = containerWindow.getComputedStyle(node2);
+    transform = computedStyle.getPropertyValue("-webkit-transform") || computedStyle.getPropertyValue("transform");
+  }
+  let offsetX = 0;
+  let offsetY = 0;
+  if (transform && transform !== "none" && typeof transform === "string") {
+    const transformValues = transform.split("(")[1].split(")")[0].split(",");
+    offsetX = parseInt(transformValues[4], 10);
+    offsetY = parseInt(transformValues[5], 10);
+  }
+  if (direction === "left") {
+    if (containerRect) {
+      return `translateX(${containerRect.right + offsetX - rect.left}px)`;
+    }
+    return `translateX(${containerWindow.innerWidth + offsetX - rect.left}px)`;
+  }
+  if (direction === "right") {
+    if (containerRect) {
+      return `translateX(-${rect.right - containerRect.left - offsetX}px)`;
+    }
+    return `translateX(-${rect.left + rect.width - offsetX}px)`;
+  }
+  if (direction === "up") {
+    if (containerRect) {
+      return `translateY(${containerRect.bottom + offsetY - rect.top}px)`;
+    }
+    return `translateY(${containerWindow.innerHeight + offsetY - rect.top}px)`;
+  }
+  if (containerRect) {
+    return `translateY(-${rect.top - containerRect.top + rect.height - offsetY}px)`;
+  }
+  return `translateY(-${rect.top + rect.height - offsetY}px)`;
+}
+function resolveContainer(containerPropProp) {
+  return typeof containerPropProp === "function" ? containerPropProp() : containerPropProp;
+}
+function setTranslateValue(direction, node2, containerProp) {
+  const resolvedContainer = resolveContainer(containerProp);
+  const transform = getTranslateValue(direction, node2, resolvedContainer);
+  if (transform) {
+    node2.style.webkitTransform = transform;
+    node2.style.transform = transform;
+  }
+}
+const Slide = /* @__PURE__ */ reactExports.forwardRef(function Slide2(props, ref) {
+  const theme2 = useTheme();
+  const defaultEasing = {
+    enter: theme2.transitions.easing.easeOut,
+    exit: theme2.transitions.easing.sharp
+  };
+  const defaultTimeout = {
+    enter: theme2.transitions.duration.enteringScreen,
+    exit: theme2.transitions.duration.leavingScreen
+  };
+  const {
+    addEndListener,
+    appear = true,
+    children,
+    container: containerProp,
+    direction = "down",
+    easing: easingProp = defaultEasing,
+    in: inProp,
+    onEnter,
+    onEntered,
+    onEntering,
+    onExit,
+    onExited,
+    onExiting,
+    style: style2,
+    timeout = defaultTimeout,
+    // eslint-disable-next-line react/prop-types
+    TransitionComponent = Transition$1,
+    ...other
+  } = props;
+  const childrenRef = reactExports.useRef(null);
+  const handleRef = useForkRef(getReactElementRef(children), childrenRef, ref);
+  const normalizedTransitionCallback = (callback) => (isAppearing) => {
+    if (callback) {
+      if (isAppearing === void 0) {
+        callback(childrenRef.current);
+      } else {
+        callback(childrenRef.current, isAppearing);
+      }
+    }
+  };
+  const handleEnter = normalizedTransitionCallback((node2, isAppearing) => {
+    setTranslateValue(direction, node2, containerProp);
+    reflow(node2);
+    if (onEnter) {
+      onEnter(node2, isAppearing);
+    }
+  });
+  const handleEntering = normalizedTransitionCallback((node2, isAppearing) => {
+    const transitionProps = getTransitionProps({
+      timeout,
+      style: style2,
+      easing: easingProp
+    }, {
+      mode: "enter"
+    });
+    node2.style.webkitTransition = theme2.transitions.create("-webkit-transform", {
+      ...transitionProps
+    });
+    node2.style.transition = theme2.transitions.create("transform", {
+      ...transitionProps
+    });
+    node2.style.webkitTransform = "none";
+    node2.style.transform = "none";
+    if (onEntering) {
+      onEntering(node2, isAppearing);
+    }
+  });
+  const handleEntered = normalizedTransitionCallback(onEntered);
+  const handleExiting = normalizedTransitionCallback(onExiting);
+  const handleExit = normalizedTransitionCallback((node2) => {
+    const transitionProps = getTransitionProps({
+      timeout,
+      style: style2,
+      easing: easingProp
+    }, {
+      mode: "exit"
+    });
+    node2.style.webkitTransition = theme2.transitions.create("-webkit-transform", transitionProps);
+    node2.style.transition = theme2.transitions.create("transform", transitionProps);
+    setTranslateValue(direction, node2, containerProp);
+    if (onExit) {
+      onExit(node2);
+    }
+  });
+  const handleExited = normalizedTransitionCallback((node2) => {
+    node2.style.webkitTransition = "";
+    node2.style.transition = "";
+    if (onExited) {
+      onExited(node2);
+    }
+  });
+  const handleAddEndListener = (next2) => {
+    if (addEndListener) {
+      addEndListener(childrenRef.current, next2);
+    }
+  };
+  const updatePosition = reactExports.useCallback(() => {
+    if (childrenRef.current) {
+      setTranslateValue(direction, childrenRef.current, containerProp);
+    }
+  }, [direction, containerProp]);
+  reactExports.useEffect(() => {
+    if (inProp || direction === "down" || direction === "right") {
+      return void 0;
+    }
+    const handleResize = debounce$1(() => {
+      if (childrenRef.current) {
+        setTranslateValue(direction, childrenRef.current, containerProp);
+      }
+    });
+    const containerWindow = ownerWindow(childrenRef.current);
+    containerWindow.addEventListener("resize", handleResize);
+    return () => {
+      handleResize.clear();
+      containerWindow.removeEventListener("resize", handleResize);
+    };
+  }, [direction, inProp, containerProp]);
+  reactExports.useEffect(() => {
+    if (!inProp) {
+      updatePosition();
+    }
+  }, [inProp, updatePosition]);
+  return /* @__PURE__ */ jsxRuntimeExports.jsx(TransitionComponent, {
+    nodeRef: childrenRef,
+    onEnter: handleEnter,
+    onEntered: handleEntered,
+    onEntering: handleEntering,
+    onExit: handleExit,
+    onExited: handleExited,
+    onExiting: handleExiting,
+    addEndListener: handleAddEndListener,
+    appear,
+    in: inProp,
+    timeout,
+    ...other,
+    children: (state, {
+      ownerState,
+      ...restChildProps
+    }) => {
+      return /* @__PURE__ */ reactExports.cloneElement(children, {
+        ref: handleRef,
+        style: {
+          visibility: state === "exited" && !inProp ? "hidden" : void 0,
+          ...style2,
+          ...children.props.style
+        },
+        ...restChildProps
+      });
+    }
+  });
+});
+const useUtilityClasses$r = (ownerState) => {
   const {
     classes,
     disableUnderline,
@@ -21333,7 +21984,7 @@ const FilledInput = /* @__PURE__ */ reactExports.forwardRef(function FilledInput
     multiline,
     type
   };
-  const classes = useUtilityClasses$p(props);
+  const classes = useUtilityClasses$r(props);
   const filledInputComponentsProps = {
     root: {
       ownerState
@@ -21365,7 +22016,7 @@ function getFormControlUtilityClasses(slot) {
   return generateUtilityClass("MuiFormControl", slot);
 }
 generateUtilityClasses("MuiFormControl", ["root", "marginNone", "marginNormal", "marginDense", "fullWidth", "disabled"]);
-const useUtilityClasses$o = (ownerState) => {
+const useUtilityClasses$q = (ownerState) => {
   const {
     classes,
     margin: margin2,
@@ -21455,7 +22106,7 @@ const FormControl = /* @__PURE__ */ reactExports.forwardRef(function FormControl
     size,
     variant
   };
-  const classes = useUtilityClasses$o(ownerState);
+  const classes = useUtilityClasses$q(ownerState);
   const [adornedStart, setAdornedStart] = reactExports.useState(() => {
     let initialAdornedStart = false;
     if (children) {
@@ -21539,7 +22190,7 @@ function getFormControlLabelUtilityClasses(slot) {
   return generateUtilityClass("MuiFormControlLabel", slot);
 }
 const formControlLabelClasses = generateUtilityClasses("MuiFormControlLabel", ["root", "labelPlacementStart", "labelPlacementTop", "labelPlacementBottom", "disabled", "label", "error", "required", "asterisk"]);
-const useUtilityClasses$n = (ownerState) => {
+const useUtilityClasses$p = (ownerState) => {
   const {
     classes,
     disabled,
@@ -21675,7 +22326,7 @@ const FormControlLabel = /* @__PURE__ */ reactExports.forwardRef(function FormCo
     required,
     error: fcs.error
   };
-  const classes = useUtilityClasses$n(ownerState);
+  const classes = useUtilityClasses$p(ownerState);
   const externalForwardedProps = {
     slots,
     slotProps: {
@@ -21717,7 +22368,7 @@ function getFormHelperTextUtilityClasses(slot) {
 }
 const formHelperTextClasses = generateUtilityClasses("MuiFormHelperText", ["root", "error", "disabled", "sizeSmall", "sizeMedium", "contained", "focused", "filled", "required"]);
 var _span$2;
-const useUtilityClasses$m = (ownerState) => {
+const useUtilityClasses$o = (ownerState) => {
   const {
     classes,
     contained,
@@ -21812,7 +22463,7 @@ const FormHelperText = /* @__PURE__ */ reactExports.forwardRef(function FormHelp
     required: fcs.required
   };
   delete ownerState.ownerState;
-  const classes = useUtilityClasses$m(ownerState);
+  const classes = useUtilityClasses$o(ownerState);
   return /* @__PURE__ */ jsxRuntimeExports.jsx(FormHelperTextRoot, {
     as: component,
     className: clsx(classes.root, className),
@@ -21833,7 +22484,7 @@ function getFormLabelUtilityClasses(slot) {
   return generateUtilityClass("MuiFormLabel", slot);
 }
 const formLabelClasses = generateUtilityClasses("MuiFormLabel", ["root", "colorSecondary", "focused", "disabled", "error", "filled", "required", "asterisk"]);
-const useUtilityClasses$l = (ownerState) => {
+const useUtilityClasses$n = (ownerState) => {
   const {
     classes,
     color: color2,
@@ -21931,7 +22582,7 @@ const FormLabel = /* @__PURE__ */ reactExports.forwardRef(function FormLabel2(in
     focused: fcs.focused,
     required: fcs.required
   };
-  const classes = useUtilityClasses$l(ownerState);
+  const classes = useUtilityClasses$n(ownerState);
   return /* @__PURE__ */ jsxRuntimeExports.jsxs(FormLabelRoot, {
     as: component,
     ownerState,
@@ -22259,7 +22910,7 @@ function resolveSpacingClasses(spacing, breakpoints) {
   });
   return classes;
 }
-const useUtilityClasses$k = (ownerState) => {
+const useUtilityClasses$m = (ownerState) => {
   const {
     classes,
     container,
@@ -22337,7 +22988,7 @@ const Grid = /* @__PURE__ */ reactExports.forwardRef(function Grid2(inProps, ref
     ...breakpointsValues,
     breakpoints: breakpoints.keys
   };
-  const classes = useUtilityClasses$k(ownerState);
+  const classes = useUtilityClasses$m(ownerState);
   return /* @__PURE__ */ jsxRuntimeExports.jsx(GridContext.Provider, {
     value: columns,
     children: /* @__PURE__ */ jsxRuntimeExports.jsx(GridRoot, {
@@ -22379,7 +23030,7 @@ const Grow = /* @__PURE__ */ reactExports.forwardRef(function Grow2(props, ref) 
     style: style2,
     timeout = "auto",
     // eslint-disable-next-line react/prop-types
-    TransitionComponent = Transition,
+    TransitionComponent = Transition$1,
     ...other
   } = props;
   const timer = useTimeout();
@@ -22512,7 +23163,7 @@ if (Grow) {
 const useMediaQuery = unstable_createUseMediaQuery({
   themeId: THEME_ID
 });
-const useUtilityClasses$j = (ownerState) => {
+const useUtilityClasses$l = (ownerState) => {
   const {
     classes,
     disableUnderline
@@ -22645,7 +23296,7 @@ const Input = /* @__PURE__ */ reactExports.forwardRef(function Input2(inProps, r
     type = "text",
     ...other
   } = props;
-  const classes = useUtilityClasses$j(props);
+  const classes = useUtilityClasses$l(props);
   const ownerState = {
     disableUnderline
   };
@@ -22677,7 +23328,7 @@ function getInputLabelUtilityClasses(slot) {
   return generateUtilityClass("MuiInputLabel", slot);
 }
 generateUtilityClasses("MuiInputLabel", ["root", "focused", "disabled", "error", "required", "asterisk", "formControl", "sizeSmall", "shrink", "animated", "standard", "filled", "outlined"]);
-const useUtilityClasses$i = (ownerState) => {
+const useUtilityClasses$k = (ownerState) => {
   const {
     classes,
     formControl,
@@ -22866,7 +23517,7 @@ const InputLabel = /* @__PURE__ */ reactExports.forwardRef(function InputLabel2(
     required: fcs.required,
     focused: fcs.focused
   };
-  const classes = useUtilityClasses$i(ownerState);
+  const classes = useUtilityClasses$k(ownerState);
   return /* @__PURE__ */ jsxRuntimeExports.jsx(InputLabelRoot, {
     "data-shrink": shrink,
     ref,
@@ -22876,12 +23527,398 @@ const InputLabel = /* @__PURE__ */ reactExports.forwardRef(function InputLabel2(
     classes
   });
 });
+function getLinearProgressUtilityClass(slot) {
+  return generateUtilityClass("MuiLinearProgress", slot);
+}
+generateUtilityClasses("MuiLinearProgress", ["root", "colorPrimary", "colorSecondary", "determinate", "indeterminate", "buffer", "query", "dashed", "dashedColorPrimary", "dashedColorSecondary", "bar", "bar1", "bar2", "barColorPrimary", "barColorSecondary", "bar1Indeterminate", "bar1Determinate", "bar1Buffer", "bar2Indeterminate", "bar2Buffer"]);
+const TRANSITION_DURATION = 4;
+const indeterminate1Keyframe = keyframes`
+  0% {
+    left: -35%;
+    right: 100%;
+  }
+
+  60% {
+    left: 100%;
+    right: -90%;
+  }
+
+  100% {
+    left: 100%;
+    right: -90%;
+  }
+`;
+const indeterminate1Animation = typeof indeterminate1Keyframe !== "string" ? css`
+        animation: ${indeterminate1Keyframe} 2.1s cubic-bezier(0.65, 0.815, 0.735, 0.395) infinite;
+      ` : null;
+const indeterminate2Keyframe = keyframes`
+  0% {
+    left: -200%;
+    right: 100%;
+  }
+
+  60% {
+    left: 107%;
+    right: -8%;
+  }
+
+  100% {
+    left: 107%;
+    right: -8%;
+  }
+`;
+const indeterminate2Animation = typeof indeterminate2Keyframe !== "string" ? css`
+        animation: ${indeterminate2Keyframe} 2.1s cubic-bezier(0.165, 0.84, 0.44, 1) 1.15s infinite;
+      ` : null;
+const bufferKeyframe = keyframes`
+  0% {
+    opacity: 1;
+    background-position: 0 -23px;
+  }
+
+  60% {
+    opacity: 0;
+    background-position: 0 -23px;
+  }
+
+  100% {
+    opacity: 1;
+    background-position: -200px -23px;
+  }
+`;
+const bufferAnimation = typeof bufferKeyframe !== "string" ? css`
+        animation: ${bufferKeyframe} 3s infinite linear;
+      ` : null;
+const useUtilityClasses$j = (ownerState) => {
+  const {
+    classes,
+    variant,
+    color: color2
+  } = ownerState;
+  const slots = {
+    root: ["root", `color${capitalize(color2)}`, variant],
+    dashed: ["dashed", `dashedColor${capitalize(color2)}`],
+    bar1: ["bar", "bar1", `barColor${capitalize(color2)}`, (variant === "indeterminate" || variant === "query") && "bar1Indeterminate", variant === "determinate" && "bar1Determinate", variant === "buffer" && "bar1Buffer"],
+    bar2: ["bar", "bar2", variant !== "buffer" && `barColor${capitalize(color2)}`, variant === "buffer" && `color${capitalize(color2)}`, (variant === "indeterminate" || variant === "query") && "bar2Indeterminate", variant === "buffer" && "bar2Buffer"]
+  };
+  return composeClasses(slots, getLinearProgressUtilityClass, classes);
+};
+const getColorShade = (theme2, color2) => {
+  if (theme2.vars) {
+    return theme2.vars.palette.LinearProgress[`${color2}Bg`];
+  }
+  return theme2.palette.mode === "light" ? lighten(theme2.palette[color2].main, 0.62) : darken(theme2.palette[color2].main, 0.5);
+};
+const LinearProgressRoot = styled("span", {
+  name: "MuiLinearProgress",
+  slot: "Root",
+  overridesResolver: (props, styles2) => {
+    const {
+      ownerState
+    } = props;
+    return [styles2.root, styles2[`color${capitalize(ownerState.color)}`], styles2[ownerState.variant]];
+  }
+})(memoTheme(({
+  theme: theme2
+}) => ({
+  position: "relative",
+  overflow: "hidden",
+  display: "block",
+  height: 4,
+  // Fix Safari's bug during composition of different paint.
+  zIndex: 0,
+  "@media print": {
+    colorAdjust: "exact"
+  },
+  variants: [...Object.entries(theme2.palette).filter(createSimplePaletteValueFilter()).map(([color2]) => ({
+    props: {
+      color: color2
+    },
+    style: {
+      backgroundColor: getColorShade(theme2, color2)
+    }
+  })), {
+    props: ({
+      ownerState
+    }) => ownerState.color === "inherit" && ownerState.variant !== "buffer",
+    style: {
+      "&::before": {
+        content: '""',
+        position: "absolute",
+        left: 0,
+        top: 0,
+        right: 0,
+        bottom: 0,
+        backgroundColor: "currentColor",
+        opacity: 0.3
+      }
+    }
+  }, {
+    props: {
+      variant: "buffer"
+    },
+    style: {
+      backgroundColor: "transparent"
+    }
+  }, {
+    props: {
+      variant: "query"
+    },
+    style: {
+      transform: "rotate(180deg)"
+    }
+  }]
+})));
+const LinearProgressDashed = styled("span", {
+  name: "MuiLinearProgress",
+  slot: "Dashed",
+  overridesResolver: (props, styles2) => {
+    const {
+      ownerState
+    } = props;
+    return [styles2.dashed, styles2[`dashedColor${capitalize(ownerState.color)}`]];
+  }
+})(memoTheme(({
+  theme: theme2
+}) => ({
+  position: "absolute",
+  marginTop: 0,
+  height: "100%",
+  width: "100%",
+  backgroundSize: "10px 10px",
+  backgroundPosition: "0 -23px",
+  variants: [{
+    props: {
+      color: "inherit"
+    },
+    style: {
+      opacity: 0.3,
+      backgroundImage: `radial-gradient(currentColor 0%, currentColor 16%, transparent 42%)`
+    }
+  }, ...Object.entries(theme2.palette).filter(createSimplePaletteValueFilter()).map(([color2]) => {
+    const backgroundColor2 = getColorShade(theme2, color2);
+    return {
+      props: {
+        color: color2
+      },
+      style: {
+        backgroundImage: `radial-gradient(${backgroundColor2} 0%, ${backgroundColor2} 16%, transparent 42%)`
+      }
+    };
+  })]
+})), bufferAnimation || {
+  // At runtime for Pigment CSS, `bufferAnimation` will be null and the generated keyframe will be used.
+  animation: `${bufferKeyframe} 3s infinite linear`
+});
+const LinearProgressBar1 = styled("span", {
+  name: "MuiLinearProgress",
+  slot: "Bar1",
+  overridesResolver: (props, styles2) => {
+    const {
+      ownerState
+    } = props;
+    return [styles2.bar, styles2.bar1, styles2[`barColor${capitalize(ownerState.color)}`], (ownerState.variant === "indeterminate" || ownerState.variant === "query") && styles2.bar1Indeterminate, ownerState.variant === "determinate" && styles2.bar1Determinate, ownerState.variant === "buffer" && styles2.bar1Buffer];
+  }
+})(memoTheme(({
+  theme: theme2
+}) => ({
+  width: "100%",
+  position: "absolute",
+  left: 0,
+  bottom: 0,
+  top: 0,
+  transition: "transform 0.2s linear",
+  transformOrigin: "left",
+  variants: [{
+    props: {
+      color: "inherit"
+    },
+    style: {
+      backgroundColor: "currentColor"
+    }
+  }, ...Object.entries(theme2.palette).filter(createSimplePaletteValueFilter()).map(([color2]) => ({
+    props: {
+      color: color2
+    },
+    style: {
+      backgroundColor: (theme2.vars || theme2).palette[color2].main
+    }
+  })), {
+    props: {
+      variant: "determinate"
+    },
+    style: {
+      transition: `transform .${TRANSITION_DURATION}s linear`
+    }
+  }, {
+    props: {
+      variant: "buffer"
+    },
+    style: {
+      zIndex: 1,
+      transition: `transform .${TRANSITION_DURATION}s linear`
+    }
+  }, {
+    props: ({
+      ownerState
+    }) => ownerState.variant === "indeterminate" || ownerState.variant === "query",
+    style: {
+      width: "auto"
+    }
+  }, {
+    props: ({
+      ownerState
+    }) => ownerState.variant === "indeterminate" || ownerState.variant === "query",
+    style: indeterminate1Animation || {
+      animation: `${indeterminate1Keyframe} 2.1s cubic-bezier(0.65, 0.815, 0.735, 0.395) infinite`
+    }
+  }]
+})));
+const LinearProgressBar2 = styled("span", {
+  name: "MuiLinearProgress",
+  slot: "Bar2",
+  overridesResolver: (props, styles2) => {
+    const {
+      ownerState
+    } = props;
+    return [styles2.bar, styles2.bar2, styles2[`barColor${capitalize(ownerState.color)}`], (ownerState.variant === "indeterminate" || ownerState.variant === "query") && styles2.bar2Indeterminate, ownerState.variant === "buffer" && styles2.bar2Buffer];
+  }
+})(memoTheme(({
+  theme: theme2
+}) => ({
+  width: "100%",
+  position: "absolute",
+  left: 0,
+  bottom: 0,
+  top: 0,
+  transition: "transform 0.2s linear",
+  transformOrigin: "left",
+  variants: [...Object.entries(theme2.palette).filter(createSimplePaletteValueFilter()).map(([color2]) => ({
+    props: {
+      color: color2
+    },
+    style: {
+      "--LinearProgressBar2-barColor": (theme2.vars || theme2).palette[color2].main
+    }
+  })), {
+    props: ({
+      ownerState
+    }) => ownerState.variant !== "buffer" && ownerState.color !== "inherit",
+    style: {
+      backgroundColor: "var(--LinearProgressBar2-barColor, currentColor)"
+    }
+  }, {
+    props: ({
+      ownerState
+    }) => ownerState.variant !== "buffer" && ownerState.color === "inherit",
+    style: {
+      backgroundColor: "currentColor"
+    }
+  }, {
+    props: {
+      color: "inherit"
+    },
+    style: {
+      opacity: 0.3
+    }
+  }, ...Object.entries(theme2.palette).filter(createSimplePaletteValueFilter()).map(([color2]) => ({
+    props: {
+      color: color2,
+      variant: "buffer"
+    },
+    style: {
+      backgroundColor: getColorShade(theme2, color2),
+      transition: `transform .${TRANSITION_DURATION}s linear`
+    }
+  })), {
+    props: ({
+      ownerState
+    }) => ownerState.variant === "indeterminate" || ownerState.variant === "query",
+    style: {
+      width: "auto"
+    }
+  }, {
+    props: ({
+      ownerState
+    }) => ownerState.variant === "indeterminate" || ownerState.variant === "query",
+    style: indeterminate2Animation || {
+      animation: `${indeterminate2Keyframe} 2.1s cubic-bezier(0.165, 0.84, 0.44, 1) 1.15s infinite`
+    }
+  }]
+})));
+const LinearProgress = /* @__PURE__ */ reactExports.forwardRef(function LinearProgress2(inProps, ref) {
+  const props = useDefaultProps({
+    props: inProps,
+    name: "MuiLinearProgress"
+  });
+  const {
+    className,
+    color: color2 = "primary",
+    value,
+    valueBuffer,
+    variant = "indeterminate",
+    ...other
+  } = props;
+  const ownerState = {
+    ...props,
+    color: color2,
+    variant
+  };
+  const classes = useUtilityClasses$j(ownerState);
+  const isRtl = useRtl();
+  const rootProps = {};
+  const inlineStyles = {
+    bar1: {},
+    bar2: {}
+  };
+  if (variant === "determinate" || variant === "buffer") {
+    if (value !== void 0) {
+      rootProps["aria-valuenow"] = Math.round(value);
+      rootProps["aria-valuemin"] = 0;
+      rootProps["aria-valuemax"] = 100;
+      let transform = value - 100;
+      if (isRtl) {
+        transform = -transform;
+      }
+      inlineStyles.bar1.transform = `translateX(${transform}%)`;
+    }
+  }
+  if (variant === "buffer") {
+    if (valueBuffer !== void 0) {
+      let transform = (valueBuffer || 0) - 100;
+      if (isRtl) {
+        transform = -transform;
+      }
+      inlineStyles.bar2.transform = `translateX(${transform}%)`;
+    }
+  }
+  return /* @__PURE__ */ jsxRuntimeExports.jsxs(LinearProgressRoot, {
+    className: clsx(classes.root, className),
+    ownerState,
+    role: "progressbar",
+    ...rootProps,
+    ref,
+    ...other,
+    children: [variant === "buffer" ? /* @__PURE__ */ jsxRuntimeExports.jsx(LinearProgressDashed, {
+      className: classes.dashed,
+      ownerState
+    }) : null, /* @__PURE__ */ jsxRuntimeExports.jsx(LinearProgressBar1, {
+      className: classes.bar1,
+      ownerState,
+      style: inlineStyles.bar1
+    }), variant === "determinate" ? null : /* @__PURE__ */ jsxRuntimeExports.jsx(LinearProgressBar2, {
+      className: classes.bar2,
+      ownerState,
+      style: inlineStyles.bar2
+    })]
+  });
+});
 const ListContext = /* @__PURE__ */ reactExports.createContext({});
 function getListUtilityClass(slot) {
   return generateUtilityClass("MuiList", slot);
 }
 generateUtilityClasses("MuiList", ["root", "padding", "dense", "subheader"]);
-const useUtilityClasses$h = (ownerState) => {
+const useUtilityClasses$i = (ownerState) => {
   const {
     classes,
     disablePadding,
@@ -22947,7 +23984,7 @@ const List = /* @__PURE__ */ reactExports.forwardRef(function List2(inProps, ref
     dense,
     disablePadding
   };
-  const classes = useUtilityClasses$h(ownerState);
+  const classes = useUtilityClasses$i(ownerState);
   return /* @__PURE__ */ jsxRuntimeExports.jsx(ListContext.Provider, {
     value: context,
     children: /* @__PURE__ */ jsxRuntimeExports.jsxs(ListRoot, {
@@ -22969,7 +24006,7 @@ function getListItemSecondaryActionClassesUtilityClass(slot) {
   return generateUtilityClass("MuiListItemSecondaryAction", slot);
 }
 generateUtilityClasses("MuiListItemSecondaryAction", ["root", "disableGutters"]);
-const useUtilityClasses$g = (ownerState) => {
+const useUtilityClasses$h = (ownerState) => {
   const {
     disableGutters,
     classes
@@ -23016,7 +24053,7 @@ const ListItemSecondaryAction = /* @__PURE__ */ reactExports.forwardRef(function
     ...props,
     disableGutters: context.disableGutters
   };
-  const classes = useUtilityClasses$g(ownerState);
+  const classes = useUtilityClasses$h(ownerState);
   return /* @__PURE__ */ jsxRuntimeExports.jsx(ListItemSecondaryActionRoot, {
     className: clsx(classes.root, className),
     ownerState,
@@ -23025,13 +24062,13 @@ const ListItemSecondaryAction = /* @__PURE__ */ reactExports.forwardRef(function
   });
 });
 ListItemSecondaryAction.muiName = "ListItemSecondaryAction";
-const overridesResolver$1 = (props, styles2) => {
+const overridesResolver$2 = (props, styles2) => {
   const {
     ownerState
   } = props;
   return [styles2.root, ownerState.dense && styles2.dense, ownerState.alignItems === "flex-start" && styles2.alignItemsFlexStart, ownerState.divider && styles2.divider, !ownerState.disableGutters && styles2.gutters, !ownerState.disablePadding && styles2.padding, ownerState.hasSecondaryAction && styles2.secondaryAction];
 };
-const useUtilityClasses$f = (ownerState) => {
+const useUtilityClasses$g = (ownerState) => {
   const {
     alignItems,
     classes,
@@ -23050,7 +24087,7 @@ const useUtilityClasses$f = (ownerState) => {
 const ListItemRoot = styled("div", {
   name: "MuiListItem",
   slot: "Root",
-  overridesResolver: overridesResolver$1
+  overridesResolver: overridesResolver$2
 })(memoTheme(({
   theme: theme2
 }) => ({
@@ -23198,7 +24235,7 @@ const ListItem = /* @__PURE__ */ reactExports.forwardRef(function ListItem2(inPr
     divider,
     hasSecondaryAction
   };
-  const classes = useUtilityClasses$f(ownerState);
+  const classes = useUtilityClasses$g(ownerState);
   const handleRef = useForkRef(listItemRef, ref);
   const Root = slots.root || components.Root || ListItemRoot;
   const rootProps = slotProps.root || componentsProps.root || {};
@@ -23258,11 +24295,12 @@ const ListItem = /* @__PURE__ */ reactExports.forwardRef(function ListItem2(inPr
     })
   });
 });
+const listItemIconClasses = generateUtilityClasses("MuiListItemIcon", ["root", "alignItemsFlexStart"]);
 function getListItemTextUtilityClass(slot) {
   return generateUtilityClass("MuiListItemText", slot);
 }
 const listItemTextClasses = generateUtilityClasses("MuiListItemText", ["root", "multiline", "dense", "inset", "primary", "secondary"]);
-const useUtilityClasses$e = (ownerState) => {
+const useUtilityClasses$f = (ownerState) => {
   const {
     classes,
     inset,
@@ -23349,7 +24387,7 @@ const ListItemText = /* @__PURE__ */ reactExports.forwardRef(function ListItemTe
     secondary: !!secondary,
     dense
   };
-  const classes = useUtilityClasses$e(ownerState);
+  const classes = useUtilityClasses$f(ownerState);
   const externalForwardedProps = {
     slots,
     slotProps: {
@@ -23619,7 +24657,7 @@ function getTransformOriginValue(transformOrigin) {
 function resolveAnchorEl(anchorEl) {
   return typeof anchorEl === "function" ? anchorEl() : anchorEl;
 }
-const useUtilityClasses$d = (ownerState) => {
+const useUtilityClasses$e = (ownerState) => {
   const {
     classes
   } = ownerState;
@@ -23701,7 +24739,7 @@ const Popover = /* @__PURE__ */ reactExports.forwardRef(function Popover2(inProp
     transitionDuration: transitionDurationProp,
     TransitionProps
   };
-  const classes = useUtilityClasses$d(ownerState);
+  const classes = useUtilityClasses$e(ownerState);
   const getAnchorOffset = reactExports.useCallback(() => {
     if (anchorReference === "anchorPosition") {
       return anchorPosition;
@@ -23899,7 +24937,7 @@ const LTR_ORIGIN = {
   vertical: "top",
   horizontal: "left"
 };
-const useUtilityClasses$c = (ownerState) => {
+const useUtilityClasses$d = (ownerState) => {
   const {
     classes
   } = ownerState;
@@ -23973,7 +25011,7 @@ const Menu = /* @__PURE__ */ reactExports.forwardRef(function Menu2(inProps, ref
     TransitionProps,
     variant
   };
-  const classes = useUtilityClasses$c(ownerState);
+  const classes = useUtilityClasses$d(ownerState);
   const autoFocusItem = autoFocus && !disableAutoFocusItem && open;
   const menuListActionsRef = reactExports.useRef(null);
   const handleEntering = (element, isAppearing) => {
@@ -24055,6 +25093,195 @@ const Menu = /* @__PURE__ */ reactExports.forwardRef(function Menu2(inProps, ref
       ...MenuListProps,
       className: clsx(classes.list, MenuListProps.className),
       children
+    })
+  });
+});
+function getMenuItemUtilityClass(slot) {
+  return generateUtilityClass("MuiMenuItem", slot);
+}
+const menuItemClasses = generateUtilityClasses("MuiMenuItem", ["root", "focusVisible", "dense", "disabled", "divider", "gutters", "selected"]);
+const overridesResolver$1 = (props, styles2) => {
+  const {
+    ownerState
+  } = props;
+  return [styles2.root, ownerState.dense && styles2.dense, ownerState.divider && styles2.divider, !ownerState.disableGutters && styles2.gutters];
+};
+const useUtilityClasses$c = (ownerState) => {
+  const {
+    disabled,
+    dense,
+    divider,
+    disableGutters,
+    selected,
+    classes
+  } = ownerState;
+  const slots = {
+    root: ["root", dense && "dense", disabled && "disabled", !disableGutters && "gutters", divider && "divider", selected && "selected"]
+  };
+  const composedClasses = composeClasses(slots, getMenuItemUtilityClass, classes);
+  return {
+    ...classes,
+    ...composedClasses
+  };
+};
+const MenuItemRoot = styled(ButtonBase, {
+  shouldForwardProp: (prop) => rootShouldForwardProp(prop) || prop === "classes",
+  name: "MuiMenuItem",
+  slot: "Root",
+  overridesResolver: overridesResolver$1
+})(memoTheme(({
+  theme: theme2
+}) => ({
+  ...theme2.typography.body1,
+  display: "flex",
+  justifyContent: "flex-start",
+  alignItems: "center",
+  position: "relative",
+  textDecoration: "none",
+  minHeight: 48,
+  paddingTop: 6,
+  paddingBottom: 6,
+  boxSizing: "border-box",
+  whiteSpace: "nowrap",
+  "&:hover": {
+    textDecoration: "none",
+    backgroundColor: (theme2.vars || theme2).palette.action.hover,
+    // Reset on touch devices, it doesn't add specificity
+    "@media (hover: none)": {
+      backgroundColor: "transparent"
+    }
+  },
+  [`&.${menuItemClasses.selected}`]: {
+    backgroundColor: theme2.vars ? `rgba(${theme2.vars.palette.primary.mainChannel} / ${theme2.vars.palette.action.selectedOpacity})` : alpha(theme2.palette.primary.main, theme2.palette.action.selectedOpacity),
+    [`&.${menuItemClasses.focusVisible}`]: {
+      backgroundColor: theme2.vars ? `rgba(${theme2.vars.palette.primary.mainChannel} / calc(${theme2.vars.palette.action.selectedOpacity} + ${theme2.vars.palette.action.focusOpacity}))` : alpha(theme2.palette.primary.main, theme2.palette.action.selectedOpacity + theme2.palette.action.focusOpacity)
+    }
+  },
+  [`&.${menuItemClasses.selected}:hover`]: {
+    backgroundColor: theme2.vars ? `rgba(${theme2.vars.palette.primary.mainChannel} / calc(${theme2.vars.palette.action.selectedOpacity} + ${theme2.vars.palette.action.hoverOpacity}))` : alpha(theme2.palette.primary.main, theme2.palette.action.selectedOpacity + theme2.palette.action.hoverOpacity),
+    // Reset on touch devices, it doesn't add specificity
+    "@media (hover: none)": {
+      backgroundColor: theme2.vars ? `rgba(${theme2.vars.palette.primary.mainChannel} / ${theme2.vars.palette.action.selectedOpacity})` : alpha(theme2.palette.primary.main, theme2.palette.action.selectedOpacity)
+    }
+  },
+  [`&.${menuItemClasses.focusVisible}`]: {
+    backgroundColor: (theme2.vars || theme2).palette.action.focus
+  },
+  [`&.${menuItemClasses.disabled}`]: {
+    opacity: (theme2.vars || theme2).palette.action.disabledOpacity
+  },
+  [`& + .${dividerClasses.root}`]: {
+    marginTop: theme2.spacing(1),
+    marginBottom: theme2.spacing(1)
+  },
+  [`& + .${dividerClasses.inset}`]: {
+    marginLeft: 52
+  },
+  [`& .${listItemTextClasses.root}`]: {
+    marginTop: 0,
+    marginBottom: 0
+  },
+  [`& .${listItemTextClasses.inset}`]: {
+    paddingLeft: 36
+  },
+  [`& .${listItemIconClasses.root}`]: {
+    minWidth: 36
+  },
+  variants: [{
+    props: ({
+      ownerState
+    }) => !ownerState.disableGutters,
+    style: {
+      paddingLeft: 16,
+      paddingRight: 16
+    }
+  }, {
+    props: ({
+      ownerState
+    }) => ownerState.divider,
+    style: {
+      borderBottom: `1px solid ${(theme2.vars || theme2).palette.divider}`,
+      backgroundClip: "padding-box"
+    }
+  }, {
+    props: ({
+      ownerState
+    }) => !ownerState.dense,
+    style: {
+      [theme2.breakpoints.up("sm")]: {
+        minHeight: "auto"
+      }
+    }
+  }, {
+    props: ({
+      ownerState
+    }) => ownerState.dense,
+    style: {
+      minHeight: 32,
+      // https://m2.material.io/components/menus#specs > Dense
+      paddingTop: 4,
+      paddingBottom: 4,
+      ...theme2.typography.body2,
+      [`& .${listItemIconClasses.root} svg`]: {
+        fontSize: "1.25rem"
+      }
+    }
+  }]
+})));
+const MenuItem = /* @__PURE__ */ reactExports.forwardRef(function MenuItem2(inProps, ref) {
+  const props = useDefaultProps({
+    props: inProps,
+    name: "MuiMenuItem"
+  });
+  const {
+    autoFocus = false,
+    component = "li",
+    dense = false,
+    divider = false,
+    disableGutters = false,
+    focusVisibleClassName,
+    role = "menuitem",
+    tabIndex: tabIndexProp,
+    className,
+    ...other
+  } = props;
+  const context = reactExports.useContext(ListContext);
+  const childContext = reactExports.useMemo(() => ({
+    dense: dense || context.dense || false,
+    disableGutters
+  }), [context.dense, dense, disableGutters]);
+  const menuItemRef = reactExports.useRef(null);
+  useEnhancedEffect(() => {
+    if (autoFocus) {
+      if (menuItemRef.current) {
+        menuItemRef.current.focus();
+      }
+    }
+  }, [autoFocus]);
+  const ownerState = {
+    ...props,
+    dense: childContext.dense,
+    divider,
+    disableGutters
+  };
+  const classes = useUtilityClasses$c(props);
+  const handleRef = useForkRef(menuItemRef, ref);
+  let tabIndex;
+  if (!props.disabled) {
+    tabIndex = tabIndexProp !== void 0 ? tabIndexProp : -1;
+  }
+  return /* @__PURE__ */ jsxRuntimeExports.jsx(ListContext.Provider, {
+    value: childContext,
+    children: /* @__PURE__ */ jsxRuntimeExports.jsx(MenuItemRoot, {
+      ref: handleRef,
+      role,
+      tabIndex,
+      component,
+      focusVisibleClassName: clsx(classes.focusVisible, focusVisibleClassName),
+      className: clsx(classes.root, className),
+      ...other,
+      ownerState,
+      classes
     })
   });
 });
@@ -32936,6 +34163,27 @@ class LiveApiClient {
     }
     return validateCorrectionData(data.data);
   }
+  async submitAnnotations(annotations) {
+    for (const annotation of annotations) {
+      const response = await fetch(`${this.baseUrl}/v1/annotations`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify(annotation)
+      });
+      if (!response.ok) {
+        console.error(`Failed to submit annotation:`, annotation);
+      }
+    }
+  }
+  async getAnnotationStats() {
+    const response = await fetch(`${this.baseUrl}/v1/annotations/stats`);
+    if (!response.ok) {
+      throw new Error(`API error: ${response.statusText}`);
+    }
+    return await response.json();
+  }
 }
 class FileOnlyClient {
   async getCorrectionData() {
@@ -32961,6 +34209,13 @@ class FileOnlyClient {
     throw new Error("Not supported in file-only mode");
   }
   async addLyrics() {
+    throw new Error("Not supported in file-only mode");
+  }
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  async submitAnnotations(_annotations) {
+    throw new Error("Not supported in file-only mode");
+  }
+  async getAnnotationStats() {
     throw new Error("Not supported in file-only mode");
   }
 }
@@ -33255,7 +34510,21 @@ const WordComponent = React.memo(function Word({
       /* @__PURE__ */ jsxRuntimeExports.jsx("br", {}),
       /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: "Source:" }),
       " ",
-      correction.source
+      correction.source,
+      /* @__PURE__ */ jsxRuntimeExports.jsx("br", {}),
+      correction.reason && /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: "Reason:" }),
+        " ",
+        correction.reason,
+        /* @__PURE__ */ jsxRuntimeExports.jsx("br", {})
+      ] }),
+      correction.confidence !== void 0 && correction.confidence > 0 && /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: "Confidence:" }),
+        " ",
+        (correction.confidence * 100).toFixed(0),
+        "%",
+        /* @__PURE__ */ jsxRuntimeExports.jsx("br", {})
+      ] })
     ] });
     return /* @__PURE__ */ jsxRuntimeExports.jsx(Tooltip, { title: tooltipContent, arrow: true, placement: "top", children: wordElement });
   }
@@ -33520,7 +34789,8 @@ function HighlightedText({
                 originalWord: correction.original_word,
                 handler: correction.handler,
                 confidence: correction.confidence,
-                source: correction.source
+                source: correction.source,
+                reason: correction.reason
               } : null;
             })()
           },
@@ -33550,7 +34820,8 @@ function HighlightedText({
           originalWord: correction.original_word,
           handler: correction.handler,
           confidence: correction.confidence,
-          source: correction.source
+          source: correction.source,
+          reason: correction.reason
         } : null;
         return /* @__PURE__ */ jsxRuntimeExports.jsxs(React.Fragment, { children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -33976,6 +35247,12 @@ const PlayCircleOutlineIcon = createSvgIcon(/* @__PURE__ */ jsxRuntimeExports.js
 const DeleteOutlineIcon = createSvgIcon(/* @__PURE__ */ jsxRuntimeExports.jsx("path", {
   d: "M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6zM8 9h8v10H8zm7.5-5-1-1h-5l-1 1H5v2h14V4z"
 }), "DeleteOutline");
+const TextFieldsIcon = createSvgIcon(/* @__PURE__ */ jsxRuntimeExports.jsx("path", {
+  d: "M2.5 4v3h5v12h3V7h5V4zm19 5h-9v3h3v7h3v-7h3z"
+}), "TextFields");
+const TimelineIcon = createSvgIcon(/* @__PURE__ */ jsxRuntimeExports.jsx("path", {
+  d: "M23 8c0 1.1-.9 2-2 2-.18 0-.35-.02-.51-.07l-3.56 3.55c.05.16.07.34.07.52 0 1.1-.9 2-2 2s-2-.9-2-2c0-.18.02-.36.07-.52l-2.55-2.55c-.16.05-.34.07-.52.07s-.36-.02-.52-.07l-4.55 4.56c.05.16.07.33.07.51 0 1.1-.9 2-2 2s-2-.9-2-2 .9-2 2-2c.18 0 .35.02.51.07l4.56-4.55C8.02 9.36 8 9.18 8 9c0-1.1.9-2 2-2s2 .9 2 2c0 .18-.02.36-.07.52l2.55 2.55c.16-.05.34-.07.52-.07s.36.02.52.07l3.55-3.56C19.02 8.35 19 8.18 19 8c0-1.1.9-2 2-2s2 .9 2 2"
+}), "Timeline");
 const urlAlphabet = "useandom-26T198340PX75pxJACKVERYMINDBUSHWOLF_GQZbfghjklqvwyzrict";
 let nanoid = (size = 21) => {
   let id = "";
@@ -34210,6 +35487,218 @@ function deleteWord(data, wordId) {
     return deleteSegment(data, segmentIndex);
   }
 }
+const WarningIcon = createSvgIcon(/* @__PURE__ */ jsxRuntimeExports.jsx("path", {
+  d: "M1 21h22L12 2zm12-3h-2v-2h2zm0-4h-2v-4h2z"
+}), "Warning");
+const TimelineContainer$1 = styled(Box)({
+  display: "flex",
+  flexDirection: "column",
+  gap: "12px",
+  padding: "8px",
+  overflowX: "auto",
+  minWidth: "100%"
+});
+const SegmentTimeline = styled(Box)({
+  display: "flex",
+  flexDirection: "column",
+  gap: "4px",
+  minWidth: "100%"
+});
+const TimelineRuler$1 = styled(Box)({
+  position: "relative",
+  height: "20px",
+  borderBottom: "1px solid #ccc",
+  marginBottom: "4px"
+});
+const TimelineMark$1 = styled(Box)({
+  position: "absolute",
+  width: "1px",
+  height: "8px",
+  backgroundColor: "#999",
+  bottom: 0
+});
+const TimelineLabel$1 = styled(Typography)({
+  position: "absolute",
+  fontSize: "0.65rem",
+  color: "#666",
+  bottom: "10px",
+  transform: "translateX(-50%)",
+  whiteSpace: "nowrap"
+});
+const WordsBar = styled(Box)({
+  position: "relative",
+  height: "60px",
+  // Increased from 48px for better readability
+  display: "flex",
+  alignItems: "stretch",
+  minWidth: "100%",
+  touchAction: "pan-y",
+  // Better mobile scrolling
+  backgroundColor: "#f5f5f5",
+  borderRadius: "4px",
+  marginBottom: "8px"
+});
+const WordBar = styled(Box, {
+  shouldForwardProp: (prop) => !["isLong", "isCorrected", "isGap", "isAnchor"].includes(prop)
+})(
+  ({ isLong, isCorrected, isGap, isAnchor }) => ({
+    position: "absolute",
+    height: "100%",
+    display: "flex",
+    flexDirection: "column",
+    justifyContent: "center",
+    alignItems: "center",
+    padding: "2px 4px",
+    borderRight: "1px solid rgba(255,255,255,0.3)",
+    fontSize: "0.75rem",
+    cursor: "pointer",
+    transition: "all 0.2s",
+    backgroundColor: isAnchor ? COLORS.anchor : isCorrected ? COLORS.corrected : isGap ? COLORS.uncorrectedGap : "#e0e0e0",
+    border: isLong ? "2px solid #f44336" : "none",
+    boxShadow: isLong ? "0 0 4px rgba(244, 67, 54, 0.5)" : "none",
+    "&:hover": {
+      opacity: 0.8,
+      transform: "scale(1.02)",
+      zIndex: 10
+    },
+    overflow: "hidden",
+    textOverflow: "ellipsis",
+    whiteSpace: "nowrap",
+    minWidth: "20px"
+    // Ensure very short words are still tappable
+  })
+);
+const OriginalWordLabel = styled(Typography)({
+  fontSize: "0.65rem",
+  color: "#888",
+  lineHeight: 1.1,
+  marginBottom: "3px",
+  textDecoration: "line-through",
+  opacity: 0.85,
+  fontWeight: 500,
+  backgroundColor: "rgba(255, 255, 255, 0.8)",
+  padding: "1px 3px",
+  borderRadius: "2px"
+});
+const LongWordWarning = styled(WarningIcon)({
+  position: "absolute",
+  top: "-2px",
+  right: "-2px",
+  fontSize: "16px",
+  color: "#f44336"
+});
+function DurationTimelineView({
+  segments,
+  corrections,
+  anchors,
+  gaps,
+  onWordClick
+}) {
+  const timeToPosition = (time, startTime, endTime) => {
+    const duration2 = endTime - startTime;
+    if (duration2 === 0) return 0;
+    const position2 = (time - startTime) / duration2 * 100;
+    return Math.max(0, Math.min(100, position2));
+  };
+  const generateTimelineMarks = (startTime, endTime) => {
+    const marks = [];
+    const startSecond = Math.floor(startTime);
+    const endSecond = Math.ceil(endTime);
+    for (let time = startSecond; time <= endSecond; time += 2) {
+      if (time >= startTime && time <= endTime) {
+        const position2 = timeToPosition(time, startTime, endTime);
+        marks.push(
+          /* @__PURE__ */ jsxRuntimeExports.jsxs(Box, { children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx(TimelineMark$1, { sx: { left: `${position2}%` } }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs(TimelineLabel$1, { sx: { left: `${position2}%` }, children: [
+              time,
+              "s"
+            ] })
+          ] }, time)
+        );
+      }
+    }
+    return marks;
+  };
+  return /* @__PURE__ */ jsxRuntimeExports.jsx(TimelineContainer$1, { children: segments.map((segment) => {
+    const segmentWords = segment.words.filter((w) => w.start_time !== null && w.end_time !== null);
+    if (segmentWords.length === 0) return null;
+    const startTime = Math.min(...segmentWords.map((w) => w.start_time));
+    const endTime = Math.max(...segmentWords.map((w) => w.end_time));
+    return /* @__PURE__ */ jsxRuntimeExports.jsxs(SegmentTimeline, { children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx(TimelineRuler$1, { children: generateTimelineMarks(startTime, endTime) }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx(WordsBar, { children: segment.words.map((word, wordIndex) => {
+        if (word.start_time === null || word.end_time === null) return null;
+        const leftPosition = timeToPosition(word.start_time, startTime, endTime);
+        const rightPosition = timeToPosition(word.end_time, startTime, endTime);
+        const width2 = rightPosition - leftPosition;
+        const duration2 = word.end_time - word.start_time;
+        const isLong = duration2 > 2;
+        const correction = corrections.find(
+          (c) => c.corrected_word_id === word.id || c.word_id === word.id
+        );
+        const isAnchor = anchors.some(
+          (a) => a.transcribed_word_ids.includes(word.id)
+        );
+        const isGap = gaps.some(
+          (g) => g.transcribed_word_ids.includes(word.id)
+        ) && !correction;
+        return /* @__PURE__ */ jsxRuntimeExports.jsxs(
+          WordBar,
+          {
+            sx: {
+              left: `${leftPosition}%`,
+              width: `${width2}%`
+            },
+            isLong,
+            isCorrected: !!correction,
+            isGap,
+            isAnchor,
+            onClick: () => onWordClick == null ? void 0 : onWordClick(word.id),
+            children: [
+              isLong && /* @__PURE__ */ jsxRuntimeExports.jsx(LongWordWarning, {}),
+              correction && /* @__PURE__ */ jsxRuntimeExports.jsx(OriginalWordLabel, { children: correction.original_word }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx(
+                Typography,
+                {
+                  sx: {
+                    fontSize: correction ? "0.85rem" : "0.75rem",
+                    fontWeight: correction ? 700 : 500,
+                    lineHeight: 1.2,
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                    whiteSpace: "nowrap",
+                    width: "100%",
+                    textAlign: "center",
+                    color: correction ? "#1b5e20" : "inherit"
+                  },
+                  children: word.text
+                }
+              ),
+              duration2 > 0.1 && /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                Typography,
+                {
+                  sx: {
+                    fontSize: "0.6rem",
+                    color: "rgba(0,0,0,0.6)",
+                    lineHeight: 1,
+                    marginTop: "3px",
+                    fontWeight: 600
+                  },
+                  children: [
+                    duration2.toFixed(1),
+                    "s"
+                  ]
+                }
+              )
+            ]
+          },
+          `${segment.id}-${wordIndex}`
+        );
+      }) })
+    ] }, segment.id);
+  }) });
+}
 const SegmentIndex = styled(Typography)(({ theme: theme2 }) => ({
   color: theme2.palette.text.secondary,
   width: "1.8em",
@@ -34252,6 +35741,7 @@ function TranscriptionView({
   onDataChange
 }) {
   const [selectedSegmentIndex, setSelectedSegmentIndex] = reactExports.useState(null);
+  const [viewMode, setViewMode] = reactExports.useState("text");
   const handleDeleteSegment = (segmentIndex) => {
     if (onDataChange) {
       const updatedData = deleteSegment(data, segmentIndex);
@@ -34259,8 +35749,66 @@ function TranscriptionView({
     }
   };
   return /* @__PURE__ */ jsxRuntimeExports.jsxs(Paper, { sx: { p: 0.8 }, children: [
-    /* @__PURE__ */ jsxRuntimeExports.jsx(Box, { sx: { display: "flex", justifyContent: "space-between", alignItems: "center", mb: 0.5 }, children: /* @__PURE__ */ jsxRuntimeExports.jsx(Typography, { variant: "h6", sx: { fontSize: "0.9rem", mb: 0 }, children: "Corrected Transcription" }) }),
-    /* @__PURE__ */ jsxRuntimeExports.jsx(Box, { sx: { display: "flex", flexDirection: "column", gap: 0.2 }, children: data.corrected_segments.map((segment, segmentIndex) => {
+    /* @__PURE__ */ jsxRuntimeExports.jsxs(Box, { sx: { display: "flex", justifyContent: "space-between", alignItems: "center", mb: 0.5 }, children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx(Typography, { variant: "h6", sx: { fontSize: "0.9rem", mb: 0 }, children: "Corrected Transcription" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs(
+        ToggleButtonGroup,
+        {
+          value: viewMode,
+          exclusive: true,
+          onChange: (_, newMode) => newMode && setViewMode(newMode),
+          size: "small",
+          "aria-label": "view mode",
+          sx: {
+            "& .MuiToggleButton-root": {
+              px: 1.5,
+              py: 0.5,
+              fontSize: "0.75rem"
+            },
+            "& .MuiToggleButton-root.Mui-selected": {
+              backgroundColor: "primary.main",
+              color: "white",
+              "&:hover": {
+                backgroundColor: "primary.dark"
+              }
+            }
+          },
+          children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsxs(ToggleButton, { value: "text", "aria-label": "text view", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx(TextFieldsIcon, { fontSize: "small", sx: { mr: 0.5 } }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: "Text" })
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs(ToggleButton, { value: "duration", "aria-label": "duration view", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx(TimelineIcon, { fontSize: "small", sx: { mr: 0.5 } }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: "Timeline" })
+            ] })
+          ]
+        }
+      )
+    ] }),
+    viewMode === "duration" ? /* @__PURE__ */ jsxRuntimeExports.jsx(
+      DurationTimelineView,
+      {
+        segments: data.corrected_segments,
+        corrections: data.corrections || [],
+        anchors: data.anchor_sequences || [],
+        gaps: data.gap_sequences || [],
+        onWordClick: (wordId) => {
+          for (const segment of data.corrected_segments) {
+            const word = segment.words.find((w) => w.id === wordId);
+            if (word) {
+              onWordClick == null ? void 0 : onWordClick({
+                word_id: wordId,
+                type: "other",
+                anchor: void 0,
+                gap: void 0
+              });
+              break;
+            }
+          }
+        }
+      }
+    ) : /* @__PURE__ */ jsxRuntimeExports.jsx(Box, { sx: { display: "flex", flexDirection: "column", gap: 0.2 }, children: data.corrected_segments.map((segment, segmentIndex) => {
       const segmentWords = segment.words.map((word) => {
         var _a, _b, _c;
         const correction = (_a = data.corrections) == null ? void 0 : _a.find(
@@ -37419,6 +38967,500 @@ const SegmentProgressPanel = reactExports.memo(({
     }) })
   ] });
 });
+const ANNOTATION_TYPES = [
+  {
+    value: "SOUND_ALIKE",
+    label: "Sound-Alike Error",
+    description: 'Homophones or similar-sounding words (e.g., "out" vs "now")'
+  },
+  {
+    value: "BACKGROUND_VOCALS",
+    label: "Background Vocals",
+    description: "Backing vocals that should be removed from karaoke"
+  },
+  {
+    value: "EXTRA_WORDS",
+    label: "Extra Filler Words",
+    description: 'Transcription added words like "And", "But", "Well"'
+  },
+  {
+    value: "PUNCTUATION_ONLY",
+    label: "Punctuation/Style Only",
+    description: "Only punctuation or capitalization differences"
+  },
+  {
+    value: "REPEATED_SECTION",
+    label: "Repeated Section",
+    description: "Chorus or verse repetition not in condensed references"
+  },
+  {
+    value: "COMPLEX_MULTI_ERROR",
+    label: "Complex Multi-Error",
+    description: "Multiple different error types in one section"
+  },
+  {
+    value: "AMBIGUOUS",
+    label: "Ambiguous",
+    description: "Unclear without listening to audio"
+  },
+  {
+    value: "NO_ERROR",
+    label: "No Error",
+    description: "Transcription matches at least one reference source"
+  },
+  {
+    value: "MANUAL_EDIT",
+    label: "Manual Edit",
+    description: "Human-initiated correction not from detected gap"
+  }
+];
+const CONFIDENCE_LABELS = {
+  1: "1 - Very Uncertain",
+  2: "2 - Somewhat Uncertain",
+  3: "3 - Neutral",
+  4: "4 - Fairly Confident",
+  5: "5 - Very Confident"
+};
+function CorrectionAnnotationModal({
+  open,
+  onClose,
+  onSave,
+  onSkip,
+  originalText,
+  correctedText,
+  wordIdsAffected,
+  agenticProposal,
+  referenceSources,
+  audioHash,
+  artist,
+  title,
+  sessionId,
+  gapId
+}) {
+  const [annotationType, setAnnotationType] = reactExports.useState("MANUAL_EDIT");
+  const [actionTaken, setActionTaken] = reactExports.useState("REPLACE");
+  const [confidence, setConfidence] = reactExports.useState(3);
+  const [reasoning, setReasoning] = reactExports.useState("");
+  const [agenticAgreed, setAgenticAgreed] = reactExports.useState(false);
+  const [error, setError] = reactExports.useState("");
+  reactExports.useEffect(() => {
+    if (agenticProposal && agenticProposal.gap_category) {
+      setAnnotationType(agenticProposal.gap_category);
+      const agreed = agenticProposal.replacement_text ? correctedText.toLowerCase().includes(agenticProposal.replacement_text.toLowerCase()) : false;
+      setAgenticAgreed(agreed);
+    }
+  }, [agenticProposal, correctedText]);
+  reactExports.useEffect(() => {
+    if (originalText === correctedText) {
+      setActionTaken("NO_ACTION");
+    } else if (correctedText === "") {
+      setActionTaken("DELETE");
+    } else if (originalText === "") {
+      setActionTaken("INSERT");
+    } else {
+      setActionTaken("REPLACE");
+    }
+  }, [originalText, correctedText]);
+  const handleSave = () => {
+    if (reasoning.length < 10) {
+      setError("Reasoning must be at least 10 characters");
+      return;
+    }
+    const annotation = {
+      audio_hash: audioHash,
+      gap_id: gapId || null,
+      annotation_type: annotationType,
+      action_taken: actionTaken,
+      original_text: originalText,
+      corrected_text: correctedText,
+      confidence,
+      reasoning,
+      word_ids_affected: wordIdsAffected,
+      agentic_proposal: agenticProposal || null,
+      agentic_category: (agenticProposal == null ? void 0 : agenticProposal.gap_category) || null,
+      agentic_agreed: agenticAgreed,
+      reference_sources_consulted: referenceSources,
+      artist,
+      title,
+      session_id: sessionId
+    };
+    onSave(annotation);
+    handleClose();
+  };
+  const handleClose = () => {
+    setAnnotationType("MANUAL_EDIT");
+    setConfidence(3);
+    setReasoning("");
+    setError("");
+    setAgenticAgreed(false);
+    onClose();
+  };
+  const handleSkipAndClose = () => {
+    handleClose();
+    onSkip();
+  };
+  return /* @__PURE__ */ jsxRuntimeExports.jsxs(
+    Dialog,
+    {
+      open,
+      onClose: handleClose,
+      maxWidth: "md",
+      fullWidth: true,
+      children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs(DialogTitle, { children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx(Typography, { variant: "h6", children: "Annotate Your Correction" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(Typography, { variant: "caption", color: "text.secondary", children: "Help improve the AI by explaining your correction" })
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs(DialogContent, { dividers: true, children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs(Paper, { elevation: 0, sx: { p: 2, mb: 3, bgcolor: "grey.50" }, children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx(Typography, { variant: "subtitle2", gutterBottom: true, children: "Your Correction:" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs(Box, { sx: { display: "flex", gap: 2, alignItems: "center" }, children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsxs(Box, { sx: { flex: 1 }, children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx(Typography, { variant: "caption", color: "error", children: "Original:" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  Typography,
+                  {
+                    sx: {
+                      textDecoration: "line-through",
+                      color: "error.main",
+                      fontFamily: "monospace"
+                    },
+                    children: originalText || "(empty)"
+                  }
+                )
+              ] }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx(Typography, { variant: "h6", children: "→" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs(Box, { sx: { flex: 1 }, children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx(Typography, { variant: "caption", color: "success.main", children: "Corrected:" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  Typography,
+                  {
+                    sx: {
+                      color: "success.main",
+                      fontWeight: "bold",
+                      fontFamily: "monospace"
+                    },
+                    children: correctedText || "(empty)"
+                  }
+                )
+              ] })
+            ] })
+          ] }),
+          agenticProposal && /* @__PURE__ */ jsxRuntimeExports.jsxs(
+            Alert,
+            {
+              severity: agenticAgreed ? "success" : "info",
+              sx: { mb: 3 },
+              children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx(Typography, { variant: "subtitle2", gutterBottom: true, children: "AI Suggestion:" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsxs(Typography, { variant: "body2", children: [
+                  "Category: ",
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: agenticProposal.gap_category })
+                ] }),
+                /* @__PURE__ */ jsxRuntimeExports.jsxs(Typography, { variant: "body2", children: [
+                  "Action: ",
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: agenticProposal.action }),
+                  agenticProposal.replacement_text && ` → "${agenticProposal.replacement_text}"`
+                ] }),
+                /* @__PURE__ */ jsxRuntimeExports.jsxs(Typography, { variant: "body2", children: [
+                  "Reason: ",
+                  agenticProposal.reason
+                ] }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx(Typography, { variant: "body2", sx: { mt: 1 }, children: agenticAgreed ? "✓ Your correction matches the AI suggestion" : "✗ Your correction differs from the AI suggestion" })
+              ]
+            }
+          ),
+          referenceSources.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsxs(Box, { sx: { mb: 3 }, children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx(Typography, { variant: "subtitle2", gutterBottom: true, children: "Reference Sources Consulted:" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(Box, { sx: { display: "flex", gap: 1, flexWrap: "wrap" }, children: referenceSources.map((source) => /* @__PURE__ */ jsxRuntimeExports.jsx(Chip, { label: source, size: "small" }, source)) })
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs(FormControl, { fullWidth: true, sx: { mb: 3 }, children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx(InputLabel, { children: "Correction Type *" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              Select,
+              {
+                value: annotationType,
+                label: "Correction Type *",
+                onChange: (e) => setAnnotationType(e.target.value),
+                children: ANNOTATION_TYPES.map((type) => /* @__PURE__ */ jsxRuntimeExports.jsx(MenuItem, { value: type.value, children: /* @__PURE__ */ jsxRuntimeExports.jsxs(Box, { children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx(Typography, { variant: "body1", children: type.label }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx(Typography, { variant: "caption", color: "text.secondary", children: type.description })
+                ] }) }, type.value))
+              }
+            )
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs(Box, { sx: { mb: 3 }, children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx(Typography, { variant: "subtitle2", gutterBottom: true, children: "Confidence in Your Correction *" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              Slider,
+              {
+                value: confidence,
+                onChange: (_, newValue) => setConfidence(newValue),
+                min: 1,
+                max: 5,
+                step: 1,
+                marks: true,
+                valueLabelDisplay: "auto",
+                valueLabelFormat: (value) => CONFIDENCE_LABELS[value]
+              }
+            ),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(Typography, { variant: "caption", color: "text.secondary", children: CONFIDENCE_LABELS[confidence] })
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            TextField,
+            {
+              fullWidth: true,
+              multiline: true,
+              rows: 4,
+              label: "Reasoning *",
+              placeholder: "Explain why this correction is needed (minimum 10 characters)...",
+              value: reasoning,
+              onChange: (e) => {
+                setReasoning(e.target.value);
+                setError("");
+              },
+              error: !!error,
+              helperText: error || `${reasoning.length}/10 minimum characters`,
+              required: true
+            }
+          )
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs(DialogActions, { children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx(Button, { onClick: handleSkipAndClose, color: "inherit", children: "Skip" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(Button, { onClick: handleSave, variant: "contained", color: "primary", children: "Save & Continue" })
+        ] })
+      ]
+    }
+  );
+}
+const Transition = reactExports.forwardRef(function Transition2(props, ref) {
+  return /* @__PURE__ */ jsxRuntimeExports.jsx(Slide, { direction: "up", ref, ...props });
+});
+const formatCategory = (category) => {
+  if (!category) return "Unknown";
+  return category.split("_").map((word) => word.charAt(0) + word.slice(1).toLowerCase()).join(" ");
+};
+const getCategoryIcon = (category) => {
+  if (!category) return "📝";
+  const icons = {
+    "SOUND_ALIKE": "🎵",
+    "PUNCTUATION_ONLY": "✏️",
+    "BACKGROUND_VOCALS": "🎤",
+    "EXTRA_WORDS": "➕",
+    "REPEATED_SECTION": "🔁",
+    "COMPLEX_MULTI_ERROR": "🔧",
+    "AMBIGUOUS": "❓",
+    "NO_ERROR": "✅"
+  };
+  return icons[category] || "📝";
+};
+const getConfidenceColor = (confidence) => {
+  if (confidence < 0.6) return "error";
+  if (confidence < 0.8) return "warning";
+  return "success";
+};
+function CorrectionDetailCard({
+  open,
+  onClose,
+  originalWord,
+  correctedWord,
+  category,
+  confidence,
+  reason,
+  handler,
+  source,
+  onRevert,
+  onEdit,
+  onAccept
+}) {
+  const theme2 = useTheme();
+  const isMobile = useMediaQuery(theme2.breakpoints.down("sm"));
+  const fullScreen = isMobile;
+  return /* @__PURE__ */ jsxRuntimeExports.jsxs(
+    Dialog,
+    {
+      open,
+      onClose,
+      fullScreen,
+      maxWidth: "sm",
+      fullWidth: true,
+      TransitionComponent: isMobile ? Transition : void 0,
+      PaperProps: {
+        sx: {
+          ...isMobile && {
+            position: "fixed",
+            bottom: 0,
+            m: 0,
+            borderRadius: "16px 16px 0 0",
+            maxHeight: "85vh"
+          }
+        }
+      },
+      children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx(DialogTitle, { sx: { pb: 1 }, children: /* @__PURE__ */ jsxRuntimeExports.jsxs(Box, { sx: { display: "flex", justifyContent: "space-between", alignItems: "center" }, children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx(Typography, { variant: "h6", sx: { fontSize: "1.1rem", fontWeight: 600 }, children: "Correction Details" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            IconButton,
+            {
+              "aria-label": "close",
+              onClick: onClose,
+              size: "small",
+              children: /* @__PURE__ */ jsxRuntimeExports.jsx(CloseIcon, {})
+            }
+          )
+        ] }) }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs(DialogContent, { children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs(Box, { sx: { mb: 3 }, children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx(Typography, { variant: "caption", color: "text.secondary", sx: { mb: 0.5, display: "block" }, children: "Change" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs(Box, { sx: { display: "flex", alignItems: "center", gap: 2 }, children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx(
+                Box,
+                {
+                  sx: {
+                    px: 2,
+                    py: 1,
+                    bgcolor: "error.lighter",
+                    borderRadius: 1,
+                    textDecoration: "line-through",
+                    flex: 1,
+                    textAlign: "center"
+                  },
+                  children: /* @__PURE__ */ jsxRuntimeExports.jsx(Typography, { variant: "body1", sx: { fontWeight: 500 }, children: originalWord })
+                }
+              ),
+              /* @__PURE__ */ jsxRuntimeExports.jsx(ArrowForwardIcon, { color: "action" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx(
+                Box,
+                {
+                  sx: {
+                    px: 2,
+                    py: 1,
+                    bgcolor: "success.lighter",
+                    borderRadius: 1,
+                    flex: 1,
+                    textAlign: "center"
+                  },
+                  children: /* @__PURE__ */ jsxRuntimeExports.jsx(Typography, { variant: "body1", sx: { fontWeight: 600 }, children: correctedWord })
+                }
+              )
+            ] })
+          ] }),
+          category && /* @__PURE__ */ jsxRuntimeExports.jsxs(Box, { sx: { mb: 2 }, children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx(Typography, { variant: "caption", color: "text.secondary", sx: { mb: 0.5, display: "block" }, children: "Category" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              Chip,
+              {
+                label: `${getCategoryIcon(category)} ${formatCategory(category)}`,
+                size: "small",
+                variant: "outlined",
+                sx: { fontSize: "0.875rem" }
+              }
+            )
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs(Box, { sx: { mb: 2 }, children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsxs(Box, { sx: { display: "flex", justifyContent: "space-between", mb: 0.5 }, children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx(Typography, { variant: "caption", color: "text.secondary", children: "Confidence" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs(Typography, { variant: "caption", sx: { fontWeight: 600 }, children: [
+                (confidence * 100).toFixed(0),
+                "%"
+              ] })
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              LinearProgress,
+              {
+                variant: "determinate",
+                value: confidence * 100,
+                color: getConfidenceColor(confidence),
+                sx: { height: 8, borderRadius: 1 }
+              }
+            )
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs(Box, { sx: { mb: 2 }, children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx(Typography, { variant: "caption", color: "text.secondary", sx: { mb: 0.5, display: "block" }, children: "Reasoning" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              Typography,
+              {
+                variant: "body2",
+                sx: {
+                  p: 1.5,
+                  bgcolor: "grey.50",
+                  borderRadius: 1,
+                  border: "1px solid",
+                  borderColor: "grey.200",
+                  lineHeight: 1.6
+                },
+                children: reason
+              }
+            )
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs(Box, { sx: { display: "flex", gap: 1, flexWrap: "wrap" }, children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              Chip,
+              {
+                label: `Handler: ${handler}`,
+                size: "small",
+                variant: "outlined",
+                sx: { fontSize: "0.7rem" }
+              }
+            ),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              Chip,
+              {
+                label: `Source: ${source}`,
+                size: "small",
+                variant: "outlined",
+                sx: { fontSize: "0.7rem" }
+              }
+            )
+          ] })
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs(DialogActions, { sx: { p: 2, gap: 1, flexDirection: isMobile ? "column" : "row" }, children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            Button,
+            {
+              onClick: () => {
+                onRevert();
+                onClose();
+              },
+              variant: "outlined",
+              color: "error",
+              fullWidth: isMobile,
+              sx: { minHeight: isMobile ? "44px" : "36px" },
+              children: "Revert to Original"
+            }
+          ),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            Button,
+            {
+              onClick: () => {
+                onEdit();
+                onClose();
+              },
+              variant: "outlined",
+              fullWidth: isMobile,
+              sx: { minHeight: isMobile ? "44px" : "36px" },
+              children: "Edit Correction"
+            }
+          ),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            Button,
+            {
+              onClick: () => {
+                onAccept();
+                onClose();
+              },
+              variant: "contained",
+              color: "success",
+              fullWidth: isMobile,
+              sx: { minHeight: isMobile ? "44px" : "36px" },
+              children: "Mark as Correct"
+            }
+          )
+        ] })
+      ]
+    }
+  );
+}
 const generateStorageKey = (data) => {
   var _a;
   const text = ((_a = data.original_segments[0]) == null ? void 0 : _a.text) || "";
@@ -37546,6 +39588,170 @@ const setupKeyboardHandlers = (state) => {
     }
   };
 };
+function AgenticCorrectionMetrics({
+  corrections,
+  onCategoryClick,
+  onConfidenceFilterClick
+}) {
+  const metrics = reactExports.useMemo(() => {
+    const agenticCorrections = corrections.filter((c) => c.handler === "AgenticCorrector");
+    const categoryMap = /* @__PURE__ */ new Map();
+    agenticCorrections.forEach((correction) => {
+      var _a;
+      const categoryMatch = (_a = correction.reason) == null ? void 0 : _a.match(/\[([A-Z_]+)\]/);
+      const category = categoryMatch ? categoryMatch[1] : "UNKNOWN";
+      if (!categoryMap.has(category)) {
+        categoryMap.set(category, {
+          category,
+          count: 0,
+          avgConfidence: 0,
+          corrections: []
+        });
+      }
+      const metric = categoryMap.get(category);
+      metric.count++;
+      metric.corrections.push(correction);
+    });
+    categoryMap.forEach((metric) => {
+      const totalConfidence = metric.corrections.reduce((sum, c) => sum + c.confidence, 0);
+      metric.avgConfidence = totalConfidence / metric.count;
+    });
+    const sortedMetrics = Array.from(categoryMap.values()).sort((a, b) => b.count - a.count);
+    const totalCorrections = agenticCorrections.length;
+    const avgConfidence = totalCorrections > 0 ? agenticCorrections.reduce((sum, c) => sum + c.confidence, 0) / totalCorrections : 0;
+    const lowConfidenceCount = agenticCorrections.filter((c) => c.confidence < 0.6).length;
+    const highConfidenceCount = agenticCorrections.filter((c) => c.confidence >= 0.8).length;
+    return {
+      categories: sortedMetrics,
+      totalCorrections,
+      avgConfidence,
+      lowConfidenceCount,
+      highConfidenceCount
+    };
+  }, [corrections]);
+  const formatCategory2 = (category) => {
+    return category.split("_").map((word) => word.charAt(0) + word.slice(1).toLowerCase()).join(" ");
+  };
+  const getCategoryIcon2 = (category) => {
+    const icons = {
+      "SOUND_ALIKE": "🎵",
+      "PUNCTUATION_ONLY": "✏️",
+      "BACKGROUND_VOCALS": "🎤",
+      "EXTRA_WORDS": "➕",
+      "REPEATED_SECTION": "🔁",
+      "COMPLEX_MULTI_ERROR": "🔧",
+      "AMBIGUOUS": "❓",
+      "NO_ERROR": "✅"
+    };
+    return icons[category] || "📝";
+  };
+  return /* @__PURE__ */ jsxRuntimeExports.jsxs(
+    Paper,
+    {
+      sx: {
+        p: 0.8,
+        height: "100%",
+        display: "flex",
+        flexDirection: "column"
+      },
+      children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx(Typography, { variant: "subtitle2", color: "text.secondary", sx: { mb: 0.5, fontSize: "0.7rem" }, children: "Agentic AI Corrections" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs(Box, { sx: { mb: 1 }, children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs(Typography, { variant: "body2", sx: { fontSize: "0.75rem", mb: 0.3 }, children: [
+            "Total: ",
+            /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: metrics.totalCorrections })
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs(Typography, { variant: "body2", sx: { fontSize: "0.75rem", mb: 0.5 }, children: [
+            "Avg Confidence: ",
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("strong", { children: [
+              (metrics.avgConfidence * 100).toFixed(0),
+              "%"
+            ] })
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs(Box, { sx: { display: "flex", gap: 0.5, flexWrap: "wrap" }, children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              Chip,
+              {
+                label: `Low (<60%): ${metrics.lowConfidenceCount}`,
+                size: "small",
+                variant: "outlined",
+                color: "warning",
+                onClick: () => onConfidenceFilterClick == null ? void 0 : onConfidenceFilterClick("low"),
+                sx: { fontSize: "0.65rem", height: "20px", cursor: "pointer" }
+              }
+            ),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              Chip,
+              {
+                label: `High (≥80%): ${metrics.highConfidenceCount}`,
+                size: "small",
+                variant: "outlined",
+                color: "success",
+                onClick: () => onConfidenceFilterClick == null ? void 0 : onConfidenceFilterClick("high"),
+                sx: { fontSize: "0.65rem", height: "20px", cursor: "pointer" }
+              }
+            )
+          ] })
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx(Typography, { variant: "subtitle2", color: "text.secondary", sx: { mb: 0.5, fontSize: "0.7rem" }, children: "By Category" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs(Box, { sx: { flex: 1, overflow: "auto" }, children: [
+          metrics.categories.map((metric) => /* @__PURE__ */ jsxRuntimeExports.jsx(
+            Box,
+            {
+              sx: {
+                mb: 0.5,
+                p: 0.5,
+                borderRadius: 1,
+                cursor: "pointer",
+                "&:hover": {
+                  bgcolor: "action.hover"
+                }
+              },
+              onClick: () => onCategoryClick == null ? void 0 : onCategoryClick(metric.category),
+              children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+                Tooltip,
+                {
+                  title: `${metric.count} correction${metric.count !== 1 ? "s" : ""} • Avg confidence: ${(metric.avgConfidence * 100).toFixed(0)}%`,
+                  placement: "right",
+                  children: /* @__PURE__ */ jsxRuntimeExports.jsxs(Box, { sx: { display: "flex", justifyContent: "space-between", alignItems: "center" }, children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsxs(Box, { sx: { display: "flex", alignItems: "center", gap: 0.5 }, children: [
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { style: { fontSize: "0.85rem" }, children: getCategoryIcon2(metric.category) }),
+                      /* @__PURE__ */ jsxRuntimeExports.jsx(Typography, { variant: "body2", sx: { fontSize: "0.7rem" }, children: formatCategory2(metric.category) })
+                    ] }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsxs(Box, { sx: { display: "flex", gap: 0.5, alignItems: "center" }, children: [
+                      /* @__PURE__ */ jsxRuntimeExports.jsxs(Typography, { variant: "body2", sx: { fontSize: "0.65rem", color: "text.secondary" }, children: [
+                        (metric.avgConfidence * 100).toFixed(0),
+                        "%"
+                      ] }),
+                      /* @__PURE__ */ jsxRuntimeExports.jsx(
+                        Typography,
+                        {
+                          variant: "body2",
+                          sx: {
+                            fontSize: "0.7rem",
+                            fontWeight: 600,
+                            bgcolor: "action.selected",
+                            px: 0.5,
+                            borderRadius: 0.5,
+                            minWidth: "24px",
+                            textAlign: "center"
+                          },
+                          children: metric.count
+                        }
+                      )
+                    ] })
+                  ] })
+                }
+              )
+            },
+            metric.category
+          )),
+          metrics.categories.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx(Typography, { variant: "body2", color: "text.secondary", sx: { fontSize: "0.7rem", fontStyle: "italic" }, children: "No agentic corrections" })
+        ] })
+      ]
+    }
+  );
+}
 function ModeSelector({ effectiveMode, onChange }) {
   return /* @__PURE__ */ jsxRuntimeExports.jsxs(Box, { sx: { display: "flex", alignItems: "center", gap: 1.2, height: "32px" }, children: [
     /* @__PURE__ */ jsxRuntimeExports.jsx(Typography, { variant: "body2", color: "text.secondary", sx: { fontSize: "0.8rem" }, children: "Mode:" }),
@@ -37769,6 +39975,7 @@ function Header({
   }, {})) || {};
   const availableHandlers = data.metadata.available_handlers || [];
   const enabledHandlers = new Set(data.metadata.enabled_handlers || []);
+  const isAgenticMode = availableHandlers.some((h) => h.id === "AgenticCorrector");
   const gapCorrections = data.corrections.reduce((map, correction) => {
     const gap2 = data.gap_sequences.find(
       (g) => g.transcribed_word_ids.includes(correction.word_id)
@@ -37827,7 +40034,18 @@ function Header({
         width: "280px",
         position: "relative",
         height: "100%"
-      }, children: /* @__PURE__ */ jsxRuntimeExports.jsxs(Paper, { sx: {
+      }, children: isAgenticMode ? /* @__PURE__ */ jsxRuntimeExports.jsx(
+        AgenticCorrectionMetrics,
+        {
+          corrections: data.corrections || [],
+          onCategoryClick: (category) => {
+            console.log("Filter by category:", category);
+          },
+          onConfidenceFilterClick: (filter) => {
+            console.log("Filter by confidence:", filter);
+          }
+        }
+      ) : /* @__PURE__ */ jsxRuntimeExports.jsxs(Paper, { sx: {
         p: 0.8,
         height: "100%",
         display: "flex",
@@ -38671,6 +40889,7 @@ const MemoizedHeader = reactExports.memo(function MemoizedHeader2({
   );
 });
 function LyricsAnalyzer({ data: initialData, onFileLoad, apiClient, isReadOnly, audioHash }) {
+  var _a, _b, _c, _d, _e, _f;
   const [modalContent, setModalContent] = reactExports.useState(null);
   const [flashingType, setFlashingType] = reactExports.useState(null);
   const [highlightInfo, setHighlightInfo] = reactExports.useState(null);
@@ -38698,6 +40917,15 @@ function LyricsAnalyzer({ data: initialData, onFileLoad, apiClient, isReadOnly, 
   const [isFindReplaceModalOpen, setIsFindReplaceModalOpen] = reactExports.useState(false);
   const [isTimingOffsetModalOpen, setIsTimingOffsetModalOpen] = reactExports.useState(false);
   const [timingOffsetMs, setTimingOffsetMs] = reactExports.useState(0);
+  const [annotations, setAnnotations] = reactExports.useState([]);
+  const [isAnnotationModalOpen, setIsAnnotationModalOpen] = reactExports.useState(false);
+  const [pendingAnnotation, setPendingAnnotation] = reactExports.useState(null);
+  const [annotationsEnabled] = reactExports.useState(() => {
+    const saved = localStorage.getItem("annotationsEnabled");
+    return saved !== null ? saved === "true" : true;
+  });
+  const [correctionDetailOpen, setCorrectionDetailOpen] = reactExports.useState(false);
+  const [selectedCorrection, setSelectedCorrection] = reactExports.useState(null);
   const theme2 = useTheme();
   const isMobile = useMediaQuery(theme2.breakpoints.down("md"));
   const [history, setHistory] = reactExports.useState([initialData]);
@@ -38770,7 +40998,7 @@ function LyricsAnalyzer({ data: initialData, onFileLoad, apiClient, isReadOnly, 
     });
   }, []);
   const handleWordClick = reactExports.useCallback((info) => {
-    var _a, _b, _c, _d, _e, _f, _g;
+    var _a2, _b2, _c2, _d2, _e2, _f2, _g;
     if (effectiveMode === "delete_word") {
       const newData = deleteWord(data, info.word_id);
       updateDataWithHistory(newData, "delete word");
@@ -38778,10 +41006,14 @@ function LyricsAnalyzer({ data: initialData, onFileLoad, apiClient, isReadOnly, 
       return;
     }
     if (effectiveMode === "highlight") {
-      const correction = (_a = data.corrections) == null ? void 0 : _a.find(
+      const correction = (_a2 = data.corrections) == null ? void 0 : _a2.find(
         (c) => c.corrected_word_id === info.word_id || c.word_id === info.word_id
       );
       if (correction) {
+        if (correction.handler === "AgenticCorrector") {
+          handleShowCorrectionDetail(info.word_id);
+          return;
+        }
         setHighlightInfo({
           type: "correction",
           transcribed_words: [],
@@ -38791,7 +41023,7 @@ function LyricsAnalyzer({ data: initialData, onFileLoad, apiClient, isReadOnly, 
         setFlashingType("word");
         return;
       }
-      const anchor = (_b = data.anchor_sequences) == null ? void 0 : _b.find(
+      const anchor = (_b2 = data.anchor_sequences) == null ? void 0 : _b2.find(
         (a) => a.transcribed_word_ids.includes(info.word_id) || Object.values(a.reference_word_ids).some(
           (ids) => ids.includes(info.word_id)
         )
@@ -38802,8 +41034,8 @@ function LyricsAnalyzer({ data: initialData, onFileLoad, apiClient, isReadOnly, 
           id: "temp",
           words: allWords,
           text: allWords.map((w) => w.text).join(" "),
-          start_time: ((_c = allWords[0]) == null ? void 0 : _c.start_time) ?? null,
-          end_time: ((_d = allWords[allWords.length - 1]) == null ? void 0 : _d.end_time) ?? null
+          start_time: ((_c2 = allWords[0]) == null ? void 0 : _c2.start_time) ?? null,
+          end_time: ((_d2 = allWords[allWords.length - 1]) == null ? void 0 : _d2.end_time) ?? null
         };
         const transcribedWords = getWordsFromIds(
           [tempSegment],
@@ -38811,14 +41043,14 @@ function LyricsAnalyzer({ data: initialData, onFileLoad, apiClient, isReadOnly, 
         );
         const referenceWords = Object.fromEntries(
           Object.entries(anchor.reference_word_ids).map(([source, ids]) => {
-            var _a2, _b2;
+            var _a3, _b3;
             const sourceWords = data.reference_lyrics[source].segments.flatMap((s) => s.words);
             const tempSourceSegment = {
               id: `temp-${source}`,
               words: sourceWords,
               text: sourceWords.map((w) => w.text).join(" "),
-              start_time: ((_a2 = sourceWords[0]) == null ? void 0 : _a2.start_time) ?? null,
-              end_time: ((_b2 = sourceWords[sourceWords.length - 1]) == null ? void 0 : _b2.end_time) ?? null
+              start_time: ((_a3 = sourceWords[0]) == null ? void 0 : _a3.start_time) ?? null,
+              end_time: ((_b3 = sourceWords[sourceWords.length - 1]) == null ? void 0 : _b3.end_time) ?? null
             };
             return [source, getWordsFromIds([tempSourceSegment], ids)];
           })
@@ -38832,7 +41064,7 @@ function LyricsAnalyzer({ data: initialData, onFileLoad, apiClient, isReadOnly, 
         setFlashingType("word");
         return;
       }
-      const gap2 = (_e = data.gap_sequences) == null ? void 0 : _e.find(
+      const gap2 = (_e2 = data.gap_sequences) == null ? void 0 : _e2.find(
         (g) => g.transcribed_word_ids.includes(info.word_id)
       );
       if (gap2) {
@@ -38841,7 +41073,7 @@ function LyricsAnalyzer({ data: initialData, onFileLoad, apiClient, isReadOnly, 
           id: "temp",
           words: allWords,
           text: allWords.map((w) => w.text).join(" "),
-          start_time: ((_f = allWords[0]) == null ? void 0 : _f.start_time) ?? null,
+          start_time: ((_f2 = allWords[0]) == null ? void 0 : _f2.start_time) ?? null,
           end_time: ((_g = allWords[allWords.length - 1]) == null ? void 0 : _g.end_time) ?? null
         };
         const transcribedWords = getWordsFromIds(
@@ -38850,14 +41082,14 @@ function LyricsAnalyzer({ data: initialData, onFileLoad, apiClient, isReadOnly, 
         );
         const referenceWords = Object.fromEntries(
           Object.entries(gap2.reference_word_ids).map(([source, ids]) => {
-            var _a2, _b2;
+            var _a3, _b3;
             const sourceWords = data.reference_lyrics[source].segments.flatMap((s) => s.words);
             const tempSourceSegment = {
               id: `temp-${source}`,
               words: sourceWords,
               text: sourceWords.map((w) => w.text).join(" "),
-              start_time: ((_a2 = sourceWords[0]) == null ? void 0 : _a2.start_time) ?? null,
-              end_time: ((_b2 = sourceWords[sourceWords.length - 1]) == null ? void 0 : _b2.end_time) ?? null
+              start_time: ((_a3 = sourceWords[0]) == null ? void 0 : _a3.start_time) ?? null,
+              end_time: ((_b3 = sourceWords[sourceWords.length - 1]) == null ? void 0 : _b3.end_time) ?? null
             };
             return [source, getWordsFromIds([tempSourceSegment], ids)];
           })
@@ -38885,6 +41117,25 @@ function LyricsAnalyzer({ data: initialData, onFileLoad, apiClient, isReadOnly, 
       }
     }
   }, [data, effectiveMode, setModalContent, handleFlash, deleteWord, updateDataWithHistory]);
+  const handleSaveAnnotation = reactExports.useCallback((annotation) => {
+    setAnnotations((prev2) => [...prev2, annotation]);
+    console.log("Annotation saved:", annotation);
+  }, []);
+  const handleSkipAnnotation = reactExports.useCallback(() => {
+    console.log("Annotation skipped");
+  }, []);
+  const triggerAnnotationModal = reactExports.useCallback((originalText, correctedText, wordIdsAffected, gapId) => {
+    if (!annotationsEnabled || isReadOnly) {
+      return;
+    }
+    setPendingAnnotation({
+      originalText,
+      correctedText,
+      wordIdsAffected,
+      gapId
+    });
+    setIsAnnotationModalOpen(true);
+  }, [annotationsEnabled, isReadOnly]);
   const handleUpdateSegment = reactExports.useCallback((updatedSegment) => {
     if (!editModalSegment) return;
     const currentData = history[historyIndex];
@@ -38896,12 +41147,115 @@ function LyricsAnalyzer({ data: initialData, onFileLoad, apiClient, isReadOnly, 
       corrected_segments: newSegments
     };
     updateDataWithHistory(newDataImmutable, "update segment");
+    const originalSegment = editModalSegment.originalSegment || editModalSegment.segment;
+    if (originalSegment && originalSegment.text !== updatedSegment.text) {
+      const wordIds = updatedSegment.words.map((w) => w.id);
+      triggerAnnotationModal(
+        originalSegment.text,
+        updatedSegment.text,
+        wordIds
+      );
+    }
     setEditModalSegment(null);
-  }, [history, historyIndex, editModalSegment, updateDataWithHistory]);
+  }, [history, historyIndex, editModalSegment, updateDataWithHistory, triggerAnnotationModal]);
   const handleDeleteSegment = reactExports.useCallback((segmentIndex) => {
     const newData = deleteSegment(data, segmentIndex);
     updateDataWithHistory(newData, "delete segment");
   }, [data, updateDataWithHistory]);
+  const handleRevertCorrection = reactExports.useCallback((wordId) => {
+    var _a2, _b2;
+    const correction = (_a2 = data.corrections) == null ? void 0 : _a2.find(
+      (c) => c.corrected_word_id === wordId || c.word_id === wordId
+    );
+    if (!correction) {
+      console.error("Correction not found for word:", wordId);
+      return;
+    }
+    const segmentIndex = data.corrected_segments.findIndex(
+      (segment2) => segment2.words.some((w) => w.id === wordId)
+    );
+    if (segmentIndex === -1) {
+      console.error("Segment not found for word:", wordId);
+      return;
+    }
+    const segment = data.corrected_segments[segmentIndex];
+    const newWords = segment.words.map((word) => {
+      if (word.id === wordId) {
+        return {
+          ...word,
+          text: correction.original_word,
+          id: correction.word_id
+          // Restore original word ID
+        };
+      }
+      return word;
+    });
+    const newText = newWords.map((w) => w.text).join(" ");
+    const newSegment = {
+      ...segment,
+      words: newWords,
+      text: newText
+    };
+    const newSegments = data.corrected_segments.map(
+      (seg, idx) => idx === segmentIndex ? newSegment : seg
+    );
+    const newCorrections = (_b2 = data.corrections) == null ? void 0 : _b2.filter(
+      (c) => c.corrected_word_id !== wordId && c.word_id !== wordId
+    );
+    const newData = {
+      ...data,
+      corrected_segments: newSegments,
+      corrections: newCorrections || []
+    };
+    updateDataWithHistory(newData, "revert correction");
+    console.log("Reverted correction:", {
+      originalWord: correction.original_word,
+      correctedWord: correction.corrected_word,
+      wordId
+    });
+  }, [data, updateDataWithHistory]);
+  const handleEditCorrection = reactExports.useCallback((wordId) => {
+    const segmentIndex = data.corrected_segments.findIndex(
+      (segment2) => segment2.words.some((w) => w.id === wordId)
+    );
+    if (segmentIndex === -1) {
+      console.error("Segment not found for word:", wordId);
+      return;
+    }
+    const segment = data.corrected_segments[segmentIndex];
+    setEditModalSegment({
+      segment,
+      index: segmentIndex,
+      originalSegment: segment
+    });
+  }, [data]);
+  const handleAcceptCorrection = reactExports.useCallback((wordId) => {
+    console.log("Accepted correction for word:", wordId);
+  }, []);
+  const handleShowCorrectionDetail = reactExports.useCallback((wordId) => {
+    var _a2, _b2, _c2;
+    const correction = (_a2 = data.corrections) == null ? void 0 : _a2.find(
+      (c) => c.corrected_word_id === wordId || c.word_id === wordId
+    );
+    if (!correction) {
+      console.error("Correction not found for word:", wordId);
+      return;
+    }
+    const categoryMatch = (_b2 = correction.reason) == null ? void 0 : _b2.match(/\[([A-Z_]+)\]/);
+    const category = categoryMatch ? categoryMatch[1] : null;
+    const correctedWord = ((_c2 = data.corrected_segments.flatMap((s) => s.words).find((w) => w.id === wordId)) == null ? void 0 : _c2.text) || correction.corrected_word;
+    setSelectedCorrection({
+      wordId,
+      originalWord: correction.original_word,
+      correctedWord,
+      category,
+      confidence: correction.confidence,
+      reason: correction.reason,
+      handler: correction.handler,
+      source: correction.source
+    });
+    setCorrectionDetailOpen(true);
+  }, [data]);
   const handleFinishReview = reactExports.useCallback(() => {
     console.log(`[TIMING] handleFinishReview - Current timing offset: ${timingOffsetMs}ms`);
     setIsReviewModalOpen(true);
@@ -38922,6 +41276,15 @@ function LyricsAnalyzer({ data: initialData, onFileLoad, apiClient, isReadOnly, 
         }
       }
       await apiClient.submitCorrections(dataToSubmit);
+      if (annotations.length > 0) {
+        console.log(`Submitting ${annotations.length} annotations...`);
+        try {
+          await apiClient.submitAnnotations(annotations);
+          console.log("Annotations submitted successfully");
+        } catch (error) {
+          console.error("Failed to submit annotations:", error);
+        }
+      }
       setIsReviewComplete(true);
       setIsReviewModalOpen(false);
       window.close();
@@ -38929,7 +41292,7 @@ function LyricsAnalyzer({ data: initialData, onFileLoad, apiClient, isReadOnly, 
       console.error("Failed to submit corrections:", error);
       alert("Failed to submit corrections. Please try again.");
     }
-  }, [apiClient, data, timingOffsetMs]);
+  }, [apiClient, data, timingOffsetMs, annotations]);
   const handlePlaySegment = reactExports.useCallback((startTime) => {
     if (window.seekAndPlayAudio) {
       const adjustedStartTime = timingOffsetMs !== 0 ? startTime + timingOffsetMs / 1e3 : startTime;
@@ -39258,6 +41621,60 @@ function LyricsAnalyzer({ data: initialData, onFileLoad, apiClient, isReadOnly, 
         onPlaySegment: handlePlaySegment,
         currentTime: currentAudioTime,
         setModalSpacebarHandler: handleSetModalSpacebarHandler
+      }
+    ),
+    pendingAnnotation && /* @__PURE__ */ jsxRuntimeExports.jsx(
+      CorrectionAnnotationModal,
+      {
+        open: isAnnotationModalOpen,
+        onClose: () => {
+          setIsAnnotationModalOpen(false);
+          setPendingAnnotation(null);
+        },
+        onSave: handleSaveAnnotation,
+        onSkip: handleSkipAnnotation,
+        originalText: pendingAnnotation.originalText,
+        correctedText: pendingAnnotation.correctedText,
+        wordIdsAffected: pendingAnnotation.wordIdsAffected,
+        agenticProposal: void 0,
+        referenceSources: Object.keys(data.reference_lyrics || {}),
+        audioHash,
+        artist: ((_c = (_b = (_a = data.metadata) == null ? void 0 : _a.audio_filepath) == null ? void 0 : _b.split("/").pop()) == null ? void 0 : _c.split(".")[0]) || "Unknown",
+        title: ((_f = (_e = (_d = data.metadata) == null ? void 0 : _d.audio_filepath) == null ? void 0 : _e.split("/").pop()) == null ? void 0 : _f.split(".")[0]) || "Unknown",
+        sessionId: audioHash,
+        gapId: pendingAnnotation.gapId
+      }
+    ),
+    selectedCorrection && /* @__PURE__ */ jsxRuntimeExports.jsx(
+      CorrectionDetailCard,
+      {
+        open: correctionDetailOpen,
+        onClose: () => {
+          setCorrectionDetailOpen(false);
+          setSelectedCorrection(null);
+        },
+        originalWord: selectedCorrection.originalWord,
+        correctedWord: selectedCorrection.correctedWord,
+        category: selectedCorrection.category,
+        confidence: selectedCorrection.confidence,
+        reason: selectedCorrection.reason,
+        handler: selectedCorrection.handler,
+        source: selectedCorrection.source,
+        onRevert: () => {
+          handleRevertCorrection(selectedCorrection.wordId);
+          setCorrectionDetailOpen(false);
+          setSelectedCorrection(null);
+        },
+        onEdit: () => {
+          handleEditCorrection(selectedCorrection.wordId);
+          setCorrectionDetailOpen(false);
+          setSelectedCorrection(null);
+        },
+        onAccept: () => {
+          handleAcceptCorrection(selectedCorrection.wordId);
+          setCorrectionDetailOpen(false);
+          setSelectedCorrection(null);
+        }
       }
     )
   ] });
@@ -39608,7 +42025,7 @@ const theme = createTheme({
   spacing: (factor) => `${0.6 * factor}rem`
   // Further reduced from 0.8 * factor
 });
-const version = "0.71.0";
+const version = "0.80.0";
 const packageJson = {
   version
 };
@@ -39619,4 +42036,4 @@ ReactDOM$1.createRoot(document.getElementById("root")).render(
     /* @__PURE__ */ jsxRuntimeExports.jsx(App, {})
   ] })
 );
-//# sourceMappingURL=index-BaSm3E0s.js.map
+//# sourceMappingURL=index-DdJTDWH3.js.map
