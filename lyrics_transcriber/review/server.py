@@ -106,10 +106,21 @@ class ReviewServer:
 
     def _configure_cors(self) -> None:
         """Configure CORS middleware."""
+        # Allow localhost development ports and the hosted review UI
+        allowed_origins = (
+            [f"http://localhost:{port}" for port in range(3000, 5174)]
+            + [f"http://127.0.0.1:{port}" for port in range(3000, 5174)]
+            + ["https://lyrics.nomadkaraoke.com"]
+        )
+        
+        # Also allow custom review UI URL if set
+        custom_ui = os.environ.get("LYRICS_REVIEW_UI_URL", "")
+        if custom_ui and custom_ui.lower() != "local" and custom_ui not in allowed_origins:
+            allowed_origins.append(custom_ui)
+        
         self.app.add_middleware(
             CORSMiddleware,
-            allow_origins=[f"http://localhost:{port}" for port in range(3000, 5174)]
-            + [f"http://127.0.0.1:{port}" for port in range(3000, 5174)],
+            allow_origins=allowed_origins,
             allow_credentials=True,
             allow_methods=["*"],
             allow_headers=["*"],
@@ -617,7 +628,19 @@ class ReviewServer:
                 if self.correction_result.metadata and "audio_hash" in self.correction_result.metadata
                 else ""
             )
-            webbrowser.open(f"http://localhost:8000?baseApiUrl={encoded_api_url}{audio_hash_param}")
+            
+            # Use hosted review UI by default, can be overridden with LYRICS_REVIEW_UI_URL env var
+            # Set to "local" to use the bundled local frontend instead
+            review_ui_url = os.environ.get("LYRICS_REVIEW_UI_URL", "https://lyrics.nomadkaraoke.com")
+            if review_ui_url.lower() == "local":
+                # Use the bundled local frontend
+                browser_url = f"http://localhost:8000?baseApiUrl={encoded_api_url}{audio_hash_param}"
+            else:
+                # Use the hosted/external review UI
+                browser_url = f"{review_ui_url}?baseApiUrl={encoded_api_url}{audio_hash_param}"
+            
+            self.logger.info(f"Opening review UI: {browser_url}")
+            webbrowser.open(browser_url)
 
             while not self.review_completed:
                 time.sleep(0.1)
